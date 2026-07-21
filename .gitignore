@@ -141,3 +141,7 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Local AI-tooling setup (personal, not shared with the team)
+/CLAUDE.md
+/.claude/

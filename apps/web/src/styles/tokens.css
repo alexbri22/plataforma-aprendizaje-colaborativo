@@ -1,0 +1,126 @@
+/*
+ * Fuente de verdad de tokens visuales. No usar valores crudos (hex, px sueltos,
+ * oklch inline) en componentes: siempre referenciar estas variables. Ver DESIGN.md.
+ */
+
+:root {
+  /* ---- Primitivos: color (OKLCH) ---- */
+  --color-white: oklch(1 0 0);
+
+  /* Graphite — familia neutra, tinte frío (hue 246) heredado del primario */
+  --color-graphite-900: oklch(0.22 0.006 246);
+  --color-graphite-500: oklch(0.46 0.008 246);
+  --color-graphite-200: oklch(0.85 0.005 246);
+  --color-graphite-100: oklch(0.91 0.004 246);
+  --color-graphite-50: oklch(0.97 0.004 246);
+
+  /* Study Ink — primario, uso en acciones e interacción */
+  --color-ink-700: oklch(0.3 0.07 246);
+  --color-ink-600: oklch(0.38 0.08 246);
+  --color-ink-300: oklch(0.76 0.05 246);
+  --color-ink-100: oklch(0.93 0.02 246);
+
+  /* Apothecary Amber — reservado a momentos de reconocimiento (insignias, cierre) */
+  --color-amber-800: oklch(0.34 0.08 50);
+  --color-amber-600: oklch(0.55 0.16 50);
+  --color-amber-100: oklch(0.94 0.03 50);
+
+  /* Confirmed Green */
+  --color-green-800: oklch(0.32 0.09 145);
+  --color-green-600: oklch(0.5 0.14 145);
+  --color-green-100: oklch(0.95 0.03 145);
+
+  /* Flag Red */
+  --color-red-800: oklch(0.36 0.14 25);
+  --color-red-700: oklch(0.44 0.19 25);
+  --color-red-600: oklch(0.52 0.19 25);
+  --color-red-100: oklch(0.95 0.035 25);
+
+  /* Caution Gold */
+  --color-gold-800: oklch(0.38 0.1 90);
+  --color-gold-600: oklch(0.53 0.14 90);
+  --color-gold-100: oklch(0.95 0.03 90);
+
+  /* ---- Primitivos: tipografía ---- */
+  --font-family-base:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-family-mono: ui-monospace, 'SF Mono', Consolas, monospace;
+
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 1.875rem;
+  --font-size-4xl: 2.25rem;
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.75;
+
+  /* ---- Primitivos: espaciado (base 4px) ---- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  /* ---- Primitivos: radio ---- */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-full: 9999px;
+
+  /* ---- Primitivos: sombra (tinte graphite-900, ver DESIGN.md §4 Elevation) ---- */
+  --shadow-sm: 0 1px 2px oklch(0.22 0.006 246 / 0.06);
+  --shadow-md: 0 4px 12px oklch(0.22 0.006 246 / 0.1);
+  --shadow-lg: 0 12px 32px oklch(0.22 0.006 246 / 0.14);
+
+  /* ---- Semánticos ---- */
+  --color-bg: var(--color-white);
+  --color-surface: var(--color-graphite-50);
+  --color-surface-hover: var(--color-graphite-100);
+  --color-border: var(--color-graphite-100);
+  --color-border-strong: var(--color-graphite-200);
+
+  --color-text: var(--color-graphite-900);
+  --color-text-muted: var(--color-graphite-500);
+  --color-text-on-accent: var(--color-white);
+
+  --color-primary: var(--color-ink-600);
+  --color-primary-hover: var(--color-ink-700);
+  --color-primary-subtle: var(--color-ink-100);
+  --color-primary-border: var(--color-ink-300);
+
+  /* Reconocimiento: insignias otorgadas, cierre de actividad. No usar en la interfaz base. */
+  --color-accent: var(--color-amber-600);
+  --color-accent-hover: var(--color-amber-800);
+  --color-accent-subtle: var(--color-amber-100);
+  --color-accent-ink: var(--color-amber-800);
+
+  --color-danger: var(--color-red-600);
+  --color-danger-hover: var(--color-red-700);
+  --color-danger-subtle: var(--color-red-100);
+  --color-danger-ink: var(--color-red-800);
+
+  --color-success: var(--color-green-600);
+  --color-success-subtle: var(--color-green-100);
+  --color-success-ink: var(--color-green-800);
+
+  --color-warning: var(--color-gold-600);
+  --color-warning-subtle: var(--color-gold-100);
+  --color-warning-ink: var(--color-gold-800);
+
+  --color-focus-ring: var(--color-ink-600);
+}
