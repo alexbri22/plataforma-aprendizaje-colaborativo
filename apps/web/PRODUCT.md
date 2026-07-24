@@ -36,6 +36,8 @@ Color and typography stay restrained across the base interface; warmth is reserv
 
 Generic corporate SaaS (blue-gradient dashboards, hero-metric cards, generic icon-grid feature lists). Gamified consumer apps in the Duolingo mold (mascots, loud gamification, confetti-heavy reward moments). Stock photography of people — students, teachers, meeting rooms — anywhere in the UI; prefer abstract shapes, icons, or simple illustration where visual interest is needed.
 
+**Scoped exception:** the public home page hero (`PantallaInicio`, the only unauthenticated entry point) uses one licensed stock illustration of people collaborating, chosen deliberately after comparing a custom abstract illustration against several stock options. This does not extend to any other surface — see DESIGN.md §6 for the attribution requirement it carries.
+
 ## Design Principles
 
 Configuration over prescription: there are no fixed modes, so every screen should make the current configuration state legible rather than hiding it behind opinionated presets.

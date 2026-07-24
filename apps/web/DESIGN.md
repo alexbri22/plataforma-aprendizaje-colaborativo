@@ -77,7 +77,7 @@ components:
   button-primary-hover:
     backgroundColor: '{colors.primary-hover}'
   button-secondary:
-    backgroundColor: '{colors.surface}'
+    backgroundColor: '{colors.bg}'
     textColor: '{colors.text}'
     rounded: '{rounded.md}'
     padding: '8px 16px'
@@ -112,7 +112,7 @@ A calm, focused workspace an organizer trusts for real evaluation — grading, p
 
 This system draws its density from **Linear** — typographic restraint, a near-monochrome surface, color reserved for status and priority — for the dense, control-heavy views (permission tables, participant lists, activity configuration). It draws its breathing room from **Notion** — a calm, content-first canvas with generous whitespace — for forms and text-heavy screens. **Khan Academy** is the reference for individual progress and tracking views (bitácora, seguimiento): neutral, uncluttered, focused on the content rather than the chrome. **Google Classroom** informs how activities group and navigate, not its softer, more playful palette.
 
-The system explicitly rejects: generic corporate SaaS (blue-gradient dashboards, hero-metric cards, icon-grid feature lists), Duolingo-style consumer gamification (mascots, confetti, loud reward loops), and stock photography of people anywhere in the interface — abstract shapes, icons, or simple illustration carry visual interest instead.
+The system explicitly rejects: generic corporate SaaS (blue-gradient dashboards, hero-metric cards, icon-grid feature lists), Duolingo-style consumer gamification (mascots, confetti, loud reward loops), and stock photography of people anywhere in the interface — abstract shapes, icons, or simple illustration carry visual interest instead. One documented exception exists for the public home page hero; see §6.
 
 **Key Characteristics:**
 
@@ -194,7 +194,7 @@ Soft-edged and calm is the default register — generous internal padding, comfo
 
 - **Shape:** `rounded-md` (8px) — soft enough to feel calm, not sharp enough to feel clinical.
 - **Primary:** Study Ink fill, white text, `8px 16px` padding. Used once per view as the clear default action.
-- **Secondary:** Shelf background, Graphite text, Hairline Strong border — for the paired "Cancelar"-style action, never competing visually with Primary.
+- **Secondary:** Paper background, Graphite text, Hairline Strong border — same resting-surface pattern as Cards/Inputs, so it stays legible regardless of what page tone sits behind it. For the paired "Cancelar"-style action, never competing visually with Primary. (Changed from Shelf to Paper after Shelf became indistinguishable once a screen's own background is also Shelf — see `PantallaInicio.tsx`.)
 - **Danger:** Flag Red fill, white text — reserved for destructive, hard-to-reverse actions (removing a participant, deleting a report), never for routine negative actions like "Cancelar."
 - **Hover / Focus:** background shifts to the `-hover` step over 0.15s ease; `:focus-visible` gets a 2px Study Ink outline, 2px offset — never removed, never replaced with a subtler box-shadow-only treatment.
 
@@ -238,7 +238,7 @@ Should follow the Linear reference for the organizer-facing shell (activity conf
 - **Don't** use Apothecary Amber on a primary button, nav item, or any default interactive control — that breaks the entire "earned, not decorated" premise of the recognition system.
 - **Don't** reach for a blue-gradient hero, a hero-metric stat card, or an icon-grid feature list — this is not a marketing surface, and those are the generic-SaaS patterns PRODUCT.md explicitly rejects.
 - **Don't** introduce mascots, confetti bursts, or loud Duolingo-style reward animations when a badge is awarded — the celebratory moment is the solid Apothecary Amber fill and nothing louder.
-- **Don't** use stock photography of people (students, teachers, meeting rooms) anywhere in the UI — use abstract shapes, icons, or simple illustration instead.
+- **Don't** use stock photography of people (students, teachers, meeting rooms) anywhere in the UI — use abstract shapes, icons, or simple illustration instead. **Scoped exception:** the public home page hero (`PantallaInicio.tsx`) uses one licensed Magnific illustration (pch.vector) of people collaborating with puzzle pieces, chosen after comparing it against a custom abstract illustration and several other stock options. It carries a required visible attribution credit in the page footer per its license — the exact wording Magnific requires is still unconfirmed, see the `TODO` in `PantallaInicio.tsx`. This exception is scoped to that one screen only — don't extend it to any other surface without revisiting this rule.
 - **Don't** add a second typeface for "warmth" or "technical feel" (The One-Face Rule) — hierarchy comes from size and weight on the single system sans stack.
 - **Don't** put a shadow on a resting card heavier than Ambient, and never on a table row, list item, or form section at rest.
 - **Don't** apply `border-left`/`border-right` as a colored accent stripe on cards, list items, or callouts — use a full border, a subtle background tint, or a leading icon instead.
