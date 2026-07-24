@@ -57,11 +57,14 @@ sección 3.5 del diseño de desarrollo):
 
 ```
 src/
-├── app/            router, layout, providers
 ├── components/ui/  design system (fuente de verdad: apps/web/DESIGN.md)
 ├── features/       una carpeta por módulo de dominio (actividades, equipos...)
 └── lib/            cliente HTTP y utilidades transversales
 ```
+
+No hay router todavía: `main.tsx` monta directamente la pantalla pública de
+entrada (`features/contenido-publico/PantallaInicio`). Cuando exista un
+router real, probablemente vuelva a vivir en un `app/`.
 
 Dentro de `apps/api/src`, arquitectura en capas (ver sección 2.2):
 
