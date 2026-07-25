@@ -18,16 +18,16 @@ function FlechaIcono() {
 
 const RECURSOS = [
   {
-    id: 'que-es-co3',
-    titulo: 'Qué es Co3',
+    id: 'caracteristicas-de-co3',
+    titulo: 'Características de Co3',
     texto:
-      'Los fundamentos del aprendizaje colaborativo que dan forma a Co3, basados en los cinco aspectos de Johnson y Johnson (1999).',
+      'Co3 permite definir actividades colaborativas y equipos de trabajo. Considera dos tipos de espacios para evaluar la actividad y, por otro lado, la participación de los miembros del equipo.',
   },
   {
-    id: 'colaborar-para-aprender',
-    titulo: 'Colaborar para aprender',
+    id: 'aprender-colaborando',
+    titulo: 'Aprender colaborando',
     texto:
-      'Cómo se traducen esos fundamentos en comportamientos concretos dentro de una actividad: comunicación, responsabilidad compartida y manejo de desacuerdos.',
+      'El aprendizaje colaborativo tiene sus fundamentos en el trabajo de Johnson y Johnson. Impulsa el desarrollo de cinco aspectos: definición de responsabilidades, interdependencia positiva, responsabilidad individual y grupal, interacción y habilidades sociales.',
   },
 ]
 
@@ -40,7 +40,10 @@ export function PantallaInicio() {
 
       <header>
         <div className={styles.headerInner}>
-          <span className={styles.brand}>Co3</span>
+          <div className={styles.brand}>
+            <span className={styles.brandName}>Co3</span>
+            <span className={styles.brandTagline}>Construcción de Conocimiento en Colaboración</span>
+          </div>
 
           <nav className={styles.nav} aria-label="Principal">
             <button type="button" className={styles.navLink}>
@@ -58,11 +61,10 @@ export function PantallaInicio() {
           <div className={styles.heroInner}>
             <div className={styles.heroText}>
               <div className={styles.heroCopy}>
-                <h1>Aprender colaborando</h1>
+                <h1>Qué es Co3</h1>
                 <p className={styles.heroLede}>
-                  Co3 es el espacio para practicar colaboración real, no solo coordinar tareas:
-                  equipos, seguimiento y evaluación configurables actividad por actividad, sin
-                  modos de gestión fijos.
+                  Es un sistema diseñado para apoyar a estudiantes y profesores en el seguimiento
+                  de actividades basadas en el aprendizaje colaborativo.
                 </p>
               </div>
               <div className={styles.heroActions}>
