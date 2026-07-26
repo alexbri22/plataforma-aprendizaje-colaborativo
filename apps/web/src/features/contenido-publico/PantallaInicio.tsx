@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { Button } from '../../components/ui'
+import { CentroFormacion } from '../formacion/CentroFormacion'
 import styles from './PantallaInicio.module.css'
 
 function FlechaIcono() {
@@ -32,6 +34,8 @@ const RECURSOS = [
 ]
 
 export function PantallaInicio() {
+  const [vistaActiva, setVistaActiva] = useState<'inicio' | 'recursos'>('inicio')
+
   return (
     <div className={styles.page}>
       <a className={styles.skipLink} href="#contenido">
@@ -40,16 +44,26 @@ export function PantallaInicio() {
 
       <header>
         <div className={styles.headerInner}>
-          <div className={styles.brand}>
+          <button
+            type="button"
+            className={styles.brand}
+            aria-label="Ir al inicio de Co3"
+            onClick={() => setVistaActiva('inicio')}
+          >
             <span className={styles.brandName}>Co3</span>
             <span className={styles.brandTagline}>Construcción de Conocimiento en Colaboración</span>
-          </div>
+          </button>
 
           <nav className={styles.nav} aria-label="Principal">
             <button type="button" className={styles.navLink}>
               Insignias
             </button>
-            <button type="button" className={styles.navLink}>
+            <button
+              type="button"
+              className={`${styles.navLink} ${vistaActiva === 'recursos' ? styles.navLinkActivo : ''}`}
+              aria-current={vistaActiva === 'recursos' ? 'page' : undefined}
+              onClick={() => setVistaActiva('recursos')}
+            >
               Recursos
             </button>
           </nav>
@@ -57,7 +71,9 @@ export function PantallaInicio() {
       </header>
 
       <main id="contenido" className={styles.main}>
-        <section className={styles.hero}>
+        {vistaActiva === 'inicio' ? (
+          <>
+            <section className={styles.hero}>
           <div className={styles.heroInner}>
             <div className={styles.heroText}>
               <div className={styles.heroCopy}>
@@ -82,24 +98,32 @@ export function PantallaInicio() {
               fetchPriority="high"
             />
           </div>
-        </section>
+            </section>
 
-        <section className={styles.contenidoPublico} aria-label="Contenido formativo">
-          <div className={styles.recursosLista}>
-            {RECURSOS.map((r) => (
-              <div key={r.id} id={r.id} className={styles.recursosFila}>
-                <div className={styles.recursosFilaTexto}>
-                  <h2>{r.titulo}</h2>
-                  <p>{r.texto}</p>
-                </div>
-                <button type="button" className={styles.seccionLink}>
-                  Ver recursos
-                  <FlechaIcono />
-                </button>
+            <section className={styles.contenidoPublico} aria-label="Contenido formativo">
+              <div className={styles.recursosLista}>
+                {RECURSOS.map((r) => (
+                  <div key={r.id} id={r.id} className={styles.recursosFila}>
+                    <div className={styles.recursosFilaTexto}>
+                      <h2>{r.titulo}</h2>
+                      <p>{r.texto}</p>
+                    </div>
+                    <button
+                      type="button"
+                      className={styles.seccionLink}
+                      onClick={() => setVistaActiva('recursos')}
+                    >
+                      Ver recursos
+                      <FlechaIcono />
+                    </button>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </section>
+            </section>
+          </>
+        ) : (
+          <CentroFormacion />
+        )}
       </main>
 
       <footer className={styles.footer}>
@@ -113,12 +137,14 @@ export function PantallaInicio() {
 
           {/* TODO: confirmar la redacción exacta que exige Magnific para su crédito (solo
               tenemos su indicación de ubicación, no el texto) — ver DESIGN.md §6. */}
-          <p className={styles.footerCredit}>
-            Ilustración de portada:{' '}
-            <a href="https://www.magnific.com" target="_blank" rel="noopener noreferrer">
-              Designed by pch.vector / Magnific
-            </a>
-          </p>
+          {vistaActiva === 'inicio' ? (
+            <p className={styles.footerCredit}>
+              Ilustración de portada:{' '}
+              <a href="https://www.magnific.com" target="_blank" rel="noopener noreferrer">
+                Designed by pch.vector / Magnific
+              </a>
+            </p>
+          ) : null}
         </div>
       </footer>
     </div>

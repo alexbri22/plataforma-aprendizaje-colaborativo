@@ -37,7 +37,7 @@
 .headerInner,
 .heroInner,
 .contenidoPublico {
-  max-width: 1120px;
+  max-width: var(--layout-content-max);
   width: 100%;
   margin: 0 auto;
   padding-left: var(--space-6);
@@ -58,7 +58,20 @@
 .brand {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: var(--space-1);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.brand:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
 }
 
 .brandName {
@@ -106,6 +119,11 @@
 }
 
 .navLink:hover {
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
+}
+
+.navLinkActivo {
   background: var(--color-primary-subtle);
   color: var(--color-primary);
 }
@@ -318,7 +336,7 @@
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-4);
-  max-width: 1120px;
+  max-width: var(--layout-content-max);
   margin: 0 auto;
 }
 
