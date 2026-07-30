@@ -2,13 +2,13 @@
 
 Plataforma de Aprendizaje Colaborativo
 
-*Documento individual — Alejandro Briceño Espinoza*
+_Documento individual — Alejandro Briceño Espinoza_
 
 Este documento especifica cómo se construye el núcleo de la aplicación: los módulos de Cuentas, Actividades, Equipos, Seguimiento, Evaluación e Historial. Es complemento del diseño de desarrollo general y no lo repite. El general fija el contrato que los tres subsistemas comparten y determina qué es válido en cada momento; este documento determina cómo se ejecuta, con el nivel de detalle necesario para que la implementación no vuelva a abrir decisiones ya tomadas.
 
 **Preguntas abiertas.** Se conserva el mecanismo del documento general: cada hueco que el material de requerimientos no determina se registra con el formato P-nn, incluye una propuesta por defecto y se procede con ella si al llegar a su implementación no ha habido cambio de dirección. Una pregunta resuelta desaparece: su contenido pasa a texto declarativo en la sección que afecta. Los identificadores no se reutilizan ni se renumeran, de modo que un hueco en la serie indica una pregunta ya cerrada. La numeración de este documento arranca en P-21 para no colisionar con las del general.
 
-***Estructura.** Los capítulos 1 a 5 son transversales al subsistema y se implementan una sola vez. Los capítulos 6 a 10 corresponden a un módulo cada uno y siguen la misma estructura interna: reglas y algoritmos, endpoints, pantallas y preguntas abiertas propias. Los tipos de evento que cada módulo emite no se repiten en su capítulo porque el catálogo completo vive en 5.2. Los capítulos 11 a 13 son de ejecución.*
+_**Estructura.** Los capítulos 1 a 5 son transversales al subsistema y se implementan una sola vez. Los capítulos 6 a 10 corresponden a un módulo cada uno y siguen la misma estructura interna: reglas y algoritmos, endpoints, pantallas y preguntas abiertas propias. Los tipos de evento que cada módulo emite no se repiten en su capítulo porque el catálogo completo vive en 5.2. Los capítulos 11 a 13 son de ejecución._
 
 # **1\. Contexto y alcance del subsistema**
 
@@ -20,13 +20,13 @@ El documento general define el contrato compartido y, en el caso del núcleo, es
 
 El deslinde que sigue este documento es de nivel y no de tema. Cada materia aparece en ambos documentos, pero en distinta capa de abstracción.
 
-| Materia | Documento general | Este documento |
-| :---- | :---- | :---- |
-| Entidades y persistencia | Modelo relacional, restricciones y diccionario de datos (4.4 y 5\) | Tipos del contrato de la API y modelos de vista del cliente |
-| Ciclo de vida | Estados, transiciones válidas y reglas invariantes (6.1) | Condición de disparo, efectos y casos límite de cada transición |
-| Autorización | Matriz de permisos por plano y por rol (7) | Mecanismo que la evalúa y qué revela una respuesta denegada |
-| Historial | Categorías, esquema y regla de emisión (8.1 y 8.2) | Catálogo de tipos, mecanismo de captura, agregación y consulta |
-| Interfaz | Organización por features y flujo unidireccional (3.5 y 3.6) | Rutas, pantallas, claves de query y derivación desde la configuración |
+| Materia                  | Documento general                                                  | Este documento                                                        |
+| :----------------------- | :----------------------------------------------------------------- | :-------------------------------------------------------------------- |
+| Entidades y persistencia | Modelo relacional, restricciones y diccionario de datos (4.4 y 5\) | Tipos del contrato de la API y modelos de vista del cliente           |
+| Ciclo de vida            | Estados, transiciones válidas y reglas invariantes (6.1)           | Condición de disparo, efectos y casos límite de cada transición       |
+| Autorización             | Matriz de permisos por plano y por rol (7)                         | Mecanismo que la evalúa y qué revela una respuesta denegada           |
+| Historial                | Categorías, esquema y regla de emisión (8.1 y 8.2)                 | Catálogo de tipos, mecanismo de captura, agregación y consulta        |
+| Interfaz                 | Organización por features y flujo unidireccional (3.5 y 3.6)       | Rutas, pantallas, claves de query y derivación desde la configuración |
 
 **Regla de remisión.** Cuando este documento necesita una definición del general, la cita por número de sección y no la reproduce. Cuando encuentra en el general una ambigüedad o una imprecisión, la resuelve aquí de forma explícita y la lleva al general en su revisión siguiente: la regla de precedencia impide corregir el contrato desde un documento individual, pero no impide señalar dónde necesita corregirse.
 
@@ -34,14 +34,14 @@ El deslinde que sigue este documento es de nivel y no de tema. Cada materia apar
 
 El general establece las fronteras entre módulos y la regla de que ninguno accede a los datos de otro directamente (3.4). Dentro del núcleo esas fronteras forman un árbol, no una red: cada módulo depende de los que están sobre él y ninguno de los que están debajo.
 
-| Módulo | Depende de | Lo consumen |
-| :---- | :---- | :---- |
-| Cuentas | — | Todos los demás, dentro y fuera del núcleo |
-| Actividades | Cuentas | Equipos, Seguimiento, Evaluación, Insignias, Administración |
-| Equipos | Actividades | Seguimiento, Evaluación |
-| Seguimiento | Equipos | Ninguno |
-| Evaluación | Actividades, Equipos | Ninguno |
-| Historial | Ninguno en tiempo de diseño | Ninguno: es observador, no observado |
+| Módulo      | Depende de                  | Lo consumen                                                 |
+| :---------- | :-------------------------- | :---------------------------------------------------------- |
+| Cuentas     | —                           | Todos los demás, dentro y fuera del núcleo                  |
+| Actividades | Cuentas                     | Equipos, Seguimiento, Evaluación, Insignias, Administración |
+| Equipos     | Actividades                 | Seguimiento, Evaluación                                     |
+| Seguimiento | Equipos                     | Ninguno                                                     |
+| Evaluación  | Actividades, Equipos        | Ninguno                                                     |
+| Historial   | Ninguno en tiempo de diseño | Ninguno: es observador, no observado                        |
 
 **El historial es la excepción y no una más.** No consume a ningún módulo ni ningún módulo lo consume: su acoplamiento existe solo en tiempo de ejecución y en un único sentido, porque los servicios emiten eventos sin conocer al destinatario. Esa asimetría es lo que permite implementarlo primero, antes que las funcionalidades que va a observar, como exige 8.4 del general.
 
@@ -51,13 +51,13 @@ El general establece las fronteras entre módulos y la regla de que ninguno acce
 
 Cinco piezas del núcleo son prerrequisito del trabajo de Carlos y de Ui Chul. Mientras no existan, sus subsistemas no pueden avanzar más allá de su interfaz, y el retraso no lo absorbe el núcleo sino ellos. Por eso se implementan y se publican como contrato tipado antes que cualquier pantalla del núcleo, aunque no sean lo que más valor visible aporta en ese momento.
 
-| Consumidor | Qué necesita | Forma |
-| :---- | :---- | :---- |
-| Insignias | Membresías de una actividad con su rol y su estado | Endpoint de participantes de la actividad |
-| Insignias | Fase actual de la actividad, para restringir el otorgamiento al periodo de cierre | Campo de estado en el recurso de actividad |
-| Insignias | Registro del otorgamiento en el historial | Registrador de eventos de la capa de servicios (2.4) |
-| Administración | Listado de cuentas, activación, desactivación y restablecimiento de contraseña | Endpoints administrativos del módulo de Cuentas |
-| Administración | Que el panel no escriba sobre las tablas del núcleo | Los cuatro anteriores como única vía de acceso |
+| Consumidor     | Qué necesita                                                                      | Forma                                                |
+| :------------- | :-------------------------------------------------------------------------------- | :--------------------------------------------------- |
+| Insignias      | Membresías de una actividad con su rol y su estado                                | Endpoint de participantes de la actividad            |
+| Insignias      | Fase actual de la actividad, para restringir el otorgamiento al periodo de cierre | Campo de estado en el recurso de actividad           |
+| Insignias      | Registro del otorgamiento en el historial                                         | Registrador de eventos de la capa de servicios (2.4) |
+| Administración | Listado de cuentas, activación, desactivación y restablecimiento de contraseña    | Endpoints administrativos del módulo de Cuentas      |
+| Administración | Que el panel no escriba sobre las tablas del núcleo                               | Los cuatro anteriores como única vía de acceso       |
 
 **La única dependencia en sentido inverso.** El rango visible de un usuario se deriva del conteo de insignias otorgadas (4.5 del general), lo calcula el subsistema de recompensas y lo consume el módulo de Cuentas en la búsqueda de participantes al invitar. Es el único punto donde el núcleo depende de otro subsistema. Se acota de dos formas: Cuentas declara la interfaz que espera y trabaja contra una implementación vacía mientras Insignias no exista, y el filtro por rango es el primer elemento del orden de recorte de 9.6 del general. Si el subsistema de recompensas se retrasa, la invitación por nombre y por correo sigue funcionando y el núcleo no se detiene.
 
@@ -71,12 +71,12 @@ El general sitúa la matriz de permisos y la verificación de fase en la capa de
 
 Construir el contexto del actor no depende de la acción solicitada, es idéntico en todas las rutas de una actividad y conviene resolverlo una sola vez por petición. Decidir si una acción concreta procede depende de la acción, de la fase de la actividad y, en varios casos, de datos que solo el servicio ha leído. Lo primero es middleware; lo segundo, servicios.
 
-| Paso | Responsabilidad | Rechaza con |
-| :---- | :---- | :---- |
-| Correlación | Asigna un identificador a la petición para el registro técnico. No decide nada | — |
-| Sesión | Resuelve la cookie a un usuario y verifica que la cuenta esté activa | 401 |
-| Contexto de actividad | En toda ruta anidada bajo una actividad, carga la actividad y la membresía del actor, con sus permisos concretos si es co-organizador | 404 (3.3) |
-| Servicio de dominio | Verifica la fase y después el permiso, con la función de 2.2 | 409 / 403 |
+| Paso                  | Responsabilidad                                                                                                                       | Rechaza con |
+| :-------------------- | :------------------------------------------------------------------------------------------------------------------------------------ | :---------- |
+| Correlación           | Asigna un identificador a la petición para el registro técnico. No decide nada                                                        | —           |
+| Sesión                | Resuelve la cookie a un usuario y verifica que la cuenta esté activa                                                                  | 401         |
+| Contexto de actividad | En toda ruta anidada bajo una actividad, carga la actividad y la membresía del actor, con sus permisos concretos si es co-organizador | 404 (3.3)   |
+| Servicio de dominio   | Verifica la fase y después el permiso, con la función de 2.2                                                                          | 409 / 403   |
 
 El middleware no decide si la acción procede: deja sobre la petición un objeto de contexto con el usuario, su tipo de cuenta, la actividad y la membresía con su conjunto de permisos. Un actor sin membresía en una actividad no llega al servicio; la cadena se interrumpe antes, con la respuesta que 3.3 especifica.
 
@@ -146,28 +146,28 @@ La API es la frontera entre las dos aplicaciones del monorepo y, por tanto, entr
 
 ## **3.1 Convenciones**
 
-* **Prefijo y versión.** Todas las rutas cuelgan de /api. No se versiona en la ruta: existe un solo cliente y se despliega junto al servidor, de modo que el versionado sería infraestructura sin consumidor.
+- **Prefijo y versión.** Todas las rutas cuelgan de /api. No se versiona en la ruta: existe un solo cliente y se despliega junto al servidor, de modo que el versionado sería infraestructura sin consumidor.
 
-* **Nombres.** Recursos en plural y en español, consistente con la convención de 2.3 del general para entidades de dominio. El anidamiento no excede dos niveles: /actividades/{id}/equipos, y a partir de ahí el recurso se direcciona por su propio identificador, /equipos/{id}/elementos.
+- **Nombres.** Recursos en plural y en español, consistente con la convención de 2.3 del general para entidades de dominio. El anidamiento no excede dos niveles: /actividades/{id}/equipos, y a partir de ahí el recurso se direcciona por su propio identificador, /equipos/{id}/elementos.
 
-* **Verbos.** GET, POST, PATCH y DELETE. PATCH aplica actualizaciones parciales y PUT no se usa, porque ningún recurso del núcleo se reemplaza íntegro.
+- **Verbos.** GET, POST, PATCH y DELETE. PATCH aplica actualizaciones parciales y PUT no se usa, porque ningún recurso del núcleo se reemplaza íntegro.
 
-* **Las transiciones no son actualizaciones.** Avanzar de fase no se expresa como la escritura del campo de estado sino como una acción con nombre propio. Permitir escribir el estado por PATCH abriría una vía para saltarse la máquina de estados de 6.1, que es una de las reglas cubiertas por pruebas de contrato.
+- **Las transiciones no son actualizaciones.** Avanzar de fase no se expresa como la escritura del campo de estado sino como una acción con nombre propio. Permitir escribir el estado por PATCH abriría una vía para saltarse la máquina de estados de 6.1, que es una de las reglas cubiertas por pruebas de contrato.
 
 Códigos de respuesta y su significado en este sistema:
 
-| Código | Cuándo |
-| :---- | :---- |
-| 200 | Lectura, o escritura que devuelve el recurso resultante |
-| 201 | Creación, con la ubicación del recurso creado |
-| 204 | Escritura que no devuelve cuerpo |
-| 400 | La petición está mal formada |
-| 401 | No hay sesión, o venció |
-| 403 | El actor es miembro de la actividad y su rol no permite la acción |
-| 404 | El recurso no existe, o el actor no puede saber que existe (3.3) |
-| 409 | La fase de la actividad no habilita la acción, o se viola una restricción de unicidad |
-| 422 | La petición está bien formada pero incumple una regla de dominio |
-| 429 | Se excedió el límite de intentos (3.3) |
+| Código | Cuándo                                                                                |
+| :----- | :------------------------------------------------------------------------------------ |
+| 200    | Lectura, o escritura que devuelve el recurso resultante                               |
+| 201    | Creación, con la ubicación del recurso creado                                         |
+| 204    | Escritura que no devuelve cuerpo                                                      |
+| 400    | La petición está mal formada                                                          |
+| 401    | No hay sesión, o venció                                                               |
+| 403    | El actor es miembro de la actividad y su rol no permite la acción                     |
+| 404    | El recurso no existe, o el actor no puede saber que existe (3.3)                      |
+| 409    | La fase de la actividad no habilita la acción, o se viola una restricción de unicidad |
+| 422    | La petición está bien formada pero incumple una regla de dominio                      |
+| 429    | Se excedió el límite de intentos (3.3)                                                |
 
 **Forma del error.** Un objeto único con un código estable legible por máquina, un mensaje en español dirigido a la persona y, cuando el fallo es de validación, el detalle por campo. El cliente decide qué mostrar a partir del código y nunca a partir del texto del mensaje, de modo que reescribir un mensaje no rompa el comportamiento de la interfaz.
 
@@ -181,19 +181,19 @@ Códigos de respuesta y su significado en este sistema:
 
 El mecanismo concreto:
 
-* La cookie es httpOnly, Secure y con política de mismo sitio. Al no ser accesible desde JavaScript, queda descartada la clase de robo de sesión por script inyectado.
+- La cookie es httpOnly, Secure y con política de mismo sitio. Al no ser accesible desde JavaScript, queda descartada la clase de robo de sesión por script inyectado.
 
-* El identificador de sesión se rota al iniciar sesión, de modo que un identificador obtenido antes de la autenticación no quede asociado a la cuenta.
+- El identificador de sesión se rota al iniciar sesión, de modo que un identificador obtenido antes de la autenticación no quede asociado a la cuenta.
 
-* La sesión tiene vencimiento por inactividad y vencimiento absoluto. Los valores concretos son P-22.
+- La sesión tiene vencimiento por inactividad y vencimiento absoluto. Los valores concretos son P-22.
 
-* Cerrar sesión elimina el registro en el servidor, no solo la cookie del navegador.
+- Cerrar sesión elimina el registro en el servidor, no solo la cookie del navegador.
 
-* Al desactivar una cuenta se eliminan además sus sesiones activas. Sin ese paso, la regla de 7.4 se cumpliría solo a partir del siguiente inicio de sesión, que es exactamente lo que la decisión anterior buscaba evitar.
+- Al desactivar una cuenta se eliminan además sus sesiones activas. Sin ese paso, la regla de 7.4 se cumpliría solo a partir del siguiente inicio de sesión, que es exactamente lo que la decisión anterior buscaba evitar.
 
-* Cambiar la contraseña, sea desde el perfil o mediante un enlace de recuperación, elimina las demás sesiones activas del usuario. Es el mismo argumento de revocación que motivó la decisión anterior.
+- Cambiar la contraseña, sea desde el perfil o mediante un enlace de recuperación, elimina las demás sesiones activas del usuario. Es el mismo argumento de revocación que motivó la decisión anterior.
 
-* El cliente y la API se sirven bajo el mismo origen en producción, mediante proxy inverso. Es lo que permite una política de mismo sitio estricta en la cookie y elimina la necesidad de peticiones entre orígenes con credenciales.
+- El cliente y la API se sirven bajo el mismo origen en producción, mediante proxy inverso. Es lo que permite una política de mismo sitio estricta en la cookie y elimina la necesidad de peticiones entre orígenes con credenciales.
 
 **Contraseñas.** Se almacena una derivación irreversible con función de costo configurable, no la contraseña ni una forma recuperable de ella, conforme al diccionario de 5.1 del general. El cifrado, que es reversible por definición, no sirve para este propósito: el sistema nunca necesita recuperar la contraseña, solo comprobar que coincide.
 
@@ -203,12 +203,12 @@ El mecanismo concreto:
 
 El general establece que quien no es miembro de una actividad no tiene ningún acceso a ella, sea cual sea su rol en otras (7.3). La forma de la respuesta decide si esa regla se cumple de verdad: responder 403 a un no miembro confirma que la actividad existe, y con ello permite a cualquiera con una sesión recorrer identificadores y averiguar cuántas actividades hay en la plataforma y cuáles corresponden a qué identificador.
 
-| Situación | Respuesta | Motivo |
-| :---- | :---- | :---- |
-| El actor no es miembro de la actividad | 404 | No debe poder distinguir entre que no existe y que no es suya |
-| El actor es miembro y su rol no permite la acción | 403 | Ya sabe que la actividad existe; ocultarlo no protege nada y empeora el mensaje |
-| El actor es miembro y la fase no habilita la acción | 409 | Es una condición temporal y no un problema de permisos; el mensaje puede decir en qué fase será posible |
-| La clave de ingreso no corresponde a ninguna actividad | 404 | Con límite de intentos, para que la clave no sea adivinable por repetición |
+| Situación                                              | Respuesta | Motivo                                                                                                  |
+| :----------------------------------------------------- | :-------- | :------------------------------------------------------------------------------------------------------ |
+| El actor no es miembro de la actividad                 | 404       | No debe poder distinguir entre que no existe y que no es suya                                           |
+| El actor es miembro y su rol no permite la acción      | 403       | Ya sabe que la actividad existe; ocultarlo no protege nada y empeora el mensaje                         |
+| El actor es miembro y la fase no habilita la acción    | 409       | Es una condición temporal y no un problema de permisos; el mensaje puede decir en qué fase será posible |
+| La clave de ingreso no corresponde a ninguna actividad | 404       | Con límite de intentos, para que la clave no sea adivinable por repetición                              |
 
 **La excepción del flujo de unión.** Unirse por clave obliga a confirmar la existencia de una actividad ante alguien que todavía no es miembro. Ese endpoint se direcciona por la clave y no por el identificador, de modo que no ofrece un espacio enumerable: la clave es una cadena generada y no un consecutivo. Aun así es el único punto de la API en que un tercero obtiene información de una actividad ajena, por lo que devuelve únicamente lo mínimo para decidir si unirse, que es el nombre de la actividad, su objetivo y el nombre de quien la organiza, y está sujeto a límite de intentos por sesión y por origen.
 
@@ -228,10 +228,10 @@ El general fija la organización por features, el flujo unidireccional de datos 
 
 El árbol tiene tres zonas: la pública, accesible sin sesión; la privada general, que exige sesión; y el contexto de actividad, que además exige membresía.
 
-| Zona | Rutas | Exige |
-| :---- | :---- | :---- |
-| Pública | Inicio, contenido formativo, ingreso y registro | Nada |
-| Privada general | Mis actividades, crear actividad, perfil | Sesión |
+| Zona                  | Rutas                                                                                               | Exige                     |
+| :-------------------- | :-------------------------------------------------------------------------------------------------- | :------------------------ |
+| Pública               | Inicio, contenido formativo, ingreso y registro                                                     | Nada                      |
+| Privada general       | Mis actividades, crear actividad, perfil                                                            | Sesión                    |
 | Contexto de actividad | Resumen, configuración, participantes, equipos, espacio de equipo, bitácora, evaluación e historial | Sesión y membresía activa |
 
 La ruta de contexto de actividad carga la actividad junto con el conjunto de capacidades del actor (4.3) y lo pone a disposición de todas sus rutas hijas. Ninguna pantalla vuelve a pedir esa información, y ninguna decide por su cuenta qué puede hacer el usuario.
@@ -242,24 +242,24 @@ La ruta de contexto de actividad carga la actividad junto con el conjunto de cap
 
 La clave de cada query reproduce la ruta del recurso, de modo que la jerarquía de claves y la de la API coincidan y la invalidación por prefijo tenga un significado predecible, como pide 3.5 del general.
 
-| Dato | Clave |
-| :---- | :---- |
-| Actividades del usuario | \['actividades'\] |
-| Una actividad con sus capacidades | \['actividades', id\] |
-| Participantes de una actividad | \['actividades', id, 'participantes'\] |
-| Equipos de una actividad | \['actividades', id, 'equipos'\] |
-| Un equipo con su espacio de trabajo | \['equipos', idEquipo\] |
-| Historial de una actividad | \['actividades', id, 'historial', filtros\] |
+| Dato                                | Clave                                       |
+| :---------------------------------- | :------------------------------------------ |
+| Actividades del usuario             | \['actividades'\]                           |
+| Una actividad con sus capacidades   | \['actividades', id\]                       |
+| Participantes de una actividad      | \['actividades', id, 'participantes'\]      |
+| Equipos de una actividad            | \['actividades', id, 'equipos'\]            |
+| Un equipo con su espacio de trabajo | \['equipos', idEquipo\]                     |
+| Historial de una actividad          | \['actividades', id, 'historial', filtros\] |
 
 **Regla de invalidación.** Toda mutación invalida el prefijo más corto que contenga el dato modificado. Los casos que no son evidentes:
 
-| Mutación | Invalida |
-| :---- | :---- |
-| Asignar o mover un participante de equipo | Los equipos y los participantes de la actividad, más el equipo de origen y el de destino |
-| Avanzar de fase | La actividad completa, porque el cambio de fase modifica el conjunto de capacidades y con él lo que la interfaz debe mostrar |
-| Cambiar la configuración de una función | La actividad completa, por la misma razón |
-| Escribir en el espacio de un equipo | Ese equipo |
-| Cualquier mutación registrable | Además, el historial de la actividad |
+| Mutación                                  | Invalida                                                                                                                     |
+| :---------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------- |
+| Asignar o mover un participante de equipo | Los equipos y los participantes de la actividad, más el equipo de origen y el de destino                                     |
+| Avanzar de fase                           | La actividad completa, porque el cambio de fase modifica el conjunto de capacidades y con él lo que la interfaz debe mostrar |
+| Cambiar la configuración de una función   | La actividad completa, por la misma razón                                                                                    |
+| Escribir en el espacio de un equipo       | Ese equipo                                                                                                                   |
+| Cualquier mutación registrable            | Además, el historial de la actividad                                                                                         |
 
 La última fila no implica una petición adicional por cada escritura: una query invalidada que no está montada queda marcada como obsoleta y se vuelve a pedir cuando la pantalla del historial se abre, no antes.
 
@@ -297,38 +297,38 @@ El general fija el propósito del historial, sus tres categorías, el esquema de
 
 El mecanismo de captura es el descrito en 2.4 y no se repite aquí. Lo que corresponde fijar es el contenido del campo de datos, que según 5.5 del general debe bastar para entender el evento sin consultar la entidad afectada, requisito que existe porque la entidad puede haber desaparecido.
 
-| Tipo de operación | Qué conserva el campo de datos |
-| :---- | :---- |
-| Creación | Identificación legible de lo creado: nombre del equipo, tipo y primeras líneas del elemento |
-| Modificación | Valor anterior y valor nuevo del campo modificado, no el registro completo |
-| Eliminación | Contenido íntegro de lo eliminado, que es el único lugar donde sobrevive |
-| Transición de fase | Fase de origen, fase de destino y si la disparó una persona o el vencimiento de una fecha |
-| Cambio de configuración | Función afectada, estado anterior y estado nuevo |
+| Tipo de operación       | Qué conserva el campo de datos                                                              |
+| :---------------------- | :------------------------------------------------------------------------------------------ |
+| Creación                | Identificación legible de lo creado: nombre del equipo, tipo y primeras líneas del elemento |
+| Modificación            | Valor anterior y valor nuevo del campo modificado, no el registro completo                  |
+| Eliminación             | Contenido íntegro de lo eliminado, que es el único lugar donde sobrevive                    |
+| Transición de fase      | Fase de origen, fase de destino y si la disparó una persona o el vencimiento de una fecha   |
+| Cambio de configuración | Función afectada, estado anterior y estado nuevo                                            |
 
 ## **5.2 Catálogo de tipos de evento**
 
 La categoría, y no el tipo, determina la visibilidad del evento (8.1 del general). Por eso el catálogo se declara con ambas columnas juntas: un tipo nuevo sin categoría asignada sería invisible para todos o visible de más, y ninguna de las dos cosas se detecta al probar la aplicación a mano.
 
-| Categoría | Tipos de evento | Módulo |
-| :---- | :---- | :---- |
-| Aportación | Elemento del espacio de equipo creado, modificado o eliminado | Seguimiento |
-| Aportación | Reporte de trabajo creado, modificado o eliminado | Seguimiento |
-| Aportación | Entrada de bitácora creada, modificada o eliminada | Seguimiento |
-| Aportación | Instrumento respondido: autoevaluación individual, autoevaluación grupal o evaluación por pares | Evaluación |
-| Estructura | Actividad creada | Actividades |
-| Estructura | Fase avanzada, con actor de tipo persona o de tipo sistema | Actividades |
-| Estructura | Configuración de una función modificada | Actividades |
-| Estructura | Invitación enviada, aceptada o rechazada | Actividades |
-| Estructura | Participante incorporado por clave de ingreso | Actividades |
-| Estructura | Participante desactivado de la actividad | Actividades |
-| Estructura | Co-organizador agregado, retirado, o sus permisos modificados | Actividades |
-| Estructura | Equipo creado o renombrado | Equipos |
-| Estructura | Participante asignado a un equipo o reasignado entre equipos | Equipos |
-| Estructura | Reparto automático de participantes sin equipo ejecutado, con actor de tipo sistema | Equipos |
-| Evaluación | Calificación asignada o modificada | Evaluación |
-| Evaluación | Comentario dirigido a un equipo escrito | Evaluación |
-| Evaluación | Comentario individual escrito | Evaluación |
-| Evaluación | Insignia otorgada | Insignias |
+| Categoría  | Tipos de evento                                                                                 | Módulo      |
+| :--------- | :---------------------------------------------------------------------------------------------- | :---------- |
+| Aportación | Elemento del espacio de equipo creado, modificado o eliminado                                   | Seguimiento |
+| Aportación | Reporte de trabajo creado, modificado o eliminado                                               | Seguimiento |
+| Aportación | Entrada de bitácora creada, modificada o eliminada                                              | Seguimiento |
+| Aportación | Instrumento respondido: autoevaluación individual, autoevaluación grupal o evaluación por pares | Evaluación  |
+| Estructura | Actividad creada                                                                                | Actividades |
+| Estructura | Fase avanzada, con actor de tipo persona o de tipo sistema                                      | Actividades |
+| Estructura | Configuración de una función modificada                                                         | Actividades |
+| Estructura | Invitación enviada, aceptada o rechazada                                                        | Actividades |
+| Estructura | Participante incorporado por clave de ingreso                                                   | Actividades |
+| Estructura | Participante desactivado de la actividad                                                        | Actividades |
+| Estructura | Co-organizador agregado, retirado, o sus permisos modificados                                   | Actividades |
+| Estructura | Equipo creado o renombrado                                                                      | Equipos     |
+| Estructura | Participante asignado a un equipo o reasignado entre equipos                                    | Equipos     |
+| Estructura | Reparto automático de participantes sin equipo ejecutado, con actor de tipo sistema             | Equipos     |
+| Evaluación | Calificación asignada o modificada                                                              | Evaluación  |
+| Evaluación | Comentario dirigido a un equipo escrito                                                         | Evaluación  |
+| Evaluación | Comentario individual escrito                                                                   | Evaluación  |
+| Evaluación | Insignia otorgada                                                                               | Insignias   |
 
 **Los cambios de configuración se registran todos.** No solo los que retiran a los participantes algo que ya estaban usando, conforme a la categoría de estructura de 8.1 del general. Registrar también las habilitaciones cuesta lo mismo y hace legible cómo evolucionó la actividad. Al quedar en la categoría de estructura, el cambio es visible para los participantes y no solo para quien organiza, lo que es coherente con que la configuración determina lo que cada uno puede hacer.
 
@@ -348,17 +348,17 @@ El valor de la ventana es P-23.
 
 La enumeración es exhaustiva y coincide con el catálogo de operaciones exentas de 2.4, que es lo que permite que la comprobación de aquella sección sea una regla y no una excepción negociable caso por caso.
 
-* Lecturas de cualquier tipo, conforme a 8.1 del general. Nadie queda registrado por consultar.
+- Lecturas de cualquier tipo, conforme a 8.1 del general. Nadie queda registrado por consultar.
 
-* Navegación, filtros y ordenamientos aplicados a una consulta.
+- Navegación, filtros y ordenamientos aplicados a una consulta.
 
-* Intentos fallidos por falta de permiso o por fase. No constituyen aportación ni cambio, y su lugar es el registro técnico del servidor.
+- Intentos fallidos por falta de permiso o por fase. No constituyen aportación ni cambio, y su lugar es el registro técnico del servidor.
 
-* Inicio y cierre de sesión, y registro de cuenta: ocurren fuera de toda actividad y el objeto del historial es la participación dentro de una.
+- Inicio y cierre de sesión, y registro de cuenta: ocurren fuera de toda actividad y el objeto del historial es la participación dentro de una.
 
-* Edición del perfil propio, por la misma razón.
+- Edición del perfil propio, por la misma razón.
 
-* Las acciones del administrador sobre cuentas, recursos formativos y catálogo de insignias, que 8.4 del general excluye expresamente.
+- Las acciones del administrador sobre cuentas, recursos formativos y catálogo de insignias, que 8.4 del general excluye expresamente.
 
 La lista se revisa cada vez que se agrega una operación de escritura al núcleo, y crecer no es su comportamiento esperado: la mayoría de las operaciones nuevas registran.
 
@@ -410,14 +410,14 @@ A eso se añade el costo de operación. Cada olvido se convierte en una solicitu
 
 **La entidad que sostiene ambos flujos.** La verificación y la recuperación necesitan lo mismo: un valor de un solo uso, con vencimiento, asociado a una persona. Se modelan como una sola relación con un atributo de tipo, en lugar de dos relaciones paralelas, siguiendo el mismo criterio que el general aplica a la configuración de funciones y a los instrumentos de evaluación (4.2). Dos relaciones duplicarían la lógica de vencimiento y de uso único sin aportar ninguna diferencia semántica.
 
-| Atributo | Descripción |
-| :---- | :---- |
-| id\_token | Llave primaria |
-| id\_usuario | Llave foránea a la persona a la que pertenece |
-| tipo | Verificación o recuperación |
-| hash\_token | Derivación irreversible del valor enviado. No se guarda el valor: quien lea la base de datos no debe poder usar un enlace ajeno, por la misma razón que con las contraseñas (3.2) |
-| fecha\_vencimiento | Veinticuatro horas para la verificación, una hora para la recuperación |
-| fecha\_uso | Nula mientras no se haya usado. Un token usado no vuelve a servir |
+| Atributo           | Descripción                                                                                                                                                                       |
+| :----------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| id\_token          | Llave primaria                                                                                                                                                                    |
+| id\_usuario        | Llave foránea a la persona a la que pertenece                                                                                                                                     |
+| tipo               | Verificación o recuperación                                                                                                                                                       |
+| hash\_token        | Derivación irreversible del valor enviado. No se guarda el valor: quien lea la base de datos no debe poder usar un enlace ajeno, por la misma razón que con las contraseñas (3.2) |
+| fecha\_vencimiento | Veinticuatro horas para la verificación, una hora para la recuperación                                                                                                            |
+| fecha\_uso         | Nula mientras no se haya usado. Un token usado no vuelve a servir                                                                                                                 |
 
 La relación está definida en 4.4 del general y descrita atributo por atributo en su sección 5; la tabla anterior la reproduce por comodidad de lectura, no como definición. Existe a lo más un token vigente por persona y tipo: emitir uno nuevo invalida el anterior. Usar un token de recuperación cierra además todas las sesiones activas de esa cuenta, por el argumento de revocación de 3.2.
 
@@ -447,37 +447,37 @@ La propuesta por defecto de P-11 limita la búsqueda al flujo de invitación y a
 
 ## **6.5 Endpoints**
 
-| Método y ruta | Quién | Qué hace |
-| :---- | :---- | :---- |
-| POST /api/usuarios | Público | Registra una cuenta |
-| POST /api/sesion | Público | Inicia sesión y emite la cookie |
-| DELETE /api/sesion | Usuario | Cierra la sesión y elimina el registro en servidor |
-| GET /api/sesion | Usuario | Devuelve el actor actual y su tipo de cuenta |
-| GET /api/usuarios/yo | Usuario | Perfil propio completo |
-| PATCH /api/usuarios/yo | Usuario | Edita nombre y apellidos, o cambia la contraseña |
-| GET /api/usuarios/{id} | Usuario | Perfil básico de otro: nombre y rangos |
-| GET /api/actividades/{id}/candidatos | Organizador | Busca usuarios para invitar (6.4) |
-| POST /api/verificaciones/{token} | Público | Confirma la dirección de correo |
-| POST /api/verificaciones | Usuario | Reenvía el enlace de verificación |
-| POST /api/recuperaciones | Público | Solicita restablecer la contraseña. Respuesta indistinta |
-| POST /api/recuperaciones/{token} | Público | Fija la nueva contraseña y cierra las sesiones |
-| GET /api/admin/usuarios | Administrador | Lista de cuentas con su estado |
-| PATCH /api/admin/usuarios/{id} | Administrador | Activa o desactiva la cuenta; al desactivar elimina sus sesiones |
-| POST /api/admin/usuarios/{id}/contrasena | Administrador | Restablece la contraseña |
+| Método y ruta                            | Quién         | Qué hace                                                         |
+| :--------------------------------------- | :------------ | :--------------------------------------------------------------- |
+| POST /api/usuarios                       | Público       | Registra una cuenta                                              |
+| POST /api/sesion                         | Público       | Inicia sesión y emite la cookie                                  |
+| DELETE /api/sesion                       | Usuario       | Cierra la sesión y elimina el registro en servidor               |
+| GET /api/sesion                          | Usuario       | Devuelve el actor actual y su tipo de cuenta                     |
+| GET /api/usuarios/yo                     | Usuario       | Perfil propio completo                                           |
+| PATCH /api/usuarios/yo                   | Usuario       | Edita nombre y apellidos, o cambia la contraseña                 |
+| GET /api/usuarios/{id}                   | Usuario       | Perfil básico de otro: nombre y rangos                           |
+| GET /api/actividades/{id}/candidatos     | Organizador   | Busca usuarios para invitar (6.4)                                |
+| POST /api/verificaciones/{token}         | Público       | Confirma la dirección de correo                                  |
+| POST /api/verificaciones                 | Usuario       | Reenvía el enlace de verificación                                |
+| POST /api/recuperaciones                 | Público       | Solicita restablecer la contraseña. Respuesta indistinta         |
+| POST /api/recuperaciones/{token}         | Público       | Fija la nueva contraseña y cierra las sesiones                   |
+| GET /api/admin/usuarios                  | Administrador | Lista de cuentas con su estado                                   |
+| PATCH /api/admin/usuarios/{id}           | Administrador | Activa o desactiva la cuenta; al desactivar elimina sus sesiones |
+| POST /api/admin/usuarios/{id}/contrasena | Administrador | Restablece la contraseña                                         |
 
 Los tres últimos son la superficie que consume el panel de administración (1.3). Los expone este módulo porque el estado de la cuenta es dominio del núcleo y el panel no escribe sobre sus tablas (3.4 del general).
 
 ## **6.6 Pantallas**
 
-| Pantalla | Contenido |
-| :---- | :---- |
-| Registro | Formulario con validación compartida (4.4). Al completarse, sesión iniciada y destino en mis actividades |
-| Ingreso | Correo y contraseña. Un solo mensaje de error para credenciales incorrectas (3.2) |
-| Mi perfil | Datos editables, cambio de contraseña y rangos propios. Si la dirección no está verificada, aviso con la acción de reenviar |
-| Verificar correo | Destino del enlace. Confirma, o explica que el token venció y ofrece reenviarlo |
-| Recuperar contraseña | Campo de correo y confirmación de que el mensaje se envió, sin decir si la dirección existe |
-| Nueva contraseña | Destino del enlace de recuperación. Al completarse, sesión iniciada y el resto cerradas |
-| Perfil de otro usuario | Se abre desde la lista de participantes o desde la búsqueda al invitar. Nombre y rangos |
+| Pantalla               | Contenido                                                                                                                   |
+| :--------------------- | :-------------------------------------------------------------------------------------------------------------------------- |
+| Registro               | Formulario con validación compartida (4.4). Al completarse, sesión iniciada y destino en mis actividades                    |
+| Ingreso                | Correo y contraseña. Un solo mensaje de error para credenciales incorrectas (3.2)                                           |
+| Mi perfil              | Datos editables, cambio de contraseña y rangos propios. Si la dirección no está verificada, aviso con la acción de reenviar |
+| Verificar correo       | Destino del enlace. Confirma, o explica que el token venció y ofrece reenviarlo                                             |
+| Recuperar contraseña   | Campo de correo y confirmación de que el mensaje se envió, sin decir si la dirección existe                                 |
+| Nueva contraseña       | Destino del enlace de recuperación. Al completarse, sesión iniciada y el resto cerradas                                     |
+| Perfil de otro usuario | Se abre desde la lista de participantes o desde la búsqueda al invitar. Nombre y rangos                                     |
 
 ## **6.7 Pregunta abierta de este módulo**
 
@@ -519,12 +519,12 @@ La clave se genera al abrir la inscripción y no antes, consistente con el dicci
 
 El general encarga a este documento la máquina de estados de la invitación (6.4). Los cuatro estados son los que ahí se enumeran.
 
-| Transición | Disparador | Efecto |
-| :---- | :---- | :---- |
-| Enviada | Quien organiza selecciona a un usuario de la búsqueda de 6.4 | Se crea la invitación y se avisa por correo al destinatario (6.1) |
-| Enviada → aceptada | Acción del destinatario | Crea la membresía como participante, en la misma transacción |
-| Enviada → rechazada | Acción del destinatario | La invitación se cierra. Puede emitirse otra después |
-| Enviada → caducada | La actividad entra en periodo de cierre | Deja de poder aceptarse |
+| Transición          | Disparador                                                   | Efecto                                                            |
+| :------------------ | :----------------------------------------------------------- | :---------------------------------------------------------------- |
+| Enviada             | Quien organiza selecciona a un usuario de la búsqueda de 6.4 | Se crea la invitación y se avisa por correo al destinatario (6.1) |
+| Enviada → aceptada  | Acción del destinatario                                      | Crea la membresía como participante, en la misma transacción      |
+| Enviada → rechazada | Acción del destinatario                                      | La invitación se cierra. Puede emitirse otra después              |
+| Enviada → caducada  | La actividad entra en periodo de cierre                      | Deja de poder aceptarse                                           |
 
 **Por qué caduca en el cierre y no antes.** Cerrar la inscripción no invalida las invitaciones pendientes, porque 6.1 del general admite la incorporación tardía por invitación individual durante el desarrollo. Es precisamente el mecanismo previsto para quien llegó tarde, y anular las invitaciones al cerrar la inscripción lo desactivaría. El límite natural es el inicio del cierre, cuando la actividad deja de admitir trabajo nuevo.
 
@@ -536,24 +536,24 @@ El general encarga a este documento la máquina de estados de la invitación (6.
 
 El general fija la secuencia de fases y las reglas que ningún subsistema puede romper, y remite aquí las condiciones concretas y los casos límite (6.1). Cada transición se dispara por acción de quien tiene el permiso o por vencimiento de una fecha, cuando la configuración la define.
 
-| Transición | Disparador | Precondición | Efecto |
-| :---- | :---- | :---- | :---- |
-| Configuración → Inscripción | Acción de quien organiza | Nombre y objetivo definidos | Genera la clave de ingreso |
-| Inscripción → Formación | Acción, o vencimiento de la fecha límite de inscripción | Al menos un participante | La clave deja de admitir uniones |
-| Formación → Desarrollo | Automática en modo autogestionado cuando nadie queda sin equipo; acción en los otros dos modos | Al menos un equipo | Reparto automático de quienes quedaron sin equipo (8.3), como evento del sistema |
-| Desarrollo → Cierre | Acción, o llegada de la fecha de término | Ninguna | Cierra las aportaciones; abre calificación, evaluaciones e insignias; caducan las invitaciones pendientes |
-| Cierre → Archivada | Acción, o vencimiento del plazo de cierre | Ninguna | Solo lectura para todos, sin excepción de rol |
+| Transición                  | Disparador                                                                                     | Precondición                | Efecto                                                                                                    |
+| :-------------------------- | :--------------------------------------------------------------------------------------------- | :-------------------------- | :-------------------------------------------------------------------------------------------------------- |
+| Configuración → Inscripción | Acción de quien organiza                                                                       | Nombre y objetivo definidos | Genera la clave de ingreso                                                                                |
+| Inscripción → Formación     | Acción, o vencimiento de la fecha límite de inscripción                                        | Al menos un participante    | La clave deja de admitir uniones                                                                          |
+| Formación → Desarrollo      | Automática en modo autogestionado cuando nadie queda sin equipo; acción en los otros dos modos | Al menos un equipo          | Reparto automático de quienes quedaron sin equipo (8.3), como evento del sistema                          |
+| Desarrollo → Cierre         | Acción, o llegada de la fecha de término                                                       | Ninguna                     | Cierra las aportaciones; abre calificación, evaluaciones e insignias; caducan las invitaciones pendientes |
+| Cierre → Archivada          | Acción, o vencimiento del plazo de cierre                                                      | Ninguna                     | Solo lectura para todos, sin excepción de rol                                                             |
 
 Los casos límite son los que deciden si la máquina de estados se comporta de forma previsible cuando la configuración y el uso no coinciden. Ninguno de los siguientes está resuelto por el general y todos ocurren con facilidad.
 
-| Situación | Comportamiento |
-| :---- | :---- |
-| La fecha límite de inscripción vence sin ningún participante | La transición no ocurre: la actividad permanece en inscripción y se avisa a quien organiza. Avanzar produciría una actividad sin nadie y sin vuelta atrás |
-| La fecha límite de inscripción vence mientras la actividad sigue en configuración | No dispara nada. Una transición automática solo se evalúa desde su fase de origen |
-| Quien organiza avanza de fase antes de que llegue la fecha | La fecha queda sin efecto. Las fases no retroceden y una transición no se ejecuta dos veces |
-| Se cierra la formación sin ningún equipo creado, en modo manual | Se impide la transición y se explica. Sin equipos, el reparto automático no tiene destino |
-| La actividad tiene un solo participante | Se permite. Forma un equipo de una persona; la evaluación por pares queda sin destinatarios y se marca como no aplicable en lugar de como pendiente |
-| Edición de fechas en fases posteriores | La fecha de término es editable durante el desarrollo. La fecha límite de inscripción deja de ser editable una vez cerrada la inscripción, porque ya no puede disparar nada |
+| Situación                                                                         | Comportamiento                                                                                                                                                              |
+| :-------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| La fecha límite de inscripción vence sin ningún participante                      | La transición no ocurre: la actividad permanece en inscripción y se avisa a quien organiza. Avanzar produciría una actividad sin nadie y sin vuelta atrás                   |
+| La fecha límite de inscripción vence mientras la actividad sigue en configuración | No dispara nada. Una transición automática solo se evalúa desde su fase de origen                                                                                           |
+| Quien organiza avanza de fase antes de que llegue la fecha                        | La fecha queda sin efecto. Las fases no retroceden y una transición no se ejecuta dos veces                                                                                 |
+| Se cierra la formación sin ningún equipo creado, en modo manual                   | Se impide la transición y se explica. Sin equipos, el reparto automático no tiene destino                                                                                   |
+| La actividad tiene un solo participante                                           | Se permite. Forma un equipo de una persona; la evaluación por pares queda sin destinatarios y se marca como no aplicable en lugar de como pendiente                         |
+| Edición de fechas en fases posteriores                                            | La fecha de término es editable durante el desarrollo. La fecha límite de inscripción deja de ser editable una vez cerrada la inscripción, porque ya no puede disparar nada |
 
 ## **7.5 Ejecución de las transiciones automáticas**
 
@@ -573,41 +573,41 @@ La modificación del conjunto de permisos de un co-organizador se registra en el
 
 ## **7.7 Endpoints**
 
-| Método y ruta | Quién | Qué hace |
-| :---- | :---- | :---- |
-| POST /api/actividades | Usuario | Crea la actividad y su membresía de organizador |
-| GET /api/actividades | Usuario | Actividades donde tiene membresía, con su rol en cada una |
-| GET /api/actividades/{id} | Miembro | Actividad, configuración y capacidades del actor (4.3) |
-| PATCH /api/actividades/{id} | Organizador | Edita objetivo, fechas y demás datos |
-| PUT /api/actividades/{id}/configuracion/{funcion} | Organizador | Fija el estado de una función |
-| POST /api/actividades/{id}/inscripcion | Organizador | Abre la inscripción y genera la clave |
-| POST /api/actividades/{id}/inscripcion/cierre | Organizador | Cierra la inscripción y pasa a formación |
-| POST /api/actividades/{id}/formacion/cierre | Organizador | Cierra la formación, con reparto automático |
-| POST /api/actividades/{id}/cierre | Organizador | Inicia el periodo de cierre |
-| POST /api/actividades/{id}/archivo | Organizador | Da la actividad por finalizada |
-| GET /api/claves/{clave} | Usuario | Vista previa mínima de la actividad (3.3) |
-| POST /api/claves/{clave}/union | Usuario | Se une como participante |
-| GET /api/actividades/{id}/participantes | Miembro | Membresías con rol y estado |
-| POST /api/actividades/{id}/invitaciones | Organizador | Emite una invitación |
-| GET /api/invitaciones | Usuario | Invitaciones pendientes dirigidas al actor |
-| POST /api/invitaciones/{id}/respuesta | Destinatario | Acepta o rechaza |
-| PUT /api/actividades/{id}/coorganizadores/{idUsuario} | Organizador | Agrega o promueve, con sus permisos |
-| DELETE /api/actividades/{id}/coorganizadores/{idUsuario} | Organizador | Retira el rol, con el destino elegido (7.6) |
-| PATCH /api/actividades/{id}/participantes/{idMembresia} | Organizador | Desactiva o reactiva la membresía |
+| Método y ruta                                            | Quién        | Qué hace                                                  |
+| :------------------------------------------------------- | :----------- | :-------------------------------------------------------- |
+| POST /api/actividades                                    | Usuario      | Crea la actividad y su membresía de organizador           |
+| GET /api/actividades                                     | Usuario      | Actividades donde tiene membresía, con su rol en cada una |
+| GET /api/actividades/{id}                                | Miembro      | Actividad, configuración y capacidades del actor (4.3)    |
+| PATCH /api/actividades/{id}                              | Organizador  | Edita objetivo, fechas y demás datos                      |
+| PUT /api/actividades/{id}/configuracion/{funcion}        | Organizador  | Fija el estado de una función                             |
+| POST /api/actividades/{id}/inscripcion                   | Organizador  | Abre la inscripción y genera la clave                     |
+| POST /api/actividades/{id}/inscripcion/cierre            | Organizador  | Cierra la inscripción y pasa a formación                  |
+| POST /api/actividades/{id}/formacion/cierre              | Organizador  | Cierra la formación, con reparto automático               |
+| POST /api/actividades/{id}/cierre                        | Organizador  | Inicia el periodo de cierre                               |
+| POST /api/actividades/{id}/archivo                       | Organizador  | Da la actividad por finalizada                            |
+| GET /api/claves/{clave}                                  | Usuario      | Vista previa mínima de la actividad (3.3)                 |
+| POST /api/claves/{clave}/union                           | Usuario      | Se une como participante                                  |
+| GET /api/actividades/{id}/participantes                  | Miembro      | Membresías con rol y estado                               |
+| POST /api/actividades/{id}/invitaciones                  | Organizador  | Emite una invitación                                      |
+| GET /api/invitaciones                                    | Usuario      | Invitaciones pendientes dirigidas al actor                |
+| POST /api/invitaciones/{id}/respuesta                    | Destinatario | Acepta o rechaza                                          |
+| PUT /api/actividades/{id}/coorganizadores/{idUsuario}    | Organizador  | Agrega o promueve, con sus permisos                       |
+| DELETE /api/actividades/{id}/coorganizadores/{idUsuario} | Organizador  | Retira el rol, con el destino elegido (7.6)               |
+| PATCH /api/actividades/{id}/participantes/{idMembresia}  | Organizador  | Desactiva o reactiva la membresía                         |
 
 La única excepción a la regla de anidamiento de 3.1 son las dos rutas de clave, que no cuelgan de la actividad porque quien las llama todavía no es miembro y no debe poder direccionarla por identificador (3.3).
 
 ## **7.8 Pantallas**
 
-| Pantalla | Contenido |
-| :---- | :---- |
-| Mis actividades | Actividades del usuario agrupadas por rol y por fase, con las invitaciones pendientes arriba |
-| Crear actividad | Nombre y objetivo, y el resto plegado como opcional |
+| Pantalla                | Contenido                                                                                                              |
+| :---------------------- | :--------------------------------------------------------------------------------------------------------------------- |
+| Mis actividades         | Actividades del usuario agrupadas por rol y por fase, con las invitaciones pendientes arriba                           |
+| Crear actividad         | Nombre y objetivo, y el resto plegado como opcional                                                                    |
 | Resumen de la actividad | Objetivo, fase actual con la acción que la hace avanzar, y accesos a las secciones que la configuración habilita (4.3) |
-| Configuración | Las nueve funciones con su estado. Las que ya tienen datos se muestran bloqueadas con el motivo (P-17) |
-| Inscripción | Clave de ingreso para compartir, búsqueda para invitar e invitaciones emitidas con su estado |
-| Participantes | Lista con rol, estado y equipo. Punto de entrada al historial por persona (5.5) |
-| Unirse con clave | Campo de clave, vista previa mínima y confirmación |
+| Configuración           | Las nueve funciones con su estado. Las que ya tienen datos se muestran bloqueadas con el motivo (P-17)                 |
+| Inscripción             | Clave de ingreso para compartir, búsqueda para invitar e invitaciones emitidas con su estado                           |
+| Participantes           | Lista con rol, estado y equipo. Punto de entrada al historial por persona (5.5)                                        |
+| Unirse con clave        | Campo de clave, vista previa mínima y confirmación                                                                     |
 
 ## **7.9 Preguntas abiertas de este módulo**
 
@@ -633,11 +633,11 @@ El módulo cubre los tres modos de formación, el reparto automático de quienes
 
 ## **8.1 Los tres modos de formación**
 
-| Modo | Quién actúa | Cómo cierra |
-| :---- | :---- | :---- |
-| Autogestionado por participantes | Cada participante crea un equipo o se une a uno existente | Automáticamente cuando nadie queda sin equipo, o por acción de quien organiza con reparto automático |
-| Propuesta del sistema | El sistema genera una propuesta que quien organiza edita y confirma | Siempre por acción explícita |
-| Asignación manual | Quien organiza crea los equipos y asigna a cada persona | Siempre por acción explícita |
+| Modo                             | Quién actúa                                                         | Cómo cierra                                                                                          |
+| :------------------------------- | :------------------------------------------------------------------ | :--------------------------------------------------------------------------------------------------- |
+| Autogestionado por participantes | Cada participante crea un equipo o se une a uno existente           | Automáticamente cuando nadie queda sin equipo, o por acción de quien organiza con reparto automático |
+| Propuesta del sistema            | El sistema genera una propuesta que quien organiza edita y confirma | Siempre por acción explícita                                                                         |
+| Asignación manual                | Quien organiza crea los equipos y asigna a cada persona             | Siempre por acción explícita                                                                         |
 
 En el modo autogestionado, el número de equipos esperado que quien organiza definió se muestra como referencia y no como límite, conforme al diccionario de 5.1 del general, que lo declara explícitamente como no restrictivo.
 
@@ -665,13 +665,13 @@ El reparto completo emite un solo evento del historial, con el sistema como acto
 
 Quien organiza puede mover a un participante de un equipo a otro mientras la actividad está en desarrollo (7.3 del general). Lo que la operación arrastra y lo que deja atrás no es evidente y conviene fijarlo:
 
-* Las aportaciones que hizo en el espacio del equipo anterior permanecen ahí. Pertenecen al equipo, que es su contenedor, y retirarlas dejaría al equipo sin parte de su trabajo por una decisión ajena a él.
+- Las aportaciones que hizo en el espacio del equipo anterior permanecen ahí. Pertenecen al equipo, que es su contenedor, y retirarlas dejaría al equipo sin parte de su trabajo por una decisión ajena a él.
 
-* Su bitácora individual lo acompaña, porque está vinculada a su membresía y no al equipo (5.2 del general).
+- Su bitácora individual lo acompaña, porque está vinculada a su membresía y no al equipo (5.2 del general).
 
-* Las respuestas de evaluación por pares que ya haya emitido se conservan referidas a las personas evaluadas, no al equipo, de modo que la reasignación no las invalida.
+- Las respuestas de evaluación por pares que ya haya emitido se conservan referidas a las personas evaluadas, no al equipo, de modo que la reasignación no las invalida.
 
-* Un equipo que queda vacío se conserva con su contenido. No se elimina solo: contiene trabajo y su desaparición automática sería una pérdida silenciosa.
+- Un equipo que queda vacío se conserva con su contenido. No se elimina solo: contiene trabajo y su desaparición automática sería una pérdida silenciosa.
 
 ## **8.5 Ciclo de vida del equipo**
 
@@ -681,23 +681,23 @@ El nombre es único dentro de la actividad (4.4 del general). La descripción de
 
 ## **8.6 Endpoints**
 
-| Método y ruta | Quién | Qué hace |
-| :---- | :---- | :---- |
-| GET /api/actividades/{id}/equipos | Miembro | Equipos con sus integrantes (P-04) |
-| POST /api/actividades/{id}/equipos | Organizador o participante | Crea un equipo. El participante solo en modo autogestionado |
-| GET /api/actividades/{id}/equipos/propuesta | Organizador | Genera la propuesta del sistema sin persistirla |
-| POST /api/actividades/{id}/equipos/propuesta | Organizador | Confirma la propuesta, con los ajustes aplicados |
-| PATCH /api/equipos/{id} | Integrante u organizador | Nombre, descripción y forma de trabajo |
-| DELETE /api/equipos/{id} | Organizador | Elimina el equipo si está vacío y sin contenido |
+| Método y ruta                                   | Quién                                | Qué hace                                                                               |
+| :---------------------------------------------- | :----------------------------------- | :------------------------------------------------------------------------------------- |
+| GET /api/actividades/{id}/equipos               | Miembro                              | Equipos con sus integrantes (P-04)                                                     |
+| POST /api/actividades/{id}/equipos              | Organizador o participante           | Crea un equipo. El participante solo en modo autogestionado                            |
+| GET /api/actividades/{id}/equipos/propuesta     | Organizador                          | Genera la propuesta del sistema sin persistirla                                        |
+| POST /api/actividades/{id}/equipos/propuesta    | Organizador                          | Confirma la propuesta, con los ajustes aplicados                                       |
+| PATCH /api/equipos/{id}                         | Integrante u organizador             | Nombre, descripción y forma de trabajo                                                 |
+| DELETE /api/equipos/{id}                        | Organizador                          | Elimina el equipo si está vacío y sin contenido                                        |
 | PUT /api/equipos/{id}/integrantes/{idMembresia} | Organizador o el propio participante | Asigna o mueve. El participante solo se mueve a sí mismo y solo en modo autogestionado |
 
 ## **8.7 Pantallas**
 
-| Pantalla | Contenido |
-| :---- | :---- |
+| Pantalla                | Contenido                                                                                                                                                                            |
+| :---------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Equipos de la actividad | Los equipos con sus integrantes y quiénes quedan sin equipo. Para quien organiza, con arrastre para asignar; para el participante, con la acción de unirse cuando el modo lo permite |
-| Propuesta de equipos | La propuesta generada, editable antes de confirmar, con el aviso de que no se ha guardado |
-| Espacio del equipo | Descripción, forma de trabajo y las secciones de metas, avances y recursos que la configuración habilite (capítulo 9\) |
+| Propuesta de equipos    | La propuesta generada, editable antes de confirmar, con el aviso de que no se ha guardado                                                                                            |
+| Espacio del equipo      | Descripción, forma de trabajo y las secciones de metas, avances y recursos que la configuración habilite (capítulo 9\)                                                               |
 
 ## **8.8 Pregunta abierta de este módulo**
 
@@ -727,11 +727,11 @@ Metas, avances y recursos comparten una sola relación con un atributo de tipo (
 
 La función tiene cuatro estados en 6.2 del general: deshabilitado, libre sin fechas, con fechas sugeridas y formato libre, y con fechas obligatorias y campos estructurados. Los tres modos activos se distinguen en dos dimensiones independientes, el calendario y el formato.
 
-| Modo | Calendario | Formato |
-| :---- | :---- | :---- |
-| Libre | El equipo declara el periodo que cubre cada reporte | Texto libre |
-| Fechas sugeridas | El sistema propone el periodo en curso; el equipo puede reportar fuera de él | Texto libre |
-| Fechas obligatorias | Un reporte por periodo definido, y no se admite fuera de ellos | Campos del instrumento de reporte estructurado (10.1) |
+| Modo                | Calendario                                                                   | Formato                                               |
+| :------------------ | :--------------------------------------------------------------------------- | :---------------------------------------------------- |
+| Libre               | El equipo declara el periodo que cubre cada reporte                          | Texto libre                                           |
+| Fechas sugeridas    | El sistema propone el periodo en curso; el equipo puede reportar fuera de él | Texto libre                                           |
+| Fechas obligatorias | Un reporte por periodo definido, y no se admite fuera de ellos               | Campos del instrumento de reporte estructurado (10.1) |
 
 **Dónde viven los periodos.** Los dos modos con calendario necesitan saber cuáles son los periodos, y la relación de actividades no tiene dónde guardarlos: solo contiene la fecha de inicio, la de término, la fecha límite de inscripción y el plazo de cierre. Para eso existe la relación de periodos de reporte de 4.4 del general, con la actividad a la que pertenece, un orden, una fecha de inicio y una fecha de fin. Su propiedad es de este módulo, que es el único que la referencia, y el reporte la apunta mediante una llave foránea anulable: nula en el modo libre, obligatoria en el de fechas.
 
@@ -745,29 +745,29 @@ Su visibilidad es la de la propuesta por defecto de P-06: el autor, quien organi
 
 ## **9.4 Endpoints**
 
-| Método y ruta | Quién | Qué hace |
-| :---- | :---- | :---- |
-| GET /api/equipos/{id}/elementos | Integrante u organizador | Espacio del equipo, filtrable por tipo |
-| POST /api/equipos/{id}/elementos | Integrante | Crea una meta, un avance o un recurso |
-| PATCH /api/elementos/{id} | Integrante | Edita el contenido |
-| DELETE /api/elementos/{id} | Integrante | Elimina; el evento conserva el contenido |
-| GET /api/equipos/{id}/reportes | Integrante u organizador | Reportes del equipo con su periodo |
-| POST /api/equipos/{id}/reportes | Integrante | Crea el reporte del periodo |
-| PATCH /api/reportes/{id} | Integrante | Edita el reporte mientras la actividad lo admita |
-| GET /api/actividades/{id}/periodos | Miembro | Periodos de reporte configurados |
-| PUT /api/actividades/{id}/periodos | Organizador | Define o ajusta los periodos |
-| GET /api/actividades/{id}/bitacora | Autor u organizador | Entradas de bitácora, propias o de un participante |
-| POST /api/actividades/{id}/bitacora | Participante | Crea una entrada |
-| PATCH /api/bitacora/{id} | Autor | Edita una entrada propia |
+| Método y ruta                       | Quién                    | Qué hace                                           |
+| :---------------------------------- | :----------------------- | :------------------------------------------------- |
+| GET /api/equipos/{id}/elementos     | Integrante u organizador | Espacio del equipo, filtrable por tipo             |
+| POST /api/equipos/{id}/elementos    | Integrante               | Crea una meta, un avance o un recurso              |
+| PATCH /api/elementos/{id}           | Integrante               | Edita el contenido                                 |
+| DELETE /api/elementos/{id}          | Integrante               | Elimina; el evento conserva el contenido           |
+| GET /api/equipos/{id}/reportes      | Integrante u organizador | Reportes del equipo con su periodo                 |
+| POST /api/equipos/{id}/reportes     | Integrante               | Crea el reporte del periodo                        |
+| PATCH /api/reportes/{id}            | Integrante               | Edita el reporte mientras la actividad lo admita   |
+| GET /api/actividades/{id}/periodos  | Miembro                  | Periodos de reporte configurados                   |
+| PUT /api/actividades/{id}/periodos  | Organizador              | Define o ajusta los periodos                       |
+| GET /api/actividades/{id}/bitacora  | Autor u organizador      | Entradas de bitácora, propias o de un participante |
+| POST /api/actividades/{id}/bitacora | Participante             | Crea una entrada                                   |
+| PATCH /api/bitacora/{id}            | Autor                    | Edita una entrada propia                           |
 
 ## **9.5 Pantallas**
 
-| Pantalla | Contenido |
-| :---- | :---- |
-| Espacio del equipo | Metas, avances y recursos en secciones separadas, cada una presente solo si la configuración la habilita. Los obligatorios ausentes se señalan sin bloquear |
-| Reportes del equipo | Los reportes por periodo. En modo con fechas, los periodos sin reporte aparecen como pendientes |
-| Mi bitácora | Entradas propias en orden cronológico inverso, con la indicación de quién más puede leerlas |
-| Seguimiento del organizador | Vista por equipo con el estado de cada función: qué reportó, qué falta y cuándo fue la última aportación |
+| Pantalla                    | Contenido                                                                                                                                                   |
+| :-------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Espacio del equipo          | Metas, avances y recursos en secciones separadas, cada una presente solo si la configuración la habilita. Los obligatorios ausentes se señalan sin bloquear |
+| Reportes del equipo         | Los reportes por periodo. En modo con fechas, los periodos sin reporte aparecen como pendientes                                                             |
+| Mi bitácora                 | Entradas propias en orden cronológico inverso, con la indicación de quién más puede leerlas                                                                 |
+| Seguimiento del organizador | Vista por equipo con el estado de cada función: qué reportó, qué falta y cuándo fue la última aportación                                                    |
 
 ## **9.6 Pregunta abierta de este módulo**
 
@@ -787,12 +787,12 @@ Cubre el motor de instrumentos del que cuelgan la rúbrica, las autoevaluaciones
 
 Los cinco instrumentos comparten la estructura de instrumento, campo y respuesta que fija 4.2 del general. La consecuencia allí señalada es que la validación deja de ser responsabilidad del esquema relacional y pasa a la capa de servicios; esta sección la asume.
 
-| Tipo de campo | Validación | Dónde se usa |
-| :---- | :---- | :---- |
-| Escala numérica | Entero dentro del intervalo declarado en el campo | Rúbrica, evaluación por pares, autoevaluaciones |
-| Opción de una lista | El valor pertenece a las opciones del campo | Autoevaluaciones, evaluación por pares |
-| Texto libre | Longitud máxima | Todos |
-| Sí o no | Uno de los dos valores | Autoevaluaciones |
+| Tipo de campo       | Validación                                        | Dónde se usa                                    |
+| :------------------ | :------------------------------------------------ | :---------------------------------------------- |
+| Escala numérica     | Entero dentro del intervalo declarado en el campo | Rúbrica, evaluación por pares, autoevaluaciones |
+| Opción de una lista | El valor pertenece a las opciones del campo       | Autoevaluaciones, evaluación por pares          |
+| Texto libre         | Longitud máxima                                   | Todos                                           |
+| Sí o no             | Uno de los dos valores                            | Autoevaluaciones                                |
 
 **Registro de decisión — instrumentos por defecto copiados, no referenciados.** Los campos definitivos de cada instrumento no están confirmados, pero una actividad que habilita la autoevaluación y encuentra un instrumento vacío es inutilizable. El sistema trae por tanto un conjunto de instrumentos por defecto que se copian a la actividad en el momento de habilitar la función, y que quien organiza edita. Se copian y no se referencian: si la actividad apuntara a la plantilla del sistema, editarla alteraría actividades en curso y cambiaría el significado de respuestas ya emitidas. Cuando los campos queden confirmados, se actualizan las plantillas y el cambio afecta solo a las actividades creadas después, que es el comportamiento correcto.
 
@@ -814,11 +814,11 @@ El momento en que la calificación se hace visible a su destinatario es P-18 del
 
 Los tres instrumentos se responden durante el periodo de cierre (6.1 del general) y se distinguen por qué llena cada uno los campos de sujeto y equipo de la respuesta.
 
-| Instrumento | Quién responde | Sujeto de la respuesta |
-| :---- | :---- | :---- |
-| Autoevaluación individual | Cada participante, una vez | Ninguno: la respuesta es sobre sí mismo |
-| Autoevaluación grupal | Cada integrante por separado (P-07) | Su equipo |
-| Evaluación por pares | Cada participante, una vez por cada compañero de su equipo (P-08) | La membresía evaluada |
+| Instrumento               | Quién responde                                                    | Sujeto de la respuesta                  |
+| :------------------------ | :---------------------------------------------------------------- | :-------------------------------------- |
+| Autoevaluación individual | Cada participante, una vez                                        | Ninguno: la respuesta es sobre sí mismo |
+| Autoevaluación grupal     | Cada integrante por separado (P-07)                               | Su equipo                               |
+| Evaluación por pares      | Cada participante, una vez por cada compañero de su equipo (P-08) | La membresía evaluada                   |
 
 **Obligatoriedad sin bloqueo.** Cuando la evaluación por pares está en su estado obligatorio, no completarla no impide cerrar la actividad (6.2 del general): la evaluación pendiente se marca como no realizada y queda consultable por quien organiza. Un equipo de una sola persona es un caso distinto y no una omisión: se marca como no aplicable, porque no hay a quién evaluar (7.4).
 
@@ -830,28 +830,28 @@ Son editables mientras la actividad no esté archivada, y la edición conserva e
 
 ## **10.5 Endpoints**
 
-| Método y ruta | Quién | Qué hace |
-| :---- | :---- | :---- |
-| GET /api/actividades/{id}/instrumentos | Miembro | Instrumentos de la actividad con sus campos |
-| POST /api/actividades/{id}/instrumentos | Organizador | Crea un instrumento a partir de la plantilla |
-| PUT /api/instrumentos/{id}/campos | Organizador | Define los campos, si no hay respuestas |
-| POST /api/instrumentos/{id}/respuestas | Participante | Responde el instrumento |
-| GET /api/instrumentos/{id}/respuestas | Organizador o sujeto | Respuestas, con el alcance de P-08 |
-| PUT /api/actividades/{id}/calificaciones/{idMembresia} | Organizador | Asigna o corrige la calificación |
-| GET /api/actividades/{id}/calificaciones | Organizador | Todas las calificaciones de la actividad |
-| POST /api/actividades/{id}/comentarios | Organizador | Escribe un comentario a un equipo o a una persona |
-| GET /api/actividades/{id}/comentarios | Miembro | Comentarios visibles para el actor |
-| PATCH /api/comentarios/{id} | Autor | Edita el comentario |
+| Método y ruta                                          | Quién                | Qué hace                                          |
+| :----------------------------------------------------- | :------------------- | :------------------------------------------------ |
+| GET /api/actividades/{id}/instrumentos                 | Miembro              | Instrumentos de la actividad con sus campos       |
+| POST /api/actividades/{id}/instrumentos                | Organizador          | Crea un instrumento a partir de la plantilla      |
+| PUT /api/instrumentos/{id}/campos                      | Organizador          | Define los campos, si no hay respuestas           |
+| POST /api/instrumentos/{id}/respuestas                 | Participante         | Responde el instrumento                           |
+| GET /api/instrumentos/{id}/respuestas                  | Organizador o sujeto | Respuestas, con el alcance de P-08                |
+| PUT /api/actividades/{id}/calificaciones/{idMembresia} | Organizador          | Asigna o corrige la calificación                  |
+| GET /api/actividades/{id}/calificaciones               | Organizador          | Todas las calificaciones de la actividad          |
+| POST /api/actividades/{id}/comentarios                 | Organizador          | Escribe un comentario a un equipo o a una persona |
+| GET /api/actividades/{id}/comentarios                  | Miembro              | Comentarios visibles para el actor                |
+| PATCH /api/comentarios/{id}                            | Autor                | Edita el comentario                               |
 
 ## **10.6 Pantallas**
 
-| Pantalla | Contenido |
-| :---- | :---- |
-| Rúbrica | Definición de criterios y puntajes. Bloqueada con el motivo si ya hay calificaciones |
-| Calificar | Lista de participantes con su calificación y su avance. En modo rúbrica, los criterios con el total calculado |
+| Pantalla              | Contenido                                                                                                                   |
+| :-------------------- | :-------------------------------------------------------------------------------------------------------------------------- |
+| Rúbrica               | Definición de criterios y puntajes. Bloqueada con el motivo si ya hay calificaciones                                        |
+| Calificar             | Lista de participantes con su calificación y su avance. En modo rúbrica, los criterios con el total calculado               |
 | Responder instrumento | Formulario construido a partir de la definición del instrumento (4.4). En evaluación por pares, un formulario por compañero |
-| Mis resultados | Calificación propia, comentarios recibidos y lo que la evaluación por pares devuelva según P-08 |
-| Comentarios | Los emitidos por quien organiza, separados por destino |
+| Mis resultados        | Calificación propia, comentarios recibidos y lo que la evaluación por pares devuelva según P-08                             |
+| Comentarios           | Los emitidos por quien organiza, separados por destino                                                                      |
 
 ## **10.7 Pregunta abierta de este módulo**
 
@@ -873,34 +873,34 @@ Cada incremento es vertical y se considera terminado cuando tiene sus cuatro pie
 
 ## **11.2 Fase A — del 3 de agosto al 4 de septiembre**
 
-| Incremento | Contenido |
-| :---- | :---- |
-| Desbloqueo | Mecanismo de captura del historial (2.4), endpoints administrativos de Cuentas y listado de participantes. Es la superficie de 1.3 y va primero aunque no produzca nada visible |
-| Cuentas y autorización | Registro, sesión, perfil, verificación de correo y recuperación de contraseña, cadena de middleware y función de autorización con la matriz declarada como datos |
-| Actividades I | Creación, configuración de funciones, clave de ingreso, inscripción, invitaciones y transiciones manuales |
-| Actividades II | Transiciones automáticas con su tarea programada, co-organizadores y sus permisos configurables |
-| Equipos | Los tres modos de formación, la propuesta del sistema y el reparto equilibrado |
-| Espacio de equipo y cierre de fase | Metas, avances y recursos; consulta cronológica del historial; recorrido manual completo de extremo a extremo |
+| Incremento                         | Contenido                                                                                                                                                                       |
+| :--------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Desbloqueo                         | Mecanismo de captura del historial (2.4), endpoints administrativos de Cuentas y listado de participantes. Es la superficie de 1.3 y va primero aunque no produzca nada visible |
+| Cuentas y autorización             | Registro, sesión, perfil, verificación de correo y recuperación de contraseña, cadena de middleware y función de autorización con la matriz declarada como datos                |
+| Actividades I                      | Creación, configuración de funciones, clave de ingreso, inscripción, invitaciones y transiciones manuales                                                                       |
+| Actividades II                     | Transiciones automáticas con su tarea programada, co-organizadores y sus permisos configurables                                                                                 |
+| Equipos                            | Los tres modos de formación, la propuesta del sistema y el reparto equilibrado                                                                                                  |
+| Espacio de equipo y cierre de fase | Metas, avances y recursos; consulta cronológica del historial; recorrido manual completo de extremo a extremo                                                                   |
 
 ## **11.3 Fase B — del 7 de septiembre al 2 de octubre**
 
-| Incremento | Contenido |
-| :---- | :---- |
-| Seguimiento | Reportes en sus tres modos activos, periodos de reporte y bitácora individual |
-| Motor de instrumentos | Instrumentos, campos y respuestas, con las plantillas por defecto |
-| Calificación | Modo directo y modo rúbrica, con el recálculo y la visibilidad de P-18 |
-| Evaluación | Autoevaluaciones, evaluación por pares y comentarios |
-| Cierre y consulta | Periodo de cierre y archivado, historial con filtros y agregación |
+| Incremento            | Contenido                                                                     |
+| :-------------------- | :---------------------------------------------------------------------------- |
+| Seguimiento           | Reportes en sus tres modos activos, periodos de reporte y bitácora individual |
+| Motor de instrumentos | Instrumentos, campos y respuestas, con las plantillas por defecto             |
+| Calificación          | Modo directo y modo rúbrica, con el recálculo y la visibilidad de P-18        |
+| Evaluación            | Autoevaluaciones, evaluación por pares y comentarios                          |
+| Cierre y consulta     | Periodo de cierre y archivado, historial con filtros y agregación             |
 
 ## **11.4 Riesgos propios del núcleo**
 
-| Riesgo | Mitigación |
-| :---- | :---- |
+| Riesgo                                                                | Mitigación                                                                                                            |
+| :-------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------- |
 | El núcleo es la ruta crítica y su retraso desplaza todo el calendario | La superficie que consumen los otros dos subsistemas se entrega en el primer incremento, antes que cualquier pantalla |
-| El ciclo de vida es prerrequisito de los cuatro módulos restantes | Se implementa completo en la primera mitad de la fase A, incluidos los casos límite de 7.4 |
-| Los campos de los instrumentos no están confirmados | El motor es genérico y los campos son datos; la confirmación tardía no obliga a reescribir nada (10.1) |
-| La búsqueda por rango depende del subsistema de recompensas | Interfaz declarada e implementación vacía; el filtro es lo primero del orden de recorte (1.3) |
-| El historial se aplaza por no ser visible | Su mecanismo va en el primer incremento y forma parte del criterio de terminado (11.1) |
+| El ciclo de vida es prerrequisito de los cuatro módulos restantes     | Se implementa completo en la primera mitad de la fase A, incluidos los casos límite de 7.4                            |
+| Los campos de los instrumentos no están confirmados                   | El motor es genérico y los campos son datos; la confirmación tardía no obliga a reescribir nada (10.1)                |
+| La búsqueda por rango depende del subsistema de recompensas           | Interfaz declarada e implementación vacía; el filtro es lo primero del orden de recorte (1.3)                         |
+| El historial se aplaza por no ser visible                             | Su mecanismo va en el primer incremento y forma parte del criterio de terminado (11.1)                                |
 
 ## **11.5 Orden de recorte propio**
 
@@ -920,15 +920,15 @@ El general fija seis pruebas de contrato de cobertura obligatoria (10.1) y cinco
 
 ## **12.1 Lo que se prueba y por qué no se ve al probar a mano**
 
-| Qué se verifica | Por qué |
-| :---- | :---- |
-| La función de autorización, recorrida celda por celda contra sus tablas de datos | Un permiso concedido de más devuelve datos con normalidad y no produce ningún error |
-| Cada transición del ciclo de vida, incluidas las que deben rechazarse | Probar a mano recorre el camino feliz; los rechazos son los que nadie intenta |
-| Los seis casos límite de 7.4 | Todos dependen de fechas o de configuraciones poco frecuentes, y ninguno aparece en un recorrido normal |
-| El reparto equilibrado: determinismo y minimización del equipo mayor | Un reparto desequilibrado parece correcto salvo que se cuente |
-| La envoltura de 2.4: un servicio de escritura que no registra evento falla | Es la prueba que hace de la regla un mecanismo y no una recomendación |
-| La agregación del historial agrupa sin perder eventos | Una agrupación que descarta se ve idéntica a una que agrupa bien |
-| Un token de verificación o de recuperación sirve una sola vez y vence | Un token reutilizable no falla: simplemente funciona dos veces, y nadie lo nota |
+| Qué se verifica                                                                  | Por qué                                                                                                 |
+| :------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------ |
+| La función de autorización, recorrida celda por celda contra sus tablas de datos | Un permiso concedido de más devuelve datos con normalidad y no produce ningún error                     |
+| Cada transición del ciclo de vida, incluidas las que deben rechazarse            | Probar a mano recorre el camino feliz; los rechazos son los que nadie intenta                           |
+| Los seis casos límite de 7.4                                                     | Todos dependen de fechas o de configuraciones poco frecuentes, y ninguno aparece en un recorrido normal |
+| El reparto equilibrado: determinismo y minimización del equipo mayor             | Un reparto desequilibrado parece correcto salvo que se cuente                                           |
+| La envoltura de 2.4: un servicio de escritura que no registra evento falla       | Es la prueba que hace de la regla un mecanismo y no una recomendación                                   |
+| La agregación del historial agrupa sin perder eventos                            | Una agrupación que descarta se ve idéntica a una que agrupa bien                                        |
+| Un token de verificación o de recuperación sirve una sola vez y vence            | Un token reutilizable no falla: simplemente funciona dos veces, y nadie lo nota                         |
 
 ## **12.2 Datos de prueba**
 
@@ -944,30 +944,29 @@ Consolida las preguntas propias de este documento y señala cuáles del general 
 
 ## **13.1 Preguntas propias**
 
-| Pregunta | Asunto | Debe resolverse antes de |
-| :---- | :---- | :---- |
-| P-24 | Servidor de correo del despliegue | El incremento de Cuentas: sin él no hay recuperación automática |
-| P-30 | Alcance de la cuenta sin verificar | El incremento de Cuentas |
-| P-25 | Configuración por defecto de una actividad nueva | El incremento de Actividades I |
-| P-26 | Transferencia de la organización de una actividad | El incremento de Actividades II |
-| P-27 | Tamaño mínimo y máximo de un equipo | El incremento de Equipos |
-| P-28 | Definición de los periodos de reporte | El incremento de Seguimiento |
-| P-29 | Escala de la calificación | El incremento de Calificación |
-| P-22 | Vencimiento de la sesión | El incremento de Cuentas |
-| P-23 | Ventana de agregación del historial | El cierre de la fase B |
+| Pregunta | Asunto                                            | Debe resolverse antes de                                        |
+| :------- | :------------------------------------------------ | :-------------------------------------------------------------- |
+| P-24     | Servidor de correo del despliegue                 | El incremento de Cuentas: sin él no hay recuperación automática |
+| P-30     | Alcance de la cuenta sin verificar                | El incremento de Cuentas                                        |
+| P-25     | Configuración por defecto de una actividad nueva  | El incremento de Actividades I                                  |
+| P-26     | Transferencia de la organización de una actividad | El incremento de Actividades II                                 |
+| P-27     | Tamaño mínimo y máximo de un equipo               | El incremento de Equipos                                        |
+| P-28     | Definición de los periodos de reporte             | El incremento de Seguimiento                                    |
+| P-29     | Escala de la calificación                         | El incremento de Calificación                                   |
+| P-22     | Vencimiento de la sesión                          | El incremento de Cuentas                                        |
+| P-23     | Ventana de agregación del historial               | El cierre de la fase B                                          |
 
 ## **13.2 Preguntas del documento general que condicionan al núcleo**
 
 Doce de las diecinueve preguntas abiertas del general afectan a módulos de este subsistema. Las cuatro primeras son las urgentes: condicionan el modelo de datos o la estructura de una pantalla, y su respuesta tardía obliga a rehacer.
 
-| Pregunta | Asunto | Debe resolverse antes de |
-| :---- | :---- | :---- |
-| P-04 | Visibilidad entre equipos | El incremento de Equipos: decide qué devuelve el listado |
-| P-08 | Alcance de la evaluación por pares | El motor de instrumentos: decide la forma de la respuesta |
-| P-10 | Alcance del historial visible al participante | La consulta del historial |
-| P-20 | Carga de archivos en el espacio de equipo | El espacio de equipo: decide si hay almacenamiento de archivos |
-| P-03, P-11 | Baja de participante, búsqueda de usuarios | Actividades I |
-| P-05, P-06 | Autoría del reporte, visibilidad de la bitácora | Seguimiento |
-| P-07, P-18 | Autoevaluación grupal, visibilidad de la calificación | Evaluación |
-| P-16, P-17 | Plazo de cierre, cambio de configuración con datos | Actividades II |
-
+| Pregunta   | Asunto                                                | Debe resolverse antes de                                       |
+| :--------- | :---------------------------------------------------- | :------------------------------------------------------------- |
+| P-04       | Visibilidad entre equipos                             | El incremento de Equipos: decide qué devuelve el listado       |
+| P-08       | Alcance de la evaluación por pares                    | El motor de instrumentos: decide la forma de la respuesta      |
+| P-10       | Alcance del historial visible al participante         | La consulta del historial                                      |
+| P-20       | Carga de archivos en el espacio de equipo             | El espacio de equipo: decide si hay almacenamiento de archivos |
+| P-03, P-11 | Baja de participante, búsqueda de usuarios            | Actividades I                                                  |
+| P-05, P-06 | Autoría del reporte, visibilidad de la bitácora       | Seguimiento                                                    |
+| P-07, P-18 | Autoevaluación grupal, visibilidad de la calificación | Evaluación                                                     |
+| P-16, P-17 | Plazo de cierre, cambio de configuración con datos    | Actividades II                                                 |
