@@ -3,9 +3,12 @@
 Plataforma web para la formación de estudiantes en habilidades de trabajo
 colaborativo. Antes de tocar código, lee
 [`docs/concepto-producto.md`](docs/concepto-producto.md) (qué es el sistema,
-por qué), [`docs/diseno-desarrollo.md`](docs/diseno-desarrollo.md) (cómo se
-construye) y [`CONVENTIONS.md`](CONVENTIONS.md) (convenciones y reglas de
-arquitectura) — los tres son la fuente de verdad del proyecto.
+por qué), [`docs/diseno-desarrollo-general.md`](docs/diseno-desarrollo-general.md)
+(contrato compartido entre los tres subsistemas),
+[`docs/diseno-desarrollo-nucleo.md`](docs/diseno-desarrollo-nucleo.md) (cómo
+se construye el núcleo: cuentas, actividades, equipos, seguimiento,
+evaluación e historial) y [`CONVENTIONS.md`](CONVENTIONS.md) (convenciones y
+reglas de arquitectura) — son la fuente de verdad del proyecto.
 
 ## Requisitos
 
@@ -53,7 +56,7 @@ packages/shared Tipos del dominio, importados por ambas apps
 ```
 
 Dentro de `apps/web/src`, organización por features (no por tipo — ver
-sección 3.5 del diseño de desarrollo):
+sección 3.5 de `docs/diseno-desarrollo-general.md`):
 
 ```
 src/
@@ -63,7 +66,8 @@ src/
 └── lib/            cliente HTTP y utilidades transversales
 ```
 
-Dentro de `apps/api/src`, arquitectura en capas (ver sección 2.2):
+Dentro de `apps/api/src`, arquitectura en capas (ver sección 2.2 de
+`docs/diseno-desarrollo-general.md`):
 
 ```
 src/

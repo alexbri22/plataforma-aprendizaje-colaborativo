@@ -2,11 +2,14 @@
 
 Consulta del historial de auditoría, con visibilidad diferenciada por rol
 (el organizador ve todo; el participante ve eventos no sensibles y solo sus
-propias calificaciones e insignias — ver sección 7). La captura es
-transversal y vive en `apps/api` como middleware (sección 3.4), no aquí.
+propias calificaciones e insignias — ver sección 7 de
+`docs/diseno-desarrollo-general.md`). La captura es transversal y vive en
+`apps/api` como middleware (sección 3.4 del general; mecanismo detallado en
+`docs/diseno-desarrollo-nucleo.md`, sección 5), no aquí.
 
-**Estado:** pendiente de implementación — Fase A (`docs/diseno-desarrollo.md`,
-sección 10).
+**Estado:** pendiente de implementación — Fase A (`docs/diseno-desarrollo-general.md`,
+sección 9.2; desglose de incrementos en `docs/diseno-desarrollo-nucleo.md`,
+sección 11.2).
 
 Convención de la carpeta: componentes, queries (TanStack Query) y stores
 (Zustand, adopción diferida — sección 2.1) de esta feature viven aquí. Los

@@ -1,7 +1,10 @@
 # Plataforma de Aprendizaje Colaborativo
 
 Contexto obligado antes de cualquier tarea: lee `docs/concepto-producto.md`
-(qué es el sistema, por qué) y `docs/diseno-desarrollo.md` (cómo se construye).
+(qué es el sistema, por qué), `docs/diseno-desarrollo-general.md` (contrato
+compartido entre los tres subsistemas) y, si la tarea toca cuentas,
+actividades, equipos, seguimiento, evaluación o historial,
+`docs/diseno-desarrollo-nucleo.md` (cómo se construye ese subsistema).
 
 ## Stack
 
@@ -12,9 +15,9 @@ Contexto obligado antes de cualquier tarea: lee `docs/concepto-producto.md`
 ## Reglas de arquitectura
 
 - Ningún módulo accede a datos de otro directamente; todo pasa por la capa de
-  servicios del módulo dueño (ver sección 3.4 del diseño de desarrollo)
+  servicios del módulo dueño (ver sección 3.4 de `docs/diseno-desarrollo-general.md`)
 - El cliente nunca es la barrera de autorización; solo oculta acciones no
-  disponibles (ver sección 3.5)
+  disponibles (ver sección 3.5 de `docs/diseno-desarrollo-general.md`)
 - Todo componente visual usa components/ui/ y los tokens de DESIGN.md; nada
   de valores crudos ni direcciones estéticas nuevas
 
