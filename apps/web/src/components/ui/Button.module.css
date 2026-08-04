@@ -38,7 +38,7 @@
 }
 
 .secondary {
-  --button-bg: var(--color-surface);
+  --button-bg: var(--color-bg);
   --button-bg-hover: var(--color-surface-hover);
   --button-fg: var(--color-text);
   --button-border: var(--color-border-strong);
