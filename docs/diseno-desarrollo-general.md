@@ -24,7 +24,7 @@ Punto de entrada a toda la documentación del proyecto. Se mantiene actualizado 
 | Documento                             | Enlace                                                                                                                             | Alcance                                                            |
 | :------------------------------------ | :--------------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------- |
 | Dev design — General (este documento) | [dev\_design\_app\_colaborativa](https://docs.google.com/document/d/1EJrssXcQSLluGz2Gn9__hiq0YeLfOkC6cCGc0qNotxk/edit?usp=sharing) | Integración y decisiones transversales                             |
-| Dev design — Alejandro Briceño        | (pendiente)                                                                                                                        | Cuentas, actividades, equipos, seguimiento, evaluación e historial |
+| Dev design — Alejandro Briceño        | [dev\_design\_nucleo\_alejandro](https://docs.google.com/document/d/1BeP1RgpIzme7NpHek6eXW0gCF1FkeCKc3I3rxUlx7NM/edit?usp=sharing) | Cuentas, actividades, equipos, seguimiento, evaluación e historial |
 | Dev design — Carlos de la Rosa        | (pendiente)                                                                                                                        | Contenido formativo público y administración                       |
 | Dev design — Ui Chul                  | (pendiente)                                                                                                                        | Sistema de recompensas e insignias                                 |
 
@@ -100,6 +100,10 @@ El backend se construye con **Node.js \+ Express y TypeScript**, expuesto como A
 
 - **Alternativa evaluada, Next.js (full-stack):** se descartó porque sus fortalezas (SSR, SEO, server components) no aplican al tipo de aplicación, introduce una curva de aprendizaje incompatible con el plazo, y reabre decisiones de frontend ya tomadas (herramienta de build, patrón de data fetching).
 
+**Persistencia: PostgreSQL con Prisma.** El manejador es PostgreSQL y el acceso se resuelve con Prisma como capa de mapeo y de migraciones. Postgres cubre sin extensiones lo que el modelo necesita: JSON para el campo de datos del historial (5.5), índices compuestos para la paginación por cursor del historial y restricciones de exclusión para las reglas de unicidad. Prisma aporta tipos generados a partir del esquema, migraciones versionadas y transacciones interactivas, que son el requisito de la envoltura de emisión de eventos (8.2).
+
+**Dirección de la verdad.** El modelo relacional de 4.4 y el diccionario de 5 son la fuente normativa; el archivo de esquema de Prisma es su transcripción y no su origen. Toda modificación del esquema pasa por revisión de pull request (2.4), y la revisión no aprueba un cambio de modelo que no venga acompañado de la actualización de 4.4 y 5 en el mismo pull request. Sin esa verificación, un cambio en el código produciría una migración no deliberada y dejaría desactualizado el modelo documentado.
+
 ## **2.3 Estructura del repositorio**
 
 Monorepo único con workspaces de npm:
@@ -126,13 +130,15 @@ Convenciones de nombres: español para entidades de dominio, consistente con el 
 
 - **Consistencia determinista.** El formato de código se garantiza con herramientas: ESLint, Prettier y TypeScript strict, verificados en CI como requisito de merge.
 
+- **Cambios de modelo.** Un pull request que modifica el esquema de Prisma incluye en el mismo cambio la actualización de 4.4 y del diccionario de 5\. La revisión lo verifica antes de aprobar.
+
 ## **2.5 Control de versiones y flujo de ramas**
 
 Git con GitHub. Flujo simple de ramas: main protegida, una rama por tarea, integración vía pull request con revisión de al menos otro integrante. Sin ramas de larga duración: las tareas se dimensionan para integrarse en días.
 
 ## **2.6 Entorno reproducible**
 
-Versiones fijadas: archivo .nvmrc con la versión de Node, lockfile commiteado. Scripts unificados desde la raíz del monorepo: npm install, npm run dev (levanta web y api en paralelo), npm run test, npm run lint. Archivo .env.example por aplicación con las variables de entorno requeridas. El manual de instalación se genera a partir de esta sección al final del desarrollo.
+Versiones fijadas: archivo .nvmrc con la versión de Node, lockfile commiteado. Scripts unificados desde la raíz del monorepo: npm install, npm run dev (levanta web y api en paralelo), npm run test, npm run lint. Archivo .env.example por aplicación con las variables de entorno requeridas. La base de datos de desarrollo se levanta con Docker Compose, incluida la base sombra que Prisma Migrate requiere para detectar deriva. El manual de instalación se genera a partir de esta sección al final del desarrollo.
 
 # **3\. Arquitectura**
 
@@ -160,7 +166,7 @@ Los tres workspaces del monorepo son los componentes de primer nivel. Dentro de 
 
 **Figura 2\.** Diagrama de distribución.
 
-La SPA se distribuye como archivos estáticos compilados que el navegador descarga y ejecuta; toda la comunicación posterior con el servidor de aplicación es intercambio de JSON sobre HTTPS. El manejador de base de datos es una decisión pendiente registrada en la sección 11; el diagrama se actualizará al resolverse.
+La SPA se distribuye como archivos estáticos compilados que el navegador descarga y ejecuta; toda la comunicación posterior con el servidor de aplicación es intercambio de JSON sobre HTTPS. El servidor de aplicación se comunica con PostgreSQL en la misma red privada; la base de datos no expone puerto al exterior.
 
 ## **3.4 Módulos del sistema y sus fronteras**
 
@@ -385,7 +391,7 @@ Las siguientes reglas no pueden garantizarse con llaves ni restricciones de unic
 
 # **5\. Diccionario de datos**
 
-Descripción de cada relación del modelo de 4.4 y de sus atributos, con el mismo formato empleado en la documentación de Argumente. Los tipos de dato concretos dependen del manejador de base de datos, cuya elección sigue pendiente (sección 11); esta sección describe la semántica, que no cambia con esa decisión.
+Descripción de cada relación del modelo de 4.4 y de sus atributos, con el mismo formato empleado en la documentación de Argumente. Esta sección describe la semántica de cada atributo; los tipos concretos de PostgreSQL se declaran en el esquema de Prisma, que transcribe este diccionario (2.2).
 
 ## **5.1 Cuentas y actividades**
 
@@ -820,7 +826,7 @@ Es la única dependencia del historial con otro subsistema, y el motivo por el q
 
 - Sesión inicial de sistema de diseño, commiteada al repositorio como fuente de verdad (2.4).
 
-- Decisión del manejador de base de datos. Es el único pendiente técnico que bloquea el arranque de la fase A.
+- Esquema de Prisma transcrito del modelo de 4.4, primera migración aplicada y verificación de deriva en CI.
 
 - Revisión y acuerdo del contrato de las secciones 4, 6 y 7 con los tres integrantes.
 
@@ -921,7 +927,6 @@ Registro vivo de las decisiones que no dependen de las asesoras y se resuelven i
 
 | Asunto                                                                                                                                                                      | Tipo                  | Momento de resolución                             | Consecuencia si no se resuelve                                                                                                                                             |
 | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :-------------------- | :------------------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Manejador de base de datos                                                                                                                                                  | Decisión técnica      | Antes del inicio de la fase A                     | Bloquea el modelo relacional y el diagrama de distribución (3.3)                                                                                                           |
 | Revisión y acuerdo del contrato con el equipo (secciones 4, 6 y 7\)                                                                                                         | Prerrequisito interno | Antes del arranque de los documentos individuales | Los subsistemas avanzan sobre un contrato no acordado y quedan expuestos a rediseño de esquema                                                                             |
 | Alcance de la sección formativa más allá del mínimo: lecciones con cuestionarios que otorgan insignias, y propuesta de recursos por usuarios con revisión del administrador | Decisión de alcance   | Antes del inicio de la fase B                     | Si se aprueba después, compite por el calendario sin plan de recorte. El atributo de estatus reservado (4.4) evita la migración de esquema, pero no el costo de calendario |
 | Nombres del catálogo de niveles de insignia                                                                                                                                 | Decisión de contenido | Durante la fase B                                 | No bloquea el modelo de datos; puede resolverse en implementación                                                                                                          |
