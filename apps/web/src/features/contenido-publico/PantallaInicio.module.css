@@ -1,0 +1,303 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--color-surface);
+}
+
+.skipLink {
+  position: absolute;
+  top: calc(var(--space-12) * -1);
+  left: var(--space-3);
+  z-index: 10;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  color: var(--color-text-on-accent);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+  transition: top 0.15s ease;
+}
+
+.skipLink:focus-visible {
+  top: var(--space-3);
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/*
+ * Recipe compartida por headerInner / heroInner / contenidoPublico: mismo
+ * max-width, mismo padding horizontal, mismo box-sizing — así sus bordes
+ * izquierdo y derecho siempre coinciden, sin importar el ancho de viewport.
+ */
+.headerInner,
+.heroInner,
+.contenidoPublico {
+  max-width: 1120px;
+  width: 100%;
+  margin: 0 auto;
+  padding-left: var(--space-6);
+  padding-right: var(--space-6);
+  box-sizing: border-box;
+}
+
+.headerInner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-top: var(--space-6);
+  padding-bottom: var(--space-6);
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.brandName {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.brandTagline {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+}
+
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6);
+  margin-left: var(--space-8);
+}
+
+.navLink {
+  position: relative;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: var(--space-1) var(--space-3);
+  margin: calc(var(--space-1) * -1) calc(var(--space-3) * -1);
+  border-radius: var(--radius-md);
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+/* El texto visible se queda pequeño y quieto; el área táctil real crece a
+   ~44px por debajo, sin afectar el layout (ver layout.md, Optical Adjustments). */
+.navLink::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+}
+
+.navLink:hover {
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
+}
+
+.navLink:focus-visible {
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.main {
+  flex: 1;
+}
+
+.hero {
+  padding-top: var(--space-16);
+  padding-bottom: var(--space-12);
+}
+
+.heroInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+}
+
+.heroText {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-8);
+  max-width: 60ch;
+  scroll-margin-top: var(--space-6);
+}
+
+.heroCopy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.heroActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.heroText h1 {
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  letter-spacing: -0.03em;
+  color: var(--color-text);
+  margin: 0;
+  text-wrap: balance;
+}
+
+/*
+ * Imagen provisional: sustituye a la ilustración final en cuanto esté
+ * disponible (ver PRODUCT.md, anti-referencias sobre fotografía de stock —
+ * esta pantalla pública es la única excepción provisional en el sistema).
+ */
+.heroImg {
+  max-width: 380px;
+  width: 100%;
+  height: auto;
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  .heroImg {
+    display: none;
+  }
+}
+
+.heroLede {
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-normal);
+  color: var(--color-text);
+  margin: 0;
+  text-wrap: pretty;
+}
+
+/* border-top separa el hero del contenido — antes eran fondos distintos
+   (Shelf/Paper), ahora que toda la página es Shelf, la línea es lo que
+   marca el corte. */
+.contenidoPublico {
+  border-top: 1px solid var(--color-border-strong);
+  padding-top: var(--space-8);
+  padding-bottom: var(--space-16);
+}
+
+.recursosLista {
+  display: flex;
+  flex-direction: column;
+}
+
+.recursosFila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  padding: var(--space-6) 0;
+  border-bottom: 1px solid var(--color-border);
+  scroll-margin-top: var(--space-6);
+}
+
+.recursosFila:last-child {
+  border-bottom: none;
+}
+
+.recursosFilaTexto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.recursosFilaTexto h2 {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  color: var(--color-text);
+  margin: 0;
+  text-wrap: balance;
+}
+
+.recursosFilaTexto p {
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-muted);
+  margin: 0;
+  max-width: 65ch;
+  text-wrap: pretty;
+}
+
+.recursosFila .seccionLink {
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .recursosFila {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.seccionLink {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  color: var(--color-primary);
+  cursor: pointer;
+  padding: var(--space-2) var(--space-3);
+  margin: calc(var(--space-2) * -1) calc(var(--space-3) * -1);
+  border-radius: var(--radius-sm);
+  transition: color 0.15s ease;
+}
+
+.seccionLink::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+
+.seccionLink:hover {
+  color: var(--color-primary-hover);
+}
+
+.seccionLink:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.seccionLinkIcon {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.15s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.seccionLink:hover .seccionLinkIcon,
+.seccionLink:focus-visible .seccionLinkIcon {
+  transform: translateX(3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seccionLinkIcon {
+    transition: none;
+  }
+}
