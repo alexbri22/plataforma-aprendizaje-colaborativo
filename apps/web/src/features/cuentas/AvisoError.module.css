@@ -1,0 +1,9 @@
+.aviso {
+  margin: 0;
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-danger-subtle);
+  color: var(--color-danger-ink);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+}
