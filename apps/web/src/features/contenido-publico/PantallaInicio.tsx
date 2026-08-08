@@ -1,3 +1,4 @@
+import { Encabezado } from '../../components/Encabezado'
 import { Button } from '../../components/ui'
 import styles from './PantallaInicio.module.css'
 
@@ -39,29 +40,7 @@ const RECURSOS = [
 export function PantallaInicio() {
   return (
     <div className={styles.page}>
-      <a className={styles.skipLink} href="#contenido">
-        Saltar al contenido
-      </a>
-
-      <header>
-        <div className={styles.headerInner}>
-          <div className={styles.brand}>
-            <span className={styles.brandName}>Co3</span>
-            <span className={styles.brandTagline}>
-              Construcción de Conocimiento en Colaboración
-            </span>
-          </div>
-
-          <nav className={styles.nav} aria-label="Principal">
-            <button type="button" className={styles.navLink}>
-              Insignias
-            </button>
-            <button type="button" className={styles.navLink}>
-              Recursos
-            </button>
-          </nav>
-        </div>
-      </header>
+      <Encabezado />
 
       <main id="contenido" className={styles.main}>
         <section className={styles.hero}>
@@ -75,8 +54,10 @@ export function PantallaInicio() {
                 </p>
               </div>
               <div className={styles.heroActions}>
-                <Button>Registrarse</Button>
-                <Button variant="secondary">Ingresar</Button>
+                <Button to="/registrarse">Registrarse</Button>
+                <Button variant="secondary" to="/ingresar">
+                  Ingresar
+                </Button>
               </div>
             </div>
 

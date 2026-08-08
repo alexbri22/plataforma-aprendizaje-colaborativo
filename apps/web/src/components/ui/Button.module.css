@@ -17,6 +17,7 @@
   line-height: var(--line-height-tight);
   background: var(--button-bg);
   color: var(--button-fg);
+  text-decoration: none;
   cursor: pointer;
   transition:
     background-color 0.15s ease,

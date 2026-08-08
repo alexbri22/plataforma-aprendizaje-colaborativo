@@ -4,6 +4,14 @@
   box-sizing: border-box;
 }
 
+/* Reserva el espacio del scrollbar en toda página, tenga o no contenido
+   suficiente para necesitarlo. Sin esto, el encabezado (centrado con
+   margin: 0 auto) se recorre unos px al navegar entre una pantalla alta
+   que sí scrollea (inicio) y una corta que no (ingresar/registrarse). */
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   margin: 0;
   font-family: var(--font-family-base);

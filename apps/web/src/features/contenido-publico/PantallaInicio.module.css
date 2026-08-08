@@ -5,33 +5,12 @@
   background: var(--color-surface);
 }
 
-.skipLink {
-  position: absolute;
-  top: calc(var(--space-12) * -1);
-  left: var(--space-3);
-  z-index: 10;
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-md);
-  background: var(--color-primary);
-  color: var(--color-text-on-accent);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  text-decoration: none;
-  transition: top 0.15s ease;
-}
-
-.skipLink:focus-visible {
-  top: var(--space-3);
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
-}
-
 /*
- * Recipe compartida por headerInner / heroInner / contenidoPublico: mismo
- * max-width, mismo padding horizontal, mismo box-sizing — así sus bordes
- * izquierdo y derecho siempre coinciden, sin importar el ancho de viewport.
+ * Recipe compartida con Encabezado.module.css (headerInner) y con
+ * contenidoPublico más abajo: mismo max-width, mismo padding horizontal,
+ * mismo box-sizing — así sus bordes izquierdo y derecho siempre coinciden,
+ * sin importar el ancho de viewport.
  */
-.headerInner,
 .heroInner,
 .contenidoPublico {
   max-width: 1120px;
@@ -40,78 +19,6 @@
   padding-left: var(--space-6);
   padding-right: var(--space-6);
   box-sizing: border-box;
-}
-
-.headerInner {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  padding-top: var(--space-6);
-  padding-bottom: var(--space-6);
-}
-
-.brand {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.brandName {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text);
-}
-
-.brandTagline {
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-muted);
-}
-
-.nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-6);
-  margin-left: var(--space-8);
-}
-
-.navLink {
-  position: relative;
-  border: none;
-  background: none;
-  font-family: inherit;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-muted);
-  cursor: pointer;
-  padding: var(--space-1) var(--space-3);
-  margin: calc(var(--space-1) * -1) calc(var(--space-3) * -1);
-  border-radius: var(--radius-md);
-  transition:
-    background-color 0.15s ease,
-    color 0.15s ease;
-}
-
-/* El texto visible se queda pequeño y quieto; el área táctil real crece a
-   ~44px por debajo, sin afectar el layout (ver layout.md, Optical Adjustments). */
-.navLink::before {
-  content: '';
-  position: absolute;
-  inset: -8px;
-}
-
-.navLink:hover {
-  background: var(--color-primary-subtle);
-  color: var(--color-primary);
-}
-
-.navLink:focus-visible {
-  background: var(--color-primary-subtle);
-  color: var(--color-primary);
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
 }
 
 .main {
