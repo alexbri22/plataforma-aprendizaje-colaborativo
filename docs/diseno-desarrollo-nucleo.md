@@ -425,7 +425,7 @@ La relación está definida en 4.4 del general y descrita atributo por atributo 
 
 ## **6.2 Registro y credenciales**
 
-El registro pide nombre, apellido paterno, apellido materno, correo y contraseña, conforme al diccionario de 5.1 del general. El correo es único y se compara sin distinguir mayúsculas, para que dos registros que difieren solo en eso no produzcan dos cuentas de la misma persona.
+El registro pide nombre, apellido paterno, apellido materno, nivel de estudios, institución educativa, correo y contraseña, conforme al diccionario de 5.1 del general. El correo es único y se compara sin distinguir mayúsculas, para que dos registros que difieren solo en eso no produzcan dos cuentas de la misma persona.
 
 **Verificación de la dirección.** Al registrarse se envía un enlace de verificación. La cuenta queda utilizable de inmediato, pero una dirección sin verificar no aparece en la búsqueda de candidatos al invitar (6.4) ni puede recibir invitaciones. La restricción se aplica exactamente donde el correo importa: es la llave con la que quien organiza busca a alguien, y admitir direcciones sin confirmar permitiría registrarse con el correo de otra persona para recibir sus invitaciones. Bloquear el acceso completo hasta verificar sería más simple de implementar, pero convierte cualquier fallo de entrega en una cuenta inservible que solo el administrador puede rescatar, que es precisamente la dependencia que este capítulo elimina. La decisión queda registrada en P-30.
 

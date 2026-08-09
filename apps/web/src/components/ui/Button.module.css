@@ -17,6 +17,7 @@
   line-height: var(--line-height-tight);
   background: var(--button-bg);
   color: var(--button-fg);
+  text-decoration: none;
   cursor: pointer;
   transition:
     background-color 0.15s ease,
@@ -38,7 +39,7 @@
 }
 
 .secondary {
-  --button-bg: var(--color-surface);
+  --button-bg: var(--color-bg);
   --button-bg-hover: var(--color-surface-hover);
   --button-fg: var(--color-text);
   --button-border: var(--color-border-strong);

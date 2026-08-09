@@ -1,0 +1,40 @@
+.toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--space-8);
+  height: var(--space-8);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.toggle::before {
+  content: '';
+  position: absolute;
+  inset: calc(var(--space-2) * -1);
+}
+
+.toggle svg {
+  width: 16px;
+  height: 16px;
+}
+
+.toggle:hover {
+  color: var(--color-text);
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  color: var(--color-text);
+}
+
+.toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
