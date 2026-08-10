@@ -11,9 +11,15 @@ function requerida(nombre: string): string {
   return valor
 }
 
+// Bajo Vitest (process.env.VITEST) se usa una base separada de la de
+// desarrollo: los tests limpian sus tablas entre casos y correrlos contra
+// DATABASE_URL borraría cuentas reales cada vez que alguien corre `npm
+// test`. Se migra sola con el script "pretest".
+const nombreVariableBaseDeDatos = process.env.VITEST ? 'DATABASE_URL_TEST' : 'DATABASE_URL'
+
 export const config = {
   puerto: numero('PORT', 3001),
-  databaseUrl: requerida('DATABASE_URL'),
+  databaseUrl: requerida(nombreVariableBaseDeDatos),
   webOrigin: process.env.WEB_ORIGIN ?? 'http://localhost:5173',
   produccion: process.env.NODE_ENV === 'production',
   sesion: {
