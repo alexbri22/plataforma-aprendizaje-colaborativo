@@ -1,0 +1,70 @@
+import type { HTMLAttributes } from 'react'
+import {
+  type CategoriaInsignia,
+  definicionCategoria,
+  definicionNivel,
+  nivelParaPuntos,
+} from '@plataforma/shared'
+import { IconoCategoria } from './IconoCategoria'
+import { MarcoRango, type TamanoMarco } from './MarcoRango'
+import styles from './InsigniaCategoria.module.css'
+
+export interface InsigniaCategoriaProps extends Omit<HTMLAttributes<HTMLElement>, 'children'> {
+  categoria: CategoriaInsignia
+  /** Acumulado del usuario en esta categoría. El nivel se deriva de aquí y no se
+   * recibe por separado: dos props para un mismo hecho es una invitación a que
+   * se contradigan. */
+  puntos: number
+  tamano?: TamanoMarco
+  /** Muestra el nombre de la categoría y su nivel debajo del medallón. Sin ella
+   * la insignia sigue siendo accesible: el nombre viaja para lector de pantalla. */
+  mostrarEtiqueta?: boolean
+}
+
+/**
+ * Una categoría con el marco del rango alcanzado. Es la unidad reusable del
+ * sistema de recompensas: la vitrina del perfil son seis de estas, y sirve
+ * igual suelta junto a un nombre en una lista de participantes.
+ */
+export function InsigniaCategoria({
+  categoria,
+  puntos,
+  tamano = 'md',
+  mostrarEtiqueta = false,
+  className,
+  ...props
+}: InsigniaCategoriaProps) {
+  const definicion = definicionCategoria(categoria)
+  const nivel = nivelParaPuntos(puntos)
+  const nombreNivel = nivel ? definicionNivel(nivel).nombre : null
+
+  const descripcion = nombreNivel
+    ? `${definicion.nombre}, nivel ${nombreNivel}`
+    : `${definicion.nombre}, sin nivel todavía`
+
+  // El nombre accesible se declara aquí y no se deja al figcaption: ni todos los
+  // motores de accesibilidad derivan el nombre de un figure a partir de él, y sin
+  // etiqueta visible no hay figcaption del que derivarlo. Un marco es una imagen
+  // decorativa, así que sin esto la insignia llegaría al lector sin nombre.
+  return (
+    <figure
+      className={[styles.insignia, className].filter(Boolean).join(' ')}
+      aria-label={descripcion}
+      {...props}
+    >
+      <MarcoRango nivel={nivel} tamano={tamano}>
+        <IconoCategoria
+          categoria={categoria}
+          className={[styles.medallon, nivel ? null : styles.sinRango].filter(Boolean).join(' ')}
+        />
+      </MarcoRango>
+
+      {mostrarEtiqueta ? (
+        <figcaption className={styles.etiqueta}>
+          <span className={styles.nombre}>{definicion.nombre}</span>
+          <span className={styles.detalle}>{nombreNivel ?? 'Sin nivel'}</span>
+        </figcaption>
+      ) : null}
+    </figure>
+  )
+}

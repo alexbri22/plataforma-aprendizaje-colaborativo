@@ -1,0 +1,13 @@
+/* La vitrina no ordena por nivel ni destaca la insignia más alta: las seis se
+   presentan siempre en el mismo orden del catálogo. Ordenar por logro convierte
+   el perfil en una tabla de posiciones consigo mismo, que es justamente lo que
+   el sistema evita (concepto, sección 6). */
+.vitrina {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  gap: var(--space-6) var(--space-4);
+  justify-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

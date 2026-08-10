@@ -60,8 +60,10 @@ Su alcance está deliberadamente limitado a tres áreas aisladas, sin ninguna ca
 
 **Gestión del catálogo de insignias:**
 
-- Crear, editar y eliminar categorías de insignias disponibles en la plataforma (ver sección 6\)
 - Ajustar los umbrales de participantes mínimos y duración mínima requeridos para el otorgamiento de insignias (ver sección 6\)
+- Ajustar los umbrales de puntos de la escala de niveles, que son una decisión de calibración (ver sección 6\)
+
+El catálogo de las seis insignias es fijo y no se administra: crear o retirar categorías rompería la comparabilidad del acumulado entre actividades, que es la razón de que el catálogo sea único (ver sección 6).
 
 ##
 
@@ -229,25 +231,74 @@ Autoevaluación, autoevaluación grupal y evaluación por pares mantienen carác
 
 # **6\. Sistema de recompensas: Insignias**
 
-El sistema mantiene un catálogo global de categorías de insignias (por ejemplo: liderazgo, colaboración, puntualidad), administrado por el rol de Administrador de forma consistente para toda la plataforma. Al configurar la función "Insignias" para una actividad (sección 5), el organizador elige cuáles categorías del catálogo global estarán disponibles para otorgarse en esa actividad — no puede crear categorías nuevas ni exclusivas de su actividad, para que el acumulado sea comparable entre actividades distintas.
+Cada usuario tiene en su perfil seis insignias de nivel que crecen con el reconocimiento de sus compañeros y de quien organiza. Al cierre de cada actividad, los integrantes de cada equipo se reconocen entre sí. No hay tablas de posiciones ni comparaciones públicas: cada quien progresa contra sí mismo.
 
-Otorgar una insignia consiste en asignar una unidad de una categoría a un participante, según lo configurado en la actividad (solo el organizador, o también entre participantes). Esta unidad se suma al conteo acumulado del usuario en esa categoría a través de todas las actividades en las que ha participado — el conteo no se reinicia entre actividades.
+**Las seis insignias**
 
-**Niveles y rangos**
+El catálogo es fijo para toda la plataforma: ni el organizador ni el administrador crean categorías nuevas, para que el acumulado sea comparable entre actividades distintas. Son pocas y observables, con el criterio de que un compañero deba poder atestiguarlas y no inferirlas, y cubren perfiles distintos para que no todo lo acaparen los mismos.
 
-Existe un único esquema de umbrales de cantidad acumulada, aplicado por igual a todas las categorías (por ejemplo: 1, 5, 20, 50), que determina el nivel del usuario dentro de cada categoría de forma independiente. Cada nivel tiene un nombre temático relacionado con colaboración **\[pendiente definir el catálogo de nombres — decisión de contenido, no bloquea el modelo de datos\]**.
+| Insignia     | Qué reconoce                                          | Cómo lo ve un compañero                    |
+| ------------ | ----------------------------------------------------- | ------------------------------------------ |
+| Liderazgo    | Organizar, dar dirección, destrabar al equipo         | "Cuando nadie sabía qué seguía, lo aclaró" |
+| Compañerismo | Ayudar a otros sin que sea su obligación              | "Me ayudó cuando estaba atorado"           |
+| Comunicación | Explicar bien, escuchar, mantener informado al equipo | "Siempre supimos en qué iba"               |
+| Compromiso   | Cumplir lo acordado y a tiempo, ser constante         | "Su parte siempre estuvo lista"            |
+| Ideas        | Proponer soluciones ante problemas                    | "Cuando nos atoramos, propuso el camino"   |
+| Buen juicio  | Dar retroalimentación útil y saber recibirla          | "Sus comentarios mejoraron el trabajo"     |
 
-El nivel más alto alcanzado por un usuario en una categoría constituye su rango visible en esa categoría, mostrado en su perfil de forma destacada y utilizado también como criterio del filtro de búsqueda de participantes al invitar a una actividad (sección 4, Fase 2).
+**El ritual de reconocimiento**
 
-**Límites al otorgamiento**
+Ocurre durante el periodo de cierre de la actividad (sección 4, Fase 5) y está pensado para tomar dos o tres minutos desde el celular.
 
-Para preservar el valor del acumulado como señal confiable, propongo dos restricciones:
+Reconocimientos limitados: cada participante reparte el 33 % del tamaño de su equipo, sin contarse, redondeado hacia arriba, con un piso de 1 y un techo de 5, y solo entre compañeros de su propio equipo. Un equipo de 3 da 1 reconocimiento; uno de 10, 3; uno de 20, 5. Siempre hay que elegir: nunca alcanza para todos. Un reconocimiento que puede darse a todo el equipo no distingue nada, y sin escasez el acumulado deja de ser una señal.
 
-Límite por otorgante: dentro de una actividad, cada persona puede otorgar como máximo una insignia de cada categoría a cada receptor. Esto define además la unicidad del registro en el modelo de datos (otorgante, receptor, categoría, actividad) y evita la acumulación por repetición dentro de una misma actividad.
+Frase de justificación: cada reconocimiento es persona + insignia + una frase de por qué. **\[Pendiente decidir si la frase será obligatoria, opcional o guiada con frases prellenadas — decisión de contenido, no bloquea el modelo de datos\]**.
 
-Requisitos mínimos de la actividad: el otorgamiento de insignias solo se habilita en actividades que cumplan un mínimo de participantes y una duración mínima entre su creación y su cierre (valores propuestos: 4 participantes y 4 semanas, ajustables por el administrador). Esto encarece la vía de inflación consistente en crear actividades artificiales con pocos integrantes para intercambiar insignias, y es coherente con el patrón de uso previsto de actividades de mediana y larga duración. Los valores concretos de estos umbrales son una decisión de calibración que no bloquea el modelo de datos.
+Anónimo entre pares: quien recibe ve el reconocimiento y la frase, no quién la escribió. El organizador conserva la atribución completa.
 
-Estas restricciones mitigan el abuso casual pero no lo impiden ante coordinación deliberada; mecanismos de detección más robustos se documentan como mejora futura en la sección 8\.
+Validación ligera del organizador: el sistema señala reciprocidad sospechosa y frases vacías; el organizador descarta las que no procedan y puede otorgar las suyas.
+
+**Puntos y niveles**
+
+Un reconocimiento no vale siempre lo mismo: el origen determina su peso, de modo que el acumulado no se reduzca a un concurso de popularidad entre pares.
+
+| Fuente                                    | Valor      | Nota                                |
+| ----------------------------------------- | ---------- | ----------------------------------- |
+| Reconocimiento de un compañero (validado) | 1 punto    | Fuente principal                    |
+| Reconocimiento del organizador            | 2 puntos   | Vale doble; modera la popularidad   |
+| Señales automáticas (solo Compromiso)     | Fracciones | Bitácora constante y metas a tiempo |
+
+Las seis insignias progresan por separado, cada una contra la misma escala única de umbrales acumulados. Los puntos nunca se pierden y no existen niveles negativos: el sistema solo reconoce lo bueno.
+
+| Nivel    | Puntos | Significado                                      |
+| -------- | ------ | ------------------------------------------------ |
+| Bronce   | 3      | Alcanzable en 2-3 actividades; enganche temprano |
+| Plata    | 8      | Constancia durante el semestre                   |
+| Oro      | 18     | Reconocimiento sostenido; pocos lo logran        |
+| Platino  | 35     | Trayectoria de varios cursos                     |
+| Diamante | 60     | Distinción máxima; excepcional y de largo plazo  |
+
+Los umbrales quedan a calibrar tras el primer uso real. El nivel alcanzado en una categoría constituye el rango visible en esa categoría, mostrado en el perfil y utilizado también como criterio del filtro de búsqueda de participantes al invitar a una actividad (sección 4, Fase 2).
+
+**El perfil**
+
+Muestra las seis insignias con su nivel y, al abrirlas, las frases recibidas de forma anónima. El propio usuario y quien organiza lo ven completo; los demás participantes ven las insignias, nunca listas comparativas. La vista de progreso compara contra el propio historial y no contra otros. Quien organiza dispone además de una vista de grupo para detectar a quien no recibe reconocimientos e intervenir a tiempo.
+
+**Salvaguardas**
+
+Contra la popularidad: insignias variadas, doble peso del organizador, y voto únicamente dentro del propio equipo, que además rota entre actividades.
+
+Contra los pactos: reconocimientos limitados por el 33 % con techo de 5, alerta de reciprocidad y anonimato entre pares.
+
+Contra la desmotivación: sin comparación pública y con un primer nivel rápido de alcanzar.
+
+Requisitos mínimos de la actividad: el otorgamiento solo se habilita en actividades que cumplan un mínimo de participantes y una duración mínima entre su creación y su cierre (valores propuestos: 4 participantes y 4 semanas, ajustables por el administrador). Esto encarece la vía de inflación consistente en crear actividades artificiales con pocos integrantes para intercambiar insignias, y es coherente con el patrón de uso previsto de actividades de mediana y larga duración.
+
+Estas salvaguardas mitigan el abuso casual pero no lo impiden ante coordinación deliberada; mecanismos de detección más robustos se documentan como mejora futura en la sección 8\.
+
+**Qué queda fuera de la primera versión**
+
+Las señales automáticas de Compromiso y una insignia especial de "Crecimiento", otorgada por el organizador a quien más mejoró, se difieren a una iteración posterior. La escala de cinco niveles sí queda definida e implementada completa desde el inicio: el arte de los cinco rangos ya existe y escalonarlos habría costado más que sostenerlos.
 
 #
 

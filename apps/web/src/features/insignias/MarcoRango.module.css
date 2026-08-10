@@ -1,0 +1,99 @@
+/*
+ * El marco se dimensiona por ALTURA, no por ancho: los cinco PNG comparten alto
+ * (320 px) pero no ancho, así que fijar el alto es lo que hace que una fila de
+ * insignias quede alineada. El ancho lo aporta la imagen.
+ *
+ * --marco-x / --marco-y / --marco-diametro describen dónde cae la abertura de
+ * cada marco y qué cabe dentro. No son valores estéticos: salen de medir el
+ * canal alfa de cada PNG (el mayor círculo inscrito en la zona transparente),
+ * por eso difieren entre niveles — la abertura del oro es ovalada y la del
+ * diamante va desplazada hacia abajo por la corona.
+ */
+
+.marco {
+  --marco-alto: 6rem;
+  --marco-x: 50%;
+  --marco-y: 50%;
+  --marco-diametro: 55%;
+
+  position: relative;
+  display: inline-block;
+  height: var(--marco-alto);
+  line-height: 0;
+}
+
+.imagen {
+  display: block;
+  height: 100%;
+  width: auto;
+}
+
+.contenido {
+  position: absolute;
+  left: var(--marco-x);
+  top: var(--marco-y);
+  width: var(--marco-diametro);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  line-height: 0;
+}
+
+/* Encuadre por nivel. Ver el comentario de arriba: son medidas, no gusto. */
+.bronce {
+  --marco-x: 48.5%;
+  --marco-y: 50.6%;
+  --marco-diametro: 55%;
+}
+
+.plata {
+  --marco-x: 50.2%;
+  --marco-y: 52.5%;
+  --marco-diametro: 61%;
+}
+
+.oro {
+  --marco-x: 49.5%;
+  --marco-y: 46.9%;
+  --marco-diametro: 59%;
+}
+
+.platino {
+  --marco-x: 50.6%;
+  --marco-y: 46.3%;
+  --marco-diametro: 54%;
+}
+
+.diamante {
+  --marco-x: 47.7%;
+  --marco-y: 55%;
+  --marco-diametro: 47%;
+}
+
+/*
+ * Sin rango todavía. No se dibuja un marco falso ni se atenúa el medallón hasta
+ * volverlo ilegible: se deja el hueco que el marco ocupará, con un anillo
+ * punteado, de modo que la vitrina no salte de sitio cuando la insignia se
+ * gane. El ancho replica la proporción del marco de bronce para que la fila
+ * conserve su ritmo.
+ */
+.vacio {
+  --marco-diametro: 62%;
+
+  aspect-ratio: 299 / 320;
+}
+
+.hueco {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-lg);
+}
+
+.tamanoSm {
+  --marco-alto: 4rem;
+}
+
+.tamanoLg {
+  --marco-alto: 9rem;
+}

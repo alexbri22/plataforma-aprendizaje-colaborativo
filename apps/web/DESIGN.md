@@ -218,6 +218,18 @@ Soft-edged and calm is the default register — generous internal padding, comfo
 - **Status variants** (success / danger / warning): `-subtle` background with matching `-ink` text — quiet, informational, sit inline in tables and lists without competing for attention.
 - **Accent variant (recognition only):** Apothecary Amber `-subtle` background with `accent-ink` text. This is the _only_ place in the system Apothecary Amber appears at rest (a badge already earned, shown on a profile). The moment of _awarding_ a badge may use the solid Apothecary Amber fill with white text as a one-time celebratory treatment (see Do's and Don'ts) — the pill above is its permanent, quiet resting state afterward.
 
+### Rank Insignia (features/insignias)
+
+The one place in the system where raster artwork appears. A rank insignia is a **metallic frame PNG** (bronce / plata / oro / platino / diamante) wrapping a **monochrome SVG medallion** for one of the six categories. It is the visual payload of the recognition system, so it gets latitude nothing else in the interface gets — and correspondingly tight boundaries.
+
+- **Where it may appear:** a user's profile, a participant list, and the closing ritual of an activity. Nowhere else. It is not decoration, an empty state, or a way to make a screen livelier.
+- **Medallion color:** `accent-ink` on a rank that's been earned, `text-muted` on a category still at zero. Never a saturated fill — the frame already carries the visual weight, and `accent` at full strength next to gold leaf reads as noise.
+- **Frames are decorative:** they carry `alt=""`. The accessible name is declared on the insignia as a whole ("Liderazgo, nivel Oro"), because no screen reader can tell gold from platinum.
+- **No motion:** frames don't shimmer, rotate, or animate on award. The Don'ts below already forbid confetti; a spinning gold frame is the same idea wearing a costume.
+- **Sizing is by height, not width:** the five frames share a height and differ in width. Their opening geometry lives as measured custom properties in `MarcoRango.module.css` — those numbers come from the alpha channel of each PNG, not from taste, and shouldn't be nudged by eye.
+
+**Why this doesn't break the One-Bottle Rule.** Amber is reserved because recognition is supposed to be rare and earned; the insignia artwork exists for exactly that reason and appears only in that context. What would break the rule is this artwork leaking outward — a gold frame on a nav item, a diamond on a marketing panel. The frames are the bottle, not a new palette.
+
 ### Navigation (not yet built — guidance for when it is)
 
 Should follow the Linear reference for the organizer-facing shell (activity configuration, participant management): compact, label-forward, Study Ink for the active item via `primary-subtle` background rather than a bold color block. Avoid a colored sidebar or top bar — navigation chrome stays Paper/Shelf so it never competes with Apothecary Amber's rarity.

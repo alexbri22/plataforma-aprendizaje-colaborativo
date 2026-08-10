@@ -1,0 +1,44 @@
+.insignia {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  text-align: center;
+}
+
+/* El medallón usa el color de reconocimiento en reposo (DESIGN.md §2, "Accent —
+   Recognition only"). Una categoría todavía sin rango se pinta en gris de texto
+   secundario: se lee como pendiente sin necesidad de un candado ni de una copia
+   que lo diga. */
+.medallon {
+  display: block;
+  width: 100%;
+  height: 100%;
+  color: var(--color-accent-ink);
+}
+
+.sinRango {
+  color: var(--color-text-muted);
+}
+
+.etiqueta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-width: 8rem;
+}
+
+.nombre {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  color: var(--color-text);
+}
+
+.detalle {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  color: var(--color-text-muted);
+}
