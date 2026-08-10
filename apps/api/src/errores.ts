@@ -3,11 +3,7 @@
 // rutas los traduce a la forma de respuesta de §3.1 vía manejadorErrores.
 
 export type CodigoError =
-  | 'validacion'
-  | 'correo_duplicado'
-  | 'credenciales_invalidas'
-  | 'cuenta_desactivada'
-  | 'sin_sesion'
+  'validacion' | 'correo_duplicado' | 'credenciales_invalidas' | 'cuenta_desactivada' | 'sin_sesion'
 
 export abstract class ErrorDominio extends Error {
   abstract readonly codigo: CodigoError

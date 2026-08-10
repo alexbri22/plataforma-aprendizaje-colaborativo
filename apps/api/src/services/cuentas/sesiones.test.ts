@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  calcularExpiracionAbsoluta,
-  generarIdSesion,
-  sesionInactivaDesde,
-} from './sesiones.js'
+import { calcularExpiracionAbsoluta, generarIdSesion, sesionInactivaDesde } from './sesiones.js'
 
 describe('generarIdSesion', () => {
   it('genera identificadores distintos e impredecibles', () => {
