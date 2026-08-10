@@ -11,9 +11,13 @@ export function Encabezado() {
       <header>
         <div className={styles.headerInner}>
           <Link to="/" className={styles.brand}>
-            <span className={styles.brandName}>Co3</span>
+            <img src="/co3-marca.png" alt="Co3" className={styles.brandMark} />
+            <span className={styles.divider} aria-hidden="true" />
             <span className={styles.brandTagline}>
-              Construcción de Conocimiento en Colaboración
+              <span className={styles.tagCoNavy}>co</span>nstrucción de{' '}
+              <span className={styles.tagCoTeal}>co</span>nocimiento
+              <br />
+              en <span className={styles.tagCoOrange}>co</span>laboración
             </span>
           </Link>
 
