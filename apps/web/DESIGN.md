@@ -220,13 +220,14 @@ Soft-edged and calm is the default register — generous internal padding, comfo
 
 ### Rank Insignia (features/insignias)
 
-The one place in the system where raster artwork appears. A rank insignia is a **metallic frame PNG** (bronce / plata / oro / platino / diamante) wrapping a **monochrome SVG medallion** for one of the six categories. It is the visual payload of the recognition system, so it gets latitude nothing else in the interface gets — and correspondingly tight boundaries.
+The one place in the system where raster artwork appears. A rank insignia is a **single PNG per category-and-level pair** — the metallic frame (bronce / plata / oro / platino / diamante) and the category's emblem baked into one image, plus a `sin-rango` state for a category not yet earned. It is the visual payload of the recognition system, so it gets latitude nothing else in the interface gets — and correspondingly tight boundaries.
 
 - **Where it may appear:** a user's profile, a participant list, and the closing ritual of an activity. Nowhere else. It is not decoration, an empty state, or a way to make a screen livelier.
-- **Medallion color:** `accent-ink` on a rank that's been earned, `text-muted` on a category still at zero. Never a saturated fill — the frame already carries the visual weight, and `accent` at full strength next to gold leaf reads as noise.
-- **Frames are decorative:** they carry `alt=""`. The accessible name is declared on the insignia as a whole ("Liderazgo, nivel Oro"), because no screen reader can tell gold from platinum.
-- **No motion:** frames don't shimmer, rotate, or animate on award. The Don'ts below already forbid confetti; a spinning gold frame is the same idea wearing a costume.
-- **Sizing is by height, not width:** the five frames share a height and differ in width. Their opening geometry lives as measured custom properties in `MarcoRango.module.css` — those numbers come from the alpha channel of each PNG, not from taste, and shouldn't be nudged by eye.
+- **The artwork carries the color, the interface doesn't tint it.** No `filter`, no overlay, no recoloring an insignia to match a surface. If a level needs to read differently, that's a change to the PNG, not to CSS on top of it.
+- **Insignias are decorative:** they carry `alt=""`. The accessible name is declared on the insignia as a whole ("Liderazgo, nivel Oro"), because no screen reader can tell gold from platinum.
+- **No motion:** insignias don't shimmer, rotate, or animate on award. The Don'ts below already forbid confetti; a spinning gold frame is the same idea wearing a costume.
+- **Sizing is by height, not width.** The PNGs don't share a proportion, so a fixed height with automatic width is what keeps a row of six aligned. The scale is 4rem / 6rem / 9rem, shared between the artwork and its transitional fallback so the shelf doesn't jump as files land.
+- **`sin-rango` is a real state, not an absence.** A category at zero shows its own artwork rather than a gap, because showing all six is half the point of the profile: it teaches what's ahead.
 
 **Why this doesn't break the One-Bottle Rule.** Amber is reserved because recognition is supposed to be rare and earned; the insignia artwork exists for exactly that reason and appears only in that context. What would break the rule is this artwork leaking outward — a gold frame on a nav item, a diamond on a marketing panel. The frames are the bottle, not a new palette.
 

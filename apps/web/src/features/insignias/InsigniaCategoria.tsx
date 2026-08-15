@@ -5,9 +5,16 @@ import {
   definicionNivel,
   nivelParaPuntos,
 } from '@plataforma/shared'
+import { SIN_RANGO, arteDeInsignia } from './arteInsignias'
 import { IconoCategoria } from './IconoCategoria'
 import { MarcoRango, type TamanoMarco } from './MarcoRango'
 import styles from './InsigniaCategoria.module.css'
+
+const CLASES_TAMANO: Record<TamanoMarco, string | undefined> = {
+  sm: styles.tamanoSm,
+  md: undefined,
+  lg: styles.tamanoLg,
+}
 
 export interface InsigniaCategoriaProps extends Omit<HTMLAttributes<HTMLElement>, 'children'> {
   categoria: CategoriaInsignia
@@ -42,22 +49,36 @@ export function InsigniaCategoria({
     ? `${definicion.nombre}, nivel ${nombreNivel}`
     : `${definicion.nombre}, sin nivel todavía`
 
+  const arte = arteDeInsignia(categoria, nivel ?? SIN_RANGO)
+
   // El nombre accesible se declara aquí y no se deja al figcaption: ni todos los
   // motores de accesibilidad derivan el nombre de un figure a partir de él, y sin
-  // etiqueta visible no hay figcaption del que derivarlo. Un marco es una imagen
-  // decorativa, así que sin esto la insignia llegaría al lector sin nombre.
+  // etiqueta visible no hay figcaption del que derivarlo. La insignia es una
+  // imagen decorativa, así que sin esto llegaría al lector sin nombre.
   return (
     <figure
       className={[styles.insignia, className].filter(Boolean).join(' ')}
       aria-label={descripcion}
       {...props}
     >
-      <MarcoRango nivel={nivel} tamano={tamano}>
-        <IconoCategoria
-          categoria={categoria}
-          className={[styles.medallon, nivel ? null : styles.sinRango].filter(Boolean).join(' ')}
+      {arte ? (
+        <img
+          className={[styles.arte, CLASES_TAMANO[tamano]].filter(Boolean).join(' ')}
+          src={arte}
+          alt=""
+          aria-hidden
         />
-      </MarcoRango>
+      ) : (
+        // Respaldo temporal mientras el arte se sube por tandas: el marco de la
+        // primera versión con el medallón encima. Se elimina, junto con
+        // MarcoRango e IconoCategoria, cuando estén los 36 PNG.
+        <MarcoRango nivel={nivel} tamano={tamano}>
+          <IconoCategoria
+            categoria={categoria}
+            className={[styles.medallon, nivel ? null : styles.sinRango].filter(Boolean).join(' ')}
+          />
+        </MarcoRango>
+      )}
 
       {mostrarEtiqueta ? (
         <figcaption className={styles.etiqueta}>

@@ -5,6 +5,13 @@
  * mover lo de adentro sin romper a nadie.
  */
 
+export {
+  SIN_RANGO,
+  arteDeInsignia,
+  faltantesDeArte,
+  type FaltanteDeArte,
+  type NivelArte,
+} from './arteInsignias'
 export { IconoCategoria, type IconoCategoriaProps } from './IconoCategoria'
 export { InsigniaCategoria, type InsigniaCategoriaProps } from './InsigniaCategoria'
 export { MarcoRango, type MarcoRangoProps, type TamanoMarco } from './MarcoRango'

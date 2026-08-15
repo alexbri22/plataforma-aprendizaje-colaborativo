@@ -12,11 +12,12 @@ núcleo y todavía no existen. Hoy los componentes reciben los puntos por props.
 
 | Pieza                      | Para qué                                                                                    |
 | -------------------------- | ------------------------------------------------------------------------------------------- |
-| `IconoCategoria`           | Medallón SVG de una de las seis categorías, sin marco. Se pinta con `currentColor`.         |
-| `MarcoRango`               | Envuelve cualquier contenido en el marco de un nivel. Agnóstico de qué enmarca.             |
-| `InsigniaCategoria`        | Una categoría con el marco de su rango. Es la unidad reusable del sistema.                  |
+| `arteInsignias`            | Resuelve el PNG de una categoría y nivel. Tolera los que aún no se han subido.              |
+| `InsigniaCategoria`        | Una categoría con el arte de su rango. Es la unidad reusable del sistema.                   |
 | `VitrinaInsignias`         | Las seis insignias de un usuario, para el perfil.                                           |
 | `PantallaMuestraInsignias` | Ruta `/insignias`. Muestra para revisión, no producto — se elimina cuando el perfil exista. |
+| `IconoCategoria`           | **Provisional.** Medallón SVG, solo como respaldo mientras falte arte.                      |
+| `MarcoRango`               | **Provisional.** Marco por nivel, solo como respaldo mientras falte arte.                   |
 
 Se importa desde `index.ts`, nunca de un archivo suelto:
 
@@ -30,20 +31,38 @@ El nivel **no se recibe por props**: se deriva de los puntos con
 invitación a que se contradigan, y el estado derivado se calcula al usarlo
 (sección 3.6 del general).
 
-## Los marcos
+## El arte
 
-`assets/marcos/*.png`, uno por nivel. Los originales que entregó el equipo no
-tenían canal alfa: el cuadriculado gris estaba pintado como píxeles opacos. Los
-de aquí son esos mismos, con la transparencia recuperada por detección del
-patrón, reescalados a 320 px de alto y comprimidos con `pngquant` — de 4.2 MB a
-156 KB en total. **Si alguien vuelve a exportarlos, hay que verificar el canal
-alfa antes de commitearlos**, o las insignias saldrán con un tablero de fondo.
+Un PNG por combinación de categoría y nivel, con el marco y el dibujo horneados
+en la misma imagen: `assets/insignias/<categoria>/<nivel>.png`, 36 en total
+contando el estado `sin-rango`. La convención de nombres y los requisitos de los
+archivos están en [`assets/insignias/README.md`](assets/insignias/README.md).
 
-Las medidas de encuadre de `MarcoRango.module.css` (`--marco-x`, `--marco-y`,
-`--marco-diametro`) salen de medir la abertura de cada PNG: el mayor círculo
-inscrito en su zona transparente. Difieren entre niveles porque las aberturas
-difieren — la del oro es ovalada, la del diamante va desplazada hacia abajo por
-la corona. Si se reemplaza un PNG, hay que volver a medir.
+El mapa se arma con `import.meta.glob` y no con imports estáticos, por dos
+razones: 36 imports escritos a mano se desincronizan del disco en cuanto alguien
+renombra un archivo, y un import estático de un archivo inexistente rompe el
+build. Aquí lo que falta simplemente no está en el mapa.
+
+### Migración en curso
+
+Mientras el lote esté incompleto, cada combinación sin archivo cae a un
+**respaldo provisional**: el marco de la primera versión (`assets/marcos/`) con
+el medallón SVG de `IconoCategoria` encima. Puedes subir los PNG por tandas sin
+romper nada; `faltantesDeArte()` enumera lo que sigue pendiente y la pantalla de
+muestra lo lista.
+
+Cuando estén los 36, se borran en un solo cambio:
+
+- `assets/marcos/` y `MarcoRango.tsx` con su CSS
+- `IconoCategoria.tsx`
+- la rama de respaldo de `InsigniaCategoria.tsx` y las clases `.medallon` y
+  `.sinRango` de su CSS
+- `faltantesDeArte`, su prueba y la sección "Arte pendiente" de la muestra
+
+Los marcos de `assets/marcos/` llegaron sin canal alfa —el cuadriculado gris
+estaba pintado como píxeles opacos— y se les recuperó la transparencia por
+detección del patrón. **El mismo riesgo aplica al arte nuevo:** verifica el alfa
+antes de commitear, o las insignias saldrán con un tablero de fondo.
 
 ## Lo que falta
 

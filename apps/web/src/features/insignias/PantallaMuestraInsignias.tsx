@@ -1,9 +1,8 @@
 import { NIVELES } from '@plataforma/shared'
 import { Encabezado } from '../../components/Encabezado'
 import { Card } from '../../components/ui'
-import { IconoCategoria } from './IconoCategoria'
+import { faltantesDeArte } from './arteInsignias'
 import { InsigniaCategoria } from './InsigniaCategoria'
-import { MarcoRango } from './MarcoRango'
 import { VitrinaInsignias } from './VitrinaInsignias'
 import styles from './PantallaMuestraInsignias.module.css'
 
@@ -24,7 +23,11 @@ const PUNTOS_DE_EJEMPLO = {
   'buen-juicio': 1,
 }
 
+const TOTAL_DE_ARTE = 36
+
 export function PantallaMuestraInsignias() {
+  const faltantes = faltantesDeArte()
+
   return (
     <div className={styles.page}>
       <Encabezado />
@@ -44,9 +47,7 @@ export function PantallaMuestraInsignias() {
           <ul className={styles.escala}>
             {NIVELES.map((nivel) => (
               <li key={nivel.id} className={styles.escalaItem}>
-                <MarcoRango nivel={nivel.id}>
-                  <IconoCategoria categoria="liderazgo" className={styles.medallon} />
-                </MarcoRango>
+                <InsigniaCategoria categoria="liderazgo" puntos={nivel.puntosMinimos} />
                 <span className={styles.escalaNombre}>{nivel.nombre}</span>
                 <span className={styles.escalaUmbral}>{nivel.puntosMinimos} pts</span>
               </li>
@@ -69,6 +70,27 @@ export function PantallaMuestraInsignias() {
             <InsigniaCategoria categoria="ideas" puntos={36} tamano="lg" mostrarEtiqueta />
           </div>
         </section>
+
+        {faltantes.length > 0 ? (
+          <section className={styles.seccion}>
+            <h2 className={styles.seccionTitulo}>Arte pendiente</h2>
+            <p className={styles.lede}>
+              Faltan {faltantes.length} de {TOTAL_DE_ARTE} PNG. Cada combinación sin archivo se
+              dibuja con el respaldo provisional —el marco de la primera versión con el medallón
+              encima— así que lo de arriba no refleja todavía el arte definitivo. La convención de
+              nombres está en <code>assets/insignias/README.md</code>.
+            </p>
+            <ul className={styles.faltantes}>
+              {faltantes.map(({ categoria, nivel }) => (
+                <li key={`${categoria}/${nivel}`}>
+                  <code>
+                    {categoria}/{nivel}.png
+                  </code>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
       </main>
     </div>
   )

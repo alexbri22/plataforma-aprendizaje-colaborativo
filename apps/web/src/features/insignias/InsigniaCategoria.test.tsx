@@ -17,23 +17,29 @@ describe('InsigniaCategoria', () => {
     expect(screen.getByRole('figure', { name: 'Ideas, sin nivel todavía' })).toBeInTheDocument()
   })
 
-  it('pinta el marco del nivel derivado de los puntos', () => {
+  it('pinta el arte del nivel derivado de los puntos', () => {
     const { container, rerender } = render(<InsigniaCategoria categoria="compromiso" puntos={8} />)
-    const marco = () => container.querySelector('img')
+    const imagen = () => container.querySelector('img')
 
-    expect(marco()?.getAttribute('src')).toContain('plata')
+    expect(imagen()?.getAttribute('src')).toContain('plata')
 
     rerender(<InsigniaCategoria categoria="compromiso" puntos={60} />)
-    expect(marco()?.getAttribute('src')).toContain('diamante')
+    expect(imagen()?.getAttribute('src')).toContain('diamante')
   })
 
-  it('no dibuja marco alguno mientras la categoría no tenga nivel', () => {
+  it('nunca muestra arte de un rango en una categoría sin nivel', () => {
+    // Vale igual con el respaldo provisional, que no dibuja marco, que con el
+    // arte definitivo, que dibuja el PNG de sin-rango: lo que no puede pasar es
+    // que una categoría en cero se lea como si tuviera un rango ganado.
     const { container } = render(<InsigniaCategoria categoria="compromiso" puntos={0} />)
+    const src = container.querySelector('img')?.getAttribute('src') ?? ''
 
-    expect(container.querySelector('img')).toBeNull()
+    for (const nivel of ['bronce', 'plata', 'oro', 'platino', 'diamante']) {
+      expect(src).not.toContain(nivel)
+    }
   })
 
-  it('el marco es decorativo: no aporta nombre accesible propio', () => {
+  it('la imagen es decorativa: no aporta nombre accesible propio', () => {
     const { container } = render(<InsigniaCategoria categoria="comunicacion" puntos={18} />)
 
     expect(container.querySelector('img')).toHaveAttribute('alt', '')
