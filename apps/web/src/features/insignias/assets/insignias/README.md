@@ -18,16 +18,26 @@ assets/insignias/
 └── buen-juicio/
 ```
 
-y dentro de cada una, seis archivos:
+y dentro de cada una, seis archivos, en cualquiera de estas dos formas:
 
 ```
-bronce.png
-plata.png
-oro.png
-platino.png
-diamante.png
-sin-rango.png
+bronce.png                   liderazgo_bronce.png
+plata.png                    liderazgo_plata.png
+oro.png            — o —     liderazgo_oro.png
+platino.png                  liderazgo_platino.png
+diamante.png                 liderazgo_diamante.png
+sin-rango.png                liderazgo_sin-rango.png
 ```
+
+La segunda repite el nombre de la carpeta como prefijo. Dentro del árbol es
+redundante, pero fuera de él —en una descarga, en una pestaña del editor, en un
+adjunto de chat— es la diferencia entre un archivo que se identifica solo y seis
+llamados `bronce.png`. Puedes mezclar ambas formas.
+
+**Si el prefijo no coincide con su carpeta, el archivo no se carga** y aparece
+listado en `/insignias` como mal colocado. Aceptarlo lo colgaría de la categoría
+equivocada sin que nada lo señale: `liderazgo/comunicacion_bronce.png` se leería
+como el bronce de liderazgo.
 
 **36 archivos en total.** `sin-rango.png` es la categoría todavía no ganada —
 sin marco, o en silueta: enseña qué hay por delante, que es media razón de que

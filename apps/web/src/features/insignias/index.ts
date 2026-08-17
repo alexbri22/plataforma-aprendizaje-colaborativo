@@ -8,6 +8,8 @@
 export {
   SIN_RANGO,
   arteDeInsignia,
+  desubicadosDeArte,
+  duplicadosDeArte,
   faltantesDeArte,
   type FaltanteDeArte,
   type NivelArte,

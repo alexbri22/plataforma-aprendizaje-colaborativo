@@ -1,7 +1,7 @@
 import { NIVELES } from '@plataforma/shared'
 import { Encabezado } from '../../components/Encabezado'
 import { Card } from '../../components/ui'
-import { faltantesDeArte } from './arteInsignias'
+import { desubicadosDeArte, duplicadosDeArte, faltantesDeArte } from './arteInsignias'
 import { InsigniaCategoria } from './InsigniaCategoria'
 import { VitrinaInsignias } from './VitrinaInsignias'
 import styles from './PantallaMuestraInsignias.module.css'
@@ -27,6 +27,8 @@ const TOTAL_DE_ARTE = 36
 
 export function PantallaMuestraInsignias() {
   const faltantes = faltantesDeArte()
+  const desubicados = desubicadosDeArte()
+  const duplicados = duplicadosDeArte()
 
   return (
     <div className={styles.page}>
@@ -70,6 +72,40 @@ export function PantallaMuestraInsignias() {
             <InsigniaCategoria categoria="ideas" puntos={36} tamano="lg" mostrarEtiqueta />
           </div>
         </section>
+
+        {desubicados.length > 0 ? (
+          <section className={styles.seccion}>
+            <h2 className={styles.seccionTitulo}>Archivos mal colocados</h2>
+            <p className={styles.lede}>
+              Estos PNG llevan un prefijo que contradice la carpeta donde están, así que no se
+              cargan. O el archivo está en la carpeta equivocada, o el prefijo tiene una errata.
+            </p>
+            <ul className={styles.faltantes}>
+              {desubicados.map((ruta) => (
+                <li key={ruta}>
+                  <code>{ruta}</code>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        {duplicados.length > 0 ? (
+          <section className={styles.seccion}>
+            <h2 className={styles.seccionTitulo}>Archivos duplicados</h2>
+            <p className={styles.lede}>
+              Cada par describe la misma insignia con las dos formas de nombre. Solo uno queda en
+              efecto, y cuál depende del orden en que se lea la carpeta: hay que borrar el sobrante.
+            </p>
+            <ul className={styles.faltantes}>
+              {duplicados.map((par) => (
+                <li key={par.join(' ')}>
+                  <code>{par.join('  ·  ')}</code>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
         {faltantes.length > 0 ? (
           <section className={styles.seccion}>
