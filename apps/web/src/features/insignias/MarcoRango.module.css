@@ -8,10 +8,24 @@
  * canal alfa de cada PNG (el mayor círculo inscrito en la zona transparente),
  * por eso difieren entre niveles — la abertura del oro es ovalada y la del
  * diamante va desplazada hacia abajo por la corona.
+ *
+ * --marco-escala sí es de ajuste, y es la única de las cuatro que conviene
+ * tocar a ojo. Corrige que a la misma altura los cinco marcos no dejan el mismo
+ * hueco: medido en píxeles de emblema, platino rendía el 81 % de plata y
+ * diamante el 71 %, porque su abertura es más cerrada. Sin este factor, un mismo
+ * emblema se ve notoriamente más chico en los niveles altos, que es justo al
+ * revés de lo que el rango debería comunicar.
+ *
+ * Se aplica como `transform` y no sumándolo a la altura a propósito: así el
+ * marco crece en pantalla sin crecer en el flujo, y las etiquetas de una fila
+ * siguen alineadas entre sí. El precio es que un valor muy alto invade el
+ * espacio del vecino en vez de empujarlo; por encima de 1.4 conviene subir
+ * también la separación de la rejilla.
  */
 
 .marco {
   --marco-alto: 6rem;
+  --marco-escala: 1;
   --marco-x: 50%;
   --marco-y: 50%;
   --marco-diametro: 55%;
@@ -20,6 +34,7 @@
   display: inline-block;
   height: var(--marco-alto);
   line-height: 0;
+  transform: scale(var(--marco-escala));
 }
 
 .imagen {
@@ -58,12 +73,16 @@
 }
 
 .platino {
+  /* Abertura cerrada: sin el factor, su emblema queda al 81 % del de plata. */
+  --marco-escala: 1.18;
   --marco-x: 50.6%;
   --marco-y: 46.3%;
   --marco-diametro: 54%;
 }
 
 .diamante {
+  /* La corona ocupa alto sin aportar abertura: su emblema queda al 71 %. */
+  --marco-escala: 1.34;
   --marco-x: 47.7%;
   --marco-y: 55%;
   --marco-diametro: 47%;
