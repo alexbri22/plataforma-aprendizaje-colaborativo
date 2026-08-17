@@ -7,29 +7,20 @@
   text-align: center;
 }
 
-/* La insignia se dimensiona por ALTURA y deja el ancho en automático. Los PNG no
-   comparten proporción entre sí, así que fijar el alto es lo que mantiene
-   alineada una fila de seis. Misma escala que MarcoRango, para que el respaldo y
-   el arte definitivo ocupen exactamente lo mismo y la vitrina no salte cuando se
-   suba un archivo. */
-.arte {
+/* El emblema llena la abertura que MarcoRango le reserva, que es un cuadrado
+   inscrito en la zona transparente del marco. No lleva medidas propias: si las
+   tuviera, competirían con las del marco y el resultado dependería de cuál gane. */
+.emblema {
   display: block;
-  height: 6rem;
-  width: auto;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
-.tamanoSm {
-  height: 4rem;
-}
-
-.tamanoLg {
-  height: 9rem;
-}
-
-/* El medallón usa el color de reconocimiento en reposo (DESIGN.md §2, "Accent —
-   Recognition only"). Una categoría todavía sin rango se pinta en gris de texto
-   secundario: se lee como pendiente sin necesidad de un candado ni de una copia
-   que lo diga. */
+/* El emblema vectorial usa el color de reconocimiento en reposo (DESIGN.md §2,
+   "Accent — Recognition only"). Una categoría todavía sin rango se pinta en gris
+   de texto secundario: se lee como pendiente sin necesidad de un candado ni de
+   una copia que lo diga. */
 .medallon {
   display: block;
   width: 100%;

@@ -1,8 +1,8 @@
-# Arte de las insignias
+# Emblemas de las insignias
 
-Un PNG por cada combinación de categoría y nivel. Cada archivo es la insignia
-**completa**: el marco del rango y el dibujo de la categoría van horneados en la
-misma imagen, no en capas.
+Un PNG por cada combinación de categoría y nivel. Cada archivo es el **emblema**
+—el disco que va dentro del marco—, no la insignia completa: el marco del rango
+lo pone `MarcoRango` por encima, en capas.
 
 ## Estructura
 
@@ -26,7 +26,6 @@ plata.png                    liderazgo_plata.png
 oro.png            — o —     liderazgo_oro.png
 platino.png                  liderazgo_platino.png
 diamante.png                 liderazgo_diamante.png
-sin-rango.png                liderazgo_sin-rango.png
 ```
 
 La segunda repite el nombre de la carpeta como prefijo. Dentro del árbol es
@@ -39,9 +38,10 @@ listado en `/insignias` como mal colocado. Aceptarlo lo colgaría de la categor�
 equivocada sin que nada lo señale: `liderazgo/comunicacion_bronce.png` se leería
 como el bronce de liderazgo.
 
-**36 archivos en total.** `sin-rango.png` es la categoría todavía no ganada —
-sin marco, o en silueta: enseña qué hay por delante, que es media razón de que
-el perfil muestre siempre las seis.
+**30 archivos en total.** El estado sin rango no lleva arte: una categoría
+todavía no ganada se dibuja con el hueco punteado del marco y el emblema
+vectorial en gris. Un `sin-rango.png` heredado de la versión anterior no se
+carga y aparece listado en `/insignias`.
 
 ## Nombres
 
@@ -60,11 +60,14 @@ distinto y Git termine viendo dos archivos donde hay uno.
 - **Transparencia real.** Un fondo cuadriculado _dibujado_ no es transparencia:
   si el PNG no trae canal alfa, la insignia sale con un tablero gris encima. Ya
   pasó con los marcos de la primera versión. Verifícalo antes de commitear.
-- **Alto uniforme,** idealmente 320 px. Los componentes dimensionan por altura y
-  dejan el ancho en automático, de modo que una fila de insignias quede alineada
-  aunque sus anchos difieran. Alturas distintas entre archivos rompen esa fila.
+- **Sin margen transparente.** El emblema debe llenar su lienzo: el marco le
+  reserva una abertura y lo estira hasta llenarla, así que un archivo con 15 % de
+  aire alrededor se ve 15 % más chico que sus hermanos. Recorta al contenido y
+  rellena a cuadrado.
+- **Alto uniforme,** idealmente 320 px antes de recortar. Los archivos ya
+  procesados rondan los 272 px de lado.
 - **Comprimidos.** `pngquant --quality=65-92` deja estas imágenes en torno a los
-  30 KB sin pérdida visible. Son 36 archivos: sin comprimir se van a varios MB.
+  30 KB sin pérdida visible. Son 30 archivos: sin comprimir se van a varios MB.
 
 Para verificar un lote antes de commitear:
 
@@ -84,8 +87,10 @@ transparente, es decir, que no está recortado.
 ## Mientras faltan archivos
 
 El cargador (`arteInsignias.ts`) arma el mapa con los PNG que existan. Una
-combinación sin archivo cae al respaldo temporal: el marco de la primera versión
-con el medallón SVG encima. Puedes subirlos por tandas sin romper nada.
+combinación sin archivo conserva su marco y cae al emblema vectorial de
+`IconoCategoria`. Puedes subirlos por tandas sin romper nada, y `/insignias`
+lista lo que falta.
 
-Cuando estén los 36, se borran `assets/marcos/`, `IconoCategoria.tsx` y
-`MarcoRango.tsx`, y el respaldo de `InsigniaCategoria.tsx` con ellos.
+El marco y el emblema vectorial **no son provisionales**: el marco se usa
+siempre, y el vectorial es además el emblema permanente del estado sin rango.
+Cuando estén los 30, lo único que desaparece es su papel de suplente.

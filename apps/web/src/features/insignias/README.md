@@ -12,12 +12,12 @@ núcleo y todavía no existen. Hoy los componentes reciben los puntos por props.
 
 | Pieza                      | Para qué                                                                                    |
 | -------------------------- | ------------------------------------------------------------------------------------------- |
-| `arteInsignias`            | Resuelve el PNG de una categoría y nivel. Tolera los que aún no se han subido.              |
-| `InsigniaCategoria`        | Una categoría con el arte de su rango. Es la unidad reusable del sistema.                   |
+| `arteInsignias`            | Resuelve el emblema PNG de una categoría y nivel. Tolera los que aún no se han subido.      |
+| `MarcoRango`               | El marco del nivel. Envuelve cualquier contenido; agnóstico de qué enmarca.                 |
+| `IconoCategoria`           | Emblema vectorial de una categoría. Suplente del PNG, y titular del estado sin rango.       |
+| `InsigniaCategoria`        | Marco más emblema. Es la unidad reusable del sistema.                                       |
 | `VitrinaInsignias`         | Las seis insignias de un usuario, para el perfil.                                           |
 | `PantallaMuestraInsignias` | Ruta `/insignias`. Muestra para revisión, no producto — se elimina cuando el perfil exista. |
-| `IconoCategoria`           | **Provisional.** Medallón SVG, solo como respaldo mientras falte arte.                      |
-| `MarcoRango`               | **Provisional.** Marco por nivel, solo como respaldo mientras falte arte.                   |
 
 Se importa desde `index.ts`, nunca de un archivo suelto:
 
@@ -33,36 +33,40 @@ invitación a que se contradigan, y el estado derivado se calcula al usarlo
 
 ## El arte
 
-Un PNG por combinación de categoría y nivel, con el marco y el dibujo horneados
-en la misma imagen: `assets/insignias/<categoria>/<nivel>.png`, 36 en total
-contando el estado `sin-rango`. La convención de nombres y los requisitos de los
-archivos están en [`assets/insignias/README.md`](assets/insignias/README.md).
+Una insignia son dos capas: el **marco** del nivel (`assets/marcos/`, cinco
+archivos) y el **emblema** de la categoría en ese nivel
+(`assets/insignias/<categoria>/<nivel>.png`, 30 archivos). El estado sin rango no
+lleva emblema propio: usa el hueco punteado del marco y el emblema vectorial en
+gris. La convención de nombres y los requisitos de los archivos están en
+[`assets/insignias/README.md`](assets/insignias/README.md).
 
 El mapa se arma con `import.meta.glob` y no con imports estáticos, por dos
-razones: 36 imports escritos a mano se desincronizan del disco en cuanto alguien
+razones: 30 imports escritos a mano se desincronizan del disco en cuanto alguien
 renombra un archivo, y un import estático de un archivo inexistente rompe el
 build. Aquí lo que falta simplemente no está en el mapa.
 
-### Migración en curso
+### Mientras falta arte
 
-Mientras el lote esté incompleto, cada combinación sin archivo cae a un
-**respaldo provisional**: el marco de la primera versión (`assets/marcos/`) con
-el medallón SVG de `IconoCategoria` encima. Puedes subir los PNG por tandas sin
-romper nada; `faltantesDeArte()` enumera lo que sigue pendiente y la pantalla de
-muestra lo lista.
+Una combinación sin emblema PNG conserva su marco y cae al emblema vectorial de
+`IconoCategoria`. Puedes subir los archivos por tandas sin romper nada;
+`faltantesDeArte()` enumera lo pendiente y la pantalla de muestra lo lista, junto
+con dos diagnósticos: archivos que no se cargan por nombre inválido
+(`ignoradosDeArte`) y pares que compiten por el mismo emblema
+(`duplicadosDeArte`).
 
-Cuando estén los 36, se borran en un solo cambio:
-
-- `assets/marcos/` y `MarcoRango.tsx` con su CSS
-- `IconoCategoria.tsx`
-- la rama de respaldo de `InsigniaCategoria.tsx` y las clases `.medallon` y
-  `.sinRango` de su CSS
-- `faltantesDeArte`, su prueba y la sección "Arte pendiente" de la muestra
+Cuando estén los 30, no se borra nada: el marco se usa siempre y el emblema
+vectorial sigue siendo el del estado sin rango. Lo único que desaparece es su
+papel de suplente, junto con las tres secciones de diagnóstico de la muestra.
 
 Los marcos de `assets/marcos/` llegaron sin canal alfa —el cuadriculado gris
 estaba pintado como píxeles opacos— y se les recuperó la transparencia por
 detección del patrón. **El mismo riesgo aplica al arte nuevo:** verifica el alfa
 antes de commitear, o las insignias saldrán con un tablero de fondo.
+
+El encuadre de cada marco (`--marco-x`, `--marco-y`, `--marco-diametro` en
+`MarcoRango.module.css`) sale de medir su abertura: el mayor círculo inscrito en
+la zona transparente. Es lo que dimensiona al emblema, y por eso el emblema no
+debe traer margen propio — si lo trae, se ve más chico que sus hermanos.
 
 ## Lo que falta
 

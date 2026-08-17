@@ -5,16 +5,10 @@ import {
   definicionNivel,
   nivelParaPuntos,
 } from '@plataforma/shared'
-import { SIN_RANGO, arteDeInsignia } from './arteInsignias'
+import { emblemaDeInsignia } from './arteInsignias'
 import { IconoCategoria } from './IconoCategoria'
 import { MarcoRango, type TamanoMarco } from './MarcoRango'
 import styles from './InsigniaCategoria.module.css'
-
-const CLASES_TAMANO: Record<TamanoMarco, string | undefined> = {
-  sm: styles.tamanoSm,
-  md: undefined,
-  lg: styles.tamanoLg,
-}
 
 export interface InsigniaCategoriaProps extends Omit<HTMLAttributes<HTMLElement>, 'children'> {
   categoria: CategoriaInsignia
@@ -49,7 +43,10 @@ export function InsigniaCategoria({
     ? `${definicion.nombre}, nivel ${nombreNivel}`
     : `${definicion.nombre}, sin nivel todavía`
 
-  const arte = arteDeInsignia(categoria, nivel ?? SIN_RANGO)
+  // El emblema es el disco de la categoría; el marco lo pone MarcoRango. Van
+  // siempre juntos, de modo que todas las insignias comparten silueta y tamaño
+  // sin importar si su arte ya se subió.
+  const emblema = nivel ? emblemaDeInsignia(categoria, nivel) : undefined
 
   // El nombre accesible se declara aquí y no se deja al figcaption: ni todos los
   // motores de accesibilidad derivan el nombre de un figure a partir de él, y sin
@@ -61,24 +58,19 @@ export function InsigniaCategoria({
       aria-label={descripcion}
       {...props}
     >
-      {arte ? (
-        <img
-          className={[styles.arte, CLASES_TAMANO[tamano]].filter(Boolean).join(' ')}
-          src={arte}
-          alt=""
-          aria-hidden
-        />
-      ) : (
-        // Respaldo temporal mientras el arte se sube por tandas: el marco de la
-        // primera versión con el medallón encima. Se elimina, junto con
-        // MarcoRango e IconoCategoria, cuando estén los 36 PNG.
-        <MarcoRango nivel={nivel} tamano={tamano}>
+      <MarcoRango nivel={nivel} tamano={tamano}>
+        {emblema ? (
+          <img className={styles.emblema} src={emblema} alt="" aria-hidden />
+        ) : (
+          // Sin nivel no hay emblema que mostrar, y con nivel puede que su PNG
+          // aún no se haya subido. Ambos casos caen al emblema vectorial: en
+          // gris cuando no hay rango, en color de reconocimiento cuando sí.
           <IconoCategoria
             categoria={categoria}
             className={[styles.medallon, nivel ? null : styles.sinRango].filter(Boolean).join(' ')}
           />
-        </MarcoRango>
-      )}
+        )}
+      </MarcoRango>
 
       {mostrarEtiqueta ? (
         <figcaption className={styles.etiqueta}>

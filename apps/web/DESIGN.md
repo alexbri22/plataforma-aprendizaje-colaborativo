@@ -220,14 +220,14 @@ Soft-edged and calm is the default register — generous internal padding, comfo
 
 ### Rank Insignia (features/insignias)
 
-The one place in the system where raster artwork appears. A rank insignia is a **single PNG per category-and-level pair** — the metallic frame (bronce / plata / oro / platino / diamante) and the category's emblem baked into one image, plus a `sin-rango` state for a category not yet earned. It is the visual payload of the recognition system, so it gets latitude nothing else in the interface gets — and correspondingly tight boundaries.
+The one place in the system where raster artwork appears. A rank insignia is **two layers**: a metallic frame PNG for the level (bronce / plata / oro / platino / diamante), and inside it an emblem PNG for the category at that level. A category not yet earned keeps the frame's dotted placeholder and a muted vector emblem. It is the visual payload of the recognition system, so it gets latitude nothing else in the interface gets — and correspondingly tight boundaries.
 
 - **Where it may appear:** a user's profile, a participant list, and the closing ritual of an activity. Nowhere else. It is not decoration, an empty state, or a way to make a screen livelier.
 - **The artwork carries the color, the interface doesn't tint it.** No `filter`, no overlay, no recoloring an insignia to match a surface. If a level needs to read differently, that's a change to the PNG, not to CSS on top of it.
 - **Insignias are decorative:** they carry `alt=""`. The accessible name is declared on the insignia as a whole ("Liderazgo, nivel Oro"), because no screen reader can tell gold from platinum.
 - **No motion:** insignias don't shimmer, rotate, or animate on award. The Don'ts below already forbid confetti; a spinning gold frame is the same idea wearing a costume.
-- **Sizing is by height, not width.** The PNGs don't share a proportion, so a fixed height with automatic width is what keeps a row of six aligned. The scale is 4rem / 6rem / 9rem, shared between the artwork and its transitional fallback so the shelf doesn't jump as files land.
-- **`sin-rango` is a real state, not an absence.** A category at zero shows its own artwork rather than a gap, because showing all six is half the point of the profile: it teaches what's ahead.
+- **The frame owns the sizing; the emblem fills what it's given.** Frames are sized by height (4rem / 6rem / 9rem) with automatic width, since they don't share a proportion. The emblem fills the opening the frame reserves and carries no dimensions of its own — two sets of measurements competing is how a row stops lining up.
+- **Emblems ship trimmed to their content.** Transparent padding inside an emblem file reads as that badge being smaller than its siblings, which looks like a rendering bug and isn't one.
 
 **Why this doesn't break the One-Bottle Rule.** Amber is reserved because recognition is supposed to be rare and earned; the insignia artwork exists for exactly that reason and appears only in that context. What would break the rule is this artwork leaking outward — a gold frame on a nav item, a diamond on a marketing panel. The frames are the bottle, not a new palette.
 

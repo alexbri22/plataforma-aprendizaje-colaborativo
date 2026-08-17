@@ -6,13 +6,13 @@
  */
 
 export {
-  SIN_RANGO,
-  arteDeInsignia,
-  desubicadosDeArte,
   duplicadosDeArte,
+  emblemaDeInsignia,
   faltantesDeArte,
+  ignoradosDeArte,
+  type ArchivoIgnorado,
   type FaltanteDeArte,
-  type NivelArte,
+  type MotivoIgnorado,
 } from './arteInsignias'
 export { IconoCategoria, type IconoCategoriaProps } from './IconoCategoria'
 export { InsigniaCategoria, type InsigniaCategoriaProps } from './InsigniaCategoria'

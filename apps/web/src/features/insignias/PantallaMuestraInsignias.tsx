@@ -1,8 +1,9 @@
 import { NIVELES } from '@plataforma/shared'
 import { Encabezado } from '../../components/Encabezado'
 import { Card } from '../../components/ui'
-import { desubicadosDeArte, duplicadosDeArte, faltantesDeArte } from './arteInsignias'
+import { duplicadosDeArte, faltantesDeArte, ignoradosDeArte } from './arteInsignias'
 import { InsigniaCategoria } from './InsigniaCategoria'
+import { MarcoRango } from './MarcoRango'
 import { VitrinaInsignias } from './VitrinaInsignias'
 import styles from './PantallaMuestraInsignias.module.css'
 
@@ -13,7 +14,7 @@ import styles from './PantallaMuestraInsignias.module.css'
  */
 
 // Un perfil de ejemplo con las seis categorías en momentos distintos de la
-// escala, para ver de un vistazo los cinco marcos y el hueco sin rango.
+// escala, para ver de un vistazo los cinco marcos y el estado sin rango.
 const PUNTOS_DE_EJEMPLO = {
   liderazgo: 21,
   companerismo: 9,
@@ -23,11 +24,11 @@ const PUNTOS_DE_EJEMPLO = {
   'buen-juicio': 1,
 }
 
-const TOTAL_DE_ARTE = 36
+const TOTAL_DE_ARTE = 30
 
 export function PantallaMuestraInsignias() {
   const faltantes = faltantesDeArte()
-  const desubicados = desubicadosDeArte()
+  const ignorados = ignoradosDeArte()
   const duplicados = duplicadosDeArte()
 
   return (
@@ -49,7 +50,7 @@ export function PantallaMuestraInsignias() {
           <ul className={styles.escala}>
             {NIVELES.map((nivel) => (
               <li key={nivel.id} className={styles.escalaItem}>
-                <InsigniaCategoria categoria="liderazgo" puntos={nivel.puntosMinimos} />
+                <MarcoRango nivel={nivel.id} />
                 <span className={styles.escalaNombre}>{nivel.nombre}</span>
                 <span className={styles.escalaUmbral}>{nivel.puntosMinimos} pts</span>
               </li>
@@ -67,23 +68,24 @@ export function PantallaMuestraInsignias() {
         <section className={styles.seccion}>
           <h2 className={styles.seccionTitulo}>Tamaños</h2>
           <div className={styles.fila}>
-            <InsigniaCategoria categoria="ideas" puntos={36} tamano="sm" mostrarEtiqueta />
-            <InsigniaCategoria categoria="ideas" puntos={36} tamano="md" mostrarEtiqueta />
-            <InsigniaCategoria categoria="ideas" puntos={36} tamano="lg" mostrarEtiqueta />
+            <InsigniaCategoria categoria="companerismo" puntos={36} tamano="sm" mostrarEtiqueta />
+            <InsigniaCategoria categoria="companerismo" puntos={36} tamano="md" mostrarEtiqueta />
+            <InsigniaCategoria categoria="companerismo" puntos={36} tamano="lg" mostrarEtiqueta />
           </div>
         </section>
 
-        {desubicados.length > 0 ? (
+        {ignorados.length > 0 ? (
           <section className={styles.seccion}>
-            <h2 className={styles.seccionTitulo}>Archivos mal colocados</h2>
+            <h2 className={styles.seccionTitulo}>Archivos que no se cargan</h2>
             <p className={styles.lede}>
-              Estos PNG llevan un prefijo que contradice la carpeta donde están, así que no se
-              cargan. O el archivo está en la carpeta equivocada, o el prefijo tiene una errata.
+              O el prefijo contradice la carpeta donde está el archivo, o el nivel no es uno de los
+              cinco. Un <code>sin-rango.png</code> heredado de la versión anterior cae aquí: ese
+              estado ya no lleva arte propio.
             </p>
             <ul className={styles.faltantes}>
-              {desubicados.map((ruta) => (
-                <li key={ruta}>
-                  <code>{ruta}</code>
+              {ignorados.map(({ archivo, motivo }) => (
+                <li key={archivo}>
+                  <code>{archivo}</code> — {motivo}
                 </li>
               ))}
             </ul>
@@ -111,10 +113,10 @@ export function PantallaMuestraInsignias() {
           <section className={styles.seccion}>
             <h2 className={styles.seccionTitulo}>Arte pendiente</h2>
             <p className={styles.lede}>
-              Faltan {faltantes.length} de {TOTAL_DE_ARTE} PNG. Cada combinación sin archivo se
-              dibuja con el respaldo provisional —el marco de la primera versión con el medallón
-              encima— así que lo de arriba no refleja todavía el arte definitivo. La convención de
-              nombres está en <code>assets/insignias/README.md</code>.
+              Faltan {faltantes.length} de {TOTAL_DE_ARTE} emblemas. Una combinación sin archivo
+              conserva su marco y cae al emblema vectorial, así que lo de arriba no refleja todavía
+              el arte definitivo. La convención de nombres está en{' '}
+              <code>assets/insignias/README.md</code>.
             </p>
             <ul className={styles.faltantes}>
               {faltantes.map(({ categoria, nivel }) => (

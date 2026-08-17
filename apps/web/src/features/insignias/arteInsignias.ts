@@ -2,22 +2,21 @@ import { CATEGORIAS_INSIGNIA, NIVELES_INSIGNIA } from '@plataforma/shared'
 import type { CategoriaInsignia, NivelInsignia } from '@plataforma/shared'
 
 /*
- * Resuelve el PNG de una insignia a partir de su categoría y su nivel.
+ * Resuelve el emblema de una categoría en un nivel: el disco que va DENTRO del
+ * marco, no la insignia completa. El marco lo pone `MarcoRango`.
+ *
+ * No hay emblema para el estado sin nivel. Una categoría que aún no se gana se
+ * dibuja con el hueco punteado del marco y el emblema vectorial en gris, de modo
+ * que el arte solo cubre los cinco niveles: 5 × 6 = 30 archivos.
  *
  * El mapa se arma con `import.meta.glob` y no con imports estáticos por dos
- * razones. Son 36 combinaciones, y escribirlas a mano es una lista que se
+ * razones. Treinta combinaciones escritas a mano son una lista que se
  * desincroniza del disco en cuanto alguien agrega o renombra un archivo. Y un
  * import estático de un archivo inexistente rompe el build: mientras el arte se
- * sube por tandas, eso dejaría el proyecto sin compilar hasta tener las 36
+ * sube por tandas, eso dejaría el proyecto sin compilar hasta tener las 30
  * piezas. Aquí, lo que falta simplemente no está en el mapa y quien pregunta
  * recibe undefined.
  */
-
-/** Una categoría sin puntos suficientes no tiene nivel, pero sí tiene arte
- * propio: es el estado "todavía no", no la ausencia de insignia. */
-export const SIN_RANGO = 'sin-rango'
-
-export type NivelArte = NivelInsignia | typeof SIN_RANGO
 
 const ARCHIVOS = import.meta.glob<string>('./assets/insignias/*/*.png', {
   eager: true,
@@ -26,6 +25,8 @@ const ARCHIVOS = import.meta.glob<string>('./assets/insignias/*/*.png', {
 })
 
 const RUTA = /\/assets\/insignias\/([^/]+)\/([^/]+)\.png$/
+
+const NIVELES_VALIDOS: readonly string[] = NIVELES_INSIGNIA
 
 /**
  * Extrae el nivel del nombre de archivo. Se aceptan dos formas: `bronce.png`, y
@@ -48,9 +49,16 @@ export function nivelDeArchivo(carpeta: string, archivo: string): string | null 
   return prefijo === carpeta ? archivo.slice(separador + 1) : null
 }
 
+export type MotivoIgnorado = 'prefijo-no-coincide' | 'nivel-desconocido'
+
+export interface ArchivoIgnorado {
+  readonly archivo: string
+  readonly motivo: MotivoIgnorado
+}
+
 const ARTE = new Map<string, string>()
 const ORIGEN = new Map<string, string>()
-const DESUBICADOS: string[] = []
+const IGNORADOS: ArchivoIgnorado[] = []
 const DUPLICADOS: string[][] = []
 
 for (const [ruta, url] of Object.entries(ARCHIVOS)) {
@@ -58,38 +66,45 @@ for (const [ruta, url] of Object.entries(ARCHIVOS)) {
   if (!partes) continue
 
   const [, carpeta, archivo] = partes
+  const nombre = `${carpeta}/${archivo}.png`
   const nivel = nivelDeArchivo(carpeta, archivo)
 
   if (!nivel) {
-    DESUBICADOS.push(`${carpeta}/${archivo}.png`)
+    IGNORADOS.push({ archivo: nombre, motivo: 'prefijo-no-coincide' })
+    continue
+  }
+
+  // Un `sin-rango.png` heredado de la versión anterior cae aquí: ya no se usa,
+  // y decirlo es mejor que cargarlo en una casilla que nadie consulta.
+  if (!NIVELES_VALIDOS.includes(nivel)) {
+    IGNORADOS.push({ archivo: nombre, motivo: 'nivel-desconocido' })
     continue
   }
 
   const clave = `${carpeta}/${nivel}`
   const anterior = ORIGEN.get(clave)
 
-  // Las dos formas de nombre admitidas describen la misma insignia, así que
+  // Las dos formas de nombre admitidas describen el mismo emblema, así que
   // `bronce.png` y `comunicacion_bronce.png` en la misma carpeta compiten por
   // la misma casilla. Quedarse con uno en silencio deja al otro sin efecto y
   // vuelve el resultado dependiente del orden en que el bundler lea la carpeta.
-  if (anterior) DUPLICADOS.push([anterior, `${carpeta}/${archivo}.png`])
+  if (anterior) DUPLICADOS.push([anterior, nombre])
 
-  ORIGEN.set(clave, `${carpeta}/${archivo}.png`)
+  ORIGEN.set(clave, nombre)
   ARTE.set(clave, url)
 }
 
 /**
- * Archivos cuyo prefijo contradice la carpeta en la que están. No se cargan, y
- * la pantalla de muestra los enseña: sin eso, un archivo mal colocado se
- * manifestaría como una insignia que sigue faltando, que es el síntoma más
- * lejano posible de su causa.
+ * Archivos que no se cargan, con el motivo. Sin esta lista, un archivo mal
+ * nombrado se manifestaría como una insignia que sigue faltando, que es el
+ * síntoma más lejano posible de su causa.
  */
-export function desubicadosDeArte(): readonly string[] {
-  return DESUBICADOS
+export function ignoradosDeArte(): readonly ArchivoIgnorado[] {
+  return IGNORADOS
 }
 
 /**
- * Pares de archivos que describen la misma insignia por usar las dos formas de
+ * Pares de archivos que describen el mismo emblema por usar las dos formas de
  * nombre a la vez. Solo uno queda en efecto, y cuál depende del orden de lectura
  * de la carpeta: hay que borrar el sobrante.
  */
@@ -97,14 +112,17 @@ export function duplicadosDeArte(): readonly (readonly string[])[] {
   return DUPLICADOS
 }
 
-/** URL del PNG, o undefined si ese archivo todavía no se ha subido. */
-export function arteDeInsignia(categoria: CategoriaInsignia, nivel: NivelArte): string | undefined {
+/** URL del emblema, o undefined si ese archivo todavía no se ha subido. */
+export function emblemaDeInsignia(
+  categoria: CategoriaInsignia,
+  nivel: NivelInsignia,
+): string | undefined {
   return ARTE.get(`${categoria}/${nivel}`)
 }
 
 export interface FaltanteDeArte {
   readonly categoria: CategoriaInsignia
-  readonly nivel: NivelArte
+  readonly nivel: NivelInsignia
 }
 
 /**
@@ -114,11 +132,10 @@ export interface FaltanteDeArte {
  * nada el día que se complete el lote.
  */
 export function faltantesDeArte(): FaltanteDeArte[] {
-  const niveles: NivelArte[] = [...NIVELES_INSIGNIA, SIN_RANGO]
-
   return CATEGORIAS_INSIGNIA.flatMap((categoria) =>
-    niveles
-      .filter((nivel) => !arteDeInsignia(categoria, nivel))
-      .map((nivel) => ({ categoria, nivel })),
+    NIVELES_INSIGNIA.filter((nivel) => !emblemaDeInsignia(categoria, nivel)).map((nivel) => ({
+      categoria,
+      nivel,
+    })),
   )
 }
