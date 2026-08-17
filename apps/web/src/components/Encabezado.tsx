@@ -18,9 +18,12 @@ export function Encabezado() {
           </Link>
 
           <nav className={styles.nav} aria-label="Principal">
-            <button type="button" className={styles.navLink}>
+            <Link to="/insignias" className={styles.navLink}>
               Insignias
-            </button>
+            </Link>
+            {/* Sin destino todavía: el contenido formativo público no está
+                construido. Se queda como botón inerte hasta que exista, porque
+                un enlace que no lleva a ningún lado es peor que uno ausente. */}
             <button type="button" className={styles.navLink}>
               Recursos
             </button>
