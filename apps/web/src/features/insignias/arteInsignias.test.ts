@@ -34,13 +34,19 @@ describe('arteInsignias', () => {
     expect(TOTAL_DE_ARTE).toBe(30)
   })
 
-  it('devuelve undefined para una combinación cuyo PNG no se ha subido', () => {
-    // Mientras el lote esté incompleto, preguntar por lo que falta no debe
-    // reventar: el componente decide qué dibujar en su lugar.
-    const sinSubir = faltantesDeArte()[0]
-    if (!sinSubir) return
+  it('tiene el lote completo: las seis categorías en los cinco niveles', () => {
+    // El lote se completó, así que esto deja de ser una aspiración y pasa a ser
+    // una condición: si alguien borra o renombra un archivo, falla aquí y no en
+    // una insignia que calladamente cae al emblema vectorial.
+    expect(faltantesDeArte()).toEqual([])
+  })
 
-    expect(emblemaDeInsignia(sinSubir.categoria, sinSubir.nivel)).toBeUndefined()
+  it('resuelve toda combinación del catálogo a un archivo', () => {
+    for (const categoria of CATEGORIAS_INSIGNIA) {
+      for (const nivel of NIVELES_INSIGNIA) {
+        expect(emblemaDeInsignia(categoria, nivel)).toBeTruthy()
+      }
+    }
   })
 
   it('enumera los faltantes sin inventar combinaciones fuera del catálogo', () => {

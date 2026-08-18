@@ -45,18 +45,20 @@ razones: 30 imports escritos a mano se desincronizan del disco en cuanto alguien
 renombra un archivo, y un import estático de un archivo inexistente rompe el
 build. Aquí lo que falta simplemente no está en el mapa.
 
-### Mientras falta arte
+### El lote está completo
 
-Una combinación sin emblema PNG conserva su marco y cae al emblema vectorial de
-`IconoCategoria`. Puedes subir los archivos por tandas sin romper nada;
-`faltantesDeArte()` enumera lo pendiente y la pantalla de muestra lo lista, junto
-con dos diagnósticos: archivos que no se cargan por nombre inválido
-(`ignoradosDeArte`) y pares que compiten por el mismo emblema
-(`duplicadosDeArte`).
+Las 30 piezas existen, y una prueba lo fija: `faltantesDeArte()` debe venir
+vacío. Si alguien borra o renombra un archivo, falla ahí y no en una insignia
+que calladamente cae al emblema vectorial.
 
-Cuando estén los 30, no se borra nada: el marco se usa siempre y el emblema
-vectorial sigue siendo el del estado sin rango. Lo único que desaparece es su
-papel de suplente, junto con las tres secciones de diagnóstico de la muestra.
+Los tres diagnósticos se quedan, aunque hoy no reporten nada: `faltantesDeArte`,
+`ignoradosDeArte` (nombre inválido) y `duplicadosDeArte` (dos archivos por el
+mismo emblema). No cuestan nada cuando están vacíos —sus secciones de la
+pantalla de muestra ni se renderizan— y son la red para la siguiente vez que
+alguien toque la carpeta.
+
+`MarcoRango` e `IconoCategoria` tampoco se van: el marco se usa siempre, y el
+emblema vectorial es el titular del estado sin rango, no solo el suplente.
 
 Los marcos de `assets/marcos/` llegaron sin canal alfa —el cuadriculado gris
 estaba pintado como píxeles opacos— y se les recuperó la transparencia por

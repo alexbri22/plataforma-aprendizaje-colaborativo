@@ -84,13 +84,14 @@ for f in sorted(glob.glob('apps/web/src/features/insignias/assets/insignias/*/*.
 `alfa_min` distinto de 0 significa que ese archivo no tiene ni un píxel
 transparente, es decir, que no está recortado.
 
-## Mientras faltan archivos
+## Estado
 
-El cargador (`arteInsignias.ts`) arma el mapa con los PNG que existan. Una
-combinación sin archivo conserva su marco y cae al emblema vectorial de
-`IconoCategoria`. Puedes subirlos por tandas sin romper nada, y `/insignias`
-lista lo que falta.
+Las 30 piezas están. Una prueba lo fija, así que borrar o renombrar un archivo
+rompe CI en vez de degradar la insignia en silencio.
+
+Si agregas o reemplazas alguno, corre el bucle de arriba y revisa `/insignias`:
+lista lo que falta, lo que no se carga por nombre inválido y los pares que
+compiten por el mismo emblema.
 
 El marco y el emblema vectorial **no son provisionales**: el marco se usa
-siempre, y el vectorial es además el emblema permanente del estado sin rango.
-Cuando estén los 30, lo único que desaparece es su papel de suplente.
+siempre, y el vectorial es el emblema permanente del estado sin rango.
