@@ -73,11 +73,11 @@
 }
 
 .platino {
-  /* Abertura cerrada: sin el factor, su emblema queda al 81 % del de plata. */
-  --marco-escala: 1.18;
-  --marco-x: 50.6%;
-  --marco-y: 46.3%;
-  --marco-diametro: 54%;
+  /* Abertura cerrada: sin el factor, su emblema queda por debajo del resto. */
+  --marco-escala: 1.16;
+  --marco-x: 51%;
+  --marco-y: 45%;
+  --marco-diametro: 55.3%;
 }
 
 .diamante {
