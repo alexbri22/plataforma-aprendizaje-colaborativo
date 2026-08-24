@@ -40,13 +40,14 @@ export interface DatosCrearActividad {
   fechaLimiteInscripcion: string
   plazoCierreDias: number
   numeroEquiposEsperado: number
-  // Autopercepción de quien organiza sobre cuánta libertad piensa ceder.
-  // No configura ninguna función de seguimiento ni existe en el diccionario
-  // de datos: es un campo de telemetría, pendiente de confirmación de
-  // alcance en la reunión de equipo. No debe interpretarse como el modo de
-  // gestión de la actividad — esa idea se descartó explícitamente en
-  // concepto-producto.md §1 a favor de configurar cada función por separado.
-  tiposActividadPercibida?: string[]
+  // Autopercepción de quien organiza sobre cuánta libertad piensa ceder, a
+  // lo más una opción. No configura ninguna función de seguimiento ni
+  // existe en el diccionario de datos: es un campo de telemetría, pendiente
+  // de confirmación de alcance en la reunión de equipo. No debe
+  // interpretarse como el modo de gestión de la actividad — esa idea se
+  // descartó explícitamente en concepto-producto.md §1 a favor de
+  // configurar cada función por separado.
+  tipoActividadPercibida?: string
 }
 
 // Alfabeto de docs/diseno-desarrollo-nucleo.md §7.2: mayúsculas y dígitos

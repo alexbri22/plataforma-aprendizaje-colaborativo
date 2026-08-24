@@ -115,6 +115,23 @@ describe('PantallaCrearActividad', () => {
     expect(await screen.findByText('Debe ser posterior a la fecha de inicio.')).toBeInTheDocument()
   })
 
+  it('permite a lo más una opción de autopercepción a la vez', async () => {
+    renderPantalla()
+
+    const dirigida = screen.getByRole('checkbox', { name: 'Dirigida' })
+    const autodirigida = screen.getByRole('checkbox', { name: 'Autodirigida' })
+
+    await userEvent.click(dirigida)
+    expect(dirigida).toBeChecked()
+
+    await userEvent.click(autodirigida)
+    expect(autodirigida).toBeChecked()
+    expect(dirigida).not.toBeChecked()
+
+    await userEvent.click(autodirigida)
+    expect(autodirigida).not.toBeChecked()
+  })
+
   it('crea la actividad y navega a su resumen', async () => {
     renderPantalla()
 

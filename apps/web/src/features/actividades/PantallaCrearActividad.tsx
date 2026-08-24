@@ -64,7 +64,7 @@ export function PantallaCrearActividad() {
   const navigate = useNavigate()
   const mutacion = useCrearActividadMutation()
   const [valores, setValores] = useState<Valores>(VALORES_INICIALES)
-  const [tiposPercibidos, setTiposPercibidos] = useState<string[]>([])
+  const [tipoPercibido, setTipoPercibido] = useState<string | null>(null)
   const [errores, setErrores] = useState<Errores>({})
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null)
 
@@ -81,10 +81,10 @@ export function PantallaCrearActividad() {
     setErrores((actuales) => ({ ...actuales, [campo]: obtenerError(campo, valores) }))
   }
 
-  function alternarTipoPercibido(tipo: string) {
-    setTiposPercibidos((actuales) =>
-      actuales.includes(tipo) ? actuales.filter((item) => item !== tipo) : [...actuales, tipo],
-    )
+  // A lo más uno: elegir otro reemplaza la selección; elegir el mismo la
+  // quita, para no forzar una respuesta en un campo opcional.
+  function seleccionarTipoPercibido(tipo: string) {
+    setTipoPercibido((actual) => (actual === tipo ? null : tipo))
   }
 
   async function manejarEnvio(evento: FormEvent<HTMLFormElement>) {
@@ -114,7 +114,7 @@ export function PantallaCrearActividad() {
         fechaLimiteInscripcion: valores.fechaLimiteInscripcion,
         plazoCierreDias: Number(valores.plazoCierreDias),
         numeroEquiposEsperado: Number(valores.numeroEquiposEsperado),
-        tiposActividadPercibida: tiposPercibidos.length > 0 ? tiposPercibidos : undefined,
+        tipoActividadPercibida: tipoPercibido ?? undefined,
       })
       navigate(`/actividades/${nueva.id}`)
     } catch {
@@ -240,8 +240,8 @@ export function PantallaCrearActividad() {
                 <Checkbox
                   key={tipo}
                   label={tipo}
-                  checked={tiposPercibidos.includes(tipo)}
-                  onChange={() => alternarTipoPercibido(tipo)}
+                  checked={tipoPercibido === tipo}
+                  onChange={() => seleccionarTipoPercibido(tipo)}
                   disabled={mutacion.isPending}
                 />
               ))}
