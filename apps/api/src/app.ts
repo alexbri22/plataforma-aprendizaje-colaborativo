@@ -10,10 +10,22 @@ import { healthRouter } from './routes/health.js'
 export function createApp(): Express {
   const app = express()
 
-  // Origen fijo al cliente web y credenciales habilitadas, para que la
+  // Lista de orígenes permitidos y credenciales habilitadas, para que la
   // cookie de sesión viaje entre orígenes distintos en desarrollo
-  // (docs/diseno-desarrollo-nucleo.md §3.2).
-  app.use(cors({ origin: config.webOrigin, credentials: true }))
+  // (docs/diseno-desarrollo-nucleo.md §3.2). Sin origen (curl, health
+  // checks) se deja pasar; con origen, debe estar en la lista.
+  app.use(
+    cors({
+      origin(origen, callback) {
+        if (!origen || config.webOrigins.includes(origen)) {
+          callback(null, true)
+          return
+        }
+        callback(new Error('Origen no permitido por CORS'))
+      },
+      credentials: true,
+    }),
+  )
   app.use(express.json())
   app.use(cookieParser())
   app.use(resolverSesion)
