@@ -142,6 +142,7 @@ export function PantallaCrearActividad() {
           <Textarea
             id="objetivo"
             label="Objetivo"
+            rows={2}
             value={valores.objetivo}
             onChange={manejarCambio('objetivo')}
             onBlur={() => validarCampo('objetivo')}
@@ -154,6 +155,7 @@ export function PantallaCrearActividad() {
             id="informacionGeneral"
             label="Información general"
             placeholder="Descripción del tipo de producto que se debe entregar, características mínimas que debe cumplir."
+            rows={2}
             value={valores.informacionGeneral}
             onChange={manejarCambio('informacionGeneral')}
             onBlur={() => validarCampo('informacionGeneral')}
