@@ -24,6 +24,8 @@ nvm use
 npm install
 cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env
+docker compose up -d          # levanta Postgres en :5433 (plataforma, plataforma_shadow, plataforma_test)
+cd apps/api && npx prisma migrate dev && cd ../..   # aplica las migraciones a la base de desarrollo
 npm run dev
 ```
 
