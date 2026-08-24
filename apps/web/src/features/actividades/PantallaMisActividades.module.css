@@ -1,34 +1,73 @@
-.page {
+.contenido {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  background: var(--color-surface);
+  gap: var(--space-8);
 }
 
-.main {
-  flex: 1;
+.cargando {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--space-10) var(--space-4);
+  padding: var(--space-16) 0;
+  color: var(--color-text-muted);
 }
 
-.card {
+.seccion {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  width: 100%;
-  max-width: 440px;
-  text-align: center;
+  gap: var(--space-3);
 }
 
-.card h1 {
-  font-size: var(--font-size-3xl);
+.tituloSeccion {
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-tight);
   color: var(--color-text);
   margin: 0;
+}
+
+.listaInvitaciones {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.tabs {
+  margin-top: calc(var(--space-2) * -1);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.grupoFase {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-4);
+}
+
+.textoVacioTab {
+  font-size: var(--font-size-base);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.vacioInicial {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  max-width: 480px;
+  margin: var(--space-12) auto 0;
+  text-align: center;
 }
 
 .texto {
@@ -37,4 +76,9 @@
   color: var(--color-text-muted);
   margin: 0;
   text-wrap: pretty;
+}
+
+.accionesVacio {
+  display: flex;
+  gap: var(--space-3);
 }
