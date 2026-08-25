@@ -66,9 +66,13 @@ detección del patrón. **El mismo riesgo aplica al arte nuevo:** verifica el al
 antes de commitear, o las insignias saldrán con un tablero de fondo.
 
 El encuadre de cada marco (`--marco-x`, `--marco-y`, `--marco-diametro` en
-`MarcoRango.module.css`) sale de medir su abertura: el mayor círculo inscrito en
-la zona transparente. Es lo que dimensiona al emblema, y por eso el emblema no
-debe traer margen propio — si lo trae, se ve más chico que sus hermanos.
+`MarcoRango.module.css`) sale de medir su abertura, con dos criterios distintos:
+el **diámetro** es el del mayor círculo inscrito en la zona transparente, con
+~10 % de respiro; el **centro** es el punto que deja el mismo hueco arriba que
+abajo sobre el eje del emblema, que no coincide con el centro de ese círculo ni
+con el centroide del área. Es lo que dimensiona y coloca al emblema, y por eso el
+emblema no debe traer margen propio — si lo trae, se ve más chico que sus
+hermanos.
 
 ## Lo que falta
 

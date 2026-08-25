@@ -58,7 +58,7 @@ Su alcance está deliberadamente limitado a tres áreas aisladas, sin ninguna ca
 
 - Subir, editar y eliminar recursos (texto, PDF, video, enlace) en las secciones formativas públicas
 
-**Gestión del catálogo de insignias:**
+**Gestión de los umbrales del sistema de insignias:**
 
 - Ajustar los umbrales de participantes mínimos y duración mínima requeridos para el otorgamiento de insignias (ver sección 6\)
 - Ajustar los umbrales de puntos de la escala de niveles, que son una decisión de calibración (ver sección 6\)

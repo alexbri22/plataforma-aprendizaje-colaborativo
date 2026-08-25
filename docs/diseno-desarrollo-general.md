@@ -44,7 +44,7 @@ Una plataforma web para la formación de estudiantes en habilidades de trabajo c
 
 ### **Qué no se construye (no-metas)**
 
-Se excluye del alcance, conforme a la sección 8 del documento de concepto: reversión de cambios (el historial provee trazabilidad; la corrección de errores es acción manual del organizador), etiquetado de actividades, y detección de abuso en el sistema de insignias más allá de las restricciones de unicidad y umbrales mínimos. Adicionalmente quedan fuera: el aula abierta de Argumente (ningún contenido de actividades es público), la calificación a nivel de equipo (la calificación es siempre individual por participante), la integración con sistemas académicos institucionales, y los modos de gestión predefinidos (la configuración individual de funciones los sustituye).
+Se excluye del alcance, conforme a la sección 8 del documento de concepto: reversión de cambios (el historial provee trazabilidad; la corrección de errores es acción manual del organizador), etiquetado de actividades, y detección de abuso en el sistema de insignias más allá del presupuesto de reconocimientos y los umbrales mínimos. Adicionalmente quedan fuera: el aula abierta de Argumente (ningún contenido de actividades es público), la calificación a nivel de equipo (la calificación es siempre individual por participante), la integración con sistemas académicos institucionales, y los modos de gestión predefinidos (la configuración individual de funciones los sustituye).
 
 El documento de concepto es la fuente de verdad del producto: define qué es el sistema y por qué. El presente documento define cómo se construye. Ante cualquier discrepancia entre ambos, prevalece el de concepto y este documento debe actualizarse.
 
@@ -180,11 +180,11 @@ La SPA se distribuye como archivos estáticos compilados que el navegador descar
 | Historial         | Registro de aportaciones de los participantes y consulta con visibilidad configurable | Alejandro   | api (transversal) \+ web (consulta) |
 | Insignias         | Catálogo global, otorgamiento, acumulados, niveles y rangos                           | Ui Chul     | api \+ web                          |
 | Contenido público | Recursos formativos accesibles sin sesión                                             | Carlos      | api \+ web                          |
-| Administración    | Gestión de cuentas, catálogo de insignias y contenido formativo                       | Carlos      | api \+ web (panel)                  |
+| Administración    | Gestión de cuentas, umbrales de insignias y contenido formativo                       | Carlos      | api \+ web (panel)                  |
 
 **Regla de frontera:** Ningún módulo accede a los datos de otro directamente; toda dependencia entre módulos pasa por la capa de servicios del módulo dueño. El historial es la única excepción: es transversal por diseño (sección 8\) y observa a los demás módulos sin que estos lo conozcan.
 
-**Nota sobre Administración.** El módulo de administración gestiona el catálogo de insignias y el estado de las cuentas, que es dominio del núcleo. En ambos casos el panel de administración es cliente de la capa de servicios del módulo dueño y no escribe directamente sobre sus tablas. Los endpoints administrativos que expone cada módulo dueño se especifican en su respectivo documento individual.
+**Nota sobre Administración.** El módulo de administración gestiona los umbrales del sistema de insignias y el estado de las cuentas, que es dominio del núcleo. En ambos casos el panel de administración es cliente de la capa de servicios del módulo dueño y no escribe directamente sobre sus tablas. Los endpoints administrativos que expone cada módulo dueño se especifican en su respectivo documento individual.
 
 ## **3.5 Arquitectura del cliente web**
 
@@ -671,7 +671,7 @@ Aplica únicamente a los miembros de la actividad en cuestión. Un usuario que n
 | Ver quién otorgó una insignia                                  | ✓           | ✓              | (P-09)       |
 | Ver el rango acumulado de otro usuario                         | ✓           | ✓              | ✓            |
 
-**Restricción de unicidad.** Independientemente del rol, cada persona puede otorgar como máximo una insignia de cada categoría a cada receptor dentro de una misma actividad. Es una restricción del modelo de datos (4.4) y no un permiso, y se verifica en el servidor.
+**Presupuesto de reconocimientos.** Independientemente del rol, cada persona reparte como máximo el 33 % del tamaño de su equipo, sin contarse, con piso de 1 y techo de 5, y solo entre compañeros de su propio equipo. Es una regla de negocio (4.6) y no un permiso, y se verifica en el servidor contra los otorgamientos ya emitidos por esa persona en esa actividad.
 
 ### **Historial**
 
@@ -809,13 +809,13 @@ Es la única dependencia del historial con otro subsistema, y el motivo por el q
 | Evento     | El otorgamiento de una insignia produce un evento, emitido por el servicio de insignias conforme a las reglas de 8.2                                                                                                                                   |
 | Categoría  | Evaluación. En consecuencia, el evento es visible para quien organiza y para el receptor, y no para el resto de los participantes                                                                                                                      |
 | Atribución | El receptor ve que recibió una insignia pero no quién se la otorgó, conforme a la propuesta de P-09. La atribución se conserva en el registro y es visible para quien organiza. Es el único evento del sistema cuyo actor se oculta a su propio sujeto |
-| Alcance    | Los eventos del catálogo de insignias —creación, edición y ajuste de umbrales de las categorías— no forman parte de este registro: ocurren fuera de toda actividad (8.4)                                                                               |
+| Alcance    | El ajuste de los umbrales del sistema de insignias no forma parte de este registro: ocurre fuera de toda actividad (8.4). El catálogo de categorías es semilla y no se administra, así que no genera eventos                                           |
 
 **Sin registros paralelos.** El sistema de recompensas no implementa su propio registro de otorgamientos con fines de trazabilidad. Si requiere trazabilidad adicional, el tipo de evento se incorpora al catálogo del historial, con su categoría definida.
 
 ## **8.4 Alcance excluido y remisión**
 
-**El subsistema de contenido formativo y administración no participa.** La gestión de cuentas, de recursos formativos y del catálogo de insignias ocurre fuera de las actividades y queda fuera de este registro, cuyo objeto es la participación dentro de una actividad. Si esas acciones requieren trazabilidad, se trata de un mecanismo distinto y se define en el documento individual de administración.
+**El subsistema de contenido formativo y administración no participa.** La gestión de cuentas, de recursos formativos y de los umbrales de insignias ocurre fuera de las actividades y queda fuera de este registro, cuyo objeto es la participación dentro de una actividad. Si esas acciones requieren trazabilidad, se trata de un mecanismo distinto y se define en el documento individual de administración.
 
 **Qué se desarrolla en el documento individual.** Catálogo completo de tipos de evento y su categoría; regla de agregación de ediciones consecutivas para que el volumen no vuelva ilegible la consulta; enumeración detallada de lo que no se registra; implementación del mecanismo de captura; y las preguntas abiertas propias del módulo.
 
@@ -849,7 +849,7 @@ Es la fase de la que dependen los otros dos subsistemas y, por lo tanto, la que 
 
 - **Recompensas:** ritual de reconocimiento con su presupuesto por participante, acumulado en puntos, niveles y rangos. Puede arrancar antes de esta fecha: solo requiere que existan actividades y membresías, disponibles desde la fase A.
 
-- **Contenido formativo y administración:** panel de administración de cuentas y del catálogo de insignias, una vez que las entidades de ambos módulos existan.
+- **Contenido formativo y administración:** panel de administración de cuentas y de los umbrales de insignias, una vez que las entidades de ambos módulos existan.
 
 ## **9.4 Fase C — Integración y estabilización (5 de octubre – 9 de noviembre)**
 
@@ -896,7 +896,7 @@ Son de cobertura obligatoria y se escriben junto con la definición de la regla.
 | El presupuesto de reconocimientos por participante y la restricción del otorgamiento al periodo de cierre | 4.4 y 6.1 | Cruza la frontera entre el núcleo y el subsistema de recompensas                               |
 | El alcance acotado del administrador sobre actividades, equipos y evaluaciones                            | 7.2       | Cruza la frontera entre el núcleo y el subsistema de administración                            |
 
-**Justificación.** Las seis comparten una característica: su incumplimiento no produce un error visible. Una petición autorizada de más devuelve datos con normalidad, un evento no emitido no falla, y una insignia duplicada se guarda sin protestar. Son los defectos que no aparecen probando la aplicación a mano.
+**Justificación.** Las seis comparten una característica: su incumplimiento no produce un error visible. Una petición autorizada de más devuelve datos con normalidad, un evento no emitido no falla, y un reconocimiento por encima del presupuesto se guarda sin protestar. Son los defectos que no aparecen probando la aplicación a mano.
 
 ## **10.2 Pruebas automatizadas por capa**
 

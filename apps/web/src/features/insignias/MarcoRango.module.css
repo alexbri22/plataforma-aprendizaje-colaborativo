@@ -5,15 +5,19 @@
  *
  * --marco-x / --marco-y / --marco-diametro describen dónde cae la abertura de
  * cada marco y qué cabe dentro. No son valores estéticos: salen de medir el
- * canal alfa de cada PNG. El centro es el CENTROIDE de la zona transparente, no
- * el centro del mayor círculo inscrito: en una abertura más alta que ancha ese
- * círculo se desliza verticalmente sin cambiar de tamaño, así que su centro no
- * identifica una posición sino un rango, y elegir de ese rango dejaba los
- * emblemas montados hacia arriba. --marco-y se afina además dejando el mismo
- * hueco arriba que abajo sobre el eje del emblema, que es lo que el ojo lee como
- * centrado; en aberturas que se estrechan, como el escudo del bronce, no
- * coincide con el centroide del área. El diámetro es el del círculo inscrito,
- * con ~10 % de respiro para que el emblema no toque el marco.
+ * canal alfa de cada PNG, con un criterio distinto para el tamaño y para la
+ * posición.
+ *
+ * El DIAMETRO es el del mayor círculo inscrito en la zona transparente, con
+ * ~10 % de respiro para que el emblema no toque el marco.
+ *
+ * El CENTRO es el punto que deja el mismo hueco arriba que abajo sobre el eje
+ * del emblema, que es lo que el ojo lee como centrado. No se toma del círculo
+ * inscrito: en una abertura más alta que ancha ese círculo se desliza
+ * verticalmente sin cambiar de tamaño, así que su centro identifica un rango y
+ * no una posición, y elegir de ese rango dejaba los emblemas montados hacia
+ * arriba. Tampoco es el centroide del área: en una abertura que se estrecha,
+ * como el escudo del bronce, la masa queda arriba y el centro visual no.
  *
  * --marco-escala sí es de ajuste, y es la única de las cuatro que conviene
  * tocar a ojo. Corrige que a la misma altura los cinco marcos no dejan el mismo

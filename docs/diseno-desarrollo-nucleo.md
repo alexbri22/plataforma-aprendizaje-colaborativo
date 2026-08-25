@@ -59,7 +59,7 @@ Cinco piezas del núcleo son prerrequisito del trabajo de Carlos y de Ui Chul. M
 | Administración | Listado de cuentas, activación, desactivación y restablecimiento de contraseña    | Endpoints administrativos del módulo de Cuentas      |
 | Administración | Que el panel no escriba sobre las tablas del núcleo                               | Los cuatro anteriores como única vía de acceso       |
 
-**La única dependencia en sentido inverso.** El rango visible de un usuario se deriva del conteo de insignias otorgadas (4.5 del general), lo calcula el subsistema de recompensas y lo consume el módulo de Cuentas en la búsqueda de participantes al invitar. Es el único punto donde el núcleo depende de otro subsistema. Se acota de dos formas: Cuentas declara la interfaz que espera y trabaja contra una implementación vacía mientras Insignias no exista, y el filtro por rango es el primer elemento del orden de recorte de 9.6 del general. Si el subsistema de recompensas se retrasa, la invitación por nombre y por correo sigue funcionando y el núcleo no se detiene.
+**La única dependencia en sentido inverso.** El rango visible de un usuario se deriva de la suma de puntos de las insignias otorgadas (4.5 del general), lo calcula el subsistema de recompensas y lo consume el módulo de Cuentas en la búsqueda de participantes al invitar. Es el único punto donde el núcleo depende de otro subsistema. Se acota de dos formas: Cuentas declara la interfaz que espera y trabaja contra una implementación vacía mientras Insignias no exista, y el filtro por rango es el primer elemento del orden de recorte de 9.6 del general. Si el subsistema de recompensas se retrasa, la invitación por nombre y por correo sigue funcionando y el núcleo no se detiene.
 
 # **2\. Anatomía del servidor**
 
@@ -360,7 +360,7 @@ La enumeración es exhaustiva y coincide con el catálogo de operaciones exentas
 
 - Edición del perfil propio, por la misma razón.
 
-- Las acciones del administrador sobre cuentas, recursos formativos y catálogo de insignias, que 8.4 del general excluye expresamente.
+- Las acciones del administrador sobre cuentas, recursos formativos y umbrales de insignias, que 8.4 del general excluye expresamente.
 
 La lista se revisa cada vez que se agrega una operación de escritura al núcleo, y crecer no es su comportamiento esperado: la mayoría de las operaciones nuevas registran.
 

@@ -18,7 +18,7 @@ assets/insignias/
 └── buen-juicio/
 ```
 
-y dentro de cada una, seis archivos, en cualquiera de estas dos formas:
+y dentro de cada una, cinco archivos, en cualquiera de estas dos formas:
 
 ```
 bronce.png                   liderazgo_bronce.png

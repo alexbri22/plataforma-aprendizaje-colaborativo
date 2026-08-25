@@ -17,25 +17,28 @@ describe('InsigniaCategoria', () => {
     expect(screen.getByRole('figure', { name: 'Ideas, sin nivel todavía' })).toBeInTheDocument()
   })
 
-  it('pinta el arte del nivel derivado de los puntos', () => {
+  it('pinta el emblema de la categoría en el nivel derivado de los puntos', () => {
     const { container, rerender } = render(<InsigniaCategoria categoria="compromiso" puntos={8} />)
-    const imagen = () => container.querySelector('img')
+    // La primera imagen es el marco, que MarcoRango dibuja antes; la segunda es
+    // el emblema. Afirmar sobre la primera dejaría pasar que el emblema pida el
+    // nivel equivocado o caiga al vectorial, porque el marco acierta igual.
+    const emblema = () => container.querySelectorAll('img')[1]
 
-    expect(imagen()?.getAttribute('src')).toContain('plata')
+    expect(emblema()?.getAttribute('src')).toContain('compromiso_plata')
 
     rerender(<InsigniaCategoria categoria="compromiso" puntos={60} />)
-    expect(imagen()?.getAttribute('src')).toContain('diamante')
+    expect(emblema()?.getAttribute('src')).toContain('compromiso_diamante')
   })
 
   it('nunca muestra arte de un rango en una categoría sin nivel', () => {
-    // Vale igual con el respaldo provisional, que no dibuja marco, que con el
-    // arte definitivo, que dibuja el PNG de sin-rango: lo que no puede pasar es
-    // que una categoría en cero se lea como si tuviera un rango ganado.
+    // Sin nivel no se dibuja ninguna imagen: el marco cede al hueco punteado y
+    // el emblema al vectorial. Lo que no puede pasar es que una categoría en
+    // cero se lea como si tuviera un rango ganado.
     const { container } = render(<InsigniaCategoria categoria="compromiso" puntos={0} />)
-    const src = container.querySelector('img')?.getAttribute('src') ?? ''
+    const fuentes = [...container.querySelectorAll('img')].map((i) => i.getAttribute('src') ?? '')
 
     for (const nivel of ['bronce', 'plata', 'oro', 'platino', 'diamante']) {
-      expect(src).not.toContain(nivel)
+      expect(fuentes.some((src) => src.includes(nivel))).toBe(false)
     }
   })
 
