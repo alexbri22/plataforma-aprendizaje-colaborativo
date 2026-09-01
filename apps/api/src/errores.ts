@@ -3,7 +3,13 @@
 // rutas los traduce a la forma de respuesta de §3.1 vía manejadorErrores.
 
 export type CodigoError =
-  'validacion' | 'correo_duplicado' | 'credenciales_invalidas' | 'cuenta_desactivada' | 'sin_sesion'
+  | 'validacion'
+  | 'correo_duplicado'
+  | 'credenciales_invalidas'
+  | 'cuenta_desactivada'
+  | 'sin_sesion'
+  | 'clave_invalida'
+  | 'ya_es_miembro'
 
 export abstract class ErrorDominio extends Error {
   abstract readonly codigo: CodigoError
@@ -53,5 +59,27 @@ export class ErrorSinSesion extends ErrorDominio {
 
   constructor() {
     super('No hay una sesión activa.')
+  }
+}
+
+// Misma respuesta tanto si la clave no corresponde a ninguna actividad como
+// si corresponde a una que ya salió de inscripción (docs/diseno-desarrollo-nucleo.md
+// §7.2: "deja de funcionar... y no se reactiva"). No distinguir ambos casos
+// sigue el mismo criterio de 3.3 para no revelar de más.
+export class ErrorClaveInvalida extends ErrorDominio {
+  readonly codigo = 'clave_invalida' as const
+  readonly status = 404
+
+  constructor() {
+    super('Esta clave no corresponde a ninguna actividad que admita unirse.')
+  }
+}
+
+export class ErrorYaEsMiembro extends ErrorDominio {
+  readonly codigo = 'ya_es_miembro' as const
+  readonly status = 409
+
+  constructor() {
+    super('Ya formas parte de esta actividad.')
   }
 }

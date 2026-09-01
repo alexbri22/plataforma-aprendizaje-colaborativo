@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   aceptarInvitacion,
+  buscarActividadPorClave,
   crearActividad,
   obtenerActividad,
   obtenerActividades,
   obtenerInvitaciones,
   rechazarInvitacion,
+  unirseConClave,
   type DatosCrearActividad,
 } from './actividades.api'
 
@@ -60,6 +62,30 @@ export function useRechazarInvitacionMutation() {
     mutationFn: (id: string) => rechazarInvitacion(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: CLAVE_INVITACIONES })
+    },
+  })
+}
+
+// Vista previa por clave (docs/diseno-desarrollo-nucleo.md §3.3): no vive en
+// el catálogo de claves de §4.2 porque no es un recurso de una actividad de
+// la que el actor sea miembro. `enabled` evita consultar mientras el campo
+// está vacío o recién cambió.
+export function useVistaPreviaClave(clave: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['claves', clave] as const,
+    queryFn: () => buscarActividadPorClave(clave),
+    enabled,
+    retry: false,
+  })
+}
+
+export function useUnirseConClaveMutation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (clave: string) => unirseConClave(clave),
+    onSuccess: () => {
+      // La actividad nueva debe aparecer en "Mis actividades" (§4.2).
+      queryClient.invalidateQueries({ queryKey: CLAVE_ACTIVIDADES })
     },
   })
 }

@@ -43,6 +43,36 @@ enum EstadoCuenta {
   @@map("estado_cuenta")
 }
 
+// docs/diseno-desarrollo-general.md §6.1: seis fases del ciclo de vida. Este
+// incremento ("Actividades I", docs/diseno-desarrollo-nucleo.md §11.2) solo
+// produce actividades en fase inscripcion (ver nota de creación más abajo),
+// pero el enum conserva el ciclo completo.
+enum EstadoActividad {
+  configuracion
+  inscripcion
+  formacion_equipos
+  desarrollo
+  cierre
+  archivada
+
+  @@map("estado_actividad")
+}
+
+enum RolMembresia {
+  organizador
+  co_organizador
+  participante
+
+  @@map("rol_membresia")
+}
+
+enum EstadoMembresia {
+  activa
+  desactivada
+
+  @@map("estado_membresia")
+}
+
 // docs/diseno-desarrollo-general.md §5.1
 model Usuario {
   idUsuario            String        @id @default(uuid()) @map("id_usuario")
@@ -59,7 +89,8 @@ model Usuario {
   estadoCuenta         EstadoCuenta  @default(activa) @map("estado_cuenta")
   fechaRegistro        DateTime      @default(now()) @map("fecha_registro")
 
-  sesiones Sesion[]
+  sesiones   Sesion[]
+  membresias Membresia[]
 
   @@map("usuarios")
 }
@@ -76,4 +107,47 @@ model Sesion {
 
   @@index([idUsuario])
   @@map("sesiones")
+}
+
+// docs/diseno-desarrollo-general.md §5.1. clave_ingreso nula hasta abrirse la
+// inscripción según ese diccionario; por decisión de producto vigente para
+// este incremento (docs/diseno-desarrollo-nucleo.md §7.1-§7.2, y ver la nota
+// en services/actividades/actividades.service.ts) la clave se genera desde
+// la creación, así que aquí nunca es nula en la práctica aunque la columna
+// lo permita.
+model Actividad {
+  idActividad            String          @id @default(uuid()) @map("id_actividad")
+  nombre                 String
+  objetivo               String
+  informacionGeneral     String          @map("informacion_general")
+  fechaInicio            DateTime        @map("fecha_inicio")
+  fechaTermino           DateTime        @map("fecha_termino")
+  fechaLimiteInscripcion DateTime        @map("fecha_limite_inscripcion")
+  plazoCierreDias        Int             @map("plazo_cierre_dias")
+  numeroEquiposEsperado  Int             @map("numero_equipos_esperado")
+  estado                 EstadoActividad @default(inscripcion)
+  claveIngreso           String?         @unique @map("clave_ingreso")
+  fechaCreacion          DateTime        @default(now()) @map("fecha_creacion")
+
+  membresias Membresia[]
+
+  @@map("actividades")
+}
+
+// docs/diseno-desarrollo-general.md §5.1 y §4.2 ("El organizador como
+// membresía"): no hay columna de propietario en Actividad, el organizador es
+// la membresía con rol organizador.
+model Membresia {
+  idMembresia String          @id @default(uuid()) @map("id_membresia")
+  idActividad String          @map("id_actividad")
+  idUsuario   String          @map("id_usuario")
+  rol         RolMembresia
+  estado      EstadoMembresia @default(activa)
+  fechaUnion  DateTime        @default(now()) @map("fecha_union")
+
+  actividad Actividad @relation(fields: [idActividad], references: [idActividad], onDelete: Cascade)
+  usuario   Usuario   @relation(fields: [idUsuario], references: [idUsuario], onDelete: Cascade)
+
+  @@unique([idActividad, idUsuario])
+  @@map("membresias")
 }

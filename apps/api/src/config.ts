@@ -51,5 +51,12 @@ export const config = {
       ventanaMin: numero('RATE_LIMIT_SESION_VENTANA_MIN', 15),
       max: numero('RATE_LIMIT_SESION_MAX', 10),
     },
+    // Consulta por clave de ingreso (docs/diseno-desarrollo-nucleo.md §3.2 y
+    // §3.3): el espacio de claves es grande, pero sin límite de intentos
+    // seguiría siendo posible recorrerlo por fuerza bruta.
+    clave: {
+      ventanaMin: numero('RATE_LIMIT_CLAVE_VENTANA_MIN', 15),
+      max: numero('RATE_LIMIT_CLAVE_MAX', 20),
+    },
   },
 }

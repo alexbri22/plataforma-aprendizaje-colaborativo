@@ -36,3 +36,12 @@ export interface InvitacionPendiente {
   objetivo: string
   invitadoPor: string
 }
+
+// Lo mínimo que devuelve GET /api/claves/{clave} para decidir si unirse
+// (docs/diseno-desarrollo-nucleo.md §3.3): nada que permita distinguir esta
+// actividad de otra ajena más allá de lo necesario para esa decisión.
+export interface VistaPreviaActividad {
+  nombre: string
+  objetivo: string
+  nombreOrganizador: string
+}

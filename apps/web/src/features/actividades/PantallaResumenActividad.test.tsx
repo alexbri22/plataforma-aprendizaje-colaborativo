@@ -3,8 +3,9 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Usuario } from '../cuentas/api'
-import { _reiniciarDatosDePrueba, crearActividad } from './actividades.api'
+import { obtenerActividad } from './actividades.api'
 import { PantallaResumenActividad } from './PantallaResumenActividad'
+import type { Actividad } from './tipos'
 
 vi.mock('../cuentas/api', async () => {
   const real = await vi.importActual<typeof import('../cuentas/api')>('../cuentas/api')
@@ -21,6 +22,15 @@ vi.mock('../cuentas/api', async () => {
     obtenerSesionActual: vi.fn().mockResolvedValue(usuario),
     cerrarSesion: vi.fn().mockResolvedValue(undefined),
   }
+})
+
+// El backend real no expone GET /api/actividades/{id} en este incremento
+// (docs/diseno-desarrollo-nucleo.md §11.2, "Actividades I" solo cubre crear y
+// listar), así que se mockea el módulo en vez de golpear fetch, mismo patrón
+// que PantallaCrearActividad.test.tsx y PantallaMisActividades.test.tsx.
+vi.mock('./actividades.api', async () => {
+  const real = await vi.importActual<typeof import('./actividades.api')>('./actividades.api')
+  return { ...real, obtenerActividad: vi.fn() }
 })
 
 function renderPantalla(id: string) {
@@ -40,10 +50,12 @@ function renderPantalla(id: string) {
 
 describe('PantallaResumenActividad', () => {
   beforeEach(() => {
-    _reiniciarDatosDePrueba()
+    vi.mocked(obtenerActividad).mockReset()
   })
 
   it('muestra un aviso cuando la actividad no existe', async () => {
+    vi.mocked(obtenerActividad).mockRejectedValueOnce(new Error('No encontramos esta actividad.'))
+
     renderPantalla('no-existe')
 
     expect(
@@ -52,20 +64,28 @@ describe('PantallaResumenActividad', () => {
   })
 
   it('una actividad recién creada ya tiene fase Inscripción y clave de ingreso', async () => {
-    const nueva = await crearActividad({
+    const actividad: Actividad = {
+      id: 'act-nueva-1',
       nombre: 'Club de robótica',
       objetivo: 'Construir un brazo robótico.',
+      fase: 'inscripcion',
+      rol: 'organizador',
+      numParticipantes: 0,
+      fechaClave: 'Clave: ROBOT2XY',
+      claveIngreso: 'ROBOT2XY',
       informacionGeneral: 'Prototipo funcional con reporte técnico.',
       fechaInicio: '2026-09-01',
       fechaTermino: '2026-11-01',
       fechaLimiteInscripcion: '2026-09-05',
       plazoCierreDias: 10,
       numeroEquiposEsperado: 3,
-    })
-    renderPantalla(nueva.id)
+    }
+    vi.mocked(obtenerActividad).mockResolvedValueOnce(actividad)
+
+    renderPantalla(actividad.id)
 
     expect(await screen.findByText('Inscripción')).toBeInTheDocument()
     expect(screen.getByText('Clave de ingreso')).toBeInTheDocument()
-    expect(screen.getByText(/^[A-Z2-9]{8}$/)).toBeInTheDocument()
+    expect(screen.getByText(actividad.claveIngreso as string)).toBeInTheDocument()
   })
 })

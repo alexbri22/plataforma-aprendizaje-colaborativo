@@ -4,8 +4,9 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Usuario } from '../cuentas/api'
-import { _reiniciarDatosDePrueba } from './actividades.api'
+import { crearActividad } from './actividades.api'
 import { PantallaCrearActividad } from './PantallaCrearActividad'
+import type { Actividad } from './tipos'
 
 vi.mock('../cuentas/api', async () => {
   const real = await vi.importActual<typeof import('../cuentas/api')>('../cuentas/api')
@@ -22,6 +23,15 @@ vi.mock('../cuentas/api', async () => {
     obtenerSesionActual: vi.fn().mockResolvedValue(usuario),
     cerrarSesion: vi.fn().mockResolvedValue(undefined),
   }
+})
+
+// El backend real cubre crear actividades en este incremento
+// (docs/diseno-desarrollo-nucleo.md §11.2, "Actividades I"); se mockea el
+// módulo en vez de golpear fetch, mismo patrón que
+// apps/web/src/features/cuentas/PantallaIngresar.test.tsx.
+vi.mock('./actividades.api', async () => {
+  const real = await vi.importActual<typeof import('./actividades.api')>('./actividades.api')
+  return { ...real, crearActividad: vi.fn() }
 })
 
 const navigateMock = vi.fn()
@@ -74,7 +84,7 @@ async function llenarFormularioValido() {
 
 describe('PantallaCrearActividad', () => {
   beforeEach(() => {
-    _reiniciarDatosDePrueba()
+    vi.mocked(crearActividad).mockReset()
     navigateMock.mockReset()
   })
 
@@ -133,6 +143,18 @@ describe('PantallaCrearActividad', () => {
   })
 
   it('crea la actividad y navega a su resumen', async () => {
+    const actividadCreada: Actividad = {
+      id: 'act-nueva-1',
+      nombre: 'Club de robótica',
+      objetivo: 'Construir un brazo robótico.',
+      fase: 'inscripcion',
+      rol: 'organizador',
+      numParticipantes: 0,
+      fechaClave: 'Clave: ROBOT123',
+      claveIngreso: 'ROBOT123',
+    }
+    vi.mocked(crearActividad).mockResolvedValueOnce(actividadCreada)
+
     renderPantalla()
 
     await llenarFormularioValido()
@@ -140,7 +162,13 @@ describe('PantallaCrearActividad', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Crear actividad' }))
 
     await waitFor(() =>
-      expect(navigateMock).toHaveBeenCalledWith(expect.stringMatching(/^\/actividades\/.+/)),
+      expect(navigateMock).toHaveBeenCalledWith(`/actividades/${actividadCreada.id}`),
+    )
+    expect(crearActividad).toHaveBeenCalledWith(
+      expect.objectContaining({
+        nombre: 'Club de robótica',
+        tipoActividadPercibida: 'Autodirigida',
+      }),
     )
   })
 })

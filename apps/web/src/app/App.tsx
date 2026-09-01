@@ -5,6 +5,7 @@ import {
   PantallaCrearActividad,
   PantallaMisActividades,
   PantallaResumenActividad,
+  PantallaUnirseConClave,
 } from '../features/actividades'
 import { PantallaInicio } from '../features/contenido-publico/PantallaInicio.tsx'
 import { PantallaIngresar, PantallaRegistrarse } from '../features/cuentas'
@@ -47,11 +48,7 @@ export function App() {
             path="/actividades/unirse"
             element={
               <RutaProtegida>
-                <PantallaProximamente
-                  seccionActiva="actividades"
-                  titulo="Unirse con clave"
-                  descripcion="Todavía no está construido. Aquí ingresarás la clave de una actividad para unirte a ella como participante."
-                />
+                <PantallaUnirseConClave />
               </RutaProtegida>
             }
           />

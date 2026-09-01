@@ -27,3 +27,8 @@ export const limitadorSesion = crearLimitador(
   config.limiteIntentos.sesion.ventanaMin,
   config.limiteIntentos.sesion.max,
 )
+
+export const limitadorClave = crearLimitador(
+  config.limiteIntentos.clave.ventanaMin,
+  config.limiteIntentos.clave.max,
+)
