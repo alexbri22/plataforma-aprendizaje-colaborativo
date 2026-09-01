@@ -17,6 +17,13 @@ const ORIGEN_VERCEL = /^https:\/\/[a-z0-9-]+\.vercel\.app$/
 export function createApp(): Express {
   const app = express()
 
+  // El despliegue real siempre llega detrás de un proxy inverso (Vercel
+  // incluido: sus funciones no reciben conexiones directas). Sin esto,
+  // req.ip resuelve a la IP interna del proxy para todas las peticiones,
+  // así que limitadorRegistro/limitadorSesion compartirían un único
+  // contador entre todos los visitantes en vez de uno por IP real.
+  app.set('trust proxy', true)
+
   // Lista de orígenes permitidos y credenciales habilitadas, para que la
   // cookie de sesión viaje entre orígenes distintos en desarrollo
   // (docs/diseno-desarrollo-nucleo.md §3.2). Sin origen (curl, health
