@@ -9,6 +9,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
+    "migrate:deploy": "prisma migrate deploy",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "pretest": "node scripts/migrar-bd-pruebas.mjs",
