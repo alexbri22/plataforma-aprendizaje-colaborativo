@@ -10,6 +10,12 @@ import { healthRouter } from './routes/health.js'
 export function createApp(): Express {
   const app = express()
 
+  // El despliegue real siempre llega detrás de un proxy inverso. Sin esto,
+  // req.ip resuelve a la IP interna del proxy para todas las peticiones,
+  // así que limitadorRegistro/limitadorSesion compartirían un único
+  // contador entre todos los visitantes en vez de uno por IP real.
+  app.set('trust proxy', true)
+
   // Origen fijo al cliente web y credenciales habilitadas, para que la
   // cookie de sesión viaje entre orígenes distintos en desarrollo
   // (docs/diseno-desarrollo-nucleo.md §3.2).
