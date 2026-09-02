@@ -9,7 +9,7 @@ import {
   nivelParaPuntos,
   progresoDeNivel,
   reconocimientosDisponibles,
-} from './insignias'
+} from './insignias.js'
 
 describe('catálogo de insignias', () => {
   it('tiene una definición por cada categoría, sin sobrantes', () => {
