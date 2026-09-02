@@ -218,6 +218,19 @@ Soft-edged and calm is the default register — generous internal padding, comfo
 - **Status variants** (success / danger / warning): `-subtle` background with matching `-ink` text — quiet, informational, sit inline in tables and lists without competing for attention.
 - **Accent variant (recognition only):** Apothecary Amber `-subtle` background with `accent-ink` text. This is the _only_ place in the system Apothecary Amber appears at rest (a badge already earned, shown on a profile). The moment of _awarding_ a badge may use the solid Apothecary Amber fill with white text as a one-time celebratory treatment (see Do's and Don'ts) — the pill above is its permanent, quiet resting state afterward.
 
+### Rank Insignia (features/insignias)
+
+The one place in the system where raster artwork appears. A rank insignia is **two layers**: a metallic frame PNG for the level (bronce / plata / oro / platino / diamante), and inside it an emblem PNG for the category at that level. A category not yet earned keeps the frame's dotted placeholder and a muted vector emblem. It is the visual payload of the recognition system, so it gets latitude nothing else in the interface gets — and correspondingly tight boundaries.
+
+- **Where it may appear:** a user's profile, a participant list, and the closing ritual of an activity. Nowhere else. It is not decoration, an empty state, or a way to make a screen livelier.
+- **The artwork carries the color, the interface doesn't tint it.** No `filter`, no overlay, no recoloring an insignia to match a surface. If a level needs to read differently, that's a change to the PNG, not to CSS on top of it.
+- **Insignias are decorative:** they carry `alt=""`. The accessible name is declared on the insignia as a whole ("Liderazgo, nivel Oro"), because no screen reader can tell gold from platinum.
+- **No motion:** insignias don't shimmer, rotate, or animate on award. The Don'ts below already forbid confetti; a spinning gold frame is the same idea wearing a costume.
+- **The frame owns the sizing; the emblem fills what it's given.** Frames are sized by height (4rem / 6rem / 9rem) with automatic width, since they don't share a proportion. The emblem fills the opening the frame reserves and carries no dimensions of its own — two sets of measurements competing is how a row stops lining up.
+- **Emblems ship trimmed to their content.** Transparent padding inside an emblem file reads as that badge being smaller than its siblings, which looks like a rendering bug and isn't one.
+
+**Why this doesn't break the One-Bottle Rule.** Amber is reserved because recognition is supposed to be rare and earned; the insignia artwork exists for exactly that reason and appears only in that context. What would break the rule is this artwork leaking outward — a gold frame on a nav item, a diamond on a marketing panel. The frames are the bottle, not a new palette.
+
 ### Navigation (not yet built — guidance for when it is)
 
 Should follow the Linear reference for the organizer-facing shell (activity configuration, participant management): compact, label-forward, Study Ink for the active item via `primary-subtle` background rather than a bold color block. Avoid a colored sidebar or top bar — navigation chrome stays Paper/Shelf so it never competes with Apothecary Amber's rarity.

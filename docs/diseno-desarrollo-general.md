@@ -44,7 +44,7 @@ Una plataforma web para la formación de estudiantes en habilidades de trabajo c
 
 ### **Qué no se construye (no-metas)**
 
-Se excluye del alcance, conforme a la sección 8 del documento de concepto: reversión de cambios (el historial provee trazabilidad; la corrección de errores es acción manual del organizador), etiquetado de actividades, y detección de abuso en el sistema de insignias más allá de las restricciones de unicidad y umbrales mínimos. Adicionalmente quedan fuera: el aula abierta de Argumente (ningún contenido de actividades es público), la calificación a nivel de equipo (la calificación es siempre individual por participante), la integración con sistemas académicos institucionales, y los modos de gestión predefinidos (la configuración individual de funciones los sustituye).
+Se excluye del alcance, conforme a la sección 8 del documento de concepto: reversión de cambios (el historial provee trazabilidad; la corrección de errores es acción manual del organizador), etiquetado de actividades, y detección de abuso en el sistema de insignias más allá del presupuesto de reconocimientos y los umbrales mínimos. Adicionalmente quedan fuera: el aula abierta de Argumente (ningún contenido de actividades es público), la calificación a nivel de equipo (la calificación es siempre individual por participante), la integración con sistemas académicos institucionales, y los modos de gestión predefinidos (la configuración individual de funciones los sustituye).
 
 El documento de concepto es la fuente de verdad del producto: define qué es el sistema y por qué. El presente documento define cómo se construye. Ante cualquier discrepancia entre ambos, prevalece el de concepto y este documento debe actualizarse.
 
@@ -122,7 +122,7 @@ Convenciones de nombres: español para entidades de dominio, consistente con el 
 
 - Un archivo de convenciones en la raíz del repositorio (contexto del proyecto, decisiones de arquitectura, convenciones de código) como referencia obligada al iniciar cualquier tarea.
 
-- Pruebas como contrato: las reglas de negocio críticas (matriz de permisos, transiciones de estado, unicidad de insignias) se especifican como pruebas antes o junto con la implementación, de modo que todo cambio sea verificable automáticamente.
+- Pruebas como contrato: las reglas de negocio críticas (matriz de permisos, transiciones de estado, escala de niveles y presupuesto de reconocimientos) se especifican como pruebas antes o junto con la implementación, de modo que todo cambio sea verificable automáticamente.
 
 - Revisión obligatoria de todo código antes de integrarse a la rama principal, vía pull request (2.5).
 
@@ -180,11 +180,11 @@ La SPA se distribuye como archivos estáticos compilados que el navegador descar
 | Historial         | Registro de aportaciones de los participantes y consulta con visibilidad configurable | Alejandro   | api (transversal) \+ web (consulta) |
 | Insignias         | Catálogo global, otorgamiento, acumulados, niveles y rangos                           | Ui Chul     | api \+ web                          |
 | Contenido público | Recursos formativos accesibles sin sesión                                             | Carlos      | api \+ web                          |
-| Administración    | Gestión de cuentas, catálogo de insignias y contenido formativo                       | Carlos      | api \+ web (panel)                  |
+| Administración    | Gestión de cuentas, umbrales de insignias y contenido formativo                       | Carlos      | api \+ web (panel)                  |
 
 **Regla de frontera:** Ningún módulo accede a los datos de otro directamente; toda dependencia entre módulos pasa por la capa de servicios del módulo dueño. El historial es la única excepción: es transversal por diseño (sección 8\) y observa a los demás módulos sin que estos lo conozcan.
 
-**Nota sobre Administración.** El módulo de administración gestiona el catálogo de insignias y el estado de las cuentas, que es dominio del núcleo. En ambos casos el panel de administración es cliente de la capa de servicios del módulo dueño y no escribe directamente sobre sus tablas. Los endpoints administrativos que expone cada módulo dueño se especifican en su respectivo documento individual.
+**Nota sobre Administración.** El módulo de administración gestiona los umbrales del sistema de insignias y el estado de las cuentas, que es dominio del núcleo. En ambos casos el panel de administración es cliente de la capa de servicios del módulo dueño y no escribe directamente sobre sus tablas. Los endpoints administrativos que expone cada módulo dueño se especifican en su respectivo documento individual.
 
 ## **3.5 Arquitectura del cliente web**
 
@@ -336,13 +336,17 @@ Las tablas siguientes describen las relaciones a nivel de atributos y restriccio
 
 ### **Insignias**
 
-| Relación             | Atributos                                                                                 | Llaves y restricciones                                                                                      |
-| :------------------- | :---------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------- |
-| categorias\_insignia | id\_categoria, nombre, descripcion, activa                                                | PK id\_categoria. Catálogo global administrado por el administrador. Único: nombre                          |
-| niveles\_insignia    | id\_nivel, cantidad\_minima, nombre\_nivel                                                | PK id\_nivel. Esquema único aplicado por igual a todas las categorías. Único: cantidad\_minima              |
-| insignias\_otorgadas | id\_otorgamiento, id\_categoria, id\_membresia\_otorgante, id\_membresia\_receptor, fecha | PK id\_otorgamiento. FK las tres. Único: (id\_categoria, id\_membresia\_otorgante, id\_membresia\_receptor) |
+| Relación             | Atributos                                                                                                        | Llaves y restricciones                                                                                                   |
+| :------------------- | :--------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------- |
+| categorias\_insignia | id\_categoria, nombre, descripcion, atestiguacion                                                                | PK id\_categoria. Catálogo fijo de seis filas, cargado como semilla. Único: nombre                                       |
+| niveles\_insignia    | id\_nivel, puntos\_minimos, nombre\_nivel                                                                        | PK id\_nivel. Esquema único aplicado por igual a todas las categorías. Único: puntos\_minimos                            |
+| insignias\_otorgadas | id\_otorgamiento, id\_categoria, id\_membresia\_otorgante, id\_membresia\_receptor, fuente, puntos, frase, fecha | PK id\_otorgamiento. FK las tres primeras. fuente: par / organizador / sistema. id\_membresia\_otorgante nula si sistema |
 
-**Por qué la unicidad se expresa sobre membresías.** El documento de concepto define la unicidad como otorgante, receptor, categoría y actividad. Al referenciar membresías en lugar de usuarios, la actividad queda implícita en ambas llaves y la restricción se reduce a tres columnas. La contrapartida es que el esquema por sí solo no garantiza que otorgante y receptor pertenezcan a la misma actividad: esa verificación corresponde a la capa de servicios (4.6).
+**El catálogo es semilla, no dato administrable.** Las seis categorías se cargan como migración y no se crean ni se retiran desde la aplicación (concepto, sección 6). Se modelan igual como relación —y no como enumerado en el esquema— porque `insignias_otorgadas` necesita una llave foránea estable y porque el nombre y el texto de atestiguación son contenido, no estructura.
+
+**Por qué el acumulado se guarda en puntos y no se cuenta por filas.** Un reconocimiento de un par vale 1 punto, uno del organizador vale 2, y las señales automáticas aportan fracciones: el acumulado deja de ser un conteo de filas y pasa a ser una suma. `puntos` se materializa en cada otorgamiento en lugar de derivarse de `fuente` en cada consulta, para que un cambio futuro de calibración no reescriba el valor histórico de reconocimientos ya emitidos.
+
+**Por qué desaparece la restricción de unicidad por categoría.** La versión anterior del concepto limitaba a una insignia de cada categoría por otorgante y receptor dentro de una actividad, y eso se expresaba como un índice único de tres columnas. El límite ahora es un presupuesto por persona —el 33 % del equipo, con techo de 5— que no es expresable como restricción de unicidad: se verifica en la capa de servicios contra los otorgamientos ya emitidos por ese otorgante en esa actividad, y forma parte de las reglas de integridad de 4.6.
 
 ### **Transversales y contenido formativo**
 
@@ -359,20 +363,21 @@ Las tablas siguientes describen las relaciones a nivel de atributos y restriccio
 
 Las siguientes relaciones cruzan fronteras de módulo y por lo tanto se fijan en este documento, no en los individuales.
 
-| Relación                          | Módulos que cruza                   | Regla                                                                                                                                                              |
-| :-------------------------------- | :---------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| insignias\_otorgadas → membresias | Insignias ↔ Actividades y Cuentas   | Otorgante y receptor son membresías de la misma actividad. El otorgamiento solo es válido durante el periodo de cierre (6.1)                                       |
-| rango visible de un usuario       | Cuentas ↔ Insignias                 | Derivado del conteo de insignias\_otorgadas contra niveles\_insignia. No se almacena como atributo: se calcula. Lo consume la búsqueda de participantes al invitar |
-| recursos\_formativos              | Contenido público                   | Sin llave foránea hacia actividades, equipos ni evaluaciones. Aislamiento deliberado (concepto, sección 7\)                                                        |
-| historial → cualquier entidad     | Historial ↔ Actividades e Insignias | Referencia polimórfica. El único evento aportado por otro subsistema es el otorgamiento de insignia (8.7); el esquema se define una sola vez aquí                  |
-| usuarios.estado\_cuenta           | Administración ↔ Cuentas            | El administrador modifica el estado de la cuenta a través de la capa de servicios del módulo de Cuentas, no escribiendo sobre la relación                          |
+| Relación                          | Módulos que cruza                   | Regla                                                                                                                                                                        |
+| :-------------------------------- | :---------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| insignias\_otorgadas → membresias | Insignias ↔ Actividades y Cuentas   | Otorgante y receptor son membresías de la misma actividad. El otorgamiento solo es válido durante el periodo de cierre (6.1)                                                 |
+| rango visible de un usuario       | Cuentas ↔ Insignias                 | Derivado de la suma de puntos de insignias\_otorgadas contra niveles\_insignia. No se almacena como atributo: se calcula. Lo consume la búsqueda de participantes al invitar |
+| recursos\_formativos              | Contenido público                   | Sin llave foránea hacia actividades, equipos ni evaluaciones. Aislamiento deliberado (concepto, sección 7\)                                                                  |
+| historial → cualquier entidad     | Historial ↔ Actividades e Insignias | Referencia polimórfica. El único evento aportado por otro subsistema es el otorgamiento de insignia (8.7); el esquema se define una sola vez aquí                            |
+| usuarios.estado\_cuenta           | Administración ↔ Cuentas            | El administrador modifica el estado de la cuenta a través de la capa de servicios del módulo de Cuentas, no escribiendo sobre la relación                                    |
 
 ## **4.6 Reglas de integridad no expresables en el esquema**
 
 Las siguientes reglas no pueden garantizarse con llaves ni restricciones de unicidad. Son responsabilidad de la capa de servicios y forman parte de las pruebas de contrato de la sección 10\.
 
 - Toda actividad tiene exactamente una membresía con rol de organizador.
-- El otorgante y el receptor de una insignia pertenecen a la misma actividad.
+- El otorgante y el receptor de una insignia pertenecen a la misma actividad, y a un mismo equipo dentro de ella: el reconocimiento entre pares no cruza equipos.
+- Ningún participante emite en una actividad más reconocimientos que su presupuesto, que es el 33 % del tamaño de su equipo sin contarse, redondeado hacia arriba, con piso 1 y techo 5. No es expresable como restricción de unicidad y se verifica contra los otorgamientos ya emitidos por esa persona en esa actividad.
 - Solo las membresías con rol de co-organizador tienen filas en la relación de permisos.
 - Todo participante de una actividad en desarrollo pertenece a exactamente un equipo, y ese equipo pertenece a la actividad de su membresía.
 - En un comentario, exactamente uno de los dos destinos (equipo o participante) es distinto de nulo.
@@ -426,11 +431,11 @@ Descripción de cada relación del modelo de 4.4 y de sus atributos, con el mism
 
 ## **5.4 Insignias**
 
-| Relación                   | Descripción de la relación                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| :------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| _**categorias\_insignia**_ | Catálogo global de categorías de insignia, administrado para toda la plataforma de modo que el acumulado sea comparable entre actividades. Sus atributos son: ● **id\_categoria:** llave primaria que identifica cada categoría. ● **nombre:** nombre de la categoría, único en el catálogo. ● **descripcion:** qué reconoce la categoría. ● **activa:** indica si la categoría puede otorgarse. Permite retirarla del catálogo sin eliminar las insignias ya otorgadas en ella.                                                                                                                                                                                                                                                           |
-| _**niveles\_insignia**_    | Esquema único de umbrales, aplicado por igual a todas las categorías, que determina el nivel de un usuario dentro de cada una. Sus atributos son: ● **id\_nivel:** llave primaria que identifica cada nivel. ● **cantidad\_minima:** cantidad acumulada a partir de la cual se alcanza el nivel. ● **nombre\_nivel:** nombre temático del nivel.                                                                                                                                                                                                                                                                                                                                                                                           |
-| _**insignias\_otorgadas**_ | Cada unidad de reconocimiento otorgada dentro de una actividad. El acumulado de un usuario en una categoría es el conteo de estas filas y no se almacena. Sus atributos son: ● **id\_otorgamiento:** llave primaria que identifica cada otorgamiento. ● **id\_categoria:** llave foránea a la categoría otorgada. ● **id\_membresia\_otorgante:** llave foránea a la membresía de quien la otorga. ● **id\_membresia\_receptor:** llave foránea a la membresía de quien la recibe. Junto con las dos anteriores forma la restricción de unicidad que impide otorgar dos veces la misma categoría a la misma persona dentro de una actividad. ● **fecha:** momento del otorgamiento, que ocurre siempre durante el periodo de cierre (6.1). |
+| Relación                   | Descripción de la relación                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| :------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| _**categorias\_insignia**_ | Las seis categorías de insignia. Es un catálogo fijo, igual para toda la plataforma, de modo que el acumulado sea comparable entre actividades; se carga como semilla y no se administra desde la aplicación (concepto, sección 6). Sus atributos son: ● **id\_categoria:** llave primaria que identifica cada categoría. ● **nombre:** nombre de la categoría, único en el catálogo. ● **descripcion:** qué reconoce la categoría. ● **atestiguacion:** cómo se ve esa conducta desde fuera, en las palabras que usaría un compañero. Es lo que se muestra al elegir a quién reconocer, y el criterio que mantiene las categorías observables en lugar de abstractas.                                                                                                                                                                                                                                                        |
+| _**niveles\_insignia**_    | Esquema único de umbrales, aplicado por igual a todas las categorías, que determina el nivel de un usuario dentro de cada una. Sus atributos son: ● **id\_nivel:** llave primaria que identifica cada nivel. ● **puntos\_minimos:** puntos acumulados a partir de los cuales se alcanza el nivel. ● **nombre\_nivel:** nombre del nivel (Bronce, Plata, Oro, Platino, Diamante).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| _**insignias\_otorgadas**_ | Cada reconocimiento otorgado dentro de una actividad. El acumulado de un usuario en una categoría es la suma de los puntos de estas filas y no se almacena. Sus atributos son: ● **id\_otorgamiento:** llave primaria que identifica cada otorgamiento. ● **id\_categoria:** llave foránea a la categoría otorgada. ● **id\_membresia\_otorgante:** llave foránea a la membresía de quien lo otorga. Es nula cuando la fuente es el sistema. ● **id\_membresia\_receptor:** llave foránea a la membresía de quien lo recibe. ● **fuente:** par, organizador o sistema. ● **puntos:** valor del reconocimiento, materializado al emitirlo para que una recalibración posterior no reescriba el historial. ● **frase:** justificación de quien reconoce. Visible para el receptor sin su autoría, y para quien organiza con ella. ● **fecha:** momento del otorgamiento, que ocurre siempre durante el periodo de cierre (6.1). |
 
 ## **5.5 Historial y contenido formativo**
 
@@ -571,7 +576,7 @@ La autorización opera en **dos planos distintos** que no deben mezclarse en una
 | Activar o desactivar una cuenta                        | —       | —       | ✓             |
 | Restablecer la contraseña de un usuario                | —       | —       | ✓             |
 | Subir, editar o eliminar recursos formativos           | —       | —       | ✓             |
-| Crear, editar o eliminar categorías de insignias       | —       | —       | ✓             |
+| Ajustar los umbrales de puntos de la escala de niveles | —       | —       | ✓             |
 | Ajustar los umbrales de otorgamiento de insignias      | —       | —       | ✓             |
 
 **El administrador es además un usuario.** La cuenta de administrador conserva todas las capacidades de una cuenta de usuario: puede crear actividades, unirse a ellas y participar. Dentro de una actividad actúa exclusivamente conforme al rol que tenga en ella; su condición de administrador no le confiere ninguna capacidad adicional sobre esa actividad ni sobre las de terceros.
@@ -666,7 +671,7 @@ Aplica únicamente a los miembros de la actividad en cuestión. Un usuario que n
 | Ver quién otorgó una insignia                                  | ✓           | ✓              | (P-09)       |
 | Ver el rango acumulado de otro usuario                         | ✓           | ✓              | ✓            |
 
-**Restricción de unicidad.** Independientemente del rol, cada persona puede otorgar como máximo una insignia de cada categoría a cada receptor dentro de una misma actividad. Es una restricción del modelo de datos (4.4) y no un permiso, y se verifica en el servidor.
+**Presupuesto de reconocimientos.** Independientemente del rol, cada persona reparte como máximo el 33 % del tamaño de su equipo, sin contarse, con piso de 1 y techo de 5, y solo entre compañeros de su propio equipo. Es una regla de negocio (4.6) y no un permiso, y se verifica en el servidor contra los otorgamientos ya emitidos por esa persona en esa actividad.
 
 ### **Historial**
 
@@ -804,13 +809,13 @@ Es la única dependencia del historial con otro subsistema, y el motivo por el q
 | Evento     | El otorgamiento de una insignia produce un evento, emitido por el servicio de insignias conforme a las reglas de 8.2                                                                                                                                   |
 | Categoría  | Evaluación. En consecuencia, el evento es visible para quien organiza y para el receptor, y no para el resto de los participantes                                                                                                                      |
 | Atribución | El receptor ve que recibió una insignia pero no quién se la otorgó, conforme a la propuesta de P-09. La atribución se conserva en el registro y es visible para quien organiza. Es el único evento del sistema cuyo actor se oculta a su propio sujeto |
-| Alcance    | Los eventos del catálogo de insignias —creación, edición y ajuste de umbrales de las categorías— no forman parte de este registro: ocurren fuera de toda actividad (8.4)                                                                               |
+| Alcance    | El ajuste de los umbrales del sistema de insignias no forma parte de este registro: ocurre fuera de toda actividad (8.4). El catálogo de categorías es semilla y no se administra, así que no genera eventos                                           |
 
 **Sin registros paralelos.** El sistema de recompensas no implementa su propio registro de otorgamientos con fines de trazabilidad. Si requiere trazabilidad adicional, el tipo de evento se incorpora al catálogo del historial, con su categoría definida.
 
 ## **8.4 Alcance excluido y remisión**
 
-**El subsistema de contenido formativo y administración no participa.** La gestión de cuentas, de recursos formativos y del catálogo de insignias ocurre fuera de las actividades y queda fuera de este registro, cuyo objeto es la participación dentro de una actividad. Si esas acciones requieren trazabilidad, se trata de un mecanismo distinto y se define en el documento individual de administración.
+**El subsistema de contenido formativo y administración no participa.** La gestión de cuentas, de recursos formativos y de los umbrales de insignias ocurre fuera de las actividades y queda fuera de este registro, cuyo objeto es la participación dentro de una actividad. Si esas acciones requieren trazabilidad, se trata de un mecanismo distinto y se define en el documento individual de administración.
 
 **Qué se desarrolla en el documento individual.** Catálogo completo de tipos de evento y su categoría; regla de agregación de ediciones consecutivas para que el volumen no vuelva ilegible la consulta; enumeración detallada de lo que no se registra; implementación del mecanismo de captura; y las preguntas abiertas propias del módulo.
 
@@ -842,9 +847,9 @@ Es la fase de la que dependen los otros dos subsistemas y, por lo tanto, la que 
 
 - **Núcleo:** reportes de trabajo, bitácora individual, comentarios por equipo e individuales, calificación con y sin rúbrica, autoevaluaciones, evaluación por pares, periodo de cierre y archivado, y la consulta del historial.
 
-- **Recompensas:** catálogo de categorías, otorgamiento con sus reglas de unicidad, acumulado, niveles y rangos. Puede arrancar antes de esta fecha: solo requiere que existan actividades y membresías, disponibles desde la fase A.
+- **Recompensas:** ritual de reconocimiento con su presupuesto por participante, acumulado en puntos, niveles y rangos. Puede arrancar antes de esta fecha: solo requiere que existan actividades y membresías, disponibles desde la fase A.
 
-- **Contenido formativo y administración:** panel de administración de cuentas y del catálogo de insignias, una vez que las entidades de ambos módulos existan.
+- **Contenido formativo y administración:** panel de administración de cuentas y de los umbrales de insignias, una vez que las entidades de ambos módulos existan.
 
 ## **9.4 Fase C — Integración y estabilización (5 de octubre – 9 de noviembre)**
 
@@ -872,7 +877,7 @@ Si una fase se desborda, se recorta alcance antes que extender fechas. El orden 
 
 4. Autoevaluación grupal, conservando la individual y la evaluación por pares.
 
-**Lo que no se recorta.** El ciclo de vida de la actividad, la matriz de permisos, el mecanismo de captura del historial y las reglas de unicidad del otorgamiento de insignias forman parte de las pruebas de contrato (sección 10\) y son la base sobre la que se apoya el resto del sistema. Cualquier ajuste de calendario se acuerda en reunión de seguimiento.
+**Lo que no se recorta.** El ciclo de vida de la actividad, la matriz de permisos, el mecanismo de captura del historial y las reglas del otorgamiento de insignias forman parte de las pruebas de contrato (sección 10\) y son la base sobre la que se apoya el resto del sistema. Cualquier ajuste de calendario se acuerda en reunión de seguimiento.
 
 # **10\. Estrategia de pruebas**
 
@@ -882,16 +887,16 @@ Las pruebas cumplen aquí una función que va más allá de detectar defectos: s
 
 Son de cobertura obligatoria y se escriben junto con la definición de la regla. Cada una corresponde a una sección de este documento:
 
-| Qué se verifica                                                                          | Origen    | Por qué es obligatoria                                                                         |
-| :--------------------------------------------------------------------------------------- | :-------- | :--------------------------------------------------------------------------------------------- |
-| Las ocho reglas de integridad que el esquema no puede expresar                           | 4.6       | La base de datos no las impide; sin prueba, un dato inconsistente entra sin que nada lo señale |
-| Las transiciones válidas del ciclo de vida y la imposibilidad de retroceder              | 6.1       | Los tres subsistemas condicionan acciones al estado de la actividad                            |
-| Cada celda de la matriz de permisos, incluidos los permisos otorgables al co-organizador | 7.2 y 7.3 | Es la única barrera de autorización real: el cliente no autoriza                               |
-| Que ninguna acción registrable termine sin emitir su evento, con su categoría correcta   | 8.2       | Una omisión no produce error visible, solo un historial incompleto                             |
-| La unicidad del otorgamiento de insignias y su restricción al periodo de cierre          | 4.4 y 6.1 | Cruza la frontera entre el núcleo y el subsistema de recompensas                               |
-| El alcance acotado del administrador sobre actividades, equipos y evaluaciones           | 7.2       | Cruza la frontera entre el núcleo y el subsistema de administración                            |
+| Qué se verifica                                                                                           | Origen    | Por qué es obligatoria                                                                         |
+| :-------------------------------------------------------------------------------------------------------- | :-------- | :--------------------------------------------------------------------------------------------- |
+| Las ocho reglas de integridad que el esquema no puede expresar                                            | 4.6       | La base de datos no las impide; sin prueba, un dato inconsistente entra sin que nada lo señale |
+| Las transiciones válidas del ciclo de vida y la imposibilidad de retroceder                               | 6.1       | Los tres subsistemas condicionan acciones al estado de la actividad                            |
+| Cada celda de la matriz de permisos, incluidos los permisos otorgables al co-organizador                  | 7.2 y 7.3 | Es la única barrera de autorización real: el cliente no autoriza                               |
+| Que ninguna acción registrable termine sin emitir su evento, con su categoría correcta                    | 8.2       | Una omisión no produce error visible, solo un historial incompleto                             |
+| El presupuesto de reconocimientos por participante y la restricción del otorgamiento al periodo de cierre | 4.4 y 6.1 | Cruza la frontera entre el núcleo y el subsistema de recompensas                               |
+| El alcance acotado del administrador sobre actividades, equipos y evaluaciones                            | 7.2       | Cruza la frontera entre el núcleo y el subsistema de administración                            |
 
-**Justificación.** Las seis comparten una característica: su incumplimiento no produce un error visible. Una petición autorizada de más devuelve datos con normalidad, un evento no emitido no falla, y una insignia duplicada se guarda sin protestar. Son los defectos que no aparecen probando la aplicación a mano.
+**Justificación.** Las seis comparten una característica: su incumplimiento no produce un error visible. Una petición autorizada de más devuelve datos con normalidad, un evento no emitido no falla, y un reconocimiento por encima del presupuesto se guarda sin protestar. Son los defectos que no aparecen probando la aplicación a mano.
 
 ## **10.2 Pruebas automatizadas por capa**
 
