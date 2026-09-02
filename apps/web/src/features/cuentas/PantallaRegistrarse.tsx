@@ -116,7 +116,7 @@ export function PantallaRegistrarse() {
         correo: valores.correo,
         contrasena: valores.contrasena,
       })
-      navigate('/')
+      navigate('/actividades')
     } catch (error) {
       setErrorEnvio(error instanceof ErrorCuenta ? error.message : MENSAJE_ERROR_GENERICO)
     } finally {

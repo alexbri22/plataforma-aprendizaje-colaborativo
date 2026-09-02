@@ -8,8 +8,6 @@ Pantalla de inicio y recursos formativos accesibles sin sesión (ver sección
 insignias que enlaza aún no existen — sus acciones son intencionalmente
 inertes hasta que esas features se construyan.
 
-La ilustración del hero (`public/personas.png`) es provisional.
-
 Convención de la carpeta: componentes, queries (TanStack Query) y stores
 (Zustand, adopción diferida) de esta feature viven aquí. Los componentes
 visuales consumen `components/ui/` y los tokens de `DESIGN.md`; no se

@@ -39,6 +39,7 @@
   position: relative;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: var(--space-1);
   border-radius: var(--radius-sm);
   text-decoration: none;
@@ -55,16 +56,50 @@
   outline-offset: 2px;
 }
 
-.brandName {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text);
+.brandMark {
+  display: block;
+  height: 55px;
+  width: auto;
+}
+
+.divider {
+  display: block;
+  width: 88px;
+  height: 1px;
+  background: var(--color-border-strong);
 }
 
 .brandTagline {
-  font-size: var(--font-size-xs);
+  text-align: center;
+  /* Por debajo de --font-size-xs (el mínimo del sistema de tipos):
+     excepción puntual de este lockup compacto, igual que el color teal de
+     abajo, no un tamaño para usarse en otro lado. */
+  font-size: 8px;
   font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
   color: var(--color-text-muted);
+}
+
+/* Colores tomados del logo (public/co3-logo.png) para las iniciales "CO" del
+   tagline. Dos ya existen como tokens (ink, amber); el tercero es exclusivo
+   de esta marca y no tiene equivalente en tokens.css, así que se declara
+   aquí como valor puntual en vez de agregarlo al sistema global. */
+.tagCoNavy,
+.tagCoOrange,
+.tagCoTeal {
+  font-weight: var(--font-weight-bold);
+}
+
+.tagCoNavy {
+  color: var(--color-ink-700);
+}
+
+.tagCoOrange {
+  color: var(--color-accent);
+}
+
+.tagCoTeal {
+  color: #2c96a0;
 }
 
 .nav {

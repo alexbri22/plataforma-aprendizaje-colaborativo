@@ -54,7 +54,7 @@ export function PantallaIngresar() {
     setEnviando(true)
     try {
       await iniciarSesion({ correo, contrasena })
-      navigate('/')
+      navigate('/actividades')
     } catch (error) {
       setErrorEnvio(error instanceof ErrorCuenta ? error.message : MENSAJE_ERROR_GENERICO)
     } finally {
