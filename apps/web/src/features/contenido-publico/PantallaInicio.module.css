@@ -68,11 +68,6 @@
   text-wrap: balance;
 }
 
-/*
- * Imagen provisional: sustituye a la ilustración final en cuanto esté
- * disponible (ver PRODUCT.md, anti-referencias sobre fotografía de stock —
- * esta pantalla pública es la única excepción provisional en el sistema).
- */
 .heroImg {
   max-width: 380px;
   width: 100%;

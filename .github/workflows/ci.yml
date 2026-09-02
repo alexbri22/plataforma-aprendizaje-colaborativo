@@ -9,6 +9,25 @@ on:
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
+    services:
+      # apps/api/src/routes/cuentas.test.ts corre contra Postgres real
+      # (DATABASE_URL_TEST), separado de la base de desarrollo — ver
+      # apps/api/scripts/migrar-bd-pruebas.mjs.
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: plataforma
+          POSTGRES_PASSWORD: plataforma
+          POSTGRES_DB: plataforma_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U plataforma -d plataforma_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL_TEST: postgresql://plataforma:plataforma@localhost:5432/plataforma_test
     steps:
       - uses: actions/checkout@v4
 

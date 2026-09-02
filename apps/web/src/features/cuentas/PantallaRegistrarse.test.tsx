@@ -100,7 +100,7 @@ describe('PantallaRegistrarse', () => {
         contrasena: 'clave1234',
       }),
     )
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/'))
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/actividades'))
   })
 
   it('muestra un aviso cuando el correo ya está registrado', async () => {

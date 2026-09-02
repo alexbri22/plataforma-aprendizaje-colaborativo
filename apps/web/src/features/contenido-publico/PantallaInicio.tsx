@@ -63,10 +63,10 @@ export function PantallaInicio() {
 
             <img
               className={styles.heroImg}
-              src="/personas.png"
-              alt="Personas colaborando para armar piezas de un rompecabezas"
-              width="2000"
-              height="1538"
+              src="/ilustracion-manos.png"
+              alt="Manos colaborando: escribiendo, ensamblando ideas y construyendo conocimiento en conjunto"
+              width="1320"
+              height="800"
               fetchPriority="high"
             />
           </div>
