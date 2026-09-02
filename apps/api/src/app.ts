@@ -51,8 +51,8 @@ export function createApp(): Express {
 
   app.use('/health', healthRouter)
   // También bajo /api: en Vercel la función solo está mapeada a ese
-  // prefijo (ver api/[...path].ts en la raíz del repo), así que /health a
-  // secas no es alcanzable ahí.
+  // prefijo (ver api/servidor.ts y el rewrite en vercel.json), así que
+  // /health a secas no es alcanzable ahí.
   app.use('/api/health', healthRouter)
   app.use('/api', cuentasRouter)
   app.use('/api', actividadesRouter)

@@ -2,7 +2,10 @@
   "buildCommand": "npm run migrate:deploy --workspace apps/api && npm run build --workspace apps/web",
   "outputDirectory": "apps/web/dist",
   "functions": {
-    "api/[...path].ts": { "maxDuration": 15 }
+    "api/servidor.ts": { "maxDuration": 15 }
   },
-  "rewrites": [{ "source": "/((?!api).*)", "destination": "/index.html" }]
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api/servidor" },
+    { "source": "/((?!api).*)", "destination": "/index.html" }
+  ]
 }
