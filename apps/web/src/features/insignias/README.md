@@ -10,14 +10,16 @@ núcleo y todavía no existen. Hoy los componentes reciben los puntos por props.
 
 ## Qué hay aquí
 
-| Pieza                      | Para qué                                                                                    |
-| -------------------------- | ------------------------------------------------------------------------------------------- |
-| `arteInsignias`            | Resuelve el emblema PNG de una categoría y nivel. Tolera los que aún no se han subido.      |
-| `MarcoRango`               | El marco del nivel. Envuelve cualquier contenido; agnóstico de qué enmarca.                 |
-| `IconoCategoria`           | Emblema vectorial de una categoría. Suplente del PNG, y titular del estado sin rango.       |
-| `InsigniaCategoria`        | Marco más emblema. Es la unidad reusable del sistema.                                       |
-| `VitrinaInsignias`         | Las seis insignias de un usuario, para el perfil.                                           |
-| `PantallaMuestraInsignias` | Ruta `/insignias`. Muestra para revisión, no producto — se elimina cuando el perfil exista. |
+| Pieza                          | Para qué                                                                                    |
+| ------------------------------ | ------------------------------------------------------------------------------------------- |
+| `arteInsignias`                | Resuelve el emblema PNG de una categoría y nivel. Tolera los que aún no se han subido.      |
+| `MarcoRango`                   | El marco del nivel. Envuelve cualquier contenido; agnóstico de qué enmarca.                 |
+| `IconoCategoria`               | Emblema vectorial de una categoría. Suplente del PNG, y titular del estado sin rango.       |
+| `InsigniaCategoria`            | Marco más emblema. Es la unidad reusable del sistema.                                       |
+| `VitrinaInsignias`             | Las seis insignias de un usuario, para el perfil.                                           |
+| `RitualReconocimiento`         | El reparto de reconocimientos del cierre. Recibe los compañeros y devuelve los borradores.  |
+| `PantallaMuestraInsignias`     | Ruta `/insignias`. Muestra para revisión, no producto — se elimina cuando el perfil exista. |
+| `PantallaRitualReconocimiento` | Ruta `/insignias/reconocer`. Hospeda el ritual con datos de ejemplo; también se elimina.    |
 
 Se importa desde `index.ts`, nunca de un archivo suelto:
 
@@ -74,11 +76,27 @@ con el centroide del área. Es lo que dimensiona y coloca al emblema, y por eso 
 emblema no debe traer margen propio — si lo trae, se ve más chico que sus
 hermanos.
 
+## El ritual de cierre
+
+`RitualReconocimiento` reparte el presupuesto entre los compañeros del propio
+equipo. Tres reglas que vale la pena no perder:
+
+- **El presupuesto se deriva** del número de compañeros, no se recibe por props,
+  por la misma razón que el nivel se deriva de los puntos.
+- **Cuenta reconocimientos, no personas.** Puedes dar dos insignias distintas a
+  la misma persona; lo que no puedes es repetir la misma categoría en ella.
+- **La frase es guiada con salida a texto libre.** `FRASES_SUGERIDAS` ofrece tres
+  por categoría y siempre se puede escribir la propia. Escribir desde cero seis
+  veces produce frases de relleno, que valen menos para quien las recibe que una
+  prellenada que sí describe lo que hizo.
+
+El anonimato se anuncia antes de empezar, no al terminar: cambia lo que la gente
+se atreve a escribir.
+
 ## Lo que falta
 
-- Otorgamiento: el ritual de cierre con su presupuesto por participante (33 %
-  del equipo, techo de 5) y la frase de justificación, cuyo formato sigue sin
-  decidirse (concepto, sección 6).
+- Otorgamiento real: no hay endpoint, así que `onEnviar` termina en la pantalla
+  de muestra. Depende de actividades, equipos y membresías (Fase A del núcleo).
 - Acumulado real contra la API, con TanStack Query. Hoy no hay endpoints ni
   cliente de datos en el proyecto.
 - Vista de progreso del perfil y vista de grupo del organizador.

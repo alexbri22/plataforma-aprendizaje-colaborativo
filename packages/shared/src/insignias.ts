@@ -71,6 +71,51 @@ export const CATALOGO_INSIGNIAS: readonly DefinicionCategoria[] = [
   },
 ]
 
+/**
+ * Frases prellenadas que se ofrecen al reconocer, por categoría. La primera de
+ * cada lista es la de `comoSeAtestigua`, que ya definía el catálogo.
+ *
+ * Existen para que el ritual de cierre quepa en los dos o tres minutos que se le
+ * suponen: escribir desde cero seis veces produce frases de relleno, y una frase
+ * de relleno vale menos para quien la recibe que una prellenada que sí describe
+ * lo que hizo. Quien quiera redactar la suya puede, siempre.
+ *
+ * Están en primera persona y en pasado porque se leen como testimonio de algo
+ * que ocurrió, no como halago. Son un punto de partida a revisar con el equipo.
+ */
+export const FRASES_SUGERIDAS: Readonly<Record<CategoriaInsignia, readonly string[]>> = {
+  liderazgo: [
+    'Cuando nadie sabía qué seguía, lo aclaró',
+    'Repartió el trabajo de una forma que nos funcionó',
+    'Nos destrabó cuando llevábamos días detenidos',
+  ],
+  companerismo: [
+    'Me ayudó cuando estaba atorado',
+    'Se ofreció a apoyar sin que nadie se lo pidiera',
+    'Se quedó a terminar algo que no le tocaba',
+  ],
+  comunicacion: [
+    'Siempre supimos en qué iba',
+    'Explicó algo difícil de una forma que sí entendí',
+    'Escuchó lo que propuse antes de opinar',
+  ],
+  compromiso: [
+    'Su parte siempre estuvo lista',
+    'Cumplió lo que acordamos, también cuando costó',
+    'Llegó preparado a cada reunión',
+  ],
+  ideas: [
+    'Cuando nos atoramos, propuso el camino',
+    'Trajo una idea en la que nadie había pensado',
+    'Convirtió un problema en algo que sí podíamos hacer',
+  ],
+  'buen-juicio': [
+    'Sus comentarios mejoraron el trabajo',
+    'Señaló un problema a tiempo, sin descalificar a nadie',
+    'Recibió una crítica y la usó',
+  ],
+}
+
 /** Niveles en orden ascendente. La escala es única y se aplica por igual a las
  * seis categorías, que progresan por separado. */
 export const NIVELES_INSIGNIA = ['bronce', 'plata', 'oro', 'platino', 'diamante'] as const

@@ -252,7 +252,7 @@ Ocurre durante el periodo de cierre de la actividad (sección 4, Fase 5) y está
 
 Reconocimientos limitados: cada participante reparte el 33 % del tamaño de su equipo, sin contarse, redondeado hacia arriba, con un piso de 1 y un techo de 5, y solo entre compañeros de su propio equipo. Un equipo de 3 da 1 reconocimiento; uno de 10, 3; uno de 20, 5. Siempre hay que elegir: nunca alcanza para todos. Un reconocimiento que puede darse a todo el equipo no distingue nada, y sin escasez el acumulado deja de ser una señal.
 
-Frase de justificación: cada reconocimiento es persona + insignia + una frase de por qué. **\[Pendiente decidir si la frase será obligatoria, opcional o guiada con frases prellenadas — decisión de contenido, no bloquea el modelo de datos\]**.
+Frase de justificación: cada reconocimiento es persona + insignia + una frase de por qué. La frase es guiada: el sistema ofrece tres frases prellenadas por categoría y siempre se puede escribir una propia. Escribir desde cero seis veces produce frases de relleno, y una frase de relleno vale menos para quien la recibe que una prellenada que sí describe lo que hizo; esto además mantiene el ritual dentro de los dos o tres minutos que se le suponen. El catálogo de frases es contenido y se revisa con el equipo sin tocar el modelo de datos.
 
 Anónimo entre pares: quien recibe ve el reconocimiento y la frase, no quién la escribió. El organizador conserva la atribución completa.
 
