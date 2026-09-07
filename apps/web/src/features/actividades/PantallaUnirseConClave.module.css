@@ -1,0 +1,52 @@
+.card {
+  max-width: 480px;
+}
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.enviar {
+  width: 100%;
+}
+
+.cargando {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16) 0;
+  color: var(--color-text-muted);
+}
+
+.vistaPrevia {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.nombre {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  margin: 0 0 var(--space-1);
+}
+
+.organiza {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.objetivo {
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+  color: var(--color-text);
+  margin: 0;
+}
+
+.acciones {
+  display: flex;
+  gap: var(--space-3);
+}

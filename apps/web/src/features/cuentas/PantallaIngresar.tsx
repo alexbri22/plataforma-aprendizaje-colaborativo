@@ -1,11 +1,10 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Button, Input } from '../../components/ui'
-import { AvisoError } from './AvisoError'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { AvisoError, Button, IconoCargando, Input } from '../../components/ui'
 import { CampoContrasena } from './CampoContrasena'
-import { IconoCargando } from './IconoCargando'
 import { PantallaAutenticacion } from './PantallaAutenticacion'
-import { ErrorCuenta, iniciarSesion } from './api'
+import { ErrorCuenta } from './api'
+import { useIniciarSesionMutation } from './useSesion'
 import { validarContrasena, validarCorreo } from './validacion'
 import styles from './PantallaIngresar.module.css'
 
@@ -15,14 +14,19 @@ interface Errores {
 }
 
 const MENSAJE_ERROR_GENERICO = 'No pudimos iniciar tu sesión. Intenta de nuevo.'
+const DESTINO_POR_DEFECTO = '/actividades'
 
 export function PantallaIngresar() {
   const navigate = useNavigate()
+  // RutaProtegida deja aquí a dónde iba quien no tenía sesión, para
+  // retomarlo tras autenticarse (docs/diseno-desarrollo-nucleo.md §4.1).
+  const location = useLocation()
+  const destino = (location.state as { desde?: string } | null)?.desde ?? DESTINO_POR_DEFECTO
+  const mutacion = useIniciarSesionMutation()
   const [correo, setCorreo] = useState('')
   const [contrasena, setContrasena] = useState('')
   const [errores, setErrores] = useState<Errores>({})
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null)
-  const [enviando, setEnviando] = useState(false)
 
   function obtenerError(campo: keyof Errores): string | undefined {
     if (campo === 'correo') return validarCorreo(correo)
@@ -51,14 +55,11 @@ export function PantallaIngresar() {
     }
 
     setErrorEnvio(null)
-    setEnviando(true)
     try {
-      await iniciarSesion({ correo, contrasena })
-      navigate('/actividades')
+      await mutacion.mutateAsync({ correo, contrasena })
+      navigate(destino, { replace: true })
     } catch (error) {
       setErrorEnvio(error instanceof ErrorCuenta ? error.message : MENSAJE_ERROR_GENERICO)
-    } finally {
-      setEnviando(false)
     }
   }
 
@@ -84,7 +85,7 @@ export function PantallaIngresar() {
           onChange={(evento: ChangeEvent<HTMLInputElement>) => setCorreo(evento.target.value)}
           onBlur={() => validarCampo('correo')}
           error={errores.correo}
-          disabled={enviando}
+          disabled={mutacion.isPending}
           required
         />
 
@@ -96,11 +97,11 @@ export function PantallaIngresar() {
           onBlur={() => validarCampo('contrasena')}
           error={errores.contrasena}
           autoComplete="current-password"
-          disabled={enviando}
+          disabled={mutacion.isPending}
         />
 
-        <Button type="submit" disabled={enviando} className={styles.enviar}>
-          {enviando ? (
+        <Button type="submit" disabled={mutacion.isPending} className={styles.enviar}>
+          {mutacion.isPending ? (
             <>
               <IconoCargando />
               Ingresando…

@@ -1,8 +1,19 @@
 import styles from './IconoCargando.module.css'
 
-export function IconoCargando() {
+export interface IconoCargandoProps {
+  /** Lado del ícono en px. Por defecto 16, el tamaño usado dentro de botones. */
+  size?: number
+}
+
+export function IconoCargando({ size = 16 }: IconoCargandoProps) {
   return (
-    <svg className={styles.spinner} viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+    <svg
+      className={styles.spinner}
+      style={{ width: size, height: size }}
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      focusable="false"
+    >
       <circle
         cx="8"
         cy="8"

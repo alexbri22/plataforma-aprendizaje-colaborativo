@@ -1,0 +1,47 @@
+.tarjeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  /* Tinte de fondo, no franja de color: DESIGN.md prohíbe el acento como
+     borde lateral decorativo (§5, Do's and Don'ts). */
+  background: var(--color-primary-subtle);
+  border-color: var(--color-primary-border);
+}
+
+.contenido {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 220px;
+}
+
+.nombre {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  color: var(--color-text);
+  margin: 0;
+}
+
+.objetivo {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.invitadoPor {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary);
+  margin: 0;
+}
+
+.acciones {
+  display: flex;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
