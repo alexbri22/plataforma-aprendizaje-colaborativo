@@ -21,7 +21,9 @@ describe('PantallaInicio', () => {
     expect(screen.getByRole('link', { name: 'Ingresar' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Registrarse' })).toBeInTheDocument()
     expect(screen.getByRole('navigation', { name: 'Principal' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Insignias' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Insignias' })).toBeInTheDocument()
+    // Recursos sigue siendo un botón inerte: el contenido formativo público
+    // todavía no existe, así que no hay destino al que enlazarlo.
     expect(screen.getByRole('button', { name: 'Recursos' })).toBeInTheDocument()
     expect(
       screen.getByRole('heading', { level: 2, name: 'Características de Co3' }),
@@ -40,5 +42,11 @@ describe('PantallaInicio', () => {
       '/registrarse',
     )
     expect(screen.getByRole('link', { name: 'Ingresar' })).toHaveAttribute('href', '/ingresar')
+  })
+
+  it('enlaza Insignias desde la navegación principal', () => {
+    renderPantallaInicio()
+
+    expect(screen.getByRole('link', { name: 'Insignias' })).toHaveAttribute('href', '/insignias')
   })
 })

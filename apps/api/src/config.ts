@@ -20,10 +20,11 @@ const nombreVariableBaseDeDatos = process.env.VITEST ? 'DATABASE_URL_TEST' : 'DA
 export const config = {
   puerto: numero('PORT', 3001),
   databaseUrl: requerida(nombreVariableBaseDeDatos),
-  // Lista separada por comas: el despliegue en Vercel llega al API mediante
-  // un rewrite (mismo origen desde el navegador), así que esto solo importa
-  // para acceso directo al API — depuración local, curl, o un cliente futuro
-  // que no pase por el proxy.
+  // Lista separada por comas: en Vercel, apps/web y esta API se sirven
+  // desde el mismo despliegue (api/servidor.ts, enrutada por el rewrite de
+  // vercel.json), así que el navegador nunca hace una petición cruzada ahí.
+  // Esto solo importa para acceso directo al API sin pasar por ese
+  // despliegue — depuración local, curl, o un cliente futuro.
   webOrigins: (process.env.WEB_ORIGIN ?? 'http://localhost:5173')
     .split(',')
     .map((origen) => origen.trim())

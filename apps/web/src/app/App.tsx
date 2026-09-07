@@ -9,6 +9,7 @@ import {
 } from '../features/actividades'
 import { PantallaInicio } from '../features/contenido-publico/PantallaInicio.tsx'
 import { PantallaIngresar, PantallaRegistrarse } from '../features/cuentas'
+import { PantallaMuestraInsignias } from '../features/insignias'
 import { queryClient } from './queryClient'
 import { RutaProtegida } from './RutaProtegida'
 
@@ -56,11 +57,7 @@ export function App() {
             path="/insignias"
             element={
               <RutaProtegida>
-                <PantallaProximamente
-                  seccionActiva="insignias"
-                  titulo="Insignias"
-                  descripcion="Todavía no está construido. Aquí verás el catálogo de insignias y tu rango acumulado en cada categoría."
-                />
+                <PantallaMuestraInsignias />
               </RutaProtegida>
             }
           />

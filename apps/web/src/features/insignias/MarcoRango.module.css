@@ -1,0 +1,128 @@
+/*
+ * El marco se dimensiona por ALTURA, no por ancho: los cinco PNG comparten alto
+ * (320 px) pero no ancho, así que fijar el alto es lo que hace que una fila de
+ * insignias quede alineada. El ancho lo aporta la imagen.
+ *
+ * --marco-x / --marco-y / --marco-diametro describen dónde cae la abertura de
+ * cada marco y qué cabe dentro. No son valores estéticos: salen de medir el
+ * canal alfa de cada PNG, con un criterio distinto para el tamaño y para la
+ * posición.
+ *
+ * El DIAMETRO es el del mayor círculo inscrito en la zona transparente, con
+ * ~10 % de respiro para que el emblema no toque el marco.
+ *
+ * El CENTRO es el punto que deja el mismo hueco arriba que abajo sobre el eje
+ * del emblema, que es lo que el ojo lee como centrado. No se toma del círculo
+ * inscrito: en una abertura más alta que ancha ese círculo se desliza
+ * verticalmente sin cambiar de tamaño, así que su centro identifica un rango y
+ * no una posición, y elegir de ese rango dejaba los emblemas montados hacia
+ * arriba. Tampoco es el centroide del área: en una abertura que se estrecha,
+ * como el escudo del bronce, la masa queda arriba y el centro visual no.
+ *
+ * --marco-escala sí es de ajuste, y es la única de las cuatro que conviene
+ * tocar a ojo. Corrige que a la misma altura los cinco marcos no dejan el mismo
+ * hueco: medido en píxeles de emblema, platino rendía el 81 % de plata y
+ * diamante el 71 %, porque su abertura es más cerrada. Sin este factor, un mismo
+ * emblema se ve notoriamente más chico en los niveles altos, que es justo al
+ * revés de lo que el rango debería comunicar.
+ *
+ * Se aplica como `transform` y no sumándolo a la altura a propósito: así el
+ * marco crece en pantalla sin crecer en el flujo, y las etiquetas de una fila
+ * siguen alineadas entre sí. El precio es que un valor muy alto invade el
+ * espacio del vecino en vez de empujarlo; por encima de 1.4 conviene subir
+ * también la separación de la rejilla.
+ */
+
+.marco {
+  --marco-alto: 6rem;
+  --marco-escala: 1;
+  --marco-x: 50%;
+  --marco-y: 50%;
+  --marco-diametro: 55%;
+
+  position: relative;
+  display: inline-block;
+  height: var(--marco-alto);
+  line-height: 0;
+  transform: scale(var(--marco-escala));
+}
+
+.imagen {
+  display: block;
+  height: 100%;
+  width: auto;
+}
+
+.contenido {
+  position: absolute;
+  left: var(--marco-x);
+  top: var(--marco-y);
+  width: var(--marco-diametro);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  line-height: 0;
+}
+
+/* Encuadre por nivel. Ver el comentario de arriba: son medidas, no gusto. */
+.bronce {
+  --marco-x: 48.7%;
+  --marco-y: 53.8%;
+  --marco-diametro: 55%;
+}
+
+.plata {
+  --marco-x: 50%;
+  --marco-y: 50.3%;
+  --marco-diametro: 61%;
+}
+
+.oro {
+  --marco-x: 49.3%;
+  --marco-y: 49.8%;
+  --marco-diametro: 59%;
+}
+
+.platino {
+  /* Abertura cerrada: sin el factor, su emblema queda por debajo del resto. */
+  --marco-escala: 1.16;
+  --marco-x: 50.8%;
+  --marco-y: 49.6%;
+  --marco-diametro: 55.3%;
+}
+
+.diamante {
+  /* La corona ocupa alto sin aportar abertura: su emblema queda al 71 %. */
+  --marco-escala: 1.34;
+  --marco-x: 48.5%;
+  --marco-y: 54.4%;
+  --marco-diametro: 47%;
+}
+
+/*
+ * Sin rango todavía. No se dibuja un marco falso ni se atenúa el medallón hasta
+ * volverlo ilegible: se deja el hueco que el marco ocupará, con un anillo
+ * punteado, de modo que la vitrina no salte de sitio cuando la insignia se
+ * gane. El ancho replica la proporción del marco de bronce para que la fila
+ * conserve su ritmo.
+ */
+.vacio {
+  --marco-diametro: 62%;
+
+  aspect-ratio: 299 / 320;
+}
+
+.hueco {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-lg);
+}
+
+.tamanoSm {
+  --marco-alto: 4rem;
+}
+
+.tamanoLg {
+  --marco-alto: 9rem;
+}

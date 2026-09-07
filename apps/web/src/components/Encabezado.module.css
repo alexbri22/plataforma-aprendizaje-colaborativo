@@ -109,6 +109,9 @@
   margin-left: var(--space-8);
 }
 
+/* Sirve para <button> y para <a>: el de Insignias ya navega, el de Recursos
+   sigue inerte porque su destino no existe. Las dos reglas de abajo son las que
+   igualan al enlace con el botón. */
 .navLink {
   position: relative;
   border: none;
@@ -116,7 +119,9 @@
   font-family: inherit;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
   color: var(--color-text-muted);
+  text-decoration: none;
   cursor: pointer;
   padding: var(--space-1) var(--space-3);
   margin: calc(var(--space-1) * -1) calc(var(--space-3) * -1);
