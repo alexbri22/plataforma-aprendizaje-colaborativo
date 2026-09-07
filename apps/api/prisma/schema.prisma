@@ -73,6 +73,63 @@ enum EstadoMembresia {
   @@map("estado_membresia")
 }
 
+// docs/diseno-desarrollo-general.md §6.2: catálogo fijo de las nueve
+// funciones de seguimiento. El valor de estado de cada una vive en
+// ConfiguracionFuncion.estado como texto (ver la nota de ese modelo): este
+// enum solo fija cuáles funciones existen, no sus estados posibles.
+enum FuncionSeguimiento {
+  formacion_equipos
+  reporte_trabajo
+  bitacora_individual
+  calificacion
+  autoevaluacion_individual
+  autoevaluacion_grupal
+  evaluacion_pares
+  espacio_equipo
+  insignias
+
+  @@map("funcion_seguimiento")
+}
+
+// docs/diseno-desarrollo-general.md §7.3: permisos otorgables a una
+// membresía de co-organizador. Los ocho primeros forman el conjunto por
+// defecto al agregar un co-organizador; gestionar_coorganizadores e
+// iniciar_cierre_y_archivar no.
+enum PermisoCoorganizador {
+  configurar_actividad
+  gestionar_inscripcion
+  gestionar_equipos
+  calificar_y_comentar
+  leer_bitacoras
+  otorgar_insignias
+  desactivar_participantes
+  consultar_historial_completo
+  gestionar_coorganizadores
+  iniciar_cierre_y_archivar
+
+  @@map("permiso_coorganizador")
+}
+
+// docs/diseno-desarrollo-general.md §4.4 y §8.2: quién disparó un evento.
+// 'sistema' es el actor de las transiciones automáticas por vencimiento de
+// fecha (nucleo §7.5).
+enum TipoActorHistorial {
+  usuario
+  sistema
+
+  @@map("tipo_actor_historial")
+}
+
+// docs/diseno-desarrollo-general.md §8.1: la categoría, no el tipo, decide
+// quién puede ver el evento.
+enum CategoriaEvento {
+  aportacion
+  estructura
+  evaluacion
+
+  @@map("categoria_evento")
+}
+
 // docs/diseno-desarrollo-general.md §5.1
 model Usuario {
   idUsuario            String        @id @default(uuid()) @map("id_usuario")
@@ -89,8 +146,9 @@ model Usuario {
   estadoCuenta         EstadoCuenta  @default(activa) @map("estado_cuenta")
   fechaRegistro        DateTime      @default(now()) @map("fecha_registro")
 
-  sesiones   Sesion[]
-  membresias Membresia[]
+  sesiones         Sesion[]
+  membresias       Membresia[]
+  eventosHistorial Historial[]
 
   @@map("usuarios")
 }
@@ -129,7 +187,9 @@ model Actividad {
   claveIngreso           String?         @unique @map("clave_ingreso")
   fechaCreacion          DateTime        @default(now()) @map("fecha_creacion")
 
-  membresias Membresia[]
+  membresias       Membresia[]
+  configuracion    ConfiguracionFuncion[]
+  eventosHistorial Historial[]
 
   @@map("actividades")
 }
@@ -145,9 +205,67 @@ model Membresia {
   estado      EstadoMembresia @default(activa)
   fechaUnion  DateTime        @default(now()) @map("fecha_union")
 
-  actividad Actividad @relation(fields: [idActividad], references: [idActividad], onDelete: Cascade)
-  usuario   Usuario   @relation(fields: [idUsuario], references: [idUsuario], onDelete: Cascade)
+  actividad Actividad                       @relation(fields: [idActividad], references: [idActividad], onDelete: Cascade)
+  usuario   Usuario                         @relation(fields: [idUsuario], references: [idUsuario], onDelete: Cascade)
+  permisos  PermisoCoorganizadorMembresia[]
 
   @@unique([idActividad, idUsuario])
   @@map("membresias")
+}
+
+// docs/diseno-desarrollo-general.md §4.4: "Solo las membresías con rol de
+// co-organizador tienen filas" (regla de integridad de §4.6, no expresable
+// como restricción de esquema; se verifica en la capa de servicios).
+model PermisoCoorganizadorMembresia {
+  idMembresia String               @map("id_membresia")
+  permiso     PermisoCoorganizador
+
+  membresia Membresia @relation(fields: [idMembresia], references: [idMembresia], onDelete: Cascade)
+
+  @@id([idMembresia, permiso])
+  @@map("permisos_coorganizador")
+}
+
+// docs/diseno-desarrollo-general.md §6.2 y §4.2 ("Configuración de
+// funciones como filas"): una fila por función del catálogo. `estado` es
+// texto y no un enum común porque el espacio de valores válidos difiere
+// por función (dos valores en bitácora, tres en formación de equipos); para
+// espacio_equipo, que agrupa metas/avances/recursos, es un JSON serializado
+// con los tres sub-estados. La validación de qué valores son aceptables
+// por función vive en la capa de servicios (mismo criterio que los
+// instrumentos genéricos de nucleo §10.1), no en el esquema.
+model ConfiguracionFuncion {
+  idActividad String             @map("id_actividad")
+  funcion     FuncionSeguimiento
+  estado      String
+
+  actividad Actividad @relation(fields: [idActividad], references: [idActividad], onDelete: Cascade)
+
+  @@id([idActividad, funcion])
+  @@map("configuracion_funciones")
+}
+
+// docs/diseno-desarrollo-general.md §4.4: referencia polimórfica hacia la
+// entidad observada (sin llave foránea, por diseño: "el historial observa a
+// todos los módulos sin que estos lo conozcan"). Este incremento solo
+// escribe eventos de transición de fase; no existe todavía la envoltura
+// transaccional de emisión garantizada de nucleo §2.4 ni un endpoint de
+// consulta — ambos quedan para el incremento de Desbloqueo.
+model Historial {
+  idEvento       String             @id @default(uuid()) @map("id_evento")
+  idActividad    String             @map("id_actividad")
+  tipoActor      TipoActorHistorial @map("tipo_actor")
+  idUsuarioActor String?            @map("id_usuario_actor")
+  tipoEvento     String             @map("tipo_evento")
+  tipoEntidad    String             @map("tipo_entidad")
+  idEntidad      String             @map("id_entidad")
+  datos          Json
+  categoria      CategoriaEvento
+  fecha          DateTime           @default(now())
+
+  actividad    Actividad @relation(fields: [idActividad], references: [idActividad], onDelete: Cascade)
+  usuarioActor Usuario?  @relation(fields: [idUsuarioActor], references: [idUsuario], onDelete: SetNull)
+
+  @@index([idActividad, fecha])
+  @@map("historial")
 }

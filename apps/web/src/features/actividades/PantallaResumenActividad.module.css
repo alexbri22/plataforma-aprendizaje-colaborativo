@@ -6,11 +6,21 @@
   color: var(--color-text-muted);
 }
 
-.card {
-  max-width: 640px;
+/* Página completa de una columna: cada sección es su propia tarjeta a todo
+   lo ancho del contenido (hasta el max-width de AppShell), en vez de una
+   sola tarjeta angosta — esto debe sentirse como el espacio de trabajo de
+   la actividad, no como un resumen de una tarjeta. */
+.contenido {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-5);
+  max-width: 1100px;
+}
+
+.seccionCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
 .badge {
@@ -18,10 +28,34 @@
 }
 
 .objetivo {
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-lg);
   line-height: var(--line-height-normal);
   color: var(--color-text);
   margin: 0;
+}
+
+.accion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  background: var(--color-primary-subtle);
+  border: 1px solid var(--color-primary);
+}
+
+.accionBoton {
+  align-self: flex-start;
+}
+
+.accionTexto {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--color-text);
+  margin: 0;
+}
+
+.accionBotones {
+  display: flex;
+  gap: var(--space-2);
 }
 
 .texto {
@@ -31,17 +65,51 @@
   margin: 0;
 }
 
-.seccion {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
 .tituloSeccion {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text);
   margin: 0;
+}
+
+.cargandoSeccion {
+  display: flex;
+  padding: var(--space-4) 0;
+  color: var(--color-text-muted);
+}
+
+.listaParticipantes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.filaParticipante {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.filaParticipante:first-child {
+  border-top: none;
+}
+
+.nombreParticipante {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+}
+
+.fechaParticipante {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  white-space: nowrap;
 }
 
 .detalles {
@@ -49,8 +117,6 @@
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: var(--space-4);
   margin: 0;
-  padding-top: var(--space-2);
-  border-top: 1px solid var(--color-border);
 }
 
 .detalle {

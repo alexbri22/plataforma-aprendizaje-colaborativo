@@ -10,6 +10,12 @@ export type CodigoError =
   | 'sin_sesion'
   | 'clave_invalida'
   | 'ya_es_miembro'
+  | 'actividad_no_encontrada'
+  | 'accion_no_permitida'
+  | 'fase_no_permite_accion'
+  | 'sin_participantes'
+  | 'usuario_no_encontrado'
+  | 'organizador_unico'
 
 export abstract class ErrorDominio extends Error {
   abstract readonly codigo: CodigoError
@@ -81,5 +87,72 @@ export class ErrorYaEsMiembro extends ErrorDominio {
 
   constructor() {
     super('Ya formas parte de esta actividad.')
+  }
+}
+
+// Mismo criterio que ErrorClaveInvalida: un actor sin membresía no debe
+// poder distinguir entre que la actividad no existe y que no es suya
+// (docs/diseno-desarrollo-nucleo.md §3.3).
+export class ErrorActividadNoEncontrada extends ErrorDominio {
+  readonly codigo = 'actividad_no_encontrada' as const
+  readonly status = 404
+
+  constructor() {
+    super('No encontramos esta actividad, o no formas parte de ella.')
+  }
+}
+
+// El actor es miembro pero su rol (o los permisos de su co-organización) no
+// alcanzan para la acción (docs/diseno-desarrollo-nucleo.md §3.3, fila de
+// 403).
+export class ErrorAccionNoPermitida extends ErrorDominio {
+  readonly codigo = 'accion_no_permitida' as const
+  readonly status = 403
+
+  constructor() {
+    super('No tienes permiso para realizar esta acción en esta actividad.')
+  }
+}
+
+// Condición temporal, no de permisos: la fase actual de la actividad no
+// habilita la acción (docs/diseno-desarrollo-nucleo.md §3.3, fila de 409).
+export class ErrorFaseNoPermiteAccion extends ErrorDominio {
+  readonly codigo = 'fase_no_permite_accion' as const
+  readonly status = 409
+
+  constructor(mensaje: string) {
+    super(mensaje)
+  }
+}
+
+// Precondición de la transición Inscripción → Formación
+// (docs/diseno-desarrollo-nucleo.md §7.4): "al menos un participante".
+export class ErrorSinParticipantes extends ErrorDominio {
+  readonly codigo = 'sin_participantes' as const
+  readonly status = 422
+
+  constructor() {
+    super('No puedes cerrar la inscripción sin al menos un participante.')
+  }
+}
+
+export class ErrorUsuarioNoEncontrado extends ErrorDominio {
+  readonly codigo = 'usuario_no_encontrado' as const
+  readonly status = 404
+
+  constructor() {
+    super('No encontramos ese usuario.')
+  }
+}
+
+// Toda actividad tiene exactamente una membresía con rol de organizador
+// (docs/diseno-desarrollo-general.md §4.6): promover al organizador mismo a
+// co-organizador dejaría a la actividad sin uno.
+export class ErrorOrganizadorUnico extends ErrorDominio {
+  readonly codigo = 'organizador_unico' as const
+  readonly status = 422
+
+  constructor() {
+    super('Quien organiza la actividad no puede convertirse en co-organizador.')
   }
 }

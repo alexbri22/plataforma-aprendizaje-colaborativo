@@ -1,3 +1,5 @@
+import type { AccionActividad, FuncionSeguimiento } from '@plataforma/shared'
+
 // El ciclo de vida real tiene seis estados (docs/diseno-desarrollo-nucleo.md
 // §7.4): configuración, inscripción, formación, desarrollo, cierre y
 // archivada. 'formacion' se pliega dentro de 'inscripcion' en este tipo
@@ -28,6 +30,22 @@ export interface Actividad {
   fechaLimiteInscripcion?: string
   plazoCierreDias?: number
   numeroEquiposEsperado?: number
+  // Solo GET /api/actividades/{id} los incluye, no el listado (docs/diseno-desarrollo-nucleo.md
+  // §4.3 y §4.2): el conjunto de acciones que el actor puede ejecutar ahora
+  // mismo. La pantalla nunca vuelve a evaluar rol ni fase por su cuenta,
+  // solo consulta este arreglo.
+  capacidades?: AccionActividad[]
+  configuracion?: Partial<Record<FuncionSeguimiento, string>>
+}
+
+// GET /api/actividades/{id}/participantes (docs/diseno-desarrollo-nucleo.md
+// §7.7): membresías con rol y estado, incluidas las desactivadas.
+export interface Participante {
+  idUsuario: string
+  nombre: string
+  rol: RolActividad
+  estado: 'activa' | 'desactivada'
+  fechaUnion: string
 }
 
 export interface InvitacionPendiente {

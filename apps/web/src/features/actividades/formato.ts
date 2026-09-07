@@ -11,3 +11,11 @@ export function formatearFecha(fechaIso: string): string {
   const [anio, mes, dia] = fechaIso.split('-').map(Number)
   return FORMATO_FECHA.format(new Date(anio, mes - 1, dia))
 }
+
+// A diferencia de formatearFecha, este recibe un instante real (con hora),
+// como membresias.fecha_union: aquí sí es correcto parsear el ISO directo,
+// porque no es una fecha de calendario sin hora la que podría correrse de
+// día al convertir de zona horaria.
+export function formatearFechaHora(fechaIso: string): string {
+  return FORMATO_FECHA.format(new Date(fechaIso))
+}

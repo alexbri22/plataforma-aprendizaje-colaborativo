@@ -2,6 +2,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { PantallaProximamente } from '../components/PantallaProximamente'
 import {
+  PantallaConfiguracion,
   PantallaCrearActividad,
   PantallaMisActividades,
   PantallaResumenActividad,
@@ -42,6 +43,14 @@ export function App() {
             element={
               <RutaProtegida>
                 <PantallaResumenActividad />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="/actividades/:id/configuracion"
+            element={
+              <RutaProtegida>
+                <PantallaConfiguracion />
               </RutaProtegida>
             }
           />

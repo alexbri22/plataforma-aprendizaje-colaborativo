@@ -1,11 +1,15 @@
+import type { FuncionSeguimiento } from '@plataforma/shared'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   aceptarInvitacion,
   buscarActividadPorClave,
+  cerrarInscripcion,
+  configurarFuncion,
   crearActividad,
   obtenerActividad,
   obtenerActividades,
   obtenerInvitaciones,
+  obtenerParticipantes,
   rechazarInvitacion,
   unirseConClave,
   type DatosCrearActividad,
@@ -29,6 +33,44 @@ export function useActividades() {
 
 export function useActividad(id: string) {
   return useQuery({ queryKey: claveActividad(id), queryFn: () => obtenerActividad(id) })
+}
+
+// Avanzar de fase invalida la actividad completa, incluida su entrada en el
+// listado: el cambio de fase modifica tanto las capacidades como el badge
+// que "Mis actividades" pinta para ella (docs/diseno-desarrollo-nucleo.md
+// §4.2, fila "Avanzar de fase").
+export function useCerrarInscripcionMutation(id: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => cerrarInscripcion(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: claveActividad(id) })
+      queryClient.invalidateQueries({ queryKey: CLAVE_ACTIVIDADES })
+    },
+  })
+}
+
+// Autoguardado por campo: cada control de PantallaConfiguracion llama a
+// mutateAsync por su cuenta y sigue su propio estado local de
+// guardando/guardado/error (el objeto de mutación compartido solo importa
+// para la invalidación, no para el indicador visual de cada campo, porque
+// varios campos pueden guardarse en paralelo).
+export function useConfigurarFuncionMutation(id: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ funcion, cuerpo }: { funcion: FuncionSeguimiento; cuerpo: Record<string, string> }) =>
+      configurarFuncion(id, funcion, cuerpo),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: claveActividad(id) })
+    },
+  })
+}
+
+export function useParticipantes(id: string) {
+  return useQuery({
+    queryKey: [...claveActividad(id), 'participantes'] as const,
+    queryFn: () => obtenerParticipantes(id),
+  })
 }
 
 export function useInvitaciones() {
@@ -83,9 +125,12 @@ export function useUnirseConClaveMutation() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (clave: string) => unirseConClave(clave),
-    onSuccess: () => {
-      // La actividad nueva debe aparecer en "Mis actividades" (§4.2).
+    onSuccess: (actividad) => {
+      // La actividad nueva debe aparecer en "Mis actividades" (§4.2), y su
+      // conteo de participantes y su lista cambiaron para quien ya la
+      // tenía abierta (por ejemplo, quien organiza viendo el Resumen).
       queryClient.invalidateQueries({ queryKey: CLAVE_ACTIVIDADES })
+      queryClient.invalidateQueries({ queryKey: claveActividad(actividad.id) })
     },
   })
 }

@@ -1,5 +1,6 @@
+import type { FuncionSeguimiento } from '@plataforma/shared'
 import { INVITACIONES_PRUEBA } from './actividades.fixtures'
-import type { Actividad, InvitacionPendiente, VistaPreviaActividad } from './tipos'
+import type { Actividad, InvitacionPendiente, Participante, VistaPreviaActividad } from './tipos'
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? ''
 
@@ -34,9 +35,9 @@ async function pedir(ruta: string, opciones: RequestInit = {}): Promise<Response
   }
 }
 
-function enviar(ruta: string, datos: unknown): Promise<Response> {
+function enviar(ruta: string, datos: unknown, metodo: 'POST' | 'PUT' = 'POST'): Promise<Response> {
   return pedir(ruta, {
-    method: 'POST',
+    method: metodo,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(datos),
   })
@@ -57,14 +58,21 @@ export async function obtenerActividades(): Promise<Actividad[]> {
   return actividades
 }
 
-// No existe GET /api/actividades/{id} en este incremento (fuera de alcance:
-// docs/diseno-desarrollo-nucleo.md §11.2, "Actividades I" solo cubre crear y
-// listar). Se deriva del listado para no bloquear PantallaResumenActividad,
-// que ya depende de esta función.
+// GET /api/actividades/{id} (docs/diseno-desarrollo-nucleo.md §7.7):
+// actividad, configuración y capacidades del actor. 404 tanto si la
+// actividad no existe como si el actor no es miembro (§3.3) — el mensaje
+// del servidor ya no distingue los dos casos, así que tampoco lo hace este
+// cliente.
 export async function obtenerActividad(id: string): Promise<Actividad> {
-  const actividades = await obtenerActividades()
-  const actividad = actividades.find((item) => item.id === id)
-  if (!actividad) throw new ErrorActividad('No encontramos esta actividad.')
+  const respuesta = await pedir(`/api/actividades/${encodeURIComponent(id)}`)
+
+  if (!respuesta.ok) {
+    throw new ErrorActividad(
+      await leerMensajeError(respuesta, 'No encontramos esta actividad, o ya no formas parte de ella.'),
+    )
+  }
+
+  const { actividad } = (await respuesta.json()) as { actividad: Actividad }
   return actividad
 }
 
@@ -139,6 +147,64 @@ export async function unirseConClave(clave: string): Promise<Actividad> {
   if (!respuesta.ok) {
     throw new ErrorActividad(
       await leerMensajeError(respuesta, 'No pudimos unirte a esta actividad. Intenta de nuevo.'),
+    )
+  }
+
+  const { actividad } = (await respuesta.json()) as { actividad: Actividad }
+  return actividad
+}
+
+// GET /api/actividades/{id}/participantes (docs/diseno-desarrollo-nucleo.md
+// §7.7): cualquier miembro puede consultarla, no solo quien organiza.
+export async function obtenerParticipantes(id: string): Promise<Participante[]> {
+  const respuesta = await pedir(`/api/actividades/${encodeURIComponent(id)}/participantes`)
+
+  if (!respuesta.ok) {
+    throw new ErrorActividad(await leerMensajeError(respuesta, 'No pudimos cargar los participantes.'))
+  }
+
+  const { participantes } = (await respuesta.json()) as { participantes: Participante[] }
+  return participantes
+}
+
+// POST /api/actividades/{id}/inscripcion/cierre (docs/diseno-desarrollo-nucleo.md
+// §7.4 y §7.7): cierra la inscripción y pasa a formación de equipos. Es la
+// acción de avance que PantallaResumenActividad muestra cuando
+// 'cerrar_inscripcion' está en las capacidades del actor (§7.8, §4.3).
+export async function cerrarInscripcion(id: string): Promise<Actividad> {
+  const respuesta = await pedir(`/api/actividades/${encodeURIComponent(id)}/inscripcion/cierre`, {
+    method: 'POST',
+  })
+
+  if (!respuesta.ok) {
+    throw new ErrorActividad(
+      await leerMensajeError(respuesta, 'No pudimos cerrar la inscripción. Intenta de nuevo.'),
+    )
+  }
+
+  const { actividad } = (await respuesta.json()) as { actividad: Actividad }
+  return actividad
+}
+
+// PUT /api/actividades/{id}/configuracion/{funcion} (docs/diseno-desarrollo-nucleo.md
+// §7.7): fija el estado de una función. `cuerpo` es {estado} para las ocho
+// funciones simples, o {metas, avances, recursos} para espacio_equipo
+// (validarDatosConfigurarFuncion en el servidor espera exactamente esa
+// forma según la función).
+export async function configurarFuncion(
+  id: string,
+  funcion: FuncionSeguimiento,
+  cuerpo: Record<string, string>,
+): Promise<Actividad> {
+  const respuesta = await enviar(
+    `/api/actividades/${encodeURIComponent(id)}/configuracion/${funcion}`,
+    cuerpo,
+    'PUT',
+  )
+
+  if (!respuesta.ok) {
+    throw new ErrorActividad(
+      await leerMensajeError(respuesta, 'No pudimos guardar este cambio. Intenta de nuevo.'),
     )
   }
 

@@ -17,6 +17,14 @@ function requerida(nombre: string): string {
 // test`. Se migra sola con el script "pretest".
 const nombreVariableBaseDeDatos = process.env.VITEST ? 'DATABASE_URL_TEST' : 'DATABASE_URL'
 
+// Mismo criterio que la base de datos separada: las pruebas de integración
+// registran muchas más cuentas por archivo que un uso real en la misma
+// ventana de quince minutos (una por caso, para que beforeEach pueda
+// limpiar la tabla de usuarios entre pruebas), así que el límite de
+// producción las haría fallar por 429 sin que eso indique ningún problema
+// de seguridad.
+const nombreVariableRegistroMax = process.env.VITEST ? 'RATE_LIMIT_REGISTRO_MAX_TEST' : 'RATE_LIMIT_REGISTRO_MAX'
+
 export const config = {
   puerto: numero('PORT', 3001),
   databaseUrl: requerida(nombreVariableBaseDeDatos),
@@ -30,6 +38,12 @@ export const config = {
     .map((origen) => origen.trim())
     .filter(Boolean),
   produccion: process.env.NODE_ENV === 'production',
+  // Protege el endpoint que dispara la tarea programada de transiciones
+  // vencidas (docs/diseno-desarrollo-nucleo.md §7.5): Vercel Cron Jobs
+  // manda este valor como "Authorization: Bearer <secreto>" en cada
+  // invocación (ver vercel.json, sección "crons"). Sin configurar, el
+  // endpoint rechaza toda petición — no hay un valor por defecto seguro.
+  cronSecret: process.env.CRON_SECRET,
   sesion: {
     nombreCookie: process.env.SESSION_COOKIE_NAME ?? 'sesion',
     // P-22 (docs/diseno-desarrollo-nucleo.md §6.7) no tiene valor confirmado
@@ -46,7 +60,7 @@ export const config = {
   limiteIntentos: {
     registro: {
       ventanaMin: numero('RATE_LIMIT_REGISTRO_VENTANA_MIN', 15),
-      max: numero('RATE_LIMIT_REGISTRO_MAX', 20),
+      max: numero(nombreVariableRegistroMax, 20),
     },
     sesion: {
       ventanaMin: numero('RATE_LIMIT_SESION_VENTANA_MIN', 15),

@@ -5,6 +5,28 @@
 export const SHARED_PACKAGE_READY = true as const
 
 export {
+  ACCIONES_ACTIVIDAD,
+  CONFIGURACION_POR_DEFECTO,
+  ELEMENTOS_ESPACIO_EQUIPO,
+  ESTADOS_ELEMENTO_ESPACIO_EQUIPO,
+  ESTADOS_POR_FUNCION,
+  FUNCIONES_SEGUIMIENTO,
+  PERMISOS_COORGANIZADOR,
+  PERMISOS_COORGANIZADOR_POR_DEFECTO,
+  parsearEstadoEspacioEquipo,
+  serializarEstadoEspacioEquipo,
+} from './actividades.js'
+
+export type {
+  AccionActividad,
+  ElementoEspacioEquipo,
+  EstadoElementoEspacioEquipo,
+  EstadoEspacioEquipo,
+  FuncionSeguimiento,
+  PermisoCoorganizador,
+} from './actividades.js'
+
+export {
   CATALOGO_INSIGNIAS,
   CATEGORIAS_INSIGNIA,
   FUENTES_OTORGAMIENTO,

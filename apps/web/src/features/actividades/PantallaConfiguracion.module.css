@@ -1,0 +1,78 @@
+.cargando {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16) 0;
+  color: var(--color-text-muted);
+}
+
+.texto {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+/* Grid en vez de una columna apilada: con nueve funciones (y más por venir)
+   una tarjeta por fila obliga a un scroll largo y deja vacío todo el ancho
+   sobre el que no cabe el control. Cada tarjeta ocupa una celda; la de
+   espacio_equipo, que trae tres selects, ocupa todo el ancho disponible
+   (ver .seccionCardAncha). */
+.contenido {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+  max-width: 1400px;
+}
+
+.seccionCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.seccionCardAncha {
+  grid-column: 1 / -1;
+}
+
+.encabezadoCampo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.tituloCampo {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  margin: 0;
+}
+
+.descripcionCampo {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.indicador {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.indicadorError {
+  color: var(--color-danger-ink);
+}
+
+.gridEspacioEquipo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-4);
+}
