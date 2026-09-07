@@ -1,13 +1,22 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { PantallaInicio } from './PantallaInicio'
 
+vi.mock('../cuentas/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../cuentas/api')>()),
+  obtenerSesion: vi.fn(() => Promise.resolve(null)),
+}))
+
 function renderPantallaInicio() {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
-    <MemoryRouter>
-      <PantallaInicio />
-    </MemoryRouter>,
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <PantallaInicio />
+      </MemoryRouter>
+    </QueryClientProvider>,
   )
 }
 

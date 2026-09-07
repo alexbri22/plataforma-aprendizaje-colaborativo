@@ -110,9 +110,7 @@ describe('POST /api/admin/usuarios/:id/contrasena', () => {
     const admin = await registrarAdministrador()
 
     // El usuario tiene una sesión activa antes del restablecimiento.
-    expect(
-      (await request(app).get('/api/sesion').set('Cookie', usuario.cookie)).status,
-    ).toBe(200)
+    expect((await request(app).get('/api/sesion').set('Cookie', usuario.cookie)).status).toBe(200)
 
     const respuesta = await request(app)
       .post(`/api/admin/usuarios/${usuario.id}/contrasena`)
@@ -122,9 +120,7 @@ describe('POST /api/admin/usuarios/:id/contrasena', () => {
 
     // La sesión previa del usuario queda invalidada.
     expect(await prisma.sesion.count({ where: { idUsuario: usuario.id } })).toBe(0)
-    expect(
-      (await request(app).get('/api/sesion').set('Cookie', usuario.cookie)).status,
-    ).toBe(401)
+    expect((await request(app).get('/api/sesion').set('Cookie', usuario.cookie)).status).toBe(401)
 
     // La contraseña anterior ya no sirve; la nueva sí.
     expect(

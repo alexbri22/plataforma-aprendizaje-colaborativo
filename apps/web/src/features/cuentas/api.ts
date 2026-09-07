@@ -15,6 +15,17 @@ export interface DatosRegistro {
   contrasena: string
 }
 
+export type TipoCuenta = 'usuario' | 'administrador'
+
+export interface ActorSesion {
+  idUsuario: string
+  nombre: string
+  apellidoPaterno: string
+  apellidoMaterno: string
+  correo: string
+  tipoCuenta: TipoCuenta
+}
+
 export class ErrorCuenta extends Error {}
 
 const MENSAJE_SIN_CONEXION =
@@ -60,6 +71,28 @@ export async function iniciarSesion(credenciales: CredencialesIngreso): Promise<
       await leerMensajeError(respuesta, 'No pudimos iniciar tu sesión. Intenta de nuevo.'),
     )
   }
+}
+
+export async function obtenerSesion(): Promise<ActorSesion | null> {
+  let respuesta: Response
+  try {
+    respuesta = await fetch(`${BASE_URL}/api/sesion`, { credentials: 'include' })
+  } catch {
+    throw new ErrorCuenta(MENSAJE_SIN_CONEXION)
+  }
+
+  if (respuesta.status === 401) return null
+  if (!respuesta.ok) {
+    throw new ErrorCuenta(
+      await leerMensajeError(respuesta, 'No pudimos verificar tu sesión. Intenta de nuevo.'),
+    )
+  }
+
+  const cuerpo: unknown = await respuesta.json()
+  if (cuerpo && typeof cuerpo === 'object' && 'usuario' in cuerpo) {
+    return (cuerpo as { usuario: ActorSesion }).usuario
+  }
+  return null
 }
 
 export async function registrarUsuario(datos: DatosRegistro): Promise<void> {
