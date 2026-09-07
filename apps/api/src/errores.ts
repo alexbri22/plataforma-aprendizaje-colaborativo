@@ -3,7 +3,13 @@
 // rutas los traduce a la forma de respuesta de §3.1 vía manejadorErrores.
 
 export type CodigoError =
-  'validacion' | 'correo_duplicado' | 'credenciales_invalidas' | 'cuenta_desactivada' | 'sin_sesion'
+  | 'validacion'
+  | 'correo_duplicado'
+  | 'credenciales_invalidas'
+  | 'cuenta_desactivada'
+  | 'sin_sesion'
+  | 'no_autorizado'
+  | 'usuario_no_encontrado'
 
 export abstract class ErrorDominio extends Error {
   abstract readonly codigo: CodigoError
@@ -53,5 +59,27 @@ export class ErrorSinSesion extends ErrorDominio {
 
   constructor() {
     super('No hay una sesión activa.')
+  }
+}
+
+// Sesión válida pero sin el tipo de cuenta que la acción exige (plano de
+// cuenta, docs/diseno-desarrollo-general.md §7.1/§7.2). Se distingue de
+// sin_sesion porque el actor sí está autenticado: es autorización, no
+// autenticación.
+export class ErrorNoAutorizado extends ErrorDominio {
+  readonly codigo = 'no_autorizado' as const
+  readonly status = 403
+
+  constructor() {
+    super('No tienes permiso para realizar esta acción.')
+  }
+}
+
+export class ErrorUsuarioNoEncontrado extends ErrorDominio {
+  readonly codigo = 'usuario_no_encontrado' as const
+  readonly status = 404
+
+  constructor() {
+    super('No existe una cuenta con ese identificador.')
   }
 }

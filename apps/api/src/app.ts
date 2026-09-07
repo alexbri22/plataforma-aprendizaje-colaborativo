@@ -4,6 +4,7 @@ import express, { type Express } from 'express'
 import { config } from './config.js'
 import { manejadorErrores } from './middleware/manejadorErrores.js'
 import { resolverSesion } from './middleware/sesion.js'
+import { adminRouter } from './routes/admin.js'
 import { cuentasRouter } from './routes/cuentas.js'
 import { healthRouter } from './routes/health.js'
 
@@ -53,6 +54,7 @@ export function createApp(): Express {
   // secas no es alcanzable ahí.
   app.use('/api/health', healthRouter)
   app.use('/api', cuentasRouter)
+  app.use('/api/admin', adminRouter)
 
   app.use(manejadorErrores)
 
