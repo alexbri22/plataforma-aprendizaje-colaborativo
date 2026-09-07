@@ -22,6 +22,7 @@ colors:
   bg: 'oklch(1 0 0)'
   surface: 'oklch(0.97 0.004 246)'
   surface-hover: 'oklch(0.91 0.004 246)'
+  overlay-backdrop: 'oklch(0.22 0.006 246 / 0.32)'
   border: 'oklch(0.91 0.004 246)'
   border-strong: 'oklch(0.85 0.005 246)'
   text: 'oklch(0.22 0.006 246)'
@@ -181,6 +182,8 @@ Flat by default, in the spirit of both Linear and Notion: surfaces at rest — c
 - **Overlay** (`box-shadow: 0 12px 32px oklch(0.22 0.006 246 / 0.14)`): modals and dialogs — content that suspends the rest of the page.
 
 All three shadows are tinted with Graphite (`oklch(0.22 0.006 246)`) at low alpha rather than pure black, so depth reads as part of the same quiet, cool-neutral system instead of a generic drop-shadow.
+
+**Overlay scrim.** A modal (the only element carrying the Overlay shadow) sits over a **scrim** — `overlay-backdrop` (`oklch(0.22 0.006 246 / 0.32)`), Graphite at low alpha, same tint as the shadows — that dims the suspended page behind it. It's the one place a full-viewport wash of the neutral appears; it is not a surface color and never fills a resting element.
 
 ### Named Rules
 

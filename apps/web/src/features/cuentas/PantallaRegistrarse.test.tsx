@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -7,7 +8,7 @@ import { ErrorCuenta, registrarUsuario } from './api'
 
 vi.mock('./api', async () => {
   const real = await vi.importActual<typeof import('./api')>('./api')
-  return { ...real, registrarUsuario: vi.fn() }
+  return { ...real, registrarUsuario: vi.fn(), obtenerSesion: vi.fn(() => Promise.resolve(null)) }
 })
 
 const navigateMock = vi.fn()
@@ -17,10 +18,13 @@ vi.mock('react-router-dom', async () => {
 })
 
 function renderPantalla() {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
-    <MemoryRouter>
-      <PantallaRegistrarse />
-    </MemoryRouter>,
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <PantallaRegistrarse />
+      </MemoryRouter>
+    </QueryClientProvider>,
   )
 }
 

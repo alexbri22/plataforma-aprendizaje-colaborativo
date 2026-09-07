@@ -114,3 +114,24 @@ export function validarCredenciales(cuerpo: unknown): CredencialesValidadas {
 
   return { correo: correo as string, contrasena }
 }
+
+export interface NuevaContrasenaValidada {
+  contrasena: string
+}
+
+// Restablecimiento de contraseña por el administrador (docs/diseno-desarrollo-nucleo.md
+// §6.5, POST /api/admin/usuarios/{id}/contrasena). Aplica la misma regla de
+// longitud mínima del registro (§6.2): ocho caracteres, sin reglas de
+// composición.
+export function validarNuevaContrasena(cuerpo: unknown): NuevaContrasenaValidada {
+  const datos = (cuerpo && typeof cuerpo === 'object' ? cuerpo : {}) as Record<string, unknown>
+
+  const contrasena = typeof datos.contrasena === 'string' ? datos.contrasena : ''
+  if (contrasena.length < LONGITUD_MINIMA_CONTRASENA) {
+    throw new ErrorValidacion({
+      contrasena: 'La contraseña debe tener al menos 8 caracteres.',
+    })
+  }
+
+  return { contrasena }
+}
