@@ -23,7 +23,9 @@ const nombreVariableBaseDeDatos = process.env.VITEST ? 'DATABASE_URL_TEST' : 'DA
 // limpiar la tabla de usuarios entre pruebas), así que el límite de
 // producción las haría fallar por 429 sin que eso indique ningún problema
 // de seguridad.
-const nombreVariableRegistroMax = process.env.VITEST ? 'RATE_LIMIT_REGISTRO_MAX_TEST' : 'RATE_LIMIT_REGISTRO_MAX'
+const nombreVariableRegistroMax = process.env.VITEST
+  ? 'RATE_LIMIT_REGISTRO_MAX_TEST'
+  : 'RATE_LIMIT_REGISTRO_MAX'
 
 export const config = {
   puerto: numero('PORT', 3001),

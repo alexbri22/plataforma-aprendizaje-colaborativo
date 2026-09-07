@@ -84,7 +84,9 @@ describe('PantallaConfiguracion', () => {
 
     renderPantalla(ACTIVIDAD_BASE.id)
 
-    expect(await screen.findByText('No tienes permiso para configurar esta actividad.')).toBeInTheDocument()
+    expect(
+      await screen.findByText('No tienes permiso para configurar esta actividad.'),
+    ).toBeInTheDocument()
     expect(screen.queryByLabelText('Formación de equipos')).not.toBeInTheDocument()
   })
 
@@ -121,14 +123,18 @@ describe('PantallaConfiguracion', () => {
   it('muestra el error inline si el guardado falla', async () => {
     const usuario = userEvent.setup()
     vi.mocked(obtenerActividad).mockResolvedValue(ACTIVIDAD_BASE)
-    vi.mocked(configurarFuncion).mockRejectedValueOnce(new ErrorActividad('La configuración no puede modificarse en esta fase.'))
+    vi.mocked(configurarFuncion).mockRejectedValueOnce(
+      new ErrorActividad('La configuración no puede modificarse en esta fase.'),
+    )
 
     renderPantalla(ACTIVIDAD_BASE.id)
 
     const select = await screen.findByLabelText('Bitácora individual')
     await usuario.selectOptions(select, 'Habilitada')
 
-    expect(await screen.findByText('La configuración no puede modificarse en esta fase.')).toBeInTheDocument()
+    expect(
+      await screen.findByText('La configuración no puede modificarse en esta fase.'),
+    ).toBeInTheDocument()
   })
 
   it('espacio_equipo: cambiar un elemento envía los tres campos, preservando los otros valores actuales', async () => {

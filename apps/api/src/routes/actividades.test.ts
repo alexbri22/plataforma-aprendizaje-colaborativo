@@ -159,7 +159,9 @@ describe('GET /api/actividades', () => {
   })
 })
 
-async function crearActividad(cookieOrganizador: string): Promise<{ id: string; claveIngreso: string }> {
+async function crearActividad(
+  cookieOrganizador: string,
+): Promise<{ id: string; claveIngreso: string }> {
   const respuesta = await request(app)
     .post('/api/actividades')
     .set('Cookie', cookieOrganizador)
@@ -179,7 +181,9 @@ describe('GET /api/actividades/:id', () => {
     const cookieOrganizador = await registrarYObtenerCookie('ada@ejemplo.com')
     const { id } = await crearActividad(cookieOrganizador)
 
-    const respuesta = await request(app).get(`/api/actividades/${id}`).set('Cookie', cookieOrganizador)
+    const respuesta = await request(app)
+      .get(`/api/actividades/${id}`)
+      .set('Cookie', cookieOrganizador)
 
     expect(respuesta.status).toBe(200)
     expect(respuesta.body.actividad.id).toBe(id)
@@ -197,7 +201,9 @@ describe('GET /api/actividades/:id', () => {
     const cookieAjena = await registrarYObtenerCookie('grace@ejemplo.com')
     const { id } = await crearActividad(cookieOrganizador)
 
-    const respuestaAjena = await request(app).get(`/api/actividades/${id}`).set('Cookie', cookieAjena)
+    const respuestaAjena = await request(app)
+      .get(`/api/actividades/${id}`)
+      .set('Cookie', cookieAjena)
     expect(respuestaAjena.status).toBe(404)
     expect(respuestaAjena.body.codigo).toBe('actividad_no_encontrada')
 
@@ -214,7 +220,9 @@ describe('GET /api/actividades/:id', () => {
     const { id, claveIngreso } = await crearActividad(cookieOrganizador)
     await unirseComoParticipante(claveIngreso, cookieParticipante)
 
-    const respuesta = await request(app).get(`/api/actividades/${id}`).set('Cookie', cookieParticipante)
+    const respuesta = await request(app)
+      .get(`/api/actividades/${id}`)
+      .set('Cookie', cookieParticipante)
     expect(respuesta.status).toBe(200)
     expect(respuesta.body.actividad.capacidades).toEqual([])
   })
@@ -233,7 +241,10 @@ describe('GET /api/actividades/:id/participantes', () => {
 
     expect(respuesta.status).toBe(200)
     expect(respuesta.body.participantes).toHaveLength(2)
-    expect(respuesta.body.participantes[0]).toMatchObject({ nombre: 'Ada Lovelace Byron', rol: 'organizador' })
+    expect(respuesta.body.participantes[0]).toMatchObject({
+      nombre: 'Ada Lovelace Byron',
+      rol: 'organizador',
+    })
     expect(respuesta.body.participantes[1]).toMatchObject({
       nombre: 'Ada Lovelace Byron',
       rol: 'participante',
@@ -260,7 +271,9 @@ describe('GET /api/actividades/:id/participantes', () => {
     const cookieAjena = await registrarYObtenerCookie('grace@ejemplo.com')
     const { id } = await crearActividad(cookieOrganizador)
 
-    const respuesta = await request(app).get(`/api/actividades/${id}/participantes`).set('Cookie', cookieAjena)
+    const respuesta = await request(app)
+      .get(`/api/actividades/${id}/participantes`)
+      .set('Cookie', cookieAjena)
     expect(respuesta.status).toBe(404)
   })
 })
@@ -353,7 +366,9 @@ describe('POST /api/actividades/:id/inscripcion/cierre', () => {
     expect(actividadEnBD.estado).toBe('formacion_equipos')
 
     const cookieTardio = await registrarYObtenerCookie('lovelace@ejemplo.com')
-    const respuestaUnion = await request(app).post(`/api/claves/${claveIngreso}/union`).set('Cookie', cookieTardio)
+    const respuestaUnion = await request(app)
+      .post(`/api/claves/${claveIngreso}/union`)
+      .set('Cookie', cookieTardio)
     expect(respuestaUnion.status).toBe(404)
   })
 
@@ -391,7 +406,9 @@ describe('POST /api/actividades/:id/inscripcion/cierre', () => {
     const { id, claveIngreso } = await crearActividad(cookieOrganizador)
     await unirseComoParticipante(claveIngreso, cookieParticipante)
 
-    await request(app).post(`/api/actividades/${id}/inscripcion/cierre`).set('Cookie', cookieOrganizador)
+    await request(app)
+      .post(`/api/actividades/${id}/inscripcion/cierre`)
+      .set('Cookie', cookieOrganizador)
     const segundoIntento = await request(app)
       .post(`/api/actividades/${id}/inscripcion/cierre`)
       .set('Cookie', cookieOrganizador)
@@ -406,9 +423,13 @@ describe('POST /api/actividades/:id/inscripcion/cierre', () => {
     const { id, claveIngreso } = await crearActividad(cookieOrganizador)
     await unirseComoParticipante(claveIngreso, cookieParticipante)
 
-    await request(app).post(`/api/actividades/${id}/inscripcion/cierre`).set('Cookie', cookieOrganizador)
+    await request(app)
+      .post(`/api/actividades/${id}/inscripcion/cierre`)
+      .set('Cookie', cookieOrganizador)
 
-    const eventos = await prisma.historial.findMany({ where: { idActividad: id, tipoEvento: 'fase_avanzada' } })
+    const eventos = await prisma.historial.findMany({
+      where: { idActividad: id, tipoEvento: 'fase_avanzada' },
+    })
     expect(eventos).toHaveLength(1)
     expect(eventos[0]).toMatchObject({ tipoActor: 'usuario', categoria: 'estructura' })
   })
@@ -519,7 +540,9 @@ describe('transicionarActividadesVencidas (tarea programada, nucleo §7.5)', () 
     const actividadEnBD = await prisma.actividad.findUniqueOrThrow({ where: { idActividad: id } })
     expect(actividadEnBD.estado).toBe('formacion_equipos')
 
-    const eventos = await prisma.historial.findMany({ where: { idActividad: id, tipoEvento: 'fase_avanzada' } })
+    const eventos = await prisma.historial.findMany({
+      where: { idActividad: id, tipoEvento: 'fase_avanzada' },
+    })
     expect(eventos).toHaveLength(1)
     expect(eventos[0]).toMatchObject({ tipoActor: 'sistema', idUsuarioActor: null })
   })

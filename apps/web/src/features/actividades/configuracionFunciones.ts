@@ -105,8 +105,9 @@ export const OPCIONES_ELEMENTO_ESPACIO_EQUIPO: OpcionEstado[] = [
   { valor: 'obligatorio', etiqueta: 'Obligatorio' },
 ]
 
-export const ELEMENTOS_ESPACIO_EQUIPO_UI: { elemento: ElementoEspacioEquipo; etiqueta: string }[] = [
-  { elemento: 'metas', etiqueta: 'Metas' },
-  { elemento: 'avances', etiqueta: 'Avances' },
-  { elemento: 'recursos', etiqueta: 'Recursos' },
-]
+export const ELEMENTOS_ESPACIO_EQUIPO_UI: { elemento: ElementoEspacioEquipo; etiqueta: string }[] =
+  [
+    { elemento: 'metas', etiqueta: 'Metas' },
+    { elemento: 'avances', etiqueta: 'Avances' },
+    { elemento: 'recursos', etiqueta: 'Recursos' },
+  ]

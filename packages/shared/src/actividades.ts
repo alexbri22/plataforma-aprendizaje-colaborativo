@@ -68,7 +68,9 @@ export type ElementoEspacioEquipo = (typeof ELEMENTOS_ESPACIO_EQUIPO)[number]
 export const ESTADOS_ELEMENTO_ESPACIO_EQUIPO = ['opcional', 'obligatorio'] as const
 export type EstadoElementoEspacioEquipo = (typeof ESTADOS_ELEMENTO_ESPACIO_EQUIPO)[number]
 
-export type EstadoEspacioEquipo = Readonly<Record<ElementoEspacioEquipo, EstadoElementoEspacioEquipo>>
+export type EstadoEspacioEquipo = Readonly<
+  Record<ElementoEspacioEquipo, EstadoElementoEspacioEquipo>
+>
 
 export function serializarEstadoEspacioEquipo(estado: EstadoEspacioEquipo): string {
   return JSON.stringify(estado)

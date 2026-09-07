@@ -58,8 +58,13 @@ export function useCerrarInscripcionMutation(id: string) {
 export function useConfigurarFuncionMutation(id: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ funcion, cuerpo }: { funcion: FuncionSeguimiento; cuerpo: Record<string, string> }) =>
-      configurarFuncion(id, funcion, cuerpo),
+    mutationFn: ({
+      funcion,
+      cuerpo,
+    }: {
+      funcion: FuncionSeguimiento
+      cuerpo: Record<string, string>
+    }) => configurarFuncion(id, funcion, cuerpo),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: claveActividad(id) })
     },

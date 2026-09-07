@@ -1,4 +1,9 @@
-import type { EstadoActividad, EstadoMembresia, PermisoCoorganizador, RolMembresia } from '@prisma/client'
+import type {
+  EstadoActividad,
+  EstadoMembresia,
+  PermisoCoorganizador,
+  RolMembresia,
+} from '@prisma/client'
 import { ACCIONES_ACTIVIDAD, type AccionActividad } from '@plataforma/shared'
 
 // La función de autorización única del módulo (docs/diseno-desarrollo-nucleo.md
@@ -29,8 +34,7 @@ export interface ActividadParaAutorizacion {
 export type MotivoRechazo = 'fase' | 'rol'
 
 export type ResultadoAutorizacion =
-  | { concedido: true }
-  | { concedido: false; motivo: MotivoRechazo }
+  { concedido: true } | { concedido: false; motivo: MotivoRechazo }
 
 // Permiso de co-organizador que sustituye al rol para cada acción. Una
 // acción sin entrada aquí no es ejecutable por co-organizador bajo ningún
@@ -53,7 +57,13 @@ const PERMISO_REQUERIDO_POR_ACCION: Readonly<Record<AccionActividad, PermisoCoor
 const FASES_POR_ACCION: Readonly<Record<AccionActividad, readonly EstadoActividad[]>> = {
   configurar_funciones: ['configuracion', 'inscripcion', 'formacion_equipos'],
   cerrar_inscripcion: ['inscripcion'],
-  agregar_coorganizador: ['configuracion', 'inscripcion', 'formacion_equipos', 'desarrollo', 'cierre'],
+  agregar_coorganizador: [
+    'configuracion',
+    'inscripcion',
+    'formacion_equipos',
+    'desarrollo',
+    'cierre',
+  ],
 }
 
 // Orden de evaluación de nucleo §2.2: de lo más general y barato a lo más
@@ -90,5 +100,7 @@ export function capacidadesDe(
   actor: ContextoActorActividad,
   actividad: ActividadParaAutorizacion,
 ): AccionActividad[] {
-  return ACCIONES_ACTIVIDAD.filter((accion) => autorizar(actor, accion, actividad).concedido === true)
+  return ACCIONES_ACTIVIDAD.filter(
+    (accion) => autorizar(actor, accion, actividad).concedido === true,
+  )
 }

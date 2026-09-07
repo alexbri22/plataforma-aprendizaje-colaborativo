@@ -95,7 +95,10 @@ function SeccionParticipantes({ id }: { id: string }) {
   return (
     <Card className={styles.seccionCard}>
       <h2 className={styles.tituloSeccion}>
-        Participantes{participantesQuery.data ? ` (${participantesQuery.data.filter((p) => p.rol === 'participante').length})` : ''}
+        Participantes
+        {participantesQuery.data
+          ? ` (${participantesQuery.data.filter((p) => p.rol === 'participante').length})`
+          : ''}
       </h2>
 
       {participantesQuery.isPending ? (

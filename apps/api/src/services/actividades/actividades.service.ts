@@ -1,4 +1,9 @@
-import { Prisma, type EstadoActividad, type EstadoMembresia, type RolMembresia } from '@prisma/client'
+import {
+  Prisma,
+  type EstadoActividad,
+  type EstadoMembresia,
+  type RolMembresia,
+} from '@prisma/client'
 import {
   CONFIGURACION_POR_DEFECTO,
   PERMISOS_COORGANIZADOR_POR_DEFECTO,
@@ -17,7 +22,12 @@ import {
   ErrorYaEsMiembro,
 } from '../../errores.js'
 import { registrarEvento } from '../historial/historial.service.js'
-import { autorizar, capacidadesDe, type ContextoActorActividad, type MotivoRechazo } from './capacidades.js'
+import {
+  autorizar,
+  capacidadesDe,
+  type ContextoActorActividad,
+  type MotivoRechazo,
+} from './capacidades.js'
 import { generarClaveIngreso } from './claveIngreso.js'
 import type { DatosCrearActividadValidados } from './validacion.js'
 import { finDeDiaEnCDMX } from '../../utilidades/fechas.js'
@@ -408,7 +418,11 @@ async function escribirCierreInscripcion(
     tipoEvento: 'fase_avanzada',
     tipoEntidad: 'actividad',
     idEntidad: idActividad,
-    datos: { faseOrigen: 'inscripcion', faseDestino: 'formacion_equipos', disparadoPor: actor.tipo },
+    datos: {
+      faseOrigen: 'inscripcion',
+      faseDestino: 'formacion_equipos',
+      disparadoPor: actor.tipo,
+    },
     categoria: 'estructura',
   })
 }
@@ -425,7 +439,9 @@ export async function cerrarInscripcion(
 ): Promise<ActividadConCapacidades> {
   const actividad = await cargarActividadConMembresiasYConfiguracion(idActividad)
 
-  const resultado = autorizar(contextoDe(membresiaActor), 'cerrar_inscripcion', { estado: actividad.estado })
+  const resultado = autorizar(contextoDe(membresiaActor), 'cerrar_inscripcion', {
+    estado: actividad.estado,
+  })
   if (!resultado.concedido) {
     lanzarErrorDeAutorizacion(resultado.motivo, 'La inscripción no está abierta en esta actividad.')
   }
@@ -455,7 +471,9 @@ export async function transicionarActividadesVencidas(
     include: { membresias: { select: { rol: true } } },
   })
 
-  const vencidas = candidatas.filter((actividad) => finDeDiaEnCDMX(actividad.fechaLimiteInscripcion) <= ahora)
+  const vencidas = candidatas.filter(
+    (actividad) => finDeDiaEnCDMX(actividad.fechaLimiteInscripcion) <= ahora,
+  )
 
   let procesadas = 0
   let omitidasPorSinParticipantes = 0
@@ -471,7 +489,9 @@ export async function transicionarActividadesVencidas(
       continue
     }
 
-    await prisma.$transaction((tx) => escribirCierreInscripcion(tx, actividad.idActividad, { tipo: 'sistema' }))
+    await prisma.$transaction((tx) =>
+      escribirCierreInscripcion(tx, actividad.idActividad, { tipo: 'sistema' }),
+    )
     procesadas += 1
   }
 
@@ -490,9 +510,14 @@ export async function configurarFuncion(
 ): Promise<ActividadConCapacidades> {
   const actividad = await cargarActividadConMembresiasYConfiguracion(idActividad)
 
-  const resultado = autorizar(contextoDe(membresiaActor), 'configurar_funciones', { estado: actividad.estado })
+  const resultado = autorizar(contextoDe(membresiaActor), 'configurar_funciones', {
+    estado: actividad.estado,
+  })
   if (!resultado.concedido) {
-    lanzarErrorDeAutorizacion(resultado.motivo, 'La configuración no puede modificarse en esta fase.')
+    lanzarErrorDeAutorizacion(
+      resultado.motivo,
+      'La configuración no puede modificarse en esta fase.',
+    )
   }
 
   const estadoAnterior = actividad.configuracion.find((c) => c.funcion === funcion)?.estado ?? null
@@ -532,12 +557,16 @@ export async function agregarOPromoverCoorganizador(
 ): Promise<ActividadConCapacidades> {
   const actividad = await cargarActividadConMembresiasYConfiguracion(idActividad)
 
-  const resultado = autorizar(contextoDe(membresiaActor), 'agregar_coorganizador', { estado: actividad.estado })
+  const resultado = autorizar(contextoDe(membresiaActor), 'agregar_coorganizador', {
+    estado: actividad.estado,
+  })
   if (!resultado.concedido) {
     lanzarErrorDeAutorizacion(resultado.motivo, 'No puedes agregar co-organizadores en esta fase.')
   }
 
-  const usuarioObjetivo = await prisma.usuario.findUnique({ where: { idUsuario: idUsuarioObjetivo } })
+  const usuarioObjetivo = await prisma.usuario.findUnique({
+    where: { idUsuario: idUsuarioObjetivo },
+  })
   if (!usuarioObjetivo) throw new ErrorUsuarioNoEncontrado()
 
   const membresiaObjetivoExistente = await prisma.membresia.findUnique({
@@ -553,13 +582,20 @@ export async function agregarOPromoverCoorganizador(
     const membresiaFinal = await tx.membresia.upsert({
       where: { idActividad_idUsuario: { idActividad, idUsuario: idUsuarioObjetivo } },
       update: { rol: 'co_organizador', estado: 'activa' },
-      create: { idActividad, idUsuario: idUsuarioObjetivo, rol: 'co_organizador', estado: 'activa' },
+      create: {
+        idActividad,
+        idUsuario: idUsuarioObjetivo,
+        rol: 'co_organizador',
+        estado: 'activa',
+      },
     })
 
     // Reemplaza el conjunto completo en vez de aplicar un diff: PUT es la
     // operación idempotente de nucleo §3.1 ("aplica actualizaciones
     // parciales" es PATCH; esta ruta fija el conjunto final de permisos).
-    await tx.permisoCoorganizadorMembresia.deleteMany({ where: { idMembresia: membresiaFinal.idMembresia } })
+    await tx.permisoCoorganizadorMembresia.deleteMany({
+      where: { idMembresia: membresiaFinal.idMembresia },
+    })
     await tx.permisoCoorganizadorMembresia.createMany({
       data: permisos.map((permiso) => ({ idMembresia: membresiaFinal.idMembresia, permiso })),
     })
@@ -597,7 +633,9 @@ export interface ParticipanteRespuesta {
 export async function listarParticipantes(idActividad: string): Promise<ParticipanteRespuesta[]> {
   const membresias = await prisma.membresia.findMany({
     where: { idActividad },
-    include: { usuario: { select: { nombre: true, apellidoPaterno: true, apellidoMaterno: true } } },
+    include: {
+      usuario: { select: { nombre: true, apellidoPaterno: true, apellidoMaterno: true } },
+    },
     orderBy: { fechaUnion: 'asc' },
   })
 

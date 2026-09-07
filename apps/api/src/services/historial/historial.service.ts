@@ -26,6 +26,9 @@ export interface DatosEvento {
   categoria: CategoriaEvento
 }
 
-export async function registrarEvento(tx: Prisma.TransactionClient, evento: DatosEvento): Promise<void> {
+export async function registrarEvento(
+  tx: Prisma.TransactionClient,
+  evento: DatosEvento,
+): Promise<void> {
   await tx.historial.create({ data: evento })
 }

@@ -55,21 +55,31 @@ describe('autorizar: cerrar_inscripcion', () => {
   })
 
   it('un co-organizador sin el permiso gestionar_inscripcion no puede', () => {
-    const resultado = autorizar(actor('co_organizador', ['configurar_actividad']), 'cerrar_inscripcion', {
-      estado: 'inscripcion',
-    })
+    const resultado = autorizar(
+      actor('co_organizador', ['configurar_actividad']),
+      'cerrar_inscripcion',
+      {
+        estado: 'inscripcion',
+      },
+    )
     expect(resultado).toEqual({ concedido: false, motivo: 'rol' })
   })
 
   it('un co-organizador con el permiso gestionar_inscripcion sí puede', () => {
-    const resultado = autorizar(actor('co_organizador', ['gestionar_inscripcion']), 'cerrar_inscripcion', {
-      estado: 'inscripcion',
-    })
+    const resultado = autorizar(
+      actor('co_organizador', ['gestionar_inscripcion']),
+      'cerrar_inscripcion',
+      {
+        estado: 'inscripcion',
+      },
+    )
     expect(resultado).toEqual({ concedido: true })
   })
 
   it('un participante nunca puede', () => {
-    const resultado = autorizar(actor('participante'), 'cerrar_inscripcion', { estado: 'inscripcion' })
+    const resultado = autorizar(actor('participante'), 'cerrar_inscripcion', {
+      estado: 'inscripcion',
+    })
     expect(resultado).toEqual({ concedido: false, motivo: 'rol' })
   })
 })
@@ -103,7 +113,9 @@ describe('autorizar: agregar_coorganizador', () => {
       'desactivar_participantes',
       'consultar_historial_completo',
     ])
-    const resultado = autorizar(conPermisosPorDefecto, 'agregar_coorganizador', { estado: 'inscripcion' })
+    const resultado = autorizar(conPermisosPorDefecto, 'agregar_coorganizador', {
+      estado: 'inscripcion',
+    })
     expect(resultado).toEqual({ concedido: false, motivo: 'rol' })
   })
 })

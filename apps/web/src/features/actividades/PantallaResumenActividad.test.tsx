@@ -122,7 +122,11 @@ describe('PantallaResumenActividad', () => {
   })
 
   it('no muestra ninguna acción de avance para un participante sin esa capacidad', async () => {
-    vi.mocked(obtenerActividad).mockResolvedValueOnce({ ...ACTIVIDAD_BASE, rol: 'participante', capacidades: [] })
+    vi.mocked(obtenerActividad).mockResolvedValueOnce({
+      ...ACTIVIDAD_BASE,
+      rol: 'participante',
+      capacidades: [],
+    })
 
     renderPantalla(ACTIVIDAD_BASE.id)
 
@@ -167,15 +171,29 @@ describe('PantallaResumenActividad', () => {
     renderPantalla(ACTIVIDAD_BASE.id)
 
     expect(
-      await screen.findByText('Nadie se ha unido todavía. Comparte la clave de ingreso para que empiecen a llegar.'),
+      await screen.findByText(
+        'Nadie se ha unido todavía. Comparte la clave de ingreso para que empiecen a llegar.',
+      ),
     ).toBeInTheDocument()
   })
 
   it('lista a los participantes que se han unido, sin incluir al organizador', async () => {
     vi.mocked(obtenerActividad).mockResolvedValueOnce(ACTIVIDAD_BASE)
     const participantes: Participante[] = [
-      { idUsuario: 'org-1', nombre: 'Ada Lovelace', rol: 'organizador', estado: 'activa', fechaUnion: '2026-08-01T12:00:00.000Z' },
-      { idUsuario: 'p-1', nombre: 'Grace Hopper', rol: 'participante', estado: 'activa', fechaUnion: '2026-08-02T12:00:00.000Z' },
+      {
+        idUsuario: 'org-1',
+        nombre: 'Ada Lovelace',
+        rol: 'organizador',
+        estado: 'activa',
+        fechaUnion: '2026-08-01T12:00:00.000Z',
+      },
+      {
+        idUsuario: 'p-1',
+        nombre: 'Grace Hopper',
+        rol: 'participante',
+        estado: 'activa',
+        fechaUnion: '2026-08-02T12:00:00.000Z',
+      },
     ]
     vi.mocked(obtenerParticipantes).mockResolvedValueOnce(participantes)
 

@@ -40,11 +40,16 @@ actividadesRouter.get('/actividades', exigirSesion, async (req, res) => {
 // GET /api/actividades/{id} (docs/diseno-desarrollo-nucleo.md §7.7):
 // actividad, configuración y capacidades del actor. 404 si el actor no es
 // miembro (§3.3), resuelto por cargarContextoActividad.
-actividadesRouter.get('/actividades/:id', exigirSesion, cargarContextoActividad, async (req, res) => {
-  const { membresia } = req.contextoActividad!
-  const actividad = await obtenerActividadPorId(req.params.id as string, membresia)
-  res.status(200).json({ actividad })
-})
+actividadesRouter.get(
+  '/actividades/:id',
+  exigirSesion,
+  cargarContextoActividad,
+  async (req, res) => {
+    const { membresia } = req.contextoActividad!
+    const actividad = await obtenerActividadPorId(req.params.id as string, membresia)
+    res.status(200).json({ actividad })
+  },
+)
 
 // GET /api/actividades/{id}/participantes (docs/diseno-desarrollo-nucleo.md
 // §7.7): cualquier miembro puede consultarla, no solo quien organiza.

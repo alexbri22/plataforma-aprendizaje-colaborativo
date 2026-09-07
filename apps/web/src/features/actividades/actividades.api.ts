@@ -68,7 +68,10 @@ export async function obtenerActividad(id: string): Promise<Actividad> {
 
   if (!respuesta.ok) {
     throw new ErrorActividad(
-      await leerMensajeError(respuesta, 'No encontramos esta actividad, o ya no formas parte de ella.'),
+      await leerMensajeError(
+        respuesta,
+        'No encontramos esta actividad, o ya no formas parte de ella.',
+      ),
     )
   }
 
@@ -160,7 +163,9 @@ export async function obtenerParticipantes(id: string): Promise<Participante[]> 
   const respuesta = await pedir(`/api/actividades/${encodeURIComponent(id)}/participantes`)
 
   if (!respuesta.ok) {
-    throw new ErrorActividad(await leerMensajeError(respuesta, 'No pudimos cargar los participantes.'))
+    throw new ErrorActividad(
+      await leerMensajeError(respuesta, 'No pudimos cargar los participantes.'),
+    )
   }
 
   const { participantes } = (await respuesta.json()) as { participantes: Participante[] }

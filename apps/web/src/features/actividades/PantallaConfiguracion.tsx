@@ -1,4 +1,8 @@
-import { parsearEstadoEspacioEquipo, type EstadoEspacioEquipo, type FuncionSeguimiento } from '@plataforma/shared'
+import {
+  parsearEstadoEspacioEquipo,
+  type EstadoEspacioEquipo,
+  type FuncionSeguimiento,
+} from '@plataforma/shared'
 import { useState, type ChangeEvent } from 'react'
 import { useParams } from 'react-router-dom'
 import { AppShell } from '../../components/AppShell'
@@ -49,7 +53,11 @@ export function PantallaConfiguracion() {
   const configurarMutacion = useConfigurarFuncionMutation(id)
   const [estados, setEstados] = useState<Record<string, EstadoCampo>>({})
 
-  async function guardar(clave: string, funcion: FuncionSeguimiento, cuerpo: Record<string, string>) {
+  async function guardar(
+    clave: string,
+    funcion: FuncionSeguimiento,
+    cuerpo: Record<string, string>,
+  ) {
     setEstados((previo) => ({ ...previo, [clave]: { status: 'guardando' } }))
     try {
       await configurarMutacion.mutateAsync({ funcion, cuerpo })
@@ -102,7 +110,8 @@ export function PantallaConfiguracion() {
       ) : (
         <div className={styles.contenido}>
           {FUNCIONES_SIMPLES.map((definicion) => {
-            const valorActual = actividad.configuracion?.[definicion.funcion] ?? definicion.opciones[0].valor
+            const valorActual =
+              actividad.configuracion?.[definicion.funcion] ?? definicion.opciones[0].valor
             return (
               <Card key={definicion.funcion} className={styles.seccionCard}>
                 <div className={styles.encabezadoCampo}>
