@@ -2,12 +2,7 @@ import { useMemo, useState } from 'react'
 import { Badge, Button, Card, Input } from '../../components/ui'
 import styles from './CentroFormacion.module.css'
 
-type Categoria =
-  | 'Todos'
-  | 'Comunicación'
-  | 'Organización'
-  | 'Decisiones'
-  | 'Mejora continua'
+type Categoria = 'Todos' | 'Comunicación' | 'Organización' | 'Decisiones' | 'Mejora continua'
 
 interface Curso {
   id: string
@@ -58,7 +53,8 @@ const CURSOS: Curso[] = [
   {
     id: 'metas-compartidas',
     titulo: 'Metas compartidas e interdependencia',
-    descripcion: 'Diseña objetivos en los que cada contribución sea necesaria para el resultado común.',
+    descripcion:
+      'Diseña objetivos en los que cada contribución sea necesaria para el resultado común.',
     categoria: 'Organización',
     duracion: '40 min',
     nivel: 'Intermedio',
@@ -76,11 +72,49 @@ const CURSOS: Curso[] = [
   {
     id: 'retrospectivas',
     titulo: 'Retrospectivas para mejorar',
-    descripcion: 'Revisa cómo colaboró el grupo y acuerda un cambio pequeño para la siguiente ocasión.',
+    descripcion:
+      'Revisa cómo colaboró el grupo y acuerda un cambio pequeño para la siguiente ocasión.',
     categoria: 'Mejora continua',
     duracion: '30 min',
     nivel: 'Inicial',
     elemento: 'Procesamiento grupal',
+  },
+]
+
+interface Articulo {
+  id: string
+  titulo: string
+  extracto: string
+  tema: Exclude<Categoria, 'Todos'>
+  lectura: string
+}
+
+// Contenido dummy: la sección existe para validar el diseño; los artículos
+// reales llegarán con su propia fuente de datos.
+const ARTICULOS: Articulo[] = [
+  {
+    id: 'roles-que-rotan',
+    titulo: 'Roles que rotan: repartir el trabajo sin cargar a una sola persona',
+    extracto:
+      'Una forma sencilla de distribuir responsabilidades para que todo el equipo aprenda de cada parte.',
+    tema: 'Organización',
+    lectura: '6 min de lectura',
+  },
+  {
+    id: 'acuerdos-que-se-recuerdan',
+    titulo: 'Acuerdos que se recuerdan: documentar sin burocracia',
+    extracto:
+      'Qué anotar después de una reunión para que los compromisos no se pierdan al día siguiente.',
+    tema: 'Decisiones',
+    lectura: '4 min de lectura',
+  },
+  {
+    id: 'negociar-sin-ganar-perder',
+    titulo: 'Negociar sin “ganar o perder”: acuerdos que convienen a todo el grupo',
+    extracto:
+      'Cómo pasar de defender posturas a construir una solución que el equipo pueda sostener.',
+    tema: 'Comunicación',
+    lectura: '7 min de lectura',
   },
 ]
 
@@ -122,8 +156,7 @@ export function CentroFormacion() {
     const termino = busqueda.trim().toLocaleLowerCase('es')
 
     return CURSOS.filter((curso) => {
-      const coincideCategoria =
-        categoriaActiva === 'Todos' || curso.categoria === categoriaActiva
+      const coincideCategoria = categoriaActiva === 'Todos' || curso.categoria === categoriaActiva
       const coincideBusqueda =
         !termino ||
         `${curso.titulo} ${curso.descripcion} ${curso.elemento}`
@@ -138,11 +171,12 @@ export function CentroFormacion() {
     <div className={styles.centro}>
       <section className={styles.presentacion} aria-labelledby="titulo-centro-formacion">
         <div className={styles.presentacionTexto}>
-          <p className={styles.eyebrow}>Centro de formación</p>
+          <p className={styles.eyebrow}>Recursos</p>
           <h1 id="titulo-centro-formacion">Mejora la forma en que colaboras</h1>
           <p className={styles.lede}>
-            Cursos breves y recursos prácticos para comunicarte mejor, organizar acuerdos y
-            resolver decisiones con otras personas.
+            Cursos breves y recursos prácticos para comunicarte mejor, organizar el trabajo,
+            documentar acuerdos, resolver decisiones y negociar con otras personas; entre otras
+            habilidades vinculadas con la colaboración y el aprendizaje colaborativo.
           </p>
           <div className={styles.presentacionAcciones}>
             <Button onClick={() => document.querySelector('#catalogo-cursos')?.scrollIntoView()}>
@@ -296,6 +330,32 @@ export function CentroFormacion() {
             </Button>
           </div>
         )}
+      </section>
+
+      <section className={styles.articulos} aria-labelledby="titulo-articulos">
+        <div className={styles.articulosCabecera}>
+          <p className={styles.eyebrow}>Lectura</p>
+          <h2 id="titulo-articulos">Artículos</h2>
+          <p>Ideas breves para profundizar en la colaboración más allá de un curso.</p>
+        </div>
+
+        <div className={styles.articulosGrid}>
+          {ARTICULOS.map((articulo) => (
+            <Card key={articulo.id} className={styles.articulo}>
+              <div className={styles.articuloMeta}>
+                <Badge variant="neutral">{articulo.tema}</Badge>
+                <span>{articulo.lectura}</span>
+              </div>
+              <div className={styles.articuloContenido}>
+                <h3>{articulo.titulo}</h3>
+                <p>{articulo.extracto}</p>
+              </div>
+              <button type="button" className={styles.enlaceTexto}>
+                Leer artículo <FlechaIcono />
+              </button>
+            </Card>
+          ))}
+        </div>
       </section>
 
       <section className={styles.recursosBreves} aria-labelledby="titulo-recursos-breves">

@@ -5,7 +5,12 @@ import styles from './PantallaInicio.module.css'
 
 function FlechaIcono() {
   return (
-    <svg className={styles.seccionLinkIcon} viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+    <svg
+      className={styles.seccionLinkIcon}
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      focusable="false"
+    >
       <path
         d="M3 8h9.5M8 3.5 13 8l-5 4.5"
         fill="none"
@@ -51,7 +56,9 @@ export function PantallaInicio() {
             onClick={() => setVistaActiva('inicio')}
           >
             <span className={styles.brandName}>Co3</span>
-            <span className={styles.brandTagline}>Construcción de Conocimiento en Colaboración</span>
+            <span className={styles.brandTagline}>
+              Construcción de Conocimiento en Colaboración
+            </span>
           </button>
 
           <nav className={styles.nav} aria-label="Principal">
@@ -74,30 +81,30 @@ export function PantallaInicio() {
         {vistaActiva === 'inicio' ? (
           <>
             <section className={styles.hero}>
-          <div className={styles.heroInner}>
-            <div className={styles.heroText}>
-              <div className={styles.heroCopy}>
-                <h1>Qué es Co3</h1>
-                <p className={styles.heroLede}>
-                  Es un sistema diseñado para apoyar a estudiantes y profesores en el seguimiento
-                  de actividades basadas en el aprendizaje colaborativo.
-                </p>
-              </div>
-              <div className={styles.heroActions}>
-                <Button>Registrarse</Button>
-                <Button variant="secondary">Ingresar</Button>
-              </div>
-            </div>
+              <div className={styles.heroInner}>
+                <div className={styles.heroText}>
+                  <div className={styles.heroCopy}>
+                    <h1>Qué es Co3</h1>
+                    <p className={styles.heroLede}>
+                      Es un sistema diseñado para apoyar a estudiantes y profesores en el
+                      seguimiento de actividades basadas en el aprendizaje colaborativo.
+                    </p>
+                  </div>
+                  <div className={styles.heroActions}>
+                    <Button>Registrarse</Button>
+                    <Button variant="secondary">Ingresar</Button>
+                  </div>
+                </div>
 
-            <img
-              className={styles.heroImg}
-              src="/hero-ilustracion-colaboracion.webp"
-              alt="Personas colaborando para armar piezas de un rompecabezas"
-              width="1200"
-              height="923"
-              fetchPriority="high"
-            />
-          </div>
+                <img
+                  className={styles.heroImg}
+                  src="/hero-ilustracion-colaboracion.webp"
+                  alt="Personas colaborando para armar piezas de un rompecabezas"
+                  width="1200"
+                  height="923"
+                  fetchPriority="high"
+                />
+              </div>
             </section>
 
             <section className={styles.contenidoPublico} aria-label="Contenido formativo">

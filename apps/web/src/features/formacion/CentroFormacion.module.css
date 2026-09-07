@@ -31,6 +31,7 @@
 .presentacion h1,
 .catalogo h2,
 .ruta h2,
+.articulos h2,
 .recursosBreves h2 {
   margin: 0;
   color: var(--color-text);
@@ -144,6 +145,7 @@
 
 .rutaIntroduccion > p:not(.eyebrow),
 .catalogoCabecera > div > p:not(.eyebrow),
+.articulosCabecera > p:not(.eyebrow),
 .recursosBreves > div > p:not(.eyebrow) {
   max-width: 56ch;
   margin: var(--space-3) 0 0;
@@ -153,6 +155,7 @@
 
 .ruta h2,
 .catalogo h2,
+.articulos h2,
 .recursosBreves h2 {
   font-size: var(--font-size-2xl);
 }
@@ -274,14 +277,25 @@
   outline-offset: 2px;
 }
 
-.cursosGrid {
+.articulos {
+  margin-top: var(--space-16);
+  scroll-margin-top: var(--space-6);
+}
+
+.articulosCabecera {
+  max-width: var(--layout-copy-max);
+}
+
+.cursosGrid,
+.articulosGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-5);
   margin-top: var(--space-6);
 }
 
-.curso {
+.curso,
+.articulo {
   display: flex;
   min-width: 0;
   flex-direction: column;
@@ -290,7 +304,8 @@
 }
 
 .cursoMeta,
-.cursoDetalle {
+.cursoDetalle,
+.articuloMeta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -299,18 +314,21 @@
   font-size: var(--font-size-xs);
 }
 
-.cursoMeta {
+.cursoMeta,
+.articuloMeta {
   justify-content: space-between;
 }
 
-.cursoContenido {
+.cursoContenido,
+.articuloContenido {
   display: flex;
   flex: 1;
   flex-direction: column;
   gap: var(--space-2);
 }
 
-.cursoContenido h3 {
+.cursoContenido h3,
+.articuloContenido h3 {
   margin: 0;
   color: var(--color-text);
   font-size: var(--font-size-lg);
@@ -318,7 +336,8 @@
   text-wrap: balance;
 }
 
-.cursoContenido p {
+.cursoContenido p,
+.articuloContenido p {
   margin: 0;
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
@@ -431,7 +450,8 @@
     max-width: 34rem;
   }
 
-  .cursosGrid {
+  .cursosGrid,
+  .articulosGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -469,7 +489,8 @@
     width: 100%;
   }
 
-  .cursosGrid {
+  .cursosGrid,
+  .articulosGrid {
     grid-template-columns: 1fr;
   }
 

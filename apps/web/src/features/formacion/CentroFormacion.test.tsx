@@ -23,15 +23,22 @@ describe('CentroFormacion', () => {
     await user.click(screen.getByRole('button', { name: 'Decisiones' }))
 
     const catalogo = screen.getByRole('region', { name: 'Aprende a tu ritmo' })
-    expect(within(catalogo).getByRole('heading', { name: 'Resolver desacuerdos con respeto' })).toBeVisible()
+    expect(
+      within(catalogo).getByRole('heading', { name: 'Resolver desacuerdos con respeto' }),
+    ).toBeVisible()
     expect(
       within(catalogo).queryByRole('heading', { name: 'Comunicación clara en equipos' }),
     ).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Todos' }))
-    await user.type(screen.getByRole('searchbox', { name: 'Buscar en el catálogo' }), 'retrospectiva')
+    await user.type(
+      screen.getByRole('searchbox', { name: 'Buscar en el catálogo' }),
+      'retrospectiva',
+    )
 
-    expect(within(catalogo).getByRole('heading', { name: 'Retrospectivas para mejorar' })).toBeVisible()
+    expect(
+      within(catalogo).getByRole('heading', { name: 'Retrospectivas para mejorar' }),
+    ).toBeVisible()
     expect(
       within(catalogo).queryByRole('heading', { name: 'Escucha activa y preguntas útiles' }),
     ).not.toBeInTheDocument()

@@ -13,8 +13,12 @@ describe('PantallaInicio', () => {
     expect(screen.getByRole('navigation', { name: 'Principal' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Insignias' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Recursos' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { level: 2, name: 'Características de Co3' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { level: 2, name: 'Aprender colaborando' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Características de Co3' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Aprender colaborando' }),
+    ).toBeInTheDocument()
   })
 
   it('atribuye la ilustración del hero según lo exige su licencia', () => {
@@ -34,10 +38,7 @@ describe('PantallaInicio', () => {
     expect(
       screen.getByRole('heading', { level: 1, name: 'Mejora la forma en que colaboras' }),
     ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Recursos' })).toHaveAttribute(
-      'aria-current',
-      'page',
-    )
+    expect(screen.getByRole('button', { name: 'Recursos' })).toHaveAttribute('aria-current', 'page')
     expect(screen.queryByRole('heading', { level: 1, name: 'Qué es Co3' })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Ir al inicio de Co3' }))
