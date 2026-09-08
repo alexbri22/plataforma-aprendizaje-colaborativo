@@ -8,7 +8,7 @@ import {
   definicionNivel,
   nivelParaPuntos,
   progresoDeNivel,
-  reconocimientosDisponibles,
+  personasReconocibles,
 } from './insignias.js'
 
 describe('catálogo de insignias', () => {
@@ -96,27 +96,29 @@ describe('progresoDeNivel', () => {
   })
 })
 
-describe('reconocimientosDisponibles', () => {
+describe('personasReconocibles', () => {
   it('reproduce los ejemplos acordados', () => {
-    expect(reconocimientosDisponibles(3)).toBe(1)
-    expect(reconocimientosDisponibles(10)).toBe(3)
-    expect(reconocimientosDisponibles(20)).toBe(5)
+    expect(personasReconocibles(3)).toBe(1)
+    expect(personasReconocibles(10)).toBe(3)
+    expect(personasReconocibles(20)).toBe(5)
   })
 
   it('nunca alcanza para todo el equipo, que es el punto de la regla', () => {
+    // La escasez está en a cuánta gente se reconoce. Cuántas insignias reciba
+    // quien ya fue elegido no entra aquí: no le quita nada a los demás.
     for (let tamano = 3; tamano <= 30; tamano += 1) {
-      expect(reconocimientosDisponibles(tamano)).toBeLessThan(tamano - 1)
+      expect(personasReconocibles(tamano)).toBeLessThan(tamano - 1)
     }
   })
 
   it('respeta el piso de uno y el techo de cinco', () => {
-    expect(reconocimientosDisponibles(2)).toBe(1)
-    expect(reconocimientosDisponibles(4)).toBe(1)
-    expect(reconocimientosDisponibles(100)).toBe(MAXIMO_RECONOCIMIENTOS)
+    expect(personasReconocibles(2)).toBe(1)
+    expect(personasReconocibles(4)).toBe(1)
+    expect(personasReconocibles(100)).toBe(MAXIMO_RECONOCIMIENTOS)
   })
 
   it('no reparte nada cuando no hay a quién', () => {
-    expect(reconocimientosDisponibles(1)).toBe(0)
-    expect(reconocimientosDisponibles(0)).toBe(0)
+    expect(personasReconocibles(1)).toBe(0)
+    expect(personasReconocibles(0)).toBe(0)
   })
 })

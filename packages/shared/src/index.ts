@@ -19,7 +19,7 @@ export {
   definicionNivel,
   nivelParaPuntos,
   progresoDeNivel,
-  reconocimientosDisponibles,
+  personasReconocibles,
 } from './insignias.js'
 
 export type {

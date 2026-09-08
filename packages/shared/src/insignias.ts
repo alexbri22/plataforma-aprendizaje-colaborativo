@@ -245,15 +245,17 @@ export const MINIMO_RECONOCIMIENTOS = 1
 export const MAXIMO_RECONOCIMIENTOS = 5
 
 /**
- * Cuántos reconocimientos puede repartir un integrante en un equipo de
+ * A cuántos compañeros puede reconocer un integrante en un equipo de
  * `tamanoEquipo` personas. Se calcula sobre el equipo sin contarse a sí mismo y
  * se redondea hacia arriba, con piso 1 y techo 5.
  *
- * El límite es deliberado: siempre hay que elegir, nunca alcanza para todos. Un
- * reconocimiento que se le puede dar a todo el equipo no distingue nada, y sin
- * escasez el acumulado deja de ser una señal.
+ * Lo que el presupuesto raciona es a CUÁNTA GENTE se reconoce, no cuántas
+ * insignias se reparten: a cada persona elegida se le pueden dar varias
+ * categorías, hasta las seis. La escasez está en tener que elegir a quién, que
+ * es la decisión que hace que el reconocimiento signifique algo; cuántas cosas
+ * destacas de quien ya elegiste no le quita valor a nadie más.
  */
-export function reconocimientosDisponibles(tamanoEquipo: number): number {
+export function personasReconocibles(tamanoEquipo: number): number {
   const companeros = Math.max(0, Math.trunc(tamanoEquipo) - 1)
   if (companeros === 0) return 0
 

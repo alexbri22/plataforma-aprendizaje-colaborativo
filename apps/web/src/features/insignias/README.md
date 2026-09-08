@@ -83,8 +83,11 @@ equipo. Tres reglas que vale la pena no perder:
 
 - **El presupuesto se deriva** del número de compañeros, no se recibe por props,
   por la misma razón que el nivel se deriva de los puntos.
-- **Cuenta reconocimientos, no personas.** Puedes dar dos insignias distintas a
-  la misma persona; lo que no puedes es repetir la misma categoría en ella.
+- **Cuenta personas, no insignias.** Con presupuesto 2 eliges a dos compañeros, y
+  a cada uno puedes darle de una a seis insignias, cada una con su frase; lo
+  único que no se puede es repetir la misma categoría en la misma persona. A
+  quien ya reconociste puedes seguir sumándole insignias aunque el presupuesto se
+  haya agotado: no gasta turno nuevo.
 - **La frase es guiada con salida a texto libre.** `FRASES_SUGERIDAS` ofrece tres
   por categoría y siempre se puede escribir la propia. Escribir desde cero seis
   veces produce frases de relleno, que valen menos para quien las recibe que una

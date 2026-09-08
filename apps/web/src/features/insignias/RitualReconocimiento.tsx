@@ -4,7 +4,7 @@ import {
   FRASES_SUGERIDAS,
   type CategoriaInsignia,
   definicionCategoria,
-  reconocimientosDisponibles,
+  personasReconocibles,
 } from '@plataforma/shared'
 import { Button, Input, Select } from '../../components/ui'
 import { IconoCategoria } from './IconoCategoria'
@@ -39,6 +39,11 @@ function clave(r: ReconocimientoBorrador) {
  * El ritual de cierre: repartir los reconocimientos del presupuesto entre los
  * compañeros del propio equipo (concepto, sección 6).
  *
+ * Lo que el presupuesto raciona es a cuánta gente se reconoce. A cada compañero
+ * elegido se le pueden marcar varias insignias —hasta las seis— y cada una lleva
+ * su propia frase: una frase compartida entre dos categorías distintas no
+ * describiría ninguna de las dos.
+ *
  * El presupuesto se deriva del número de compañeros y no se recibe por props,
  * por la misma razón que el nivel de una insignia se deriva de los puntos: dos
  * fuentes para un mismo hecho terminan contradiciéndose.
@@ -50,36 +55,47 @@ export function RitualReconocimiento({
 }: RitualReconocimientoProps) {
   const [reconocimientos, setReconocimientos] = useState<ReconocimientoBorrador[]>([])
   const [abierto, setAbierto] = useState<string | null>(null)
-  const [categoria, setCategoria] = useState<CategoriaInsignia>(CATALOGO_INSIGNIAS[0].id)
-  const [fraseElegida, setFraseElegida] = useState<string>(
-    FRASES_SUGERIDAS[CATALOGO_INSIGNIAS[0].id][0],
-  )
-  const [frasePropia, setFrasePropia] = useState('')
+  const [seleccion, setSeleccion] = useState<CategoriaInsignia[]>([])
+  const [elegidas, setElegidas] = useState<Partial<Record<CategoriaInsignia, string>>>({})
+  const [propias, setPropias] = useState<Partial<Record<CategoriaInsignia, string>>>({})
   const idBase = useId()
 
-  const presupuesto = reconocimientosDisponibles(companeros.length + 1)
-  const restantes = presupuesto - reconocimientos.length
+  const presupuesto = personasReconocibles(companeros.length + 1)
+  const reconocidos = new Set(reconocimientos.map((r) => r.integranteId))
+  const restantes = presupuesto - reconocidos.size
 
-  const frase = fraseElegida === FRASE_PROPIA ? frasePropia.trim() : fraseElegida
   const yaOtorgada = (integranteId: string, cat: CategoriaInsignia) =>
     reconocimientos.some((r) => r.integranteId === integranteId && r.categoria === cat)
 
-  function abrir(integranteId: string) {
-    const siguiente = abierto === integranteId ? null : integranteId
-    setAbierto(siguiente)
-    if (siguiente) elegirCategoria(CATALOGO_INSIGNIAS[0].id)
+  const fraseDe = (cat: CategoriaInsignia) => {
+    const elegida = elegidas[cat] ?? FRASES_SUGERIDAS[cat][0]
+    return elegida === FRASE_PROPIA ? (propias[cat] ?? '').trim() : elegida
   }
 
-  function elegirCategoria(cat: CategoriaInsignia) {
-    setCategoria(cat)
-    // La frase acompaña a la insignia: al cambiar de categoría, la sugerencia
-    // anterior deja de describir lo que se está reconociendo.
-    setFraseElegida(FRASES_SUGERIDAS[cat][0])
-    setFrasePropia('')
+  const completo = seleccion.length > 0 && seleccion.every((cat) => fraseDe(cat) !== '')
+
+  function abrir(integranteId: string) {
+    setAbierto(abierto === integranteId ? null : integranteId)
+    setSeleccion([])
+    setElegidas({})
+    setPropias({})
+  }
+
+  function alternar(cat: CategoriaInsignia) {
+    setSeleccion((previa) =>
+      previa.includes(cat) ? previa.filter((c) => c !== cat) : [...previa, cat],
+    )
   }
 
   function agregar(integranteId: string) {
-    setReconocimientos((previos) => [...previos, { integranteId, categoria, frase }])
+    // En el orden del catálogo y no en el de marcado, para que la lista de una
+    // persona se lea igual sin importar cómo se eligieron.
+    const nuevos = CATALOGO_INSIGNIAS.filter((d) => seleccion.includes(d.id)).map((d) => ({
+      integranteId,
+      categoria: d.id,
+      frase: fraseDe(d.id),
+    }))
+    setReconocimientos((previos) => [...previos, ...nuevos])
     setAbierto(null)
   }
 
@@ -100,12 +116,13 @@ export function RitualReconocimiento({
     <div className={styles.ritual}>
       <p className={styles.presupuesto} aria-live="polite">
         {restantes > 0
-          ? `Te quedan ${restantes} de ${presupuesto} reconocimientos`
-          : `Repartiste los ${presupuesto} reconocimientos`}
+          ? `Puedes reconocer a ${restantes} ${restantes === 1 ? 'compañero más' : 'compañeros más'}, de ${presupuesto}`
+          : `Ya elegiste a tus ${presupuesto} ${presupuesto === 1 ? 'compañero' : 'compañeros'}`}
       </p>
       <p className={styles.nota}>
-        Nunca alcanzan para todo el equipo: hay que elegir. Quien lo reciba verá la insignia y la
-        frase, no quién se la dio.
+        No alcanza para todo el equipo: hay que elegir a quién. A cada persona que elijas puedes
+        darle todas las insignias que merezca. Quien lo reciba verá la insignia y la frase, no quién
+        se la dio.
       </p>
 
       <ul className={styles.companeros}>
@@ -123,7 +140,7 @@ export function RitualReconocimiento({
                   size="sm"
                   type="button"
                   onClick={() => abrir(companero.id)}
-                  disabled={restantes === 0 && !estaAbierto}
+                  disabled={restantes === 0 && !estaAbierto && !reconocidos.has(companero.id)}
                   aria-expanded={estaAbierto}
                   aria-controls={idPanel}
                 >
@@ -151,23 +168,26 @@ export function RitualReconocimiento({
               {estaAbierto ? (
                 <div className={styles.panel} id={idPanel}>
                   <fieldset className={styles.opciones}>
-                    <legend className={styles.leyenda}>Qué reconoces</legend>
+                    <legend className={styles.leyenda}>Qué reconoces — puedes marcar varias</legend>
                     {CATALOGO_INSIGNIAS.map((definicion) => {
-                      const repetida = yaOtorgada(companero.id, definicion.id)
+                      const marcada = seleccion.includes(definicion.id)
+                      // Lo único que bloquea una casilla es haberle dado ya esa
+                      // insignia a esta persona: el presupuesto limita a cuánta
+                      // gente reconoces, no cuánto le reconoces a cada quien.
+                      const bloqueada = yaOtorgada(companero.id, definicion.id)
+
                       return (
                         <label
                           key={definicion.id}
-                          className={[styles.opcion, repetida ? styles.opcionRepetida : null]
+                          className={[styles.opcion, bloqueada ? styles.opcionRepetida : null]
                             .filter(Boolean)
                             .join(' ')}
                         >
                           <input
-                            type="radio"
-                            name={`${idPanel}-categoria`}
-                            value={definicion.id}
-                            checked={categoria === definicion.id}
-                            disabled={repetida}
-                            onChange={() => elegirCategoria(definicion.id)}
+                            type="checkbox"
+                            checked={marcada}
+                            disabled={bloqueada}
+                            onChange={() => alternar(definicion.id)}
                           />
                           <IconoCategoria categoria={definicion.id} className={styles.emblema} />
                           <span className={styles.opcionNombre}>{definicion.nombre}</span>
@@ -177,30 +197,49 @@ export function RitualReconocimiento({
                     })}
                   </fieldset>
 
-                  <Select
-                    label="Por qué"
-                    value={fraseElegida}
-                    onChange={(evento) => setFraseElegida(evento.target.value)}
-                  >
-                    {FRASES_SUGERIDAS[categoria].map((sugerencia) => (
-                      <option key={sugerencia} value={sugerencia}>
-                        {sugerencia}
-                      </option>
-                    ))}
-                    <option value={FRASE_PROPIA}>Escribir la mía…</option>
-                  </Select>
+                  {CATALOGO_INSIGNIAS.filter((d) => seleccion.includes(d.id)).map((definicion) => {
+                    const elegida = elegidas[definicion.id] ?? FRASES_SUGERIDAS[definicion.id][0]
+                    return (
+                      <div key={definicion.id} className={styles.frases}>
+                        <Select
+                          label={`Por qué — ${definicion.nombre}`}
+                          value={elegida}
+                          onChange={(evento) =>
+                            setElegidas((previas) => ({
+                              ...previas,
+                              [definicion.id]: evento.target.value,
+                            }))
+                          }
+                        >
+                          {FRASES_SUGERIDAS[definicion.id].map((sugerencia) => (
+                            <option key={sugerencia} value={sugerencia}>
+                              {sugerencia}
+                            </option>
+                          ))}
+                          <option value={FRASE_PROPIA}>Escribir la mía…</option>
+                        </Select>
 
-                  {fraseElegida === FRASE_PROPIA ? (
-                    <Input
-                      label="Tu frase"
-                      value={frasePropia}
-                      maxLength={140}
-                      onChange={(evento) => setFrasePropia(evento.target.value)}
-                    />
-                  ) : null}
+                        {elegida === FRASE_PROPIA ? (
+                          <Input
+                            label={`Tu frase — ${definicion.nombre}`}
+                            value={propias[definicion.id] ?? ''}
+                            maxLength={140}
+                            onChange={(evento) =>
+                              setPropias((previas) => ({
+                                ...previas,
+                                [definicion.id]: evento.target.value,
+                              }))
+                            }
+                          />
+                        ) : null}
+                      </div>
+                    )
+                  })}
 
-                  <Button type="button" onClick={() => agregar(companero.id)} disabled={!frase}>
-                    Reconocer a {companero.nombre}
+                  <Button type="button" onClick={() => agregar(companero.id)} disabled={!completo}>
+                    {seleccion.length > 1
+                      ? `Reconocer a ${companero.nombre} con ${seleccion.length} insignias`
+                      : `Reconocer a ${companero.nombre}`}
                   </Button>
                 </div>
               ) : null}
