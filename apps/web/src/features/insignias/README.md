@@ -96,6 +96,12 @@ equipo. Tres reglas que vale la pena no perder:
 El anonimato se anuncia antes de empezar, no al terminar: cambia lo que la gente
 se atreve a escribir.
 
+`fechaLimite` es obligatoria y no opcional. El botón dice **Guardar**, no
+Enviar, porque los reconocimientos se aplican al cerrar la actividad y hasta
+entonces se pueden cambiar; sin la fecha, "Guardar" no diría hasta cuándo se
+puede volver, que es justo lo que hace útil el cambio. Cuando exista el módulo
+de Actividades, sale del cierre de la actividad.
+
 ## Lo que falta
 
 - Otorgamiento real: no hay endpoint, así que `onEnviar` termina en la pantalla

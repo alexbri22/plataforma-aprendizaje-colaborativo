@@ -13,10 +13,14 @@ const COMPANEROS: IntegranteEquipo[] = [
   { id: 'm-6', nombre: 'Elena' },
 ]
 
-function montar(onEnviar = vi.fn()) {
+const CIERRE = new Date(2026, 10, 14)
+
+function montar(onGuardar = vi.fn()) {
   const usuario = userEvent.setup()
-  render(<RitualReconocimiento companeros={COMPANEROS} onEnviar={onEnviar} />)
-  return { usuario, onEnviar }
+  render(
+    <RitualReconocimiento companeros={COMPANEROS} fechaLimite={CIERRE} onGuardar={onGuardar} />,
+  )
+  return { usuario, onGuardar }
 }
 
 describe('RitualReconocimiento', () => {
@@ -68,7 +72,7 @@ describe('RitualReconocimiento', () => {
   })
 
   it('permite varias insignias a la misma persona, cada una con su frase', async () => {
-    const { usuario, onEnviar } = montar()
+    const { usuario, onGuardar } = montar()
 
     await usuario.click(screen.getAllByRole('button', { name: 'Reconocer' })[0])
     await usuario.click(screen.getByRole('checkbox', { name: /Liderazgo/ }))
@@ -79,9 +83,9 @@ describe('RitualReconocimiento', () => {
     expect(screen.getByLabelText('Por qué — Ideas')).toBeInTheDocument()
 
     await usuario.click(screen.getByRole('button', { name: /Reconocer a Andrea con 2 insignias/ }))
-    await usuario.click(screen.getByRole('button', { name: 'Enviar reconocimientos' }))
+    await usuario.click(screen.getByRole('button', { name: 'Guardar reconocimientos' }))
 
-    const [enviados] = onEnviar.mock.calls[0] as [
+    const [enviados] = onGuardar.mock.calls[0] as [
       { categoria: string; integranteId: string; frase: string }[],
     ]
     expect(enviados.map((r) => r.categoria)).toEqual(['liderazgo', 'ideas'])
@@ -90,7 +94,7 @@ describe('RitualReconocimiento', () => {
   })
 
   it('no limita cuántas insignias recibe una misma persona', async () => {
-    const { usuario, onEnviar } = montar()
+    const { usuario, onGuardar } = montar()
 
     // El presupuesto de dos es de personas, no de insignias: a la primera se le
     // pueden dar las seis sin gastar el turno de la segunda.
@@ -102,8 +106,8 @@ describe('RitualReconocimiento', () => {
 
     expect(screen.getByText('Puedes reconocer a 1 compañero más, de 2')).toBeInTheDocument()
 
-    await usuario.click(screen.getByRole('button', { name: 'Enviar reconocimientos' }))
-    const [enviados] = onEnviar.mock.calls[0] as [{ integranteId: string }[]]
+    await usuario.click(screen.getByRole('button', { name: 'Guardar reconocimientos' }))
+    const [enviados] = onGuardar.mock.calls[0] as [{ integranteId: string }[]]
     expect(enviados).toHaveLength(6)
   })
 
@@ -125,15 +129,15 @@ describe('RitualReconocimiento', () => {
   })
 
   it('acompaña cada reconocimiento con una frase, prellenada por omisión', async () => {
-    const { usuario, onEnviar } = montar()
+    const { usuario, onGuardar } = montar()
 
     await usuario.click(screen.getAllByRole('button', { name: 'Reconocer' })[0])
     await usuario.click(screen.getByRole('checkbox', { name: /Liderazgo/ }))
     await usuario.click(screen.getByRole('button', { name: /Reconocer a Andrea/ }))
-    await usuario.click(screen.getByRole('button', { name: 'Enviar reconocimientos' }))
+    await usuario.click(screen.getByRole('button', { name: 'Guardar reconocimientos' }))
 
-    expect(onEnviar).toHaveBeenCalledTimes(1)
-    const [enviados] = onEnviar.mock.calls[0] as [{ frase: string; integranteId: string }[]]
+    expect(onGuardar).toHaveBeenCalledTimes(1)
+    const [enviados] = onGuardar.mock.calls[0] as [{ frase: string; integranteId: string }[]]
     expect(enviados).toHaveLength(1)
     expect(enviados[0].integranteId).toBe('m-2')
     expect(enviados[0].frase).not.toBe('')
@@ -152,10 +156,18 @@ describe('RitualReconocimiento', () => {
     expect(screen.getByRole('button', { name: /Reconocer a Andrea/ })).toBeEnabled()
   })
 
-  it('no permite enviar sin haber repartido nada', () => {
+  it('no permite guardar sin haber repartido nada', () => {
     montar()
 
-    expect(screen.getByRole('button', { name: 'Enviar reconocimientos' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Guardar reconocimientos' })).toBeDisabled()
+  })
+
+  it('dice desde cuándo se aplican y hasta cuándo se pueden cambiar', () => {
+    // "Guardar" sin fecha no promete nada: el valor del cambio está en decir
+    // que todavía se puede volver.
+    montar()
+
+    expect(screen.getByText(/Se aplican el 14 de noviembre/)).toBeInTheDocument()
   })
 
   it('avisa desde el principio que el reconocimiento llega sin autoría', () => {

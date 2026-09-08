@@ -27,9 +27,15 @@ export interface RitualReconocimientoProps {
   /** Compañeros del propio equipo, sin incluir a quien reconoce: el ritual no
    * permite reconocerse a uno mismo ni cruzar equipos. */
   companeros: readonly IntegranteEquipo[]
-  onEnviar: (reconocimientos: readonly ReconocimientoBorrador[]) => void
-  enviado?: boolean
+  /** Cuándo se cierra la actividad y los reconocimientos dejan de ser
+   * editables. Es obligatoria porque cambia lo que el botón promete: sin fecha,
+   * "Guardar" no dice hasta cuándo se puede volver. */
+  fechaLimite: Date
+  onGuardar: (reconocimientos: readonly ReconocimientoBorrador[]) => void
+  guardado?: boolean
 }
+
+const FORMATO_FECHA = new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'long' })
 
 function clave(r: ReconocimientoBorrador) {
   return `${r.integranteId}::${r.categoria}`
@@ -50,8 +56,9 @@ function clave(r: ReconocimientoBorrador) {
  */
 export function RitualReconocimiento({
   companeros,
-  onEnviar,
-  enviado = false,
+  fechaLimite,
+  onGuardar,
+  guardado = false,
 }: RitualReconocimientoProps) {
   const [reconocimientos, setReconocimientos] = useState<ReconocimientoBorrador[]>([])
   const [abierto, setAbierto] = useState<string | null>(null)
@@ -103,11 +110,13 @@ export function RitualReconocimiento({
     setReconocimientos((previos) => previos.filter((p) => clave(p) !== clave(r)))
   }
 
-  if (enviado) {
+  const cierre = FORMATO_FECHA.format(fechaLimite)
+
+  if (guardado) {
     return (
       <p className={styles.enviado} role="status">
-        Listo. Tus reconocimientos quedaron registrados y tus compañeros los verán sin saber que
-        vinieron de ti.
+        Guardado. Puedes volver a cambiarlos hasta el {cierre}; ese día la actividad cierra y tus
+        compañeros reciben sus insignias, sin saber que vinieron de ti.
       </p>
     )
   }
@@ -120,9 +129,11 @@ export function RitualReconocimiento({
           : `Ya elegiste a tus ${presupuesto} ${presupuesto === 1 ? 'compañero' : 'compañeros'}`}
       </p>
       <p className={styles.nota}>
-        No alcanza para todo el equipo: hay que elegir a quién. A cada persona que elijas puedes
-        darle todas las insignias que merezca. Quien lo reciba verá la insignia y la frase, no quién
-        se la dio.
+        No alcanza para todo el equipo, así que tendrás que elegir. A cada compañero que elijas
+        puedes darle más de una insignia, si destacó en varias cosas.
+      </p>
+      <p className={styles.nota}>
+        Es anónimo: quien reciba una insignia verá cuál es y por qué, pero no quién se la dio.
       </p>
 
       <ul className={styles.companeros}>
@@ -251,16 +262,15 @@ export function RitualReconocimiento({
       <div className={styles.cierre}>
         <Button
           type="button"
-          onClick={() => onEnviar(reconocimientos)}
-          disabled={restantes === presupuesto}
+          onClick={() => onGuardar(reconocimientos)}
+          disabled={reconocimientos.length === 0}
         >
-          Enviar reconocimientos
+          Guardar reconocimientos
         </Button>
-        {restantes > 0 && restantes < presupuesto ? (
-          <p className={styles.nota}>
-            Puedes enviar con {restantes} sin repartir, pero no podrás volver a entrar.
-          </p>
-        ) : null}
+        <p className={styles.nota}>
+          Se aplican el {cierre}, cuando la actividad cierre. Hasta entonces puedes volver y
+          cambiarlos.
+        </p>
       </div>
     </div>
   )
