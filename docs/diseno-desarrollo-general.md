@@ -377,7 +377,7 @@ Las siguientes reglas no pueden garantizarse con llaves ni restricciones de unic
 
 - Toda actividad tiene exactamente una membresía con rol de organizador.
 - El otorgante y el receptor de una insignia pertenecen a la misma actividad, y a un mismo equipo dentro de ella: el reconocimiento entre pares no cruza equipos.
-- Ningún participante emite en una actividad más reconocimientos que su presupuesto, que es el 33 % del tamaño de su equipo sin contarse, redondeado hacia arriba, con piso 1 y techo 5. No es expresable como restricción de unicidad y se verifica contra los otorgamientos ya emitidos por esa persona en esa actividad.
+- Ningún participante reconoce en una actividad a más compañeros que su presupuesto, que es el 33 % del tamaño de su equipo sin contarse, redondeado hacia arriba, con piso 1 y techo 5. El presupuesto cuenta receptores distintos, no otorgamientos: a un mismo receptor se le pueden dar varias categorías. No es expresable como restricción de unicidad y se verifica contra los receptores ya reconocidos por esa persona en esa actividad.
 - Solo las membresías con rol de co-organizador tienen filas en la relación de permisos.
 - Todo participante de una actividad en desarrollo pertenece a exactamente un equipo, y ese equipo pertenece a la actividad de su membresía.
 - En un comentario, exactamente uno de los dos destinos (equipo o participante) es distinto de nulo.
@@ -671,7 +671,7 @@ Aplica únicamente a los miembros de la actividad en cuestión. Un usuario que n
 | Ver quién otorgó una insignia                                  | ✓           | ✓              | (P-09)       |
 | Ver el rango acumulado de otro usuario                         | ✓           | ✓              | ✓            |
 
-**Presupuesto de reconocimientos.** Independientemente del rol, cada persona reparte como máximo el 33 % del tamaño de su equipo, sin contarse, con piso de 1 y techo de 5, y solo entre compañeros de su propio equipo. Es una regla de negocio (4.6) y no un permiso, y se verifica en el servidor contra los otorgamientos ya emitidos por esa persona en esa actividad.
+**Presupuesto de reconocimientos.** Independientemente del rol, cada persona reconoce como máximo al 33 % de su equipo, sin contarse, con piso de 1 y techo de 5, y solo entre compañeros de su propio equipo. El presupuesto cuenta receptores distintos: a cada uno se le pueden dar varias categorías. Es una regla de negocio (4.6) y no un permiso, y se verifica en el servidor contra los receptores ya reconocidos por esa persona en esa actividad.
 
 ### **Historial**
 

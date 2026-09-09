@@ -1,0 +1,184 @@
+.ritual {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.presupuesto {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.nota {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  max-width: 60ch;
+}
+
+.companeros,
+.otorgados {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.companeros {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.companero {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  background: var(--color-bg);
+}
+
+.cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.nombre {
+  font-weight: var(--font-weight-medium);
+}
+
+/* Reconocimientos ya asignados a esta persona. Se pintan en el color de
+   reconocimiento en reposo (DESIGN.md §2): es una insignia ganada, aunque
+   todavía no se haya enviado. */
+.otorgados {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.otorgado {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-accent-subtle);
+  padding: var(--space-2) var(--space-3);
+}
+
+.otorgadoTexto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
+  font-size: var(--font-size-sm);
+  color: var(--color-accent-ink);
+}
+
+.frase {
+  color: var(--color-text-muted);
+}
+
+.emblemaChico {
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  color: var(--color-accent-ink);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.opciones {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--space-2);
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.leyenda {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+/* La opción elegida se marca con el borde y el fondo del sistema, no con el
+   color de acento: el ámbar es para el reconocimiento ya dado, no para el
+   control con el que se elige (DESIGN.md, One-Bottle Rule). */
+.opcion {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+}
+
+.opcion:has(input:checked) {
+  border-color: var(--color-primary-border);
+  background: var(--color-primary-subtle);
+}
+
+.opcion:has(input:focus-visible) {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.opcionRepetida {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.emblema {
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--color-text-muted);
+}
+
+.opcionNombre {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.opcionQue {
+  grid-column: 2 / -1;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.cierre {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-4);
+}
+
+.enviado {
+  margin: 0;
+  max-width: 60ch;
+  color: var(--color-text);
+}
+
+/* Una frase por insignia marcada. Van bajo el selector para que se lea "esta
+   insignia, por esto", y no como un formulario de campos sueltos. */
+.frases {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
