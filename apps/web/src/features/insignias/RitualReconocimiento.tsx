@@ -27,6 +27,10 @@ export interface RitualReconocimientoProps {
   /** Compañeros del propio equipo, sin incluir a quien reconoce: el ritual no
    * permite reconocerse a uno mismo ni cruzar equipos. */
   companeros: readonly IntegranteEquipo[]
+  /** Lo ya guardado, para volver a entrar y seguir editando hasta el cierre.
+   * Es valor inicial y no controlado: a partir del montaje manda el estado
+   * interno, porque quien edita es esta pantalla. */
+  reconocimientosIniciales?: readonly ReconocimientoBorrador[]
   /** Cuándo se cierra la actividad y los reconocimientos dejan de ser
    * editables. Es obligatoria porque cambia lo que el botón promete: sin fecha,
    * "Guardar" no dice hasta cuándo se puede volver. */
@@ -56,16 +60,21 @@ function clave(r: ReconocimientoBorrador) {
  */
 export function RitualReconocimiento({
   companeros,
+  reconocimientosIniciales = [],
   fechaLimite,
   onGuardar,
   guardado = false,
 }: RitualReconocimientoProps) {
-  const [reconocimientos, setReconocimientos] = useState<ReconocimientoBorrador[]>([])
+  const [reconocimientos, setReconocimientos] = useState<ReconocimientoBorrador[]>(() => [
+    ...reconocimientosIniciales,
+  ])
   const [abierto, setAbierto] = useState<string | null>(null)
   const [seleccion, setSeleccion] = useState<CategoriaInsignia[]>([])
   const [elegidas, setElegidas] = useState<Partial<Record<CategoriaInsignia, string>>>({})
   const [propias, setPropias] = useState<Partial<Record<CategoriaInsignia, string>>>({})
   const idBase = useId()
+
+  const idDisparador = (integranteId: string) => `${idBase}-${integranteId}-disparador`
 
   const presupuesto = personasReconocibles(companeros.length + 1)
   const reconocidos = new Set(reconocimientos.map((r) => r.integranteId))
@@ -102,6 +111,12 @@ export function RitualReconocimiento({
       categoria: d.id,
       frase: fraseDe(d.id),
     }))
+    // El foco se mueve aquí y no en un efecto: al cerrar, el panel se desmonta
+    // con el foco dentro y el navegador lo manda al body, así que quien navega
+    // con teclado pierde su lugar en la lista. El disparador de esta persona no
+    // se desmonta, y sigue siendo un destino válido porque a quien ya
+    // reconociste puedes seguir sumándole insignias.
+    document.getElementById(idDisparador(integranteId))?.focus()
     setReconocimientos((previos) => [...previos, ...nuevos])
     setAbierto(null)
   }
@@ -150,10 +165,16 @@ export function RitualReconocimiento({
                   variant="secondary"
                   size="sm"
                   type="button"
+                  id={idDisparador(companero.id)}
                   onClick={() => abrir(companero.id)}
                   disabled={restantes === 0 && !estaAbierto && !reconocidos.has(companero.id)}
                   aria-expanded={estaAbierto}
                   aria-controls={idPanel}
+                  aria-label={
+                    estaAbierto
+                      ? `Cancelar el reconocimiento a ${companero.nombre}`
+                      : `Reconocer a ${companero.nombre}`
+                  }
                 >
                   {estaAbierto ? 'Cancelar' : 'Reconocer'}
                 </Button>
@@ -168,7 +189,13 @@ export function RitualReconocimiento({
                         <strong>{definicionCategoria(r.categoria).nombre}</strong>
                         <span className={styles.frase}>“{r.frase}”</span>
                       </span>
-                      <Button variant="secondary" size="sm" type="button" onClick={() => quitar(r)}>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        type="button"
+                        onClick={() => quitar(r)}
+                        aria-label={`Quitar ${definicionCategoria(r.categoria).nombre} de ${companero.nombre}`}
+                      >
                         Quitar
                       </Button>
                     </li>
@@ -247,10 +274,22 @@ export function RitualReconocimiento({
                     )
                   })}
 
-                  <Button type="button" onClick={() => agregar(companero.id)} disabled={!completo}>
+                  {/* Verbo distinto al del disparador a propósito: uno abre el
+                      formulario y el otro lo confirma, y llamarlos igual deja a
+                      quien navega por controles sin saber cuál hace qué. */}
+                  <Button
+                    type="button"
+                    onClick={() => agregar(companero.id)}
+                    disabled={!completo}
+                    aria-label={
+                      seleccion.length > 1
+                        ? `Confirmar ${seleccion.length} insignias para ${companero.nombre}`
+                        : `Confirmar reconocimiento a ${companero.nombre}`
+                    }
+                  >
                     {seleccion.length > 1
-                      ? `Reconocer a ${companero.nombre} con ${seleccion.length} insignias`
-                      : `Reconocer a ${companero.nombre}`}
+                      ? `Confirmar ${seleccion.length} insignias`
+                      : 'Confirmar reconocimiento'}
                   </Button>
                 </div>
               ) : null}
