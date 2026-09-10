@@ -33,13 +33,13 @@ describe('RitualReconocimiento', () => {
   it('descuenta del presupuesto al reconocer y lo devuelve al quitar', async () => {
     const { usuario } = montar()
 
-    await usuario.click(screen.getAllByRole('button', { name: 'Reconocer' })[0])
+    await usuario.click(screen.getAllByRole('button', { name: /^Reconocer a / })[0])
     await usuario.click(screen.getByRole('checkbox', { name: /Liderazgo/ }))
-    await usuario.click(screen.getByRole('button', { name: /Reconocer a Andrea/ }))
+    await usuario.click(screen.getByRole('button', { name: /^Confirmar/ }))
 
     expect(screen.getByText('Puedes reconocer a 1 compañero más, de 2')).toBeInTheDocument()
 
-    await usuario.click(screen.getByRole('button', { name: 'Quitar' }))
+    await usuario.click(screen.getByRole('button', { name: /^Quitar / }))
     expect(screen.getByText('Puedes reconocer a 2 compañeros más, de 2')).toBeInTheDocument()
   })
 
@@ -47,14 +47,14 @@ describe('RitualReconocimiento', () => {
     const { usuario } = montar()
 
     for (const indice of [0, 1]) {
-      await usuario.click(screen.getAllByRole('button', { name: 'Reconocer' })[indice])
+      await usuario.click(screen.getAllByRole('button', { name: /^Reconocer a / })[indice])
       await usuario.click(screen.getByRole('checkbox', { name: /Liderazgo/ }))
-      await usuario.click(screen.getByRole('button', { name: /^Reconocer a / }))
+      await usuario.click(screen.getByRole('button', { name: /^Confirmar/ }))
     }
 
     expect(screen.getByText('Ya elegiste a tus 2 compañeros')).toBeInTheDocument()
     // Los tres que quedan sin reconocer ya no son alcanzables.
-    for (const boton of screen.getAllByRole('button', { name: 'Reconocer' }).slice(2)) {
+    for (const boton of screen.getAllByRole('button', { name: /^Reconocer a / }).slice(2)) {
       expect(boton).toBeDisabled()
     }
   })
@@ -62,11 +62,11 @@ describe('RitualReconocimiento', () => {
   it('no deja dar dos veces la misma insignia a la misma persona', async () => {
     const { usuario } = montar()
 
-    await usuario.click(screen.getAllByRole('button', { name: 'Reconocer' })[0])
+    await usuario.click(screen.getAllByRole('button', { name: /^Reconocer a / })[0])
     await usuario.click(screen.getByRole('checkbox', { name: /Liderazgo/ }))
-    await usuario.click(screen.getByRole('button', { name: /Reconocer a Andrea/ }))
+    await usuario.click(screen.getByRole('button', { name: /^Confirmar/ }))
 
-    await usuario.click(screen.getAllByRole('button', { name: 'Reconocer' })[0])
+    await usuario.click(screen.getAllByRole('button', { name: /^Reconocer a / })[0])
     expect(screen.getByRole('checkbox', { name: /Liderazgo/ })).toBeDisabled()
     expect(screen.getByRole('checkbox', { name: /Compañerismo/ })).toBeEnabled()
   })
@@ -74,7 +74,7 @@ describe('RitualReconocimiento', () => {
   it('permite varias insignias a la misma persona, cada una con su frase', async () => {
     const { usuario, onGuardar } = montar()
 
-    await usuario.click(screen.getAllByRole('button', { name: 'Reconocer' })[0])
+    await usuario.click(screen.getAllByRole('button', { name: /^Reconocer a / })[0])
     await usuario.click(screen.getByRole('checkbox', { name: /Liderazgo/ }))
     await usuario.click(screen.getByRole('checkbox', { name: /Ideas/ }))
 
@@ -82,7 +82,7 @@ describe('RitualReconocimiento', () => {
     expect(screen.getByLabelText('Por qué — Liderazgo')).toBeInTheDocument()
     expect(screen.getByLabelText('Por qué — Ideas')).toBeInTheDocument()
 
-    await usuario.click(screen.getByRole('button', { name: /Reconocer a Andrea con 2 insignias/ }))
+    await usuario.click(screen.getByRole('button', { name: /^Confirmar 2 insignias/ }))
     await usuario.click(screen.getByRole('button', { name: 'Guardar reconocimientos' }))
 
     const [enviados] = onGuardar.mock.calls[0] as [
@@ -98,11 +98,11 @@ describe('RitualReconocimiento', () => {
 
     // El presupuesto de dos es de personas, no de insignias: a la primera se le
     // pueden dar las seis sin gastar el turno de la segunda.
-    await usuario.click(screen.getAllByRole('button', { name: 'Reconocer' })[0])
+    await usuario.click(screen.getAllByRole('button', { name: /^Reconocer a / })[0])
     for (const casilla of screen.getAllByRole('checkbox')) {
       await usuario.click(casilla)
     }
-    await usuario.click(screen.getByRole('button', { name: /con 6 insignias/ }))
+    await usuario.click(screen.getByRole('button', { name: /^Confirmar 6 insignias/ }))
 
     expect(screen.getByText('Puedes reconocer a 1 compañero más, de 2')).toBeInTheDocument()
 
@@ -115,12 +115,12 @@ describe('RitualReconocimiento', () => {
     const { usuario } = montar()
 
     for (const indice of [0, 1]) {
-      await usuario.click(screen.getAllByRole('button', { name: 'Reconocer' })[indice])
+      await usuario.click(screen.getAllByRole('button', { name: /^Reconocer a / })[indice])
       await usuario.click(screen.getByRole('checkbox', { name: /Liderazgo/ }))
-      await usuario.click(screen.getByRole('button', { name: /^Reconocer a / }))
+      await usuario.click(screen.getByRole('button', { name: /^Confirmar/ }))
     }
 
-    const botones = screen.getAllByRole('button', { name: 'Reconocer' })
+    const botones = screen.getAllByRole('button', { name: /^Reconocer a / })
     // Las dos primeras personas ya son suyas: puede seguir sumándoles insignias.
     expect(botones[0]).toBeEnabled()
     expect(botones[1]).toBeEnabled()
@@ -131,9 +131,9 @@ describe('RitualReconocimiento', () => {
   it('acompaña cada reconocimiento con una frase, prellenada por omisión', async () => {
     const { usuario, onGuardar } = montar()
 
-    await usuario.click(screen.getAllByRole('button', { name: 'Reconocer' })[0])
+    await usuario.click(screen.getAllByRole('button', { name: /^Reconocer a / })[0])
     await usuario.click(screen.getByRole('checkbox', { name: /Liderazgo/ }))
-    await usuario.click(screen.getByRole('button', { name: /Reconocer a Andrea/ }))
+    await usuario.click(screen.getByRole('button', { name: /^Confirmar/ }))
     await usuario.click(screen.getByRole('button', { name: 'Guardar reconocimientos' }))
 
     expect(onGuardar).toHaveBeenCalledTimes(1)
@@ -146,14 +146,14 @@ describe('RitualReconocimiento', () => {
   it('exige texto cuando se elige escribir la frase propia', async () => {
     const { usuario } = montar()
 
-    await usuario.click(screen.getAllByRole('button', { name: 'Reconocer' })[0])
+    await usuario.click(screen.getAllByRole('button', { name: /^Reconocer a / })[0])
     await usuario.click(screen.getByRole('checkbox', { name: /Liderazgo/ }))
     await usuario.selectOptions(screen.getByLabelText('Por qué — Liderazgo'), 'propia')
 
-    expect(screen.getByRole('button', { name: /Reconocer a Andrea/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /^Confirmar/ })).toBeDisabled()
 
     await usuario.type(screen.getByLabelText('Tu frase — Liderazgo'), 'Nos sacó del atasco')
-    expect(screen.getByRole('button', { name: /Reconocer a Andrea/ })).toBeEnabled()
+    expect(screen.getByRole('button', { name: /^Confirmar/ })).toBeEnabled()
   })
 
   it('no permite guardar sin haber repartido nada', () => {
@@ -168,6 +168,50 @@ describe('RitualReconocimiento', () => {
     montar()
 
     expect(screen.getByText(/Se aplican el 14 de noviembre/)).toBeInTheDocument()
+  })
+
+  it('nombra a la persona en cada control, no solo en el texto visible', async () => {
+    // Cinco botones "Reconocer" indistinguibles al navegar por controles no
+    // dicen a quién afectan; lo mismo cada "Quitar" cuando hay varios.
+    const { usuario } = montar()
+
+    expect(screen.getByRole('button', { name: 'Reconocer a Andrea' })).toBeInTheDocument()
+
+    await usuario.click(screen.getByRole('button', { name: 'Reconocer a Andrea' }))
+    await usuario.click(screen.getByRole('checkbox', { name: /Liderazgo/ }))
+    await usuario.click(screen.getByRole('button', { name: /^Confirmar/ }))
+
+    expect(screen.getByRole('button', { name: 'Quitar Liderazgo de Andrea' })).toBeInTheDocument()
+  })
+
+  it('devuelve el foco al disparador tras confirmar', async () => {
+    const { usuario } = montar()
+
+    const disparador = screen.getByRole('button', { name: 'Reconocer a Andrea' })
+    await usuario.click(disparador)
+    await usuario.click(screen.getByRole('checkbox', { name: /Liderazgo/ }))
+    await usuario.click(screen.getByRole('button', { name: /^Confirmar/ }))
+
+    // Sin esto el panel se desmonta con el foco dentro y cae al body.
+    expect(screen.getByRole('button', { name: 'Reconocer a Andrea' })).toHaveFocus()
+  })
+
+  it('parte de los reconocimientos ya guardados', () => {
+    // El botón promete que se puede volver y cambiarlos hasta el cierre: si el
+    // componente arrancara vacío, el borrador se vería perdido al recargar.
+    render(
+      <RitualReconocimiento
+        companeros={COMPANEROS}
+        fechaLimite={CIERRE}
+        onGuardar={vi.fn()}
+        reconocimientosIniciales={[
+          { integranteId: 'm-2', categoria: 'liderazgo', frase: 'Nos destrabó' },
+        ]}
+      />,
+    )
+
+    expect(screen.getByText('“Nos destrabó”')).toBeInTheDocument()
+    expect(screen.getByText('Puedes reconocer a 1 compañero más, de 2')).toBeInTheDocument()
   })
 
   it('avisa desde el principio que el reconocimiento llega sin autoría', () => {
