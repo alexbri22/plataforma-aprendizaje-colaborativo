@@ -148,7 +148,9 @@ export function RitualReconocimiento({
         <p className={styles.presupuesto} aria-live="polite">
           {restantes > 0
             ? `Puedes reconocer a ${restantes} ${restantes === 1 ? 'compañero más' : 'compañeros más'}, de ${presupuesto}`
-            : `Ya elegiste a tus ${presupuesto} ${presupuesto === 1 ? 'compañero' : 'compañeros'}`}
+            : presupuesto === 1
+              ? 'Ya elegiste a tu compañero'
+              : `Ya elegiste a tus ${presupuesto} compañeros`}
         </p>
       )}
       <p className={styles.nota}>

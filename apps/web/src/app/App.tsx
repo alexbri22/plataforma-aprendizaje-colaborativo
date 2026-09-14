@@ -9,7 +9,13 @@ import {
 } from '../features/actividades'
 import { PantallaInicio } from '../features/contenido-publico/PantallaInicio.tsx'
 import { PantallaIngresar, PantallaRegistrarse } from '../features/cuentas'
-import { PantallaMuestraInsignias, PantallaRitualReconocimiento } from '../features/insignias'
+import {
+  PantallaMisReconocimientos,
+  PantallaMuestraInsignias,
+  PantallaParticipantes,
+  PantallaReconocer,
+  PantallaReconocimientosDeParticipante,
+} from '../features/insignias'
 import { queryClient } from './queryClient'
 import { RutaProtegida } from './RutaProtegida'
 
@@ -61,11 +67,38 @@ export function App() {
               </RutaProtegida>
             }
           />
+          {/* Insignias dentro de la actividad: el ritual, lo recibido y la
+              vista de quien organiza. Todas requieren sesión; qué puede ver
+              cada rol lo decide la API (docs/diseno-desarrollo-general.md §7.4). */}
           <Route
-            path="/insignias/reconocer"
+            path="/actividades/:id/reconocer"
             element={
               <RutaProtegida>
-                <PantallaRitualReconocimiento />
+                <PantallaReconocer />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="/actividades/:id/insignias"
+            element={
+              <RutaProtegida>
+                <PantallaMisReconocimientos />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="/actividades/:id/participantes"
+            element={
+              <RutaProtegida>
+                <PantallaParticipantes />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="/actividades/:id/participantes/:idMembresia"
+            element={
+              <RutaProtegida>
+                <PantallaReconocimientosDeParticipante />
               </RutaProtegida>
             }
           />
