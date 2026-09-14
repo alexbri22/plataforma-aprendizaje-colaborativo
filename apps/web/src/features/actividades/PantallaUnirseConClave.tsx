@@ -31,7 +31,13 @@ export function PantallaUnirseConClave() {
     if (requerido) return
 
     setErrorUnion(null)
-    setClaveConsultada(clave.trim())
+
+    const claveNormalizada = clave.trim()
+    if (claveNormalizada === claveConsultada) {
+      void vistaPreviaQuery.refetch()
+    } else {
+      setClaveConsultada(claveNormalizada)
+    }
   }
 
   function manejarBuscarOtra() {

@@ -3,14 +3,8 @@ import { AppShell } from '../../components/AppShell'
 import { Button, IconoCargando, Tabs } from '../../components/ui'
 import { grupoVisual, ORDEN_GRUPOS_VISUALES, TITULO_GRUPO_FASE, type GrupoFaseVisual } from './fase'
 import { TarjetaActividad } from './TarjetaActividad'
-import { TarjetaInvitacion } from './TarjetaInvitacion'
 import type { Actividad } from './tipos'
-import {
-  useAceptarInvitacionMutation,
-  useActividades,
-  useInvitaciones,
-  useRechazarInvitacionMutation,
-} from './useActividades'
+import { useActividades } from './useActividades'
 import styles from './PantallaMisActividades.module.css'
 
 type RolTab = 'organizo' | 'participo'
@@ -40,12 +34,8 @@ export function PantallaMisActividades() {
   const [tab, setTab] = useState<RolTab>('organizo')
 
   const actividadesQuery = useActividades()
-  const invitacionesQuery = useInvitaciones()
-  const aceptarInvitacion = useAceptarInvitacionMutation()
-  const rechazarInvitacion = useRechazarInvitacionMutation()
 
   const actividades = useMemo(() => actividadesQuery.data ?? [], [actividadesQuery.data])
-  const invitaciones = useMemo(() => invitacionesQuery.data ?? [], [invitacionesQuery.data])
 
   const actividadesOrganizo = useMemo(
     () => actividades.filter((a) => a.rol === 'organizador' || a.rol === 'co-organizador'),
@@ -65,7 +55,7 @@ export function PantallaMisActividades() {
   // Estados de pantalla (docs/diseno-desarrollo-nucleo.md §4.5): carga,
   // error, vacío y el normal. "Sin acceso" no aplica: la ruta ya exige
   // sesión (RutaProtegida) y esta pantalla no depende de membresía.
-  if (actividadesQuery.isPending || invitacionesQuery.isPending) {
+  if (actividadesQuery.isPending) {
     return (
       <AppShell seccionActiva="actividades" titulo="Mis actividades">
         <div className={styles.cargando} role="status" aria-label="Cargando tus actividades">
@@ -75,7 +65,7 @@ export function PantallaMisActividades() {
     )
   }
 
-  if (actividadesQuery.isError || invitacionesQuery.isError) {
+  if (actividadesQuery.isError) {
     return (
       <AppShell seccionActiva="actividades" titulo="Mis actividades">
         <p className={styles.textoVacioTab}>
@@ -85,7 +75,7 @@ export function PantallaMisActividades() {
     )
   }
 
-  const sinNadaTodavia = actividades.length === 0 && invitaciones.length === 0
+  const sinNadaTodavia = actividades.length === 0
 
   if (sinNadaTodavia) {
     return (
@@ -115,22 +105,6 @@ export function PantallaMisActividades() {
   return (
     <AppShell seccionActiva="actividades" titulo="Mis actividades" acciones={ACCIONES_ACTIVIDAD}>
       <div className={styles.contenido}>
-        {invitaciones.length > 0 ? (
-          <section className={styles.seccion} aria-label="Invitaciones pendientes">
-            <h2 className={styles.tituloSeccion}>Invitaciones pendientes</h2>
-            <div className={styles.listaInvitaciones}>
-              {invitaciones.map((invitacion) => (
-                <TarjetaInvitacion
-                  key={invitacion.id}
-                  invitacion={invitacion}
-                  onAceptar={(id) => aceptarInvitacion.mutate(id)}
-                  onRechazar={(id) => rechazarInvitacion.mutate(id)}
-                />
-              ))}
-            </div>
-          </section>
-        ) : null}
-
         <Tabs
           label="Rol en la actividad"
           items={TABS}

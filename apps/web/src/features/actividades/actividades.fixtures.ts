@@ -1,4 +1,4 @@
-import type { Actividad, InvitacionPendiente } from './tipos'
+import type { Actividad } from './tipos'
 
 // Datos de prueba: el módulo de Actividades todavía no existe en el backend
 // (docs/diseno-desarrollo-nucleo.md §11.2, incremento "Actividades I" en curso).
@@ -101,14 +101,5 @@ export const ACTIVIDADES_PRUEBA: Actividad[] = [
     fechaLimiteInscripcion: '2026-04-10',
     plazoCierreDias: 10,
     numeroEquiposEsperado: 2,
-  },
-]
-
-export const INVITACIONES_PRUEBA: InvitacionPendiente[] = [
-  {
-    id: 'inv-1',
-    nombre: 'Club de lectura científica',
-    objetivo: 'Discutir artículos de divulgación científica en equipos rotativos.',
-    invitadoPor: 'Larisa Enríquez',
   },
 ]
