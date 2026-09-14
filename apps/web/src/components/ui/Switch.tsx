@@ -19,9 +19,10 @@ export function Switch({ label, id, className, ocultarEtiqueta, ...props }: Swit
         className={[styles.input, className].filter(Boolean).join(' ')}
         {...props}
       />
-      <span className={[styles.etiqueta, ocultarEtiqueta ? styles.etiquetaOculta : null]
-        .filter(Boolean)
-        .join(' ')}
+      <span
+        className={[styles.etiqueta, ocultarEtiqueta ? styles.etiquetaOculta : null]
+          .filter(Boolean)
+          .join(' ')}
       >
         {label}
       </span>
