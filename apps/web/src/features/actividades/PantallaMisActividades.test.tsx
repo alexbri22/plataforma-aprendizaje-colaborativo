@@ -72,5 +72,4 @@ describe('PantallaMisActividades', () => {
     expect(await screen.findByText('Debate de genética')).toBeInTheDocument()
     expect(screen.queryByText('Proyecto de ecosistemas')).not.toBeInTheDocument()
   })
-
 })
