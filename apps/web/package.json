@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@plataforma/shared": "*",
+    "@tanstack/react-query": "^5.102.2",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router-dom": "^7.18.2"
