@@ -9,7 +9,7 @@ import {
 } from '../features/actividades'
 import { PantallaInicio } from '../features/contenido-publico/PantallaInicio.tsx'
 import { PantallaIngresar, PantallaRegistrarse } from '../features/cuentas'
-import { PantallaMuestraInsignias } from '../features/insignias'
+import { PantallaMuestraInsignias, PantallaRitualReconocimiento } from '../features/insignias'
 import { queryClient } from './queryClient'
 import { RutaProtegida } from './RutaProtegida'
 
@@ -58,6 +58,14 @@ export function App() {
             element={
               <RutaProtegida>
                 <PantallaMuestraInsignias />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="/insignias/reconocer"
+            element={
+              <RutaProtegida>
+                <PantallaRitualReconocimiento />
               </RutaProtegida>
             }
           />

@@ -250,9 +250,11 @@ El catálogo es fijo para toda la plataforma: ni el organizador ni el administra
 
 Ocurre durante el periodo de cierre de la actividad (sección 4, Fase 5) y está pensado para tomar dos o tres minutos desde el celular.
 
-Reconocimientos limitados: cada participante reparte el 33 % del tamaño de su equipo, sin contarse, redondeado hacia arriba, con un piso de 1 y un techo de 5, y solo entre compañeros de su propio equipo. Un equipo de 3 da 1 reconocimiento; uno de 10, 3; uno de 20, 5. Siempre hay que elegir: nunca alcanza para todos. Un reconocimiento que puede darse a todo el equipo no distingue nada, y sin escasez el acumulado deja de ser una señal.
+Reconocimientos limitados: cada participante puede reconocer al 33 % de su equipo, sin contarse, redondeado hacia arriba, con un piso de 1 y un techo de 5, y solo entre compañeros de su propio equipo. En un equipo de 3 elige a 1 compañero; en uno de 10, a 3; en uno de 20, a 5. A cada compañero elegido puede darle varias insignias, hasta las seis, cada una con su frase.
 
-Frase de justificación: cada reconocimiento es persona + insignia + una frase de por qué. **\[Pendiente decidir si la frase será obligatoria, opcional o guiada con frases prellenadas — decisión de contenido, no bloquea el modelo de datos\]**.
+Lo racionado es a cuánta gente se reconoce, no cuántas insignias se reparten. La escasez está en tener que elegir a quién, que es la decisión que hace que el reconocimiento signifique algo: un reconocimiento que alcanza para todo el equipo no distingue nada, y sin esa escasez el acumulado deja de ser una señal. En cambio, cuántas cosas se destacan de alguien ya elegido no le quita nada a los demás.
+
+Frase de justificación: cada reconocimiento es persona + insignia + una frase de por qué. La frase es guiada: el sistema ofrece tres frases prellenadas por categoría y siempre se puede escribir una propia. Escribir desde cero seis veces produce frases de relleno, y una frase de relleno vale menos para quien la recibe que una prellenada que sí describe lo que hizo; esto además mantiene el ritual dentro de los dos o tres minutos que se le suponen. El catálogo de frases es contenido y se revisa con el equipo sin tocar el modelo de datos.
 
 Anónimo entre pares: quien recibe ve el reconocimiento y la frase, no quién la escribió. El organizador conserva la atribución completa.
 
