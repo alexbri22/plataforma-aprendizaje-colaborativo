@@ -11,7 +11,7 @@ import {
   Textarea,
 } from '../../components/ui'
 import { useCrearActividadMutation } from './useActividades'
-import { validarCampoRequerido } from './validacion'
+import { validarCampoRequerido, validarEnteroPositivo } from './validacion'
 import styles from './PantallaCrearActividad.module.css'
 
 interface Valores {
@@ -49,6 +49,11 @@ const MENSAJE_ERROR_GENERICO = 'No pudimos crear la actividad. Intenta de nuevo.
 function obtenerError(campo: keyof Valores, valores: Valores): string | undefined {
   const requerido = validarCampoRequerido(valores[campo])
   if (requerido) return requerido
+
+  if (campo === 'plazoCierreDias' || campo === 'numeroEquiposEsperado') {
+    const entero = validarEnteroPositivo(valores[campo])
+    if (entero) return entero
+  }
 
   if (
     campo === 'fechaTermino' &&
