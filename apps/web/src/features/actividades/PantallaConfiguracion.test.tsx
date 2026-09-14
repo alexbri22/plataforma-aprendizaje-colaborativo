@@ -109,8 +109,8 @@ describe('PantallaConfiguracion', () => {
 
     renderPantalla(ACTIVIDAD_BASE.id)
 
-    const select = await screen.findByLabelText('Bitácora individual')
-    await usuario.selectOptions(select, 'Habilitada')
+    const interruptor = await screen.findByLabelText('Bitácora individual')
+    await usuario.click(interruptor)
 
     await waitFor(() =>
       expect(configurarFuncion).toHaveBeenCalledWith(ACTIVIDAD_BASE.id, 'bitacora_individual', {
@@ -129,8 +129,8 @@ describe('PantallaConfiguracion', () => {
 
     renderPantalla(ACTIVIDAD_BASE.id)
 
-    const select = await screen.findByLabelText('Bitácora individual')
-    await usuario.selectOptions(select, 'Habilitada')
+    const interruptor = await screen.findByLabelText('Bitácora individual')
+    await usuario.click(interruptor)
 
     expect(
       await screen.findByText('La configuración no puede modificarse en esta fase.'),

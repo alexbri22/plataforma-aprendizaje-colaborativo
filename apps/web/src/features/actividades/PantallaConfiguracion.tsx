@@ -6,7 +6,7 @@ import {
 import { useState, type ChangeEvent } from 'react'
 import { useParams } from 'react-router-dom'
 import { AppShell } from '../../components/AppShell'
-import { Button, Card, IconoCargando, Select } from '../../components/ui'
+import { Button, Card, IconoCargando, Select, Switch } from '../../components/ui'
 import { ErrorActividad } from './actividades.api'
 import {
   ELEMENTOS_ESPACIO_EQUIPO_UI,
@@ -17,6 +17,12 @@ import { useActividad, useConfigurarFuncionMutation } from './useActividades'
 import styles from './PantallaConfiguracion.module.css'
 
 const MENSAJE_ERROR_GENERICO = 'No pudimos guardar este cambio. Intenta de nuevo.'
+// Todas las de interruptor primero y luego las de picklist, para que el
+// patrón visual de cada fila no se interrumpa a media lista.
+const FUNCIONES_ORDENADAS = [
+  ...FUNCIONES_SIMPLES.filter((definicion) => definicion.opciones.length === 2),
+  ...FUNCIONES_SIMPLES.filter((definicion) => definicion.opciones.length !== 2),
+]
 const ESPACIO_EQUIPO_POR_DEFECTO: EstadoEspacioEquipo = {
   metas: 'opcional',
   avances: 'opcional',
@@ -92,6 +98,9 @@ export function PantallaConfiguracion() {
   }
 
   const actividad = actividadQuery.data
+  const estadoEspacioEquipo =
+    parsearEstadoEspacioEquipo(actividad.configuracion?.espacio_equipo ?? '') ??
+    ESPACIO_EQUIPO_POR_DEFECTO
 
   return (
     <AppShell
@@ -108,69 +117,91 @@ export function PantallaConfiguracion() {
           <p className={styles.texto}>No tienes permiso para configurar esta actividad.</p>
         </Card>
       ) : (
-        <div className={styles.contenido}>
-          {FUNCIONES_SIMPLES.map((definicion) => {
+        <Card className={styles.lista}>
+          {FUNCIONES_ORDENADAS.map((definicion) => {
             const valorActual =
               actividad.configuracion?.[definicion.funcion] ?? definicion.opciones[0].valor
             return (
-              <Card key={definicion.funcion} className={styles.seccionCard}>
-                <div className={styles.encabezadoCampo}>
+              <div key={definicion.funcion} className={styles.fila}>
+                <div className={styles.filaTexto}>
+                  <h2 className={styles.tituloCampo}>{definicion.titulo}</h2>
                   <p className={styles.descripcionCampo}>{definicion.descripcion}</p>
+                </div>
+                <div className={styles.filaControl}>
+                  {definicion.opciones.length === 2 ? (
+                    <Switch
+                      label={definicion.titulo}
+                      ocultarEtiqueta
+                      checked={valorActual === definicion.opciones[1].valor}
+                      onChange={(evento: ChangeEvent<HTMLInputElement>) =>
+                        guardar(definicion.funcion, definicion.funcion, {
+                          estado: evento.target.checked
+                            ? definicion.opciones[1].valor
+                            : definicion.opciones[0].valor,
+                        })
+                      }
+                    />
+                  ) : (
+                    <div className={styles.controlAncho}>
+                      <Select
+                        label={definicion.titulo}
+                        ocultarEtiqueta
+                        value={valorActual}
+                        onChange={(evento: ChangeEvent<HTMLSelectElement>) =>
+                          guardar(definicion.funcion, definicion.funcion, {
+                            estado: evento.target.value,
+                          })
+                        }
+                      >
+                        {definicion.opciones.map((opcion) => (
+                          <option key={opcion.valor} value={opcion.valor}>
+                            {opcion.etiqueta}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+                  )}
                   <IndicadorCampo estado={estados[definicion.funcion]} />
                 </div>
-                <Select
-                  label={definicion.titulo}
-                  value={valorActual}
-                  onChange={(evento: ChangeEvent<HTMLSelectElement>) =>
-                    guardar(definicion.funcion, definicion.funcion, { estado: evento.target.value })
-                  }
-                >
-                  {definicion.opciones.map((opcion) => (
-                    <option key={opcion.valor} value={opcion.valor}>
-                      {opcion.etiqueta}
-                    </option>
-                  ))}
-                </Select>
-              </Card>
+              </div>
             )
           })}
 
-          <Card className={`${styles.seccionCard} ${styles.seccionCardAncha}`}>
-            <div className={styles.encabezadoCampo}>
-              <div>
-                <h2 className={styles.tituloCampo}>Espacio de equipo</h2>
-                <p className={styles.descripcionCampo}>
-                  Qué elementos usan los equipos para compartir su trabajo, y si son obligatorios.
-                </p>
+          <div className={styles.fila}>
+            <div className={styles.filaTexto}>
+              <h2 className={styles.tituloCampo}>Espacio de equipo</h2>
+              <p className={styles.descripcionCampo}>
+                Qué elementos usan los equipos para compartir su trabajo, y si son obligatorios.
+              </p>
+            </div>
+            <div className={styles.filaControl}>
+              <div className={styles.grupoEspacioEquipo}>
+                {ELEMENTOS_ESPACIO_EQUIPO_UI.map(({ elemento, etiqueta }) => (
+                  <div key={elemento} className={styles.controlEspacio}>
+                    <Select
+                      label={etiqueta}
+                      value={estadoEspacioEquipo[elemento]}
+                      onChange={(evento: ChangeEvent<HTMLSelectElement>) => {
+                        const siguiente = {
+                          ...estadoEspacioEquipo,
+                          [elemento]: evento.target.value,
+                        }
+                        guardar('espacio_equipo', 'espacio_equipo', siguiente)
+                      }}
+                    >
+                      {OPCIONES_ELEMENTO_ESPACIO_EQUIPO.map((opcion) => (
+                        <option key={opcion.valor} value={opcion.valor}>
+                          {opcion.etiqueta}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                ))}
               </div>
               <IndicadorCampo estado={estados.espacio_equipo} />
             </div>
-            <div className={styles.gridEspacioEquipo}>
-              {ELEMENTOS_ESPACIO_EQUIPO_UI.map(({ elemento, etiqueta }) => {
-                const actual =
-                  parsearEstadoEspacioEquipo(actividad.configuracion?.espacio_equipo ?? '') ??
-                  ESPACIO_EQUIPO_POR_DEFECTO
-                return (
-                  <Select
-                    key={elemento}
-                    label={etiqueta}
-                    value={actual[elemento]}
-                    onChange={(evento: ChangeEvent<HTMLSelectElement>) => {
-                      const siguiente = { ...actual, [elemento]: evento.target.value }
-                      guardar('espacio_equipo', 'espacio_equipo', siguiente)
-                    }}
-                  >
-                    {OPCIONES_ELEMENTO_ESPACIO_EQUIPO.map((opcion) => (
-                      <option key={opcion.valor} value={opcion.valor}>
-                        {opcion.etiqueta}
-                      </option>
-                    ))}
-                  </Select>
-                )
-              })}
-            </div>
-          </Card>
-        </div>
+          </div>
+        </Card>
       )}
     </AppShell>
   )

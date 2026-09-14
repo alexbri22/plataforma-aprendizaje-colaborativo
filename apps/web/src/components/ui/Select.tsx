@@ -5,6 +5,7 @@ export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   label: string
   error?: string
   children: ReactNode
+  ocultarEtiqueta?: boolean
 }
 
 function ChevronIcono() {
@@ -22,13 +23,26 @@ function ChevronIcono() {
   )
 }
 
-export function Select({ label, error, id, className, children, ...props }: SelectProps) {
+export function Select({
+  label,
+  error,
+  id,
+  className,
+  children,
+  ocultarEtiqueta,
+  ...props
+}: SelectProps) {
   const generatedId = useId()
   const selectId = id ?? generatedId
 
   return (
     <div className={styles.field}>
-      <label className={styles.label} htmlFor={selectId}>
+      <label
+        className={[styles.label, ocultarEtiqueta ? styles.labelOculta : null]
+          .filter(Boolean)
+          .join(' ')}
+        htmlFor={selectId}
+      >
         {label}
       </label>
       <div className={styles.selectWrapper}>

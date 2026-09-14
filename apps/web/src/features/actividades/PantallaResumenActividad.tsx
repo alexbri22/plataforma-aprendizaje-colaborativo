@@ -216,7 +216,7 @@ export function PantallaResumenActividad() {
             ) : null}
             {actividad.plazoCierreDias != null ? (
               <div className={styles.detalle}>
-                <dt className={styles.detalleEtiqueta}>Plazo de cierre</dt>
+                <dt className={styles.detalleEtiqueta}>Plazo de honoramiento</dt>
                 <dd className={styles.detalleValor}>{actividad.plazoCierreDias} días</dd>
               </div>
             ) : null}

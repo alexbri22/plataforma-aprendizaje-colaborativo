@@ -209,7 +209,7 @@ export function PantallaCrearActividad() {
           <div className={styles.filaDos}>
             <Input
               id="plazoCierreDias"
-              label="Plazo de cierre (días)"
+              label="Plazo de honoramiento (días)"
               type="number"
               min="1"
               value={valores.plazoCierreDias}

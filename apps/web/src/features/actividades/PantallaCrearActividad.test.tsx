@@ -60,7 +60,7 @@ const CAMPOS_OBLIGATORIOS = [
   'Fecha de inicio',
   'Fecha de término',
   'Fecha límite de inscripción',
-  'Plazo de cierre (días)',
+  'Plazo de honoramiento (días)',
   'Número de equipos esperado',
 ]
 
@@ -76,7 +76,9 @@ async function llenarFormularioValido() {
   fireEvent.change(screen.getByLabelText('Fecha límite de inscripción'), {
     target: { value: '2026-09-05' },
   })
-  fireEvent.change(screen.getByLabelText('Plazo de cierre (días)'), { target: { value: '10' } })
+  fireEvent.change(screen.getByLabelText('Plazo de honoramiento (días)'), {
+    target: { value: '10' },
+  })
   fireEvent.change(screen.getByLabelText('Número de equipos esperado'), {
     target: { value: '3' },
   })
@@ -128,8 +130,10 @@ describe('PantallaCrearActividad', () => {
   it('rechaza valores no enteros o no positivos en los campos numéricos', async () => {
     renderPantalla()
 
-    fireEvent.change(screen.getByLabelText('Plazo de cierre (días)'), { target: { value: '0' } })
-    fireEvent.blur(screen.getByLabelText('Plazo de cierre (días)'))
+    fireEvent.change(screen.getByLabelText('Plazo de honoramiento (días)'), {
+      target: { value: '0' },
+    })
+    fireEvent.blur(screen.getByLabelText('Plazo de honoramiento (días)'))
     fireEvent.change(screen.getByLabelText('Número de equipos esperado'), {
       target: { value: '1.5' },
     })

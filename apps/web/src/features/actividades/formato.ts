@@ -1,6 +1,6 @@
 const FORMATO_FECHA = new Intl.DateTimeFormat('es-MX', {
   day: 'numeric',
-  month: 'long',
+  month: 'short',
   year: 'numeric',
 })
 
