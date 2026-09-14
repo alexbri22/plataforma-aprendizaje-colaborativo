@@ -25,11 +25,23 @@ export function useSesion() {
   return { usuario: data ?? null, cargando: isPending }
 }
 
+// Un cambio de identidad (entrar, registrarse o salir) puede suceder con
+// queries privadas de la cuenta anterior aún en caché — por ejemplo entrando
+// directamente a /ingresar sin haber recargado la página. Sin esto, esas
+// queries se sirven desde caché antes de revalidar y se filtran datos de la
+// cuenta anterior a la nueva.
+function limpiarCachePrivada(queryClient: ReturnType<typeof useQueryClient>) {
+  queryClient.removeQueries({
+    predicate: (query) => query.queryKey[0] !== CLAVE_SESION[0],
+  })
+}
+
 export function useIniciarSesionMutation() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (credenciales: CredencialesIngreso) => iniciarSesion(credenciales),
     onSuccess: (usuario: Usuario) => {
+      limpiarCachePrivada(queryClient)
       queryClient.setQueryData(CLAVE_SESION, usuario)
     },
   })
@@ -40,6 +52,7 @@ export function useRegistrarUsuarioMutation() {
   return useMutation({
     mutationFn: (datos: DatosRegistro) => registrarUsuario(datos),
     onSuccess: (usuario: Usuario) => {
+      limpiarCachePrivada(queryClient)
       queryClient.setQueryData(CLAVE_SESION, usuario)
     },
   })
@@ -50,6 +63,7 @@ export function useCerrarSesionMutation() {
   return useMutation({
     mutationFn: cerrarSesion,
     onSuccess: () => {
+      limpiarCachePrivada(queryClient)
       queryClient.setQueryData(CLAVE_SESION, null)
     },
   })
