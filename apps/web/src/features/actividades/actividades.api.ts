@@ -1,6 +1,5 @@
 import type { FuncionSeguimiento } from '@plataforma/shared'
-import { INVITACIONES_PRUEBA } from './actividades.fixtures'
-import type { Actividad, InvitacionPendiente, Participante, VistaPreviaActividad } from './tipos'
+import type { Actividad, Participante, VistaPreviaActividad } from './tipos'
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? ''
 
@@ -77,10 +76,6 @@ export async function obtenerActividad(id: string): Promise<Actividad> {
 
   const { actividad } = (await respuesta.json()) as { actividad: Actividad }
   return actividad
-}
-
-export async function obtenerInvitaciones(): Promise<InvitacionPendiente[]> {
-  return invitaciones
 }
 
 // Campos de docs/diseno-desarrollo-general.md §5.1 (relación 'actividades').
@@ -215,29 +210,4 @@ export async function configurarFuncion(
 
   const { actividad } = (await respuesta.json()) as { actividad: Actividad }
   return actividad
-}
-
-// Invitaciones: sin backend en este incremento (docs/diseno-desarrollo-nucleo.md
-// §11.2 deja las invitaciones fuera de "Actividades I"). Se mantienen
-// mockeadas en memoria hasta que ese endpoint exista.
-let invitaciones: InvitacionPendiente[] = [...INVITACIONES_PRUEBA]
-
-export async function aceptarInvitacion(id: string): Promise<Actividad> {
-  const invitacion = invitaciones.find((item) => item.id === id)
-  if (!invitacion) throw new ErrorActividad('La invitación ya no está disponible.')
-
-  invitaciones = invitaciones.filter((item) => item.id !== id)
-  return {
-    id: invitacion.id,
-    nombre: invitacion.nombre,
-    objetivo: invitacion.objetivo,
-    fase: 'inscripcion',
-    rol: 'participante',
-    numParticipantes: 0,
-    fechaClave: 'Te uniste recién',
-  }
-}
-
-export async function rechazarInvitacion(id: string): Promise<void> {
-  invitaciones = invitaciones.filter((item) => item.id !== id)
 }

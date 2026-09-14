@@ -100,6 +100,22 @@ describe('PantallaUnirseConClave', () => {
     expect(screen.getByLabelText('Clave de ingreso')).toBeInTheDocument()
   })
 
+  it('reintenta la petición al buscar de nuevo la misma clave tras un error', async () => {
+    vi.mocked(buscarActividadPorClave)
+      .mockRejectedValueOnce(new ErrorActividad('Esta clave no corresponde a ninguna actividad.'))
+      .mockResolvedValueOnce(VISTA_PREVIA)
+    renderPantalla()
+
+    await userEvent.type(screen.getByLabelText('Clave de ingreso'), 'ECO4H7KP')
+    await userEvent.click(screen.getByRole('button', { name: 'Buscar' }))
+    await screen.findByText('Esta clave no corresponde a ninguna actividad.')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Buscar' }))
+
+    expect(await screen.findByText('Proyecto de ecosistemas')).toBeInTheDocument()
+    expect(buscarActividadPorClave).toHaveBeenCalledTimes(2)
+  })
+
   it('al unirse, navega al resumen de la actividad', async () => {
     vi.mocked(buscarActividadPorClave).mockResolvedValueOnce(VISTA_PREVIA)
     const actividad: Actividad = {

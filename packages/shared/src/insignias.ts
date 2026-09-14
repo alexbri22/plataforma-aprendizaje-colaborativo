@@ -71,6 +71,51 @@ export const CATALOGO_INSIGNIAS: readonly DefinicionCategoria[] = [
   },
 ]
 
+/**
+ * Frases prellenadas que se ofrecen al reconocer, por categoría. La primera de
+ * cada lista es la de `comoSeAtestigua`, que ya definía el catálogo.
+ *
+ * Existen para que el ritual de cierre quepa en los dos o tres minutos que se le
+ * suponen: escribir desde cero seis veces produce frases de relleno, y una frase
+ * de relleno vale menos para quien la recibe que una prellenada que sí describe
+ * lo que hizo. Quien quiera redactar la suya puede, siempre.
+ *
+ * Están en primera persona y en pasado porque se leen como testimonio de algo
+ * que ocurrió, no como halago. Son un punto de partida a revisar con el equipo.
+ */
+export const FRASES_SUGERIDAS: Readonly<Record<CategoriaInsignia, readonly string[]>> = {
+  liderazgo: [
+    'Cuando nadie sabía qué seguía, lo aclaró',
+    'Repartió el trabajo de una forma que nos funcionó',
+    'Nos destrabó cuando llevábamos días detenidos',
+  ],
+  companerismo: [
+    'Me ayudó cuando estaba atorado',
+    'Se ofreció a apoyar sin que nadie se lo pidiera',
+    'Se quedó a terminar algo que no le tocaba',
+  ],
+  comunicacion: [
+    'Siempre supimos en qué iba',
+    'Explicó algo difícil de una forma que sí entendí',
+    'Escuchó lo que propuse antes de opinar',
+  ],
+  compromiso: [
+    'Su parte siempre estuvo lista',
+    'Cumplió lo que acordamos, también cuando costó',
+    'Llegó preparado a cada reunión',
+  ],
+  ideas: [
+    'Cuando nos atoramos, propuso el camino',
+    'Trajo una idea en la que nadie había pensado',
+    'Convirtió un problema en algo que sí podíamos hacer',
+  ],
+  'buen-juicio': [
+    'Sus comentarios mejoraron el trabajo',
+    'Señaló un problema a tiempo, sin descalificar a nadie',
+    'Recibió una crítica y la usó',
+  ],
+}
+
 /** Niveles en orden ascendente. La escala es única y se aplica por igual a las
  * seis categorías, que progresan por separado. */
 export const NIVELES_INSIGNIA = ['bronce', 'plata', 'oro', 'platino', 'diamante'] as const
@@ -200,15 +245,17 @@ export const MINIMO_RECONOCIMIENTOS = 1
 export const MAXIMO_RECONOCIMIENTOS = 5
 
 /**
- * Cuántos reconocimientos puede repartir un integrante en un equipo de
+ * A cuántos compañeros puede reconocer un integrante en un equipo de
  * `tamanoEquipo` personas. Se calcula sobre el equipo sin contarse a sí mismo y
  * se redondea hacia arriba, con piso 1 y techo 5.
  *
- * El límite es deliberado: siempre hay que elegir, nunca alcanza para todos. Un
- * reconocimiento que se le puede dar a todo el equipo no distingue nada, y sin
- * escasez el acumulado deja de ser una señal.
+ * Lo que el presupuesto raciona es a CUÁNTA GENTE se reconoce, no cuántas
+ * insignias se reparten: a cada persona elegida se le pueden dar varias
+ * categorías, hasta las seis. La escasez está en tener que elegir a quién, que
+ * es la decisión que hace que el reconocimiento signifique algo; cuántas cosas
+ * destacas de quien ya elegiste no le quita valor a nadie más.
  */
-export function reconocimientosDisponibles(tamanoEquipo: number): number {
+export function personasReconocibles(tamanoEquipo: number): number {
   const companeros = Math.max(0, Math.trunc(tamanoEquipo) - 1)
   if (companeros === 0) return 0
 

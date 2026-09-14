@@ -29,6 +29,7 @@ export type {
 export {
   CATALOGO_INSIGNIAS,
   CATEGORIAS_INSIGNIA,
+  FRASES_SUGERIDAS,
   FUENTES_OTORGAMIENTO,
   MAXIMO_RECONOCIMIENTOS,
   MINIMO_RECONOCIMIENTOS,
@@ -40,7 +41,7 @@ export {
   definicionNivel,
   nivelParaPuntos,
   progresoDeNivel,
-  reconocimientosDisponibles,
+  personasReconocibles,
 } from './insignias.js'
 
 export type {

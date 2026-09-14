@@ -20,10 +20,18 @@ function requerido(valor: unknown): string | undefined {
   return limpio.length > 0 ? limpio : undefined
 }
 
+// `new Date` normaliza fechas de calendario inexistentes (2026-02-30 se
+// vuelve 2026-03-02 en vez de fallar) y acepta formatos fuera del contrato
+// YYYY-MM-DD. Se valida el formato con regex y se reconstruye la fecha para
+// confirmar que conserva los mismos componentes antes de aceptarla.
 function fecha(valor: unknown): Date | undefined {
-  if (typeof valor !== 'string' || !valor.trim()) return undefined
-  const parseada = new Date(valor)
-  return Number.isNaN(parseada.getTime()) ? undefined : parseada
+  if (typeof valor !== 'string') return undefined
+  const limpio = valor.trim()
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(limpio)) return undefined
+  const parseada = new Date(`${limpio}T00:00:00.000Z`)
+  return !Number.isNaN(parseada.getTime()) && parseada.toISOString().slice(0, 10) === limpio
+    ? parseada
+    : undefined
 }
 
 function enteroPositivo(valor: unknown): number | undefined {

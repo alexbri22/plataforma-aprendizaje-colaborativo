@@ -125,6 +125,19 @@ describe('PantallaCrearActividad', () => {
     expect(await screen.findByText('Debe ser posterior a la fecha de inicio.')).toBeInTheDocument()
   })
 
+  it('rechaza valores no enteros o no positivos en los campos numéricos', async () => {
+    renderPantalla()
+
+    fireEvent.change(screen.getByLabelText('Plazo de cierre (días)'), { target: { value: '0' } })
+    fireEvent.blur(screen.getByLabelText('Plazo de cierre (días)'))
+    fireEvent.change(screen.getByLabelText('Número de equipos esperado'), {
+      target: { value: '1.5' },
+    })
+    fireEvent.blur(screen.getByLabelText('Número de equipos esperado'))
+
+    expect(await screen.findAllByText('Debe ser un número entero mayor a cero.')).toHaveLength(2)
+  })
+
   it('permite a lo más una opción de autopercepción a la vez', async () => {
     renderPantalla()
 
