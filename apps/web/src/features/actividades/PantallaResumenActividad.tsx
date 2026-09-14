@@ -1,6 +1,6 @@
 import { useParams } from 'react-router-dom'
 import { AppShell } from '../../components/AppShell'
-import { Badge, Card, IconoCargando } from '../../components/ui'
+import { Badge, Button, Card, IconoCargando } from '../../components/ui'
 import { infoFase } from './fase'
 import { formatearFecha } from './formato'
 import { useActividad } from './useActividades'
@@ -30,9 +30,29 @@ export function PantallaResumenActividad() {
 
   const actividad = actividadQuery.data
   const fase = infoFase(actividad.fase)
+  const organiza = actividad.rol !== 'participante'
+
+  // Accesos al módulo de insignias. Se ofrecen siempre: la API decide si el
+  // ritual está abierto o si lo recibido ya se reveló, y cada pantalla lo
+  // explica. Ocultarlos por fase aquí duplicaría esa regla en el cliente.
+  const accionesInsignias = (
+    <>
+      <Button variant="secondary" size="sm" to={`/actividades/${actividad.id}/reconocer`}>
+        Reconocer al equipo
+      </Button>
+      <Button variant="secondary" size="sm" to={`/actividades/${actividad.id}/insignias`}>
+        Mis reconocimientos
+      </Button>
+      {organiza ? (
+        <Button variant="secondary" size="sm" to={`/actividades/${actividad.id}/participantes`}>
+          Participantes
+        </Button>
+      ) : null}
+    </>
+  )
 
   return (
-    <AppShell seccionActiva="actividades" titulo={actividad.nombre}>
+    <AppShell seccionActiva="actividades" titulo={actividad.nombre} acciones={accionesInsignias}>
       <Card className={styles.card}>
         <Badge variant={fase.variant} className={styles.badge}>
           {fase.etiqueta}

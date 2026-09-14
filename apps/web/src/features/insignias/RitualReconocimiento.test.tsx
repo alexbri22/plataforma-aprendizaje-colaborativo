@@ -3,8 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { RitualReconocimiento, type IntegranteEquipo } from './RitualReconocimiento'
 
-// Seis integrantes en total: cinco compañeros más quien reconoce. El 33 % de
-// seis, sin contarse y redondeado hacia arriba, son dos compañeros.
+// Cinco compañeros y presupuesto de dos, que es lo que el servidor calcula
+// para un equipo de seis (33 % sin contarse, redondeado hacia arriba).
 const COMPANEROS: IntegranteEquipo[] = [
   { id: 'm-2', nombre: 'Andrea' },
   { id: 'm-3', nombre: 'Bruno' },
@@ -15,19 +15,37 @@ const COMPANEROS: IntegranteEquipo[] = [
 
 const CIERRE = new Date(2026, 10, 14)
 
-function montar(onGuardar = vi.fn()) {
+function montar(onGuardar = vi.fn(), presupuesto: number | null = 2) {
   const usuario = userEvent.setup()
   render(
-    <RitualReconocimiento companeros={COMPANEROS} fechaLimite={CIERRE} onGuardar={onGuardar} />,
+    <RitualReconocimiento
+      companeros={COMPANEROS}
+      presupuesto={presupuesto}
+      fechaLimite={CIERRE}
+      onGuardar={onGuardar}
+    />,
   )
   return { usuario, onGuardar }
 }
 
 describe('RitualReconocimiento', () => {
-  it('deriva el presupuesto del tamaño del equipo, sin recibirlo por props', () => {
+  it('muestra el presupuesto que dicta el servidor', () => {
     montar()
 
     expect(screen.getByText('Puedes reconocer a 2 compañeros más, de 2')).toBeInTheDocument()
+  })
+
+  it('sin presupuesto no limita a cuánta gente se reconoce', async () => {
+    // Quien organiza no compite por popularidad: su papel es compensar.
+    const { usuario } = montar(vi.fn(), null)
+
+    expect(screen.getByText('Reconoce a quien lo merezca')).toBeInTheDocument()
+    for (const indice of [0, 1, 2, 3, 4]) {
+      await usuario.click(screen.getAllByRole('button', { name: /^Reconocer a / })[indice])
+      await usuario.click(screen.getByRole('checkbox', { name: /Liderazgo/ }))
+      await usuario.click(screen.getByRole('button', { name: /^Confirmar/ }))
+    }
+    expect(screen.getAllByRole('button', { name: /^Quitar/ })).toHaveLength(5)
   })
 
   it('descuenta del presupuesto al reconocer y lo devuelve al quitar', async () => {
@@ -202,6 +220,7 @@ describe('RitualReconocimiento', () => {
     render(
       <RitualReconocimiento
         companeros={COMPANEROS}
+        presupuesto={2}
         fechaLimite={CIERRE}
         onGuardar={vi.fn()}
         reconocimientosIniciales={[

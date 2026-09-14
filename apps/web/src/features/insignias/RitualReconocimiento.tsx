@@ -4,7 +4,6 @@ import {
   FRASES_SUGERIDAS,
   type CategoriaInsignia,
   definicionCategoria,
-  personasReconocibles,
 } from '@plataforma/shared'
 import { Button, Input, Select } from '../../components/ui'
 import { IconoCategoria } from './IconoCategoria'
@@ -27,6 +26,11 @@ export interface RitualReconocimientoProps {
   /** Compañeros del propio equipo, sin incluir a quien reconoce: el ritual no
    * permite reconocerse a uno mismo ni cruzar equipos. */
   companeros: readonly IntegranteEquipo[]
+  /** A cuánta gente se puede reconocer. Lo dicta el servidor, que es quien
+   * conoce el equipo y el rol: null significa sin límite (organizador). El
+   * cliente no lo recalcula, porque la regla cambiará al existir equipos y
+   * dos fuentes para un mismo hecho terminan contradiciéndose. */
+  presupuesto: number | null
   /** Lo ya guardado, para volver a entrar y seguir editando hasta el cierre.
    * Es valor inicial y no controlado: a partir del montaje manda el estado
    * interno, porque quien edita es esta pantalla. */
@@ -54,12 +58,12 @@ function clave(r: ReconocimientoBorrador) {
  * su propia frase: una frase compartida entre dos categorías distintas no
  * describiría ninguna de las dos.
  *
- * El presupuesto se deriva del número de compañeros y no se recibe por props,
- * por la misma razón que el nivel de una insignia se deriva de los puntos: dos
- * fuentes para un mismo hecho terminan contradiciéndose.
+ * El presupuesto llega del servidor y no se deriva aquí: es él quien conoce el
+ * equipo y el rol, y la regla cambiará al existir equipos.
  */
 export function RitualReconocimiento({
   companeros,
+  presupuesto,
   reconocimientosIniciales = [],
   fechaLimite,
   onGuardar,
@@ -76,9 +80,9 @@ export function RitualReconocimiento({
 
   const idDisparador = (integranteId: string) => `${idBase}-${integranteId}-disparador`
 
-  const presupuesto = personasReconocibles(companeros.length + 1)
   const reconocidos = new Set(reconocimientos.map((r) => r.integranteId))
-  const restantes = presupuesto - reconocidos.size
+  const sinLimite = presupuesto === null
+  const restantes = sinLimite ? Infinity : presupuesto - reconocidos.size
 
   const yaOtorgada = (integranteId: string, cat: CategoriaInsignia) =>
     reconocimientos.some((r) => r.integranteId === integranteId && r.categoria === cat)
@@ -138,14 +142,19 @@ export function RitualReconocimiento({
 
   return (
     <div className={styles.ritual}>
-      <p className={styles.presupuesto} aria-live="polite">
-        {restantes > 0
-          ? `Puedes reconocer a ${restantes} ${restantes === 1 ? 'compañero más' : 'compañeros más'}, de ${presupuesto}`
-          : `Ya elegiste a tus ${presupuesto} ${presupuesto === 1 ? 'compañero' : 'compañeros'}`}
-      </p>
+      {sinLimite ? (
+        <p className={styles.presupuesto}>Reconoce a quien lo merezca</p>
+      ) : (
+        <p className={styles.presupuesto} aria-live="polite">
+          {restantes > 0
+            ? `Puedes reconocer a ${restantes} ${restantes === 1 ? 'compañero más' : 'compañeros más'}, de ${presupuesto}`
+            : `Ya elegiste a tus ${presupuesto} ${presupuesto === 1 ? 'compañero' : 'compañeros'}`}
+        </p>
+      )}
       <p className={styles.nota}>
-        No alcanza para todo el equipo, así que tendrás que elegir. A cada compañero que elijas
-        puedes darle más de una insignia, si destacó en varias cosas.
+        {sinLimite
+          ? 'Tu reconocimiento vale doble y no tiene límite: sirve para compensar a quien sus compañeros no vieron. A cada persona puedes darle más de una insignia.'
+          : 'No alcanza para todo el equipo, así que tendrás que elegir. A cada compañero que elijas puedes darle más de una insignia, si destacó en varias cosas.'}
       </p>
       <p className={styles.nota}>
         Es anónimo: quien reciba una insignia verá cuál es y por qué, pero no quién se la dio.
@@ -167,7 +176,7 @@ export function RitualReconocimiento({
                   type="button"
                   id={idDisparador(companero.id)}
                   onClick={() => abrir(companero.id)}
-                  disabled={restantes === 0 && !estaAbierto && !reconocidos.has(companero.id)}
+                  disabled={restantes <= 0 && !estaAbierto && !reconocidos.has(companero.id)}
                   aria-expanded={estaAbierto}
                   aria-controls={idPanel}
                   aria-label={
