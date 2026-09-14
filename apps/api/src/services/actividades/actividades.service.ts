@@ -1,6 +1,6 @@
 import { Prisma, type EstadoActividad, type RolMembresia } from '@prisma/client'
 import { prisma } from '../../data/prisma.js'
-import { ErrorClaveInvalida, ErrorYaEsMiembro } from '../../errores.js'
+import { ErrorActividadNoEncontrada, ErrorClaveInvalida, ErrorYaEsMiembro } from '../../errores.js'
 import { generarClaveIngreso } from './claveIngreso.js'
 import type { DatosCrearActividadValidados } from './validacion.js'
 
@@ -260,4 +260,66 @@ export async function unirseConClave(
   })
 
   return aRespuesta(actividadActualizada, 'participante')
+}
+
+// ---------------------------------------------------------------------------
+// Lo que otros módulos necesitan saber de una actividad y sus miembros. Es la
+// única puerta: el módulo de insignias no consulta membresías por su cuenta
+// (docs/diseno-desarrollo-general.md §3.4, regla de frontera).
+// ---------------------------------------------------------------------------
+
+export interface MembresiaEnActividad {
+  idMembresia: string
+  idActividad: string
+  idUsuario: string
+  rol: RolMembresia
+  actividad: {
+    nombre: string
+    estado: EstadoActividad
+    fechaTermino: Date
+    plazoCierreDias: number
+  }
+}
+
+/** Membresía activa del usuario en la actividad. Si no existe —o la
+ * actividad no existe— lanza el mismo error en ambos casos. */
+export async function obtenerMembresiaActiva(
+  idUsuario: string,
+  idActividad: string,
+): Promise<MembresiaEnActividad> {
+  const membresia = await prisma.membresia.findFirst({
+    where: { idUsuario, idActividad, estado: 'activa' },
+    include: {
+      actividad: {
+        select: { nombre: true, estado: true, fechaTermino: true, plazoCierreDias: true },
+      },
+    },
+  })
+  if (!membresia) throw new ErrorActividadNoEncontrada()
+  return membresia
+}
+
+export interface ParticipanteDeActividad {
+  idMembresia: string
+  idUsuario: string
+  nombre: string
+  rol: RolActividad
+}
+
+// Miembros activos con rol participante, que son quienes hacen el trabajo y
+// a quienes se reconoce. Organizador y co-organizadores no entran: no
+// pertenecen a un equipo (docs/diseno-desarrollo-general.md §7.3, "El
+// organizador no integra un equipo").
+export async function listarParticipantes(idActividad: string): Promise<ParticipanteDeActividad[]> {
+  const membresias = await prisma.membresia.findMany({
+    where: { idActividad, estado: 'activa', rol: 'participante' },
+    include: { usuario: { select: { nombre: true, apellidoPaterno: true } } },
+    orderBy: { fechaUnion: 'asc' },
+  })
+  return membresias.map((m) => ({
+    idMembresia: m.idMembresia,
+    idUsuario: m.idUsuario,
+    nombre: `${m.usuario.nombre} ${m.usuario.apellidoPaterno}`.trim(),
+    rol: ROL_POR_ROL_MEMBRESIA[m.rol],
+  }))
 }

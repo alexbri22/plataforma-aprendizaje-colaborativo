@@ -6,6 +6,7 @@ import { manejadorErrores } from './middleware/manejadorErrores.js'
 import { resolverSesion } from './middleware/sesion.js'
 import { actividadesRouter } from './routes/actividades.js'
 import { clavesRouter } from './routes/claves.js'
+import { insigniasRouter } from './routes/insignias.js'
 import { cuentasRouter } from './routes/cuentas.js'
 import { healthRouter } from './routes/health.js'
 
@@ -57,6 +58,7 @@ export function createApp(): Express {
   app.use('/api', cuentasRouter)
   app.use('/api', actividadesRouter)
   app.use('/api', clavesRouter)
+  app.use('/api', insigniasRouter)
 
   app.use(manejadorErrores)
 
