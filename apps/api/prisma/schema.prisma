@@ -148,6 +148,48 @@ model Membresia {
   actividad Actividad @relation(fields: [idActividad], references: [idActividad], onDelete: Cascade)
   usuario   Usuario   @relation(fields: [idUsuario], references: [idUsuario], onDelete: Cascade)
 
+  insigniasOtorgadas InsigniaOtorgada[] @relation("otorgante")
+  insigniasRecibidas InsigniaOtorgada[] @relation("receptor")
+
   @@unique([idActividad, idUsuario])
   @@map("membresias")
+}
+
+// docs/diseno-desarrollo-general.md §5.4. El origen determina cuánto vale el
+// reconocimiento: el del organizador pesa doble. `sistema` queda declarado
+// para las señales automáticas de fase 2; hoy nada lo emite.
+enum FuenteOtorgamiento {
+  par
+  organizador
+  sistema
+
+  @@map("fuente_otorgamiento")
+}
+
+// docs/diseno-desarrollo-general.md §4.4 y §5.4 (relación
+// 'insignias_otorgadas'). La categoría se guarda como texto y no como enum
+// porque el catálogo vive en packages/shared (CATEGORIAS_INSIGNIA) y sus
+// identificadores llevan guion ('buen-juicio'), que un enum de Prisma no
+// admite; la capa de servicios valida contra ese catálogo antes de escribir.
+//
+// No lleva id_actividad: el receptor es una membresía y la actividad se
+// deriva de ahí (§4.4, "por qué la unicidad se expresa sobre membresías").
+// Que otorgante y receptor sean de la misma actividad lo garantiza el
+// servicio, no el esquema (§4.6).
+model InsigniaOtorgada {
+  idOtorgamiento       String             @id @default(uuid()) @map("id_otorgamiento")
+  categoria            String
+  idMembresiaOtorgante String?            @map("id_membresia_otorgante")
+  idMembresiaReceptor  String             @map("id_membresia_receptor")
+  fuente               FuenteOtorgamiento
+  puntos               Float
+  frase                String
+  fecha                DateTime           @default(now())
+
+  otorgante Membresia? @relation("otorgante", fields: [idMembresiaOtorgante], references: [idMembresia], onDelete: SetNull)
+  receptor  Membresia  @relation("receptor", fields: [idMembresiaReceptor], references: [idMembresia], onDelete: Cascade)
+
+  @@unique([categoria, idMembresiaOtorgante, idMembresiaReceptor])
+  @@index([idMembresiaReceptor])
+  @@map("insignias_otorgadas")
 }
