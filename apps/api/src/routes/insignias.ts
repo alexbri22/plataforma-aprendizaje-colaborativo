@@ -9,6 +9,7 @@ import {
   listarMisReconocimientos,
   listarRecibidos,
   listarRecibidosDeParticipante,
+  listarRecibidosEnPerfil,
   type ReconocimientoEntrada,
 } from '../services/insignias/insignias.service.js'
 
@@ -82,4 +83,12 @@ insigniasRouter.get('/insignias/acumulado', exigirSesion, async (req, res) => {
   const actor = req.actor as UsuarioPublico
   const acumulado = await acumuladoDeUsuario(actor.idUsuario)
   res.status(200).json({ acumulado })
+})
+
+// GET /api/insignias/recibidos: las frases detrás del acumulado, con la
+// actividad de la que salió cada una. Para abrir una insignia en el perfil.
+insigniasRouter.get('/insignias/recibidos', exigirSesion, async (req, res) => {
+  const actor = req.actor as UsuarioPublico
+  const reconocimientos = await listarRecibidosEnPerfil(actor.idUsuario)
+  res.status(200).json({ reconocimientos })
 })

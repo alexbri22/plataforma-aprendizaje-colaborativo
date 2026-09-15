@@ -70,6 +70,13 @@ export interface ReconocimientoRecibidoConAutor extends ReconocimientoRecibido {
   otorgadoPor: string | null
 }
 
+/** Lo recibido visto desde el perfil: cruza actividades, así que cada frase
+ * dice de cuál salió. Sigue sin autor. */
+export interface ReconocimientoEnPerfil extends ReconocimientoRecibido {
+  fecha: string
+  actividad: { id: string; nombre: string }
+}
+
 export async function obtenerRitual(
   idActividad: string,
 ): Promise<{ contexto: ContextoReconocimiento; reconocimientos: ReconocimientoPropio[] }> {
@@ -119,4 +126,11 @@ export async function obtenerAcumulado(): Promise<Partial<Record<CategoriaInsign
   if (!r.ok) throw await leerError(r, 'No pudimos cargar tu acumulado.')
   const cuerpo = (await r.json()) as { acumulado: Partial<Record<CategoriaInsignia, number>> }
   return cuerpo.acumulado
+}
+
+export async function obtenerRecibidosEnPerfil(): Promise<ReconocimientoEnPerfil[]> {
+  const r = await pedir('/api/insignias/recibidos')
+  if (!r.ok) throw await leerError(r, 'No pudimos cargar tus reconocimientos.')
+  const cuerpo = (await r.json()) as { reconocimientos: ReconocimientoEnPerfil[] }
+  return cuerpo.reconocimientos
 }

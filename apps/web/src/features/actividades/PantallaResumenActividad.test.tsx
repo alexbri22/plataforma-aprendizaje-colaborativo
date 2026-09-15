@@ -16,6 +16,7 @@ vi.mock('../cuentas/api', async () => {
     apellidoMaterno: 'López',
     correo: 'ana@example.com',
     tipoCuenta: 'usuario',
+    fotoUrl: null,
   }
   return {
     ...real,

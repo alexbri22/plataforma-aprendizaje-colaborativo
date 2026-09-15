@@ -11,3 +11,31 @@
   padding: 0;
   list-style: none;
 }
+
+/* Cuando la vitrina es interactiva, el botón envuelve a la insignia sin
+   cambiarle el tamaño; lo único que añade es el estado de selección. */
+.boton {
+  display: block;
+  padding: var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.boton:hover {
+  background: var(--color-surface-hover);
+}
+
+.boton:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.botonActivo,
+.botonActivo:hover {
+  background: var(--color-primary-subtle);
+  border-color: var(--color-primary-border);
+}
