@@ -18,9 +18,10 @@ porque la transición a `cierre` no existe todavía.
 | `MarcoRango`                            | El marco del nivel. Envuelve cualquier contenido; agnóstico de qué enmarca.                  |
 | `IconoCategoria`                        | Emblema vectorial de una categoría. Suplente del PNG, y titular del estado sin rango.        |
 | `InsigniaCategoria`                     | Marco más emblema. Es la unidad reusable del sistema.                                        |
-| `VitrinaInsignias`                      | Las seis insignias de un usuario, para el perfil.                                            |
+| `VitrinaInsignias`                      | Las seis insignias de un usuario, para el perfil. Con `onSeleccionar`, cada una es un botón. |
+| `DetalleInsignia`                       | Lo que se abre al elegir una en el perfil propio: nivel, avance y frases con su actividad.   |
 | `RitualReconocimiento`                  | El reparto de reconocimientos del cierre. Recibe los compañeros y devuelve los borradores.   |
-| `insignias.api` / `useReconocimientos`  | Cliente HTTP y queries de TanStack, con claves bajo `['actividades', id]`.                   |
+| `insignias.api` / `useReconocimientos`  | Cliente HTTP y queries de TanStack, con claves bajo `['actividades', id]` e `['insignias']`. |
 | `PantallaReconocer`                     | `/actividades/:id/reconocer`. El ritual conectado; sirve a participantes y a quien organiza. |
 | `PantallaMisReconocimientos`            | `/actividades/:id/insignias`. Lo recibido en la actividad (tras el cierre) y el acumulado.   |
 | `PantallaParticipantes`                 | `/actividades/:id/participantes`. Lista; quien organiza enlaza al detalle de cada uno.       |
@@ -126,5 +127,6 @@ de Actividades, sale del cierre de la actividad.
   actividad en vez de calcular la ventana con fechas.
 - La validación ligera del organizador (alertas de reciprocidad y frases
   vacías) y el descarte de reconocimientos.
-- El perfil global, que hoy es la sección "Tu acumulado" de
-  `PantallaMisReconocimientos`.
+- `PantallaMuestraInsignias` (`/insignias`) era la muestra del arte mientras no
+  existía el perfil; ahora que existe (`features/perfil`), puede retirarse junto
+  con el enlace de la portada.

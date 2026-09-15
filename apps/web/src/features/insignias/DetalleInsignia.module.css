@@ -1,0 +1,117 @@
+.detalle {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-top: var(--space-6);
+  margin-top: var(--space-6);
+  border-top: 1px solid var(--color-border);
+}
+
+.cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.titulo {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
+.queReconoce {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.nivel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+  margin: 0;
+  text-align: right;
+}
+
+.nivelNombre {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-accent-ink);
+}
+
+.nivelPuntos {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.progreso {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Barra de avance dentro del tramo actual. Usa el color de reconocimiento
+   (DESIGN.md §2, "Accent — Recognition only"): es la única lectura de progreso
+   del sistema y compara contra uno mismo. */
+.barra {
+  height: 0.5rem;
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+.relleno {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  transition: width 200ms ease-out;
+}
+
+.siguiente {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.subtitulo {
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+}
+
+.vacio {
+  margin: 0;
+  max-width: 60ch;
+  color: var(--color-text-muted);
+}
+
+.frases {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.frase {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.texto {
+  margin: 0;
+  color: var(--color-text);
+}
+
+.origen {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}

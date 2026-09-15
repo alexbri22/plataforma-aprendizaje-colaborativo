@@ -1,5 +1,6 @@
 import type { HTMLAttributes } from 'react'
 import { CATALOGO_INSIGNIAS, type CategoriaInsignia } from '@plataforma/shared'
+import { descripcionDeInsignia } from './descripcionDeInsignia'
 import { InsigniaCategoria } from './InsigniaCategoria'
 import type { TamanoMarco } from './MarcoRango'
 import styles from './VitrinaInsignias.module.css'
@@ -12,6 +13,11 @@ export interface VitrinaInsigniasProps extends Omit<HTMLAttributes<HTMLUListElem
   puntos: PuntosPorCategoria
   tamano?: TamanoMarco
   mostrarEtiquetas?: boolean
+  /** Con `onSeleccionar`, cada insignia es un botón que abre su detalle (las
+   * frases recibidas, el progreso). Sin él, la vitrina es solo lectura, que
+   * es como se ve en el perfil de otra persona. */
+  seleccionada?: CategoriaInsignia | null
+  onSeleccionar?: (categoria: CategoriaInsignia) => void
 }
 
 /**
@@ -23,21 +29,43 @@ export function VitrinaInsignias({
   puntos,
   tamano = 'md',
   mostrarEtiquetas = true,
+  seleccionada = null,
+  onSeleccionar,
   className,
   ...props
 }: VitrinaInsigniasProps) {
   return (
     <ul className={[styles.vitrina, className].filter(Boolean).join(' ')} {...props}>
-      {CATALOGO_INSIGNIAS.map((categoria) => (
-        <li key={categoria.id}>
+      {CATALOGO_INSIGNIAS.map((categoria) => {
+        const puntosCategoria = puntos[categoria.id] ?? 0
+        const insignia = (
           <InsigniaCategoria
             categoria={categoria.id}
-            puntos={puntos[categoria.id] ?? 0}
+            puntos={puntosCategoria}
             tamano={tamano}
             mostrarEtiqueta={mostrarEtiquetas}
           />
-        </li>
-      ))}
+        )
+        return (
+          <li key={categoria.id}>
+            {onSeleccionar ? (
+              <button
+                type="button"
+                className={[styles.boton, seleccionada === categoria.id ? styles.botonActivo : null]
+                  .filter(Boolean)
+                  .join(' ')}
+                aria-pressed={seleccionada === categoria.id}
+                aria-label={descripcionDeInsignia(categoria.id, puntosCategoria)}
+                onClick={() => onSeleccionar(categoria.id)}
+              >
+                {insignia}
+              </button>
+            ) : (
+              insignia
+            )}
+          </li>
+        )
+      })}
     </ul>
   )
 }
