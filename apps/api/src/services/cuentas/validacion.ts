@@ -130,16 +130,27 @@ export type ActualizacionPerfilValidada =
   | { tipo: 'datos'; datos: DatosPerfilValidados }
   | { tipo: 'contrasena'; cambio: CambioContrasenaValidado }
 
+const CAMPOS_DATOS = ['nombre', 'apellidoPaterno', 'apellidoMaterno'] as const
+const CAMPOS_CONTRASENA = ['contrasenaActual', 'contrasenaNueva'] as const
+
 // PATCH /api/usuarios/yo hace dos cosas distintas según lo que traiga el
 // cuerpo (docs/diseno-desarrollo-nucleo.md §6.5: "edita nombre y apellidos,
-// o cambia la contraseña"). Traer `contrasenaNueva` decide: así el cliente no
-// puede colar un cambio de nombre junto con uno de contraseña y recibir un
-// éxito a medias.
+// o cambia la contraseña"). Son excluyentes: un cuerpo con campos de ambas
+// se rechaza entero, porque aplicar solo una parte y responder éxito sería
+// mentirle al cliente sobre la otra.
 export function validarActualizacionPerfil(cuerpo: unknown): ActualizacionPerfilValidada {
   const datos = (cuerpo && typeof cuerpo === 'object' ? cuerpo : {}) as Record<string, unknown>
   const detallePorCampo: Record<string, string> = {}
 
-  if ('contrasenaNueva' in datos || 'contrasenaActual' in datos) {
+  const traeDatos = CAMPOS_DATOS.some((campo) => campo in datos)
+  const traeContrasena = CAMPOS_CONTRASENA.some((campo) => campo in datos)
+  if (traeDatos && traeContrasena) {
+    throw new ErrorValidacion({
+      cuerpo: 'Edita tus datos o cambia la contraseña, pero no ambos en la misma petición.',
+    })
+  }
+
+  if (traeContrasena) {
     const contrasenaActual =
       typeof datos.contrasenaActual === 'string' ? datos.contrasenaActual : ''
     if (!contrasenaActual) detallePorCampo.contrasenaActual = 'Escribe tu contraseña actual.'

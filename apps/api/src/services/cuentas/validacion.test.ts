@@ -117,13 +117,22 @@ describe('validarActualizacionPerfil', () => {
     })
   })
 
-  it('con contrasenaNueva, es un cambio de contraseña y no mezcla datos', () => {
+  it('con contrasenaNueva, es un cambio de contraseña', () => {
     const resultado = validarActualizacionPerfil({
-      nombre: 'Otro',
       contrasenaActual: 'contrasena-larga',
       contrasenaNueva: 'otra-contrasena-larga',
     })
     expect(resultado.tipo).toBe('contrasena')
+  })
+
+  it('rechaza un cuerpo que mezcla datos y contraseña, en vez de aplicar una parte', () => {
+    expect(() =>
+      validarActualizacionPerfil({
+        nombre: 'Otro',
+        contrasenaActual: 'contrasena-larga',
+        contrasenaNueva: 'otra-contrasena-larga',
+      }),
+    ).toThrow(ErrorValidacion)
   })
 
   it('exige la actual, ocho caracteres y que la nueva sea distinta', () => {

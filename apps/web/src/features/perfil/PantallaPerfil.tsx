@@ -22,15 +22,20 @@ export function PantallaPerfil() {
   const quitar = useQuitarFoto()
   const [categoriaAbierta, setCategoriaAbierta] = useState<CategoriaInsignia | null>(null)
   const [errorFoto, setErrorFoto] = useState<string | null>(null)
+  // Recortar y comprimir ocurre antes de que exista la mutación, así que
+  // `subir.isPending` no lo cubre; sin esto, "Quitar foto" y una segunda
+  // elección seguirían habilitados durante ese tramo y competirían.
+  const [preparando, setPreparando] = useState(false)
   const entradaFoto = useRef<HTMLInputElement>(null)
 
   async function manejarArchivo(evento: ChangeEvent<HTMLInputElement>) {
     const archivo = evento.target.files?.[0]
     // Se limpia para que elegir el mismo archivo dos veces vuelva a disparar.
     evento.target.value = ''
-    if (!archivo) return
+    if (!archivo || preparando) return
 
     setErrorFoto(null)
+    setPreparando(true)
     try {
       await subir.mutateAsync(await prepararFoto(archivo))
     } catch (error) {
@@ -39,6 +44,8 @@ export function PantallaPerfil() {
           ? error.message
           : 'No pudimos subir tu foto.',
       )
+    } finally {
+      setPreparando(false)
     }
   }
 
@@ -70,7 +77,7 @@ export function PantallaPerfil() {
   }
 
   const usuario = perfil.data
-  const ocupado = subir.isPending || quitar.isPending
+  const ocupado = preparando || subir.isPending || quitar.isPending
 
   return (
     <AppShell seccionActiva="perfil" titulo="Mi perfil">
@@ -105,7 +112,11 @@ export function PantallaPerfil() {
               disabled={ocupado}
               onClick={() => entradaFoto.current?.click()}
             >
-              {subir.isPending ? 'Subiendo…' : usuario.fotoUrl ? 'Cambiar foto' : 'Subir foto'}
+              {preparando || subir.isPending
+                ? 'Subiendo…'
+                : usuario.fotoUrl
+                  ? 'Cambiar foto'
+                  : 'Subir foto'}
             </Button>
             {usuario.fotoUrl ? (
               <Button

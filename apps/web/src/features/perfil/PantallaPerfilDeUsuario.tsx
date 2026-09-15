@@ -32,7 +32,7 @@ export function PantallaPerfilDeUsuario() {
   if (perfil.isError || !perfil.data) {
     return (
       <AppShell seccionActiva="actividades" titulo="Perfil">
-        <AvisoError mensaje="No encontramos a esta persona." />
+        <AvisoError mensaje={perfil.error?.message ?? 'No encontramos a esta persona.'} />
       </AppShell>
     )
   }
