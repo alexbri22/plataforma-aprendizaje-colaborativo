@@ -49,6 +49,13 @@ export interface ReconocimientoRecibido {
   fuente: FuenteOtorgamiento
 }
 
+/** Lo recibido visto desde el perfil: cruza actividades, así que cada frase
+ * dice de cuál salió. Sigue sin autor (concepto §6, "El perfil"). */
+export interface ReconocimientoEnPerfil extends ReconocimientoRecibido {
+  fecha: string
+  actividad: { id: string; nombre: string }
+}
+
 export interface ReconocimientoRecibidoConAutor extends ReconocimientoRecibido {
   otorgadoPor: string | null
 }
@@ -72,14 +79,18 @@ export interface ContextoReconocimiento {
   aplicados: boolean
 }
 
-function fechaLimiteDe(actividad: MembresiaEnActividad['actividad']): Date {
+// Solo las dos fechas: así sirve igual para la actividad de una membresía y
+// para la que viene seleccionada en una consulta más chica.
+type FechasDeCierre = Pick<MembresiaEnActividad['actividad'], 'fechaTermino' | 'plazoCierreDias'>
+
+function fechaLimiteDe(actividad: FechasDeCierre): Date {
   return new Date(actividad.fechaTermino.getTime() + actividad.plazoCierreDias * DIA_EN_MS)
 }
 
 // Las fechas de la actividad son de calendario (YYYY-MM-DD guardadas a
 // medianoche UTC). El término cuenta desde el inicio de ese día y el límite
 // hasta el final del suyo, para que "cierra el 14" incluya el 14 completo.
-function ventana(actividad: MembresiaEnActividad['actividad'], ahora: Date) {
+function ventana(actividad: FechasDeCierre, ahora: Date) {
   const inicio = actividad.fechaTermino.getTime()
   const fin = fechaLimiteDe(actividad).getTime() + DIA_EN_MS - 1
   const t = ahora.getTime()
@@ -345,10 +356,47 @@ export async function acumuladoDeUsuario(
 
   const acumulado: Partial<Record<CategoriaInsignia, number>> = {}
   for (const fila of filas) {
-    if (!ventana(fila.receptor.actividad as MembresiaEnActividad['actividad'], ahora).aplicados)
-      continue
+    if (!ventana(fila.receptor.actividad, ahora).aplicados) continue
     const categoria = fila.categoria as CategoriaInsignia
     acumulado[categoria] = (acumulado[categoria] ?? 0) + fila.puntos
   }
   return acumulado
+}
+
+/**
+ * Todo lo que el usuario ha recibido en actividades cuyo cierre ya terminó,
+ * para abrir una insignia desde el perfil. Es el mismo filtro que el
+ * acumulado: lo que todavía no se aplicó no existe para quien lo recibe.
+ */
+export async function listarRecibidosEnPerfil(
+  idUsuario: string,
+  ahora = new Date(),
+): Promise<ReconocimientoEnPerfil[]> {
+  const filas = await prisma.insigniaOtorgada.findMany({
+    where: { receptor: { idUsuario } },
+    include: {
+      receptor: {
+        include: {
+          actividad: {
+            select: { idActividad: true, nombre: true, fechaTermino: true, plazoCierreDias: true },
+          },
+        },
+      },
+    },
+    orderBy: [{ fecha: 'desc' }],
+  })
+
+  return filas
+    .filter((fila) => ventana(fila.receptor.actividad, ahora).aplicados)
+    .map((fila) => ({
+      categoria: fila.categoria as CategoriaInsignia,
+      frase: fila.frase,
+      puntos: fila.puntos,
+      fuente: fila.fuente,
+      fecha: fila.fecha.toISOString(),
+      actividad: {
+        id: fila.receptor.actividad.idActividad,
+        nombre: fila.receptor.actividad.nombre,
+      },
+    }))
 }

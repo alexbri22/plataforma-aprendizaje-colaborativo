@@ -17,6 +17,10 @@ export interface UsuarioPublico {
   apellidoMaterno: string
   correo: string
   tipoCuenta: TipoCuenta
+  /** Ruta relativa al API de la foto de perfil, versionada con su fecha para
+   * que una foto nueva no se quede atrapada en la caché del navegador; null
+   * si no ha subido ninguna (docs/diseno-desarrollo-nucleo.md §6.3). */
+  fotoUrl: string | null
 }
 
 export interface SesionCreada {
@@ -24,16 +28,25 @@ export interface SesionCreada {
   expiraEn: Date
 }
 
-interface FilaUsuario {
+export interface FilaUsuario {
   idUsuario: string
   nombre: string
   apellidoPaterno: string
   apellidoMaterno: string
   correo: string
   tipoCuenta: TipoCuenta
+  foto?: { actualizadaEn: Date } | null
 }
 
-function aUsuarioPublico(usuario: FilaUsuario): UsuarioPublico {
+// Solo la fecha de la foto, nunca su contenido: es lo único que hace falta
+// para armar la URL y no arrastra el bytea en cada resolución de sesión.
+export const INCLUIR_FOTO = { foto: { select: { actualizadaEn: true } } } as const
+
+export function urlDeFoto(idUsuario: string, actualizadaEn: Date): string {
+  return `/api/usuarios/${idUsuario}/foto?v=${actualizadaEn.getTime()}`
+}
+
+export function aUsuarioPublico(usuario: FilaUsuario): UsuarioPublico {
   return {
     idUsuario: usuario.idUsuario,
     nombre: usuario.nombre,
@@ -41,6 +54,7 @@ function aUsuarioPublico(usuario: FilaUsuario): UsuarioPublico {
     apellidoMaterno: usuario.apellidoMaterno,
     correo: usuario.correo,
     tipoCuenta: usuario.tipoCuenta,
+    fotoUrl: usuario.foto ? urlDeFoto(usuario.idUsuario, usuario.foto.actualizadaEn) : null,
   }
 }
 
@@ -85,7 +99,10 @@ export async function registrarUsuario(
 export async function iniciarSesion(
   credenciales: CredencialesValidadas,
 ): Promise<{ usuario: UsuarioPublico; sesion: SesionCreada }> {
-  const usuario = await prisma.usuario.findUnique({ where: { correo: credenciales.correo } })
+  const usuario = await prisma.usuario.findUnique({
+    where: { correo: credenciales.correo },
+    include: INCLUIR_FOTO,
+  })
 
   // La respuesta no distingue correo inexistente de contraseña incorrecta
   // (docs/diseno-desarrollo-nucleo.md §3.2).
@@ -110,7 +127,7 @@ export async function cerrarSesion(idSesion: string): Promise<void> {
 export async function obtenerActorPorSesion(idSesion: string): Promise<UsuarioPublico> {
   const sesion = await prisma.sesion.findUnique({
     where: { id: idSesion },
-    include: { usuario: true },
+    include: { usuario: { include: INCLUIR_FOTO } },
   })
 
   const ahora = new Date()

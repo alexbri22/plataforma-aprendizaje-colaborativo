@@ -114,3 +114,64 @@ export function validarCredenciales(cuerpo: unknown): CredencialesValidadas {
 
   return { correo: correo as string, contrasena }
 }
+
+export interface DatosPerfilValidados {
+  nombre: string
+  apellidoPaterno: string
+  apellidoMaterno: string
+}
+
+export interface CambioContrasenaValidado {
+  contrasenaActual: string
+  contrasenaNueva: string
+}
+
+export type ActualizacionPerfilValidada =
+  | { tipo: 'datos'; datos: DatosPerfilValidados }
+  | { tipo: 'contrasena'; cambio: CambioContrasenaValidado }
+
+// PATCH /api/usuarios/yo hace dos cosas distintas según lo que traiga el
+// cuerpo (docs/diseno-desarrollo-nucleo.md §6.5: "edita nombre y apellidos,
+// o cambia la contraseña"). Traer `contrasenaNueva` decide: así el cliente no
+// puede colar un cambio de nombre junto con uno de contraseña y recibir un
+// éxito a medias.
+export function validarActualizacionPerfil(cuerpo: unknown): ActualizacionPerfilValidada {
+  const datos = (cuerpo && typeof cuerpo === 'object' ? cuerpo : {}) as Record<string, unknown>
+  const detallePorCampo: Record<string, string> = {}
+
+  if ('contrasenaNueva' in datos || 'contrasenaActual' in datos) {
+    const contrasenaActual =
+      typeof datos.contrasenaActual === 'string' ? datos.contrasenaActual : ''
+    if (!contrasenaActual) detallePorCampo.contrasenaActual = 'Escribe tu contraseña actual.'
+
+    const contrasenaNueva = typeof datos.contrasenaNueva === 'string' ? datos.contrasenaNueva : ''
+    if (contrasenaNueva.length < LONGITUD_MINIMA_CONTRASENA) {
+      detallePorCampo.contrasenaNueva = 'La contraseña debe tener al menos 8 caracteres.'
+    } else if (contrasenaNueva === contrasenaActual) {
+      detallePorCampo.contrasenaNueva = 'La contraseña nueva debe ser distinta de la actual.'
+    }
+
+    if (Object.keys(detallePorCampo).length > 0) throw new ErrorValidacion(detallePorCampo)
+    return { tipo: 'contrasena', cambio: { contrasenaActual, contrasenaNueva } }
+  }
+
+  const nombre = requerido(datos.nombre)
+  if (!nombre) detallePorCampo.nombre = 'El nombre es requerido.'
+
+  const apellidoPaterno = requerido(datos.apellidoPaterno)
+  if (!apellidoPaterno) detallePorCampo.apellidoPaterno = 'El apellido paterno es requerido.'
+
+  const apellidoMaterno = requerido(datos.apellidoMaterno)
+  if (!apellidoMaterno) detallePorCampo.apellidoMaterno = 'El apellido materno es requerido.'
+
+  if (Object.keys(detallePorCampo).length > 0) throw new ErrorValidacion(detallePorCampo)
+
+  return {
+    tipo: 'datos',
+    datos: {
+      nombre: nombre as string,
+      apellidoPaterno: apellidoPaterno as string,
+      apellidoMaterno: apellidoMaterno as string,
+    },
+  }
+}

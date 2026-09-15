@@ -13,6 +13,8 @@ export type CodigoError =
   | 'actividad_no_encontrada'
   | 'sin_permiso'
   | 'fuera_de_plazo'
+  | 'usuario_no_encontrado'
+  | 'foto_invalida'
 
 export abstract class ErrorDominio extends Error {
   abstract readonly codigo: CodigoError
@@ -111,6 +113,28 @@ export class ErrorSinPermiso extends ErrorDominio {
 export class ErrorFueraDePlazo extends ErrorDominio {
   readonly codigo = 'fuera_de_plazo' as const
   readonly status = 409
+
+  constructor(mensaje: string) {
+    super(mensaje)
+  }
+}
+
+export class ErrorUsuarioNoEncontrado extends ErrorDominio {
+  readonly codigo = 'usuario_no_encontrado' as const
+  readonly status = 404
+
+  constructor() {
+    super('No encontramos a esta persona.')
+  }
+}
+
+// La foto no cumple el contrato (docs/diseno-desarrollo-nucleo.md §6.3):
+// tipo no admitido, contenido que no corresponde al tipo declarado o tamaño
+// fuera de límite. Es 400 y no 415 porque el cliente propio ya la reduce y
+// convierte antes de subirla; llegar aquí es un cliente que no lo hizo.
+export class ErrorFotoInvalida extends ErrorDominio {
+  readonly codigo = 'foto_invalida' as const
+  readonly status = 400
 
   constructor(mensaje: string) {
     super(mensaje)
