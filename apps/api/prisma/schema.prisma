@@ -176,6 +176,12 @@ enum FuenteOtorgamiento {
 // deriva de ahí (§4.4, "por qué la unicidad se expresa sobre membresías").
 // Que otorgante y receptor sean de la misma actividad lo garantiza el
 // servicio, no el esquema (§4.6).
+//
+// La unicidad (categoría, otorgante, receptor) deja pasar varias filas con
+// otorgante nulo porque PostgreSQL trata cada NULL como distinto, y eso es lo
+// que se quiere: la regla "una insignia por categoría a la misma persona" es
+// para personas; las señales de `sistema` no tienen otorgante y cada una
+// aporta su fracción propia, así que pueden acumularse en la misma categoría.
 model InsigniaOtorgada {
   idOtorgamiento       String             @id @default(uuid()) @map("id_otorgamiento")
   categoria            String

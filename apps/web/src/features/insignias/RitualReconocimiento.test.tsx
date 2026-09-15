@@ -174,10 +174,36 @@ describe('RitualReconocimiento', () => {
     expect(screen.getByRole('button', { name: /^Confirmar/ })).toBeEnabled()
   })
 
-  it('no permite guardar sin haber repartido nada', () => {
+  it('no permite guardar sin haber cambiado nada', () => {
     montar()
 
     expect(screen.getByRole('button', { name: 'Guardar reconocimientos' })).toBeDisabled()
+  })
+
+  it('deja guardar la lista vacía cuando se quita lo que ya estaba guardado', async () => {
+    // Guardar reemplaza la lista entera: si quitar el último reconocimiento no
+    // se pudiera guardar, las filas viejas se quedarían en el servidor.
+    const onGuardar = vi.fn()
+    const usuario = userEvent.setup()
+    render(
+      <RitualReconocimiento
+        companeros={COMPANEROS}
+        presupuesto={2}
+        fechaLimite={CIERRE}
+        onGuardar={onGuardar}
+        reconocimientosIniciales={[
+          { integranteId: 'm-2', categoria: 'liderazgo', frase: 'Nos destrabó' },
+        ]}
+      />,
+    )
+    const boton = screen.getByRole('button', { name: 'Guardar reconocimientos' })
+    expect(boton).toBeDisabled()
+
+    await usuario.click(screen.getByRole('button', { name: /^Quitar / }))
+
+    expect(boton).toBeEnabled()
+    await usuario.click(boton)
+    expect(onGuardar).toHaveBeenCalledWith([])
   })
 
   it('dice desde cuándo se aplican y hasta cuándo se pueden cambiar', () => {

@@ -61,6 +61,19 @@ function clave(r: ReconocimientoBorrador) {
  * El presupuesto llega del servidor y no se deriva aquí: es él quien conoce el
  * equipo y el rol, y la regla cambiará al existir equipos.
  */
+function claveDe(r: ReconocimientoBorrador): string {
+  return `${r.integranteId}\u0000${r.categoria}\u0000${r.frase}`
+}
+
+function mismosReconocimientos(
+  a: readonly ReconocimientoBorrador[],
+  b: readonly ReconocimientoBorrador[],
+): boolean {
+  if (a.length !== b.length) return false
+  const clavesB = new Set(b.map(claveDe))
+  return a.every((r) => clavesB.has(claveDe(r)))
+}
+
 export function RitualReconocimiento({
   companeros,
   presupuesto,
@@ -77,6 +90,11 @@ export function RitualReconocimiento({
   const [elegidas, setElegidas] = useState<Partial<Record<CategoriaInsignia, string>>>({})
   const [propias, setPropias] = useState<Partial<Record<CategoriaInsignia, string>>>({})
   const idBase = useId()
+
+  // El botón se habilita cuando hay algo distinto de lo guardado, no cuando la
+  // lista tiene elementos: quitar el último reconocimiento también es un cambio
+  // que hay que poder guardar, o las filas viejas se quedan en el servidor.
+  const hayCambios = !mismosReconocimientos(reconocimientos, reconocimientosIniciales)
 
   const idDisparador = (integranteId: string) => `${idBase}-${integranteId}-disparador`
 
@@ -310,11 +328,7 @@ export function RitualReconocimiento({
       </ul>
 
       <div className={styles.cierre}>
-        <Button
-          type="button"
-          onClick={() => onGuardar(reconocimientos)}
-          disabled={reconocimientos.length === 0}
-        >
+        <Button type="button" onClick={() => onGuardar(reconocimientos)} disabled={!hayCambios}>
           Guardar reconocimientos
         </Button>
         <p className={styles.nota}>
