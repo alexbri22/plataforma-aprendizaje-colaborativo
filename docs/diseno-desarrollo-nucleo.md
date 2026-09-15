@@ -435,9 +435,11 @@ El registro pide nombre, apellido paterno, apellido materno, nivel de estudios, 
 
 ## **6.3 Perfil y visibilidad entre usuarios**
 
-El perfil propio permite editar nombre y apellidos, y cambiar la contraseña exigiendo la anterior. El correo no es editable en el alcance actual: es el identificador de acceso y la llave con la que se busca a alguien para invitarlo, y cambiarlo sin verificación permitiría apropiarse de una dirección ajena.
+El perfil propio permite editar nombre y apellidos, y cambiar la contraseña exigiendo la anterior. El correo no es editable en el alcance actual: es el identificador de acceso y la llave con la que se busca a alguien para invitarlo, y cambiarlo sin verificación permitiría apropiarse de una dirección ajena. El nivel de estudios y la institución se muestran pero no se editan desde el perfil en este alcance.
 
-De otro usuario solo se ven el nombre y sus rangos de insignia (7.2 del general). El correo nunca se muestra; sirve como criterio de búsqueda para quien ya lo conoce, no como dato consultable. Mientras el subsistema de recompensas no exista, los rangos se resuelven contra la implementación vacía descrita en 1.3 y el perfil se muestra sin ellos.
+**Foto de perfil.** Es opcional: sin ella, la interfaz muestra las iniciales. El cliente recorta la imagen elegida a un cuadrado, la reduce a 256 px y la codifica en WebP (o JPEG donde el navegador no produzca WebP) antes de subirla; el servidor solo admite JPEG, PNG o WebP hasta 512 KB, comprueba que los primeros bytes correspondan al tipo declarado y la guarda en la relación fotos\_de\_perfil (4.4 del general). Se guarda en la base y no en disco porque el API se despliega como función sin sistema de archivos persistente, y reducirla en el cliente evita decodificar imágenes en el servidor. La foto se sirve con sesión, como el resto del perfil, y su URL lleva la fecha de la última subida para poder cachearla sin plazo. Los límites viven en `packages/shared` para que cliente y servidor no discrepen.
+
+De otro usuario solo se ven el nombre, la foto y sus rangos de insignia (7.2 del general). El correo nunca se muestra; sirve como criterio de búsqueda para quien ya lo conoce, no como dato consultable. Los rangos los calcula el subsistema de recompensas (1.3): el perfil propio incluye además, al abrir cada insignia, las frases recibidas con la actividad de la que salió cada una y el avance hacia el siguiente nivel, que se comparan solo contra el propio historial (concepto, sección 6).
 
 ## **6.4 Búsqueda de usuarios**
 
@@ -455,9 +457,12 @@ La propuesta por defecto de P-11 limita la búsqueda al flujo de invitación y a
 | POST /api/sesion                         | Público       | Inicia sesión y emite la cookie                                  |
 | DELETE /api/sesion                       | Usuario       | Cierra la sesión y elimina el registro en servidor               |
 | GET /api/sesion                          | Usuario       | Devuelve el actor actual y su tipo de cuenta                     |
-| GET /api/usuarios/yo                     | Usuario       | Perfil propio completo                                           |
+| GET /api/usuarios/yo                     | Usuario       | Perfil propio completo, con rangos                               |
 | PATCH /api/usuarios/yo                   | Usuario       | Edita nombre y apellidos, o cambia la contraseña                 |
-| GET /api/usuarios/{id}                   | Usuario       | Perfil básico de otro: nombre y rangos                           |
+| PUT /api/usuarios/yo/foto                | Usuario       | Sube o reemplaza la foto; el cuerpo es la imagen (6.3)           |
+| DELETE /api/usuarios/yo/foto             | Usuario       | Quita la foto                                                    |
+| GET /api/usuarios/{id}                   | Usuario       | Perfil básico de otro: nombre, foto y rangos                     |
+| GET /api/usuarios/{id}/foto              | Usuario       | La imagen de la foto de perfil                                   |
 | GET /api/actividades/{id}/candidatos     | Organizador   | Busca usuarios para invitar (6.4)                                |
 | POST /api/verificaciones/{token}         | Público       | Confirma la dirección de correo                                  |
 | POST /api/verificaciones                 | Usuario       | Reenvía el enlace de verificación                                |
@@ -471,15 +476,15 @@ Los tres últimos son la superficie que consume el panel de administración (1.3
 
 ## **6.6 Pantallas**
 
-| Pantalla               | Contenido                                                                                                                   |
-| :--------------------- | :-------------------------------------------------------------------------------------------------------------------------- |
-| Registro               | Formulario con validación compartida (4.4). Al completarse, sesión iniciada y destino en mis actividades                    |
-| Ingreso                | Correo y contraseña. Un solo mensaje de error para credenciales incorrectas (3.2)                                           |
-| Mi perfil              | Datos editables, cambio de contraseña y rangos propios. Si la dirección no está verificada, aviso con la acción de reenviar |
-| Verificar correo       | Destino del enlace. Confirma, o explica que el token venció y ofrece reenviarlo                                             |
-| Recuperar contraseña   | Campo de correo y confirmación de que el mensaje se envió, sin decir si la dirección existe                                 |
-| Nueva contraseña       | Destino del enlace de recuperación. Al completarse, sesión iniciada y el resto cerradas                                     |
-| Perfil de otro usuario | Se abre desde la lista de participantes o desde la búsqueda al invitar. Nombre y rangos                                     |
+| Pantalla               | Contenido                                                                                                                                                    |
+| :--------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Registro               | Formulario con validación compartida (4.4). Al completarse, sesión iniciada y destino en mis actividades                                                     |
+| Ingreso                | Correo y contraseña. Un solo mensaje de error para credenciales incorrectas (3.2)                                                                            |
+| Mi perfil              | Foto, datos editables, cambio de contraseña e insignias propias con sus frases y avance. Si la dirección no está verificada, aviso con la acción de reenviar |
+| Verificar correo       | Destino del enlace. Confirma, o explica que el token venció y ofrece reenviarlo                                                                              |
+| Recuperar contraseña   | Campo de correo y confirmación de que el mensaje se envió, sin decir si la dirección existe                                                                  |
+| Nueva contraseña       | Destino del enlace de recuperación. Al completarse, sesión iniciada y el resto cerradas                                                                      |
+| Perfil de otro usuario | Se abre desde la lista de participantes o desde la búsqueda al invitar. Nombre, foto y rangos                                                                |
 
 ## **6.7 Pregunta abierta de este módulo**
 

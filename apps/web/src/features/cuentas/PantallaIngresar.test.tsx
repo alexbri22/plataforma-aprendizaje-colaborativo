@@ -24,6 +24,7 @@ const USUARIO_PRUEBA: Usuario = {
   apellidoMaterno: 'López',
   correo: 'ana@example.com',
   tipoCuenta: 'usuario',
+  fotoUrl: null,
 }
 
 type EntradaInicial = string | { pathname: string; state?: unknown }

@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useCerrarSesionMutation, useSesion } from '../features/cuentas'
+import { Avatar } from './ui'
 import styles from './AppShell.module.css'
 
-export type SeccionApp = 'actividades' | 'insignias' | 'recursos'
+export type SeccionApp = 'actividades' | 'perfil' | 'recursos'
 
 interface ItemNav {
   id: SeccionApp
@@ -105,7 +106,7 @@ function IconoSalir() {
 
 const ITEMS_NAV: ItemNav[] = [
   { id: 'actividades', etiqueta: 'Mis actividades', to: '/actividades', Icono: IconoActividades },
-  { id: 'insignias', etiqueta: 'Insignias', to: '/insignias', Icono: IconoInsignias },
+  { id: 'perfil', etiqueta: 'Mi perfil', to: '/perfil', Icono: IconoInsignias },
   { id: 'recursos', etiqueta: 'Recursos', to: '/recursos', Icono: IconoRecursos },
 ]
 
@@ -163,15 +164,16 @@ export function AppShell({ seccionActiva, titulo, acciones, children }: AppShell
 
         <div className={styles.cuenta}>
           {usuario ? (
-            <div className={styles.cuentaInfo}>
-              <span className={styles.iniciales} aria-hidden="true">
-                {usuario.nombre[0]}
-                {usuario.apellidoPaterno[0]}
-              </span>
+            <Link to="/perfil" className={styles.cuentaInfo}>
+              <Avatar
+                nombre={usuario.nombre}
+                apellidoPaterno={usuario.apellidoPaterno}
+                fotoUrl={usuario.fotoUrl}
+              />
               <span className={styles.nombreUsuario}>
                 {usuario.nombre} {usuario.apellidoPaterno}
               </span>
-            </div>
+            </Link>
           ) : null}
 
           <button

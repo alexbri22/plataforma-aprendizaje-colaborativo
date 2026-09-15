@@ -286,7 +286,7 @@ Los umbrales quedan a calibrar tras el primer uso real. El nivel alcanzado en un
 
 **El perfil**
 
-Muestra las seis insignias con su nivel y, al abrirlas, las frases recibidas de forma anónima. El propio usuario y quien organiza lo ven completo; los demás participantes ven las insignias, nunca listas comparativas. La vista de progreso compara contra el propio historial y no contra otros. Quien organiza dispone además de una vista de grupo para detectar a quien no recibe reconocimientos e intervenir a tiempo.
+Muestra el nombre, la foto (opcional) y las seis insignias con su nivel y, al abrirlas, las frases recibidas de forma anónima, cada una con la actividad de la que salió. El propio usuario y quien organiza lo ven completo; los demás participantes ven las insignias, nunca listas comparativas. La vista de progreso compara contra el propio historial y no contra otros. Quien organiza dispone además de una vista de grupo para detectar a quien no recibe reconocimientos e intervenir a tiempo.
 
 **Salvaguardas**
 
