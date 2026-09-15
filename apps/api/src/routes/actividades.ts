@@ -4,6 +4,8 @@ import type { UsuarioPublico } from '../services/cuentas/cuentas.service.js'
 import {
   crearActividad,
   listarActividadesDeUsuario,
+  listarParticipantes,
+  obtenerMembresiaActiva,
 } from '../services/actividades/actividades.service.js'
 import { validarDatosCrearActividad } from '../services/actividades/validacion.js'
 
@@ -24,4 +26,15 @@ actividadesRouter.get('/actividades', exigirSesion, async (req, res) => {
   const actor = req.actor as UsuarioPublico
   const actividades = await listarActividadesDeUsuario(actor.idUsuario)
   res.status(200).json({ actividades })
+})
+
+// GET /api/actividades/:id/participantes: miembros activos con rol
+// participante. Solo para miembros de la actividad; a quien no lo es se le
+// responde como si no existiera.
+actividadesRouter.get('/actividades/:id/participantes', exigirSesion, async (req, res) => {
+  const actor = req.actor as UsuarioPublico
+  const id = req.params.id as string
+  await obtenerMembresiaActiva(actor.idUsuario, id)
+  const participantes = await listarParticipantes(id)
+  res.status(200).json({ participantes })
 })

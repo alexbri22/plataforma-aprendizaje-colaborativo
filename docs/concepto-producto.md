@@ -260,6 +260,8 @@ Anónimo entre pares: quien recibe ve el reconocimiento y la frase, no quién la
 
 Validación ligera del organizador: el sistema señala reciprocidad sospechosa y frases vacías; el organizador descarta las que no procedan y puede otorgar las suyas.
 
+El organizador reconoce sin presupuesto. El 33 % existe para que los pares tengan que elegir; quien organiza no compite por popularidad, y su papel es justo compensar a quien los pares no vieron. Lo que sí conserva es la regla de una insignia por categoría y persona. Los co-organizadores reconocen con las mismas condiciones y el mismo valor.
+
 **Puntos y niveles**
 
 Un reconocimiento no vale siempre lo mismo: el origen determina su peso, de modo que el acumulado no se reduzca a un concurso de popularidad entre pares.

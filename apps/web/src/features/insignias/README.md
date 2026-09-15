@@ -4,22 +4,28 @@ Catálogo, otorgamiento, acumulados, niveles y rangos (ver sección 3.4 de
 `docs/diseno-desarrollo-general.md`). El modelo del sistema de recompensas está
 en la sección 6 de `docs/concepto-producto.md`.
 
-**Estado:** implementada la capa de presentación. El otorgamiento y el acumulado
-real están pendientes: dependen de actividades y membresías, que son Fase A del
-núcleo y todavía no existen. Hoy los componentes reciben los puntos por props.
+**Estado:** otorgamiento, consulta y acumulado contra la API real
+(`apps/api/src/services/insignias/`). Dos deviaciones documentadas en
+`docs/diseno-desarrollo-general.md` §4.4: mientras no exista `equipos`, los
+compañeros son toda la actividad; y la ventana del ritual se calcula con fechas
+porque la transición a `cierre` no existe todavía.
 
 ## Qué hay aquí
 
-| Pieza                          | Para qué                                                                                    |
-| ------------------------------ | ------------------------------------------------------------------------------------------- |
-| `arteInsignias`                | Resuelve el emblema PNG de una categoría y nivel. Tolera los que aún no se han subido.      |
-| `MarcoRango`                   | El marco del nivel. Envuelve cualquier contenido; agnóstico de qué enmarca.                 |
-| `IconoCategoria`               | Emblema vectorial de una categoría. Suplente del PNG, y titular del estado sin rango.       |
-| `InsigniaCategoria`            | Marco más emblema. Es la unidad reusable del sistema.                                       |
-| `VitrinaInsignias`             | Las seis insignias de un usuario, para el perfil.                                           |
-| `RitualReconocimiento`         | El reparto de reconocimientos del cierre. Recibe los compañeros y devuelve los borradores.  |
-| `PantallaMuestraInsignias`     | Ruta `/insignias`. Muestra para revisión, no producto — se elimina cuando el perfil exista. |
-| `PantallaRitualReconocimiento` | Ruta `/insignias/reconocer`. Hospeda el ritual con datos de ejemplo; también se elimina.    |
+| Pieza                                   | Para qué                                                                                     |
+| --------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `arteInsignias`                         | Resuelve el emblema PNG de una categoría y nivel. Tolera los que aún no se han subido.       |
+| `MarcoRango`                            | El marco del nivel. Envuelve cualquier contenido; agnóstico de qué enmarca.                  |
+| `IconoCategoria`                        | Emblema vectorial de una categoría. Suplente del PNG, y titular del estado sin rango.        |
+| `InsigniaCategoria`                     | Marco más emblema. Es la unidad reusable del sistema.                                        |
+| `VitrinaInsignias`                      | Las seis insignias de un usuario, para el perfil.                                            |
+| `RitualReconocimiento`                  | El reparto de reconocimientos del cierre. Recibe los compañeros y devuelve los borradores.   |
+| `insignias.api` / `useReconocimientos`  | Cliente HTTP y queries de TanStack, con claves bajo `['actividades', id]`.                   |
+| `PantallaReconocer`                     | `/actividades/:id/reconocer`. El ritual conectado; sirve a participantes y a quien organiza. |
+| `PantallaMisReconocimientos`            | `/actividades/:id/insignias`. Lo recibido en la actividad (tras el cierre) y el acumulado.   |
+| `PantallaParticipantes`                 | `/actividades/:id/participantes`. Lista; quien organiza enlaza al detalle de cada uno.       |
+| `PantallaReconocimientosDeParticipante` | `/actividades/:id/participantes/:idMembresia`. Lo recibido con autoría, solo organiza.       |
+| `PantallaMuestraInsignias`              | Ruta `/insignias`. Muestra del arte para revisión, no producto.                              |
 
 Se importa desde `index.ts`, nunca de un archivo suelto:
 
@@ -81,8 +87,10 @@ hermanos.
 `RitualReconocimiento` reparte el presupuesto entre los compañeros del propio
 equipo. Tres reglas que vale la pena no perder:
 
-- **El presupuesto se deriva** del número de compañeros, no se recibe por props,
-  por la misma razón que el nivel se deriva de los puntos.
+- **El presupuesto lo dicta el servidor**, que conoce el equipo y el rol. El
+  cliente no lo recalcula: la regla cambiará al existir equipos y dos fuentes
+  para un mismo hecho terminan contradiciéndose. `null` es sin límite —quien
+  organiza— y su reconocimiento vale doble.
 - **Cuenta personas, no insignias.** Con presupuesto 2 eliges a dos compañeros, y
   a cada uno puedes darle de una a seis insignias, cada una con su frase; lo
   único que no se puede es repetir la misma categoría en la misma persona. A
@@ -102,10 +110,21 @@ entonces se pueden cambiar; sin la fecha, "Guardar" no diría hasta cuándo se
 puede volver, que es justo lo que hace útil el cambio. Cuando exista el módulo
 de Actividades, sale del cierre de la actividad.
 
+## Quién ve qué
+
+- **Quien lo recibe** ve sus insignias y frases solo cuando el cierre termina,
+  y nunca quién se las dio. Revelarlo durante la ventana invita a responder en
+  especie, que es justo lo que el anonimato evita.
+- **Quien organiza** ve lo de cada participante con autoría y en cualquier
+  momento: moderar es parte del cierre, no viene después.
+- **Los demás participantes** no ven nada de nadie. La API responde 403; el
+  cliente solo oculta el enlace.
+
 ## Lo que falta
 
-- Otorgamiento real: no hay endpoint, así que `onEnviar` termina en la pantalla
-  de muestra. Depende de actividades, equipos y membresías (Fase A del núcleo).
-- Acumulado real contra la API, con TanStack Query. Hoy no hay endpoints ni
-  cliente de datos en el proyecto.
-- Vista de progreso del perfil y vista de grupo del organizador.
+- Acotar los compañeros al equipo cuando exista `equipos`, y leer la fase de la
+  actividad en vez de calcular la ventana con fechas.
+- La validación ligera del organizador (alertas de reciprocidad y frases
+  vacías) y el descarte de reconocimientos.
+- El perfil global, que hoy es la sección "Tu acumulado" de
+  `PantallaMisReconocimientos`.

@@ -10,6 +10,9 @@ export type CodigoError =
   | 'sin_sesion'
   | 'clave_invalida'
   | 'ya_es_miembro'
+  | 'actividad_no_encontrada'
+  | 'sin_permiso'
+  | 'fuera_de_plazo'
 
 export abstract class ErrorDominio extends Error {
   abstract readonly codigo: CodigoError
@@ -81,5 +84,35 @@ export class ErrorYaEsMiembro extends ErrorDominio {
 
   constructor() {
     super('Ya formas parte de esta actividad.')
+  }
+}
+
+// Misma respuesta si la actividad no existe que si existe pero el actor no es
+// miembro: distinguirlas revelaría que hay una actividad con ese id a quien
+// no tiene nada que ver con ella (mismo criterio que ErrorClaveInvalida).
+export class ErrorActividadNoEncontrada extends ErrorDominio {
+  readonly codigo = 'actividad_no_encontrada' as const
+  readonly status = 404
+
+  constructor() {
+    super('No encontramos esta actividad.')
+  }
+}
+
+export class ErrorSinPermiso extends ErrorDominio {
+  readonly codigo = 'sin_permiso' as const
+  readonly status = 403
+
+  constructor(mensaje = 'No tienes permiso para hacer esto en esta actividad.') {
+    super(mensaje)
+  }
+}
+
+export class ErrorFueraDePlazo extends ErrorDominio {
+  readonly codigo = 'fuera_de_plazo' as const
+  readonly status = 409
+
+  constructor(mensaje: string) {
+    super(mensaje)
   }
 }

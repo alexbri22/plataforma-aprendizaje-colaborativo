@@ -6,6 +6,7 @@ import {
   obtenerActividades,
   unirseConClave,
   type DatosCrearActividad,
+  obtenerParticipantes,
 } from './actividades.api'
 
 // docs/diseno-desarrollo-nucleo.md §4.2 fija ['actividades'] y
@@ -58,5 +59,12 @@ export function useUnirseConClaveMutation() {
       // La actividad nueva debe aparecer en "Mis actividades" (§4.2).
       queryClient.invalidateQueries({ queryKey: CLAVE_ACTIVIDADES })
     },
+  })
+}
+
+export function useParticipantes(id: string) {
+  return useQuery({
+    queryKey: [...claveActividad(id), 'participantes'] as const,
+    queryFn: () => obtenerParticipantes(id),
   })
 }

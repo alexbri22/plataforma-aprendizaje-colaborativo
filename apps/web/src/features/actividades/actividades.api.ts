@@ -140,3 +140,24 @@ export async function unirseConClave(clave: string): Promise<Actividad> {
   const { actividad } = (await respuesta.json()) as { actividad: Actividad }
   return actividad
 }
+
+export interface Participante {
+  idMembresia: string
+  idUsuario: string
+  nombre: string
+  rol: 'organizador' | 'co-organizador' | 'participante'
+}
+
+// GET /api/actividades/:id/participantes: miembros activos con rol
+// participante. Lo consume el módulo de insignias para la vista de quien
+// organiza; vive aquí porque las membresías son del núcleo.
+export async function obtenerParticipantes(idActividad: string): Promise<Participante[]> {
+  const respuesta = await pedir(`/api/actividades/${idActividad}/participantes`)
+  if (!respuesta.ok) {
+    throw new ErrorActividad(
+      await leerMensajeError(respuesta, 'No pudimos cargar a los participantes.'),
+    )
+  }
+  const cuerpo = (await respuesta.json()) as { participantes: Participante[] }
+  return cuerpo.participantes
+}
