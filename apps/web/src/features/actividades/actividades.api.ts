@@ -1,4 +1,9 @@
-import type { FuncionSeguimiento } from '@plataforma/shared'
+import type {
+  EstadoPeriodo,
+  FuncionSeguimiento,
+  Periodicidad,
+  PeriodoReporte,
+} from '@plataforma/shared'
 import type { Actividad, Participante, VistaPreviaActividad } from './tipos'
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? ''
@@ -34,7 +39,11 @@ async function pedir(ruta: string, opciones: RequestInit = {}): Promise<Response
   }
 }
 
-function enviar(ruta: string, datos: unknown, metodo: 'POST' | 'PUT' = 'POST'): Promise<Response> {
+function enviar(
+  ruta: string,
+  datos: unknown,
+  metodo: 'POST' | 'PUT' | 'PATCH' = 'POST',
+): Promise<Response> {
   return pedir(ruta, {
     method: metodo,
     headers: { 'Content-Type': 'application/json' },
@@ -187,7 +196,7 @@ export async function cerrarInscripcion(id: string): Promise<Actividad> {
 }
 
 // PUT /api/actividades/{id}/configuracion/{funcion} (docs/diseno-desarrollo-nucleo.md
-// §7.7): fija el estado de una función. `cuerpo` es {estado} para las ocho
+// §7.7): fija el estado de una función. `cuerpo` es {estado} para las siete
 // funciones simples, o {metas, avances, recursos} para espacio_equipo
 // (validarDatosConfigurarFuncion en el servidor espera exactamente esa
 // forma según la función).
@@ -210,4 +219,70 @@ export async function configurarFuncion(
 
   const { actividad } = (await respuesta.json()) as { actividad: Actividad }
   return actividad
+}
+
+// GET /api/actividades/{id}/periodos (docs/diseno-desarrollo-nucleo.md §9.4):
+// calendario de avances, cancelados incluidos.
+export async function obtenerPeriodos(id: string): Promise<PeriodoReporte[]> {
+  const respuesta = await pedir(`/api/actividades/${encodeURIComponent(id)}/periodos`)
+
+  if (!respuesta.ok) {
+    throw new ErrorActividad(
+      await leerMensajeError(respuesta, 'No pudimos cargar el calendario de avances.'),
+    )
+  }
+
+  const { periodos } = (await respuesta.json()) as { periodos: PeriodoReporte[] }
+  return periodos
+}
+
+// PUT /api/actividades/{id}/periodos: genera el calendario a partir de una
+// periodicidad y reemplaza el anterior, o lo borra con 'ninguna'.
+export async function definirPeriodos(
+  id: string,
+  periodicidad: Periodicidad | 'ninguna',
+): Promise<PeriodoReporte[]> {
+  const respuesta = await enviar(
+    `/api/actividades/${encodeURIComponent(id)}/periodos`,
+    { periodicidad },
+    'PUT',
+  )
+
+  if (!respuesta.ok) {
+    throw new ErrorActividad(
+      await leerMensajeError(respuesta, 'No pudimos guardar el calendario. Intenta de nuevo.'),
+    )
+  }
+
+  const { periodos } = (await respuesta.json()) as { periodos: PeriodoReporte[] }
+  return periodos
+}
+
+export interface CambiosPeriodo {
+  fechaInicio?: string
+  fechaFin?: string
+  estado?: EstadoPeriodo
+}
+
+// PATCH /api/actividades/{id}/periodos/{idPeriodo}: mueve las fechas de un
+// periodo o lo cancela/reactiva.
+export async function actualizarPeriodo(
+  id: string,
+  idPeriodo: string,
+  cambios: CambiosPeriodo,
+): Promise<PeriodoReporte> {
+  const respuesta = await enviar(
+    `/api/actividades/${encodeURIComponent(id)}/periodos/${encodeURIComponent(idPeriodo)}`,
+    cambios,
+    'PATCH',
+  )
+
+  if (!respuesta.ok) {
+    throw new ErrorActividad(
+      await leerMensajeError(respuesta, 'No pudimos guardar este avance. Intenta de nuevo.'),
+    )
+  }
+
+  const { periodo } = (await respuesta.json()) as { periodo: PeriodoReporte }
+  return periodo
 }

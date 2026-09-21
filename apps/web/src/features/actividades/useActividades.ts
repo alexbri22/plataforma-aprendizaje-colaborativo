@@ -1,14 +1,18 @@
-import type { FuncionSeguimiento } from '@plataforma/shared'
+import type { FuncionSeguimiento, Periodicidad } from '@plataforma/shared'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   buscarActividadPorClave,
   cerrarInscripcion,
   configurarFuncion,
+  actualizarPeriodo,
   crearActividad,
+  definirPeriodos,
   obtenerActividad,
   obtenerActividades,
   obtenerParticipantes,
+  obtenerPeriodos,
   unirseConClave,
+  type CambiosPeriodo,
   type DatosCrearActividad,
 } from './actividades.api'
 
@@ -71,6 +75,36 @@ export function useParticipantes(id: string) {
   return useQuery({
     queryKey: [...claveActividad(id), 'participantes'] as const,
     queryFn: () => obtenerParticipantes(id),
+  })
+}
+
+// Calendario de avances. Cuelga de la clave de la actividad, así que
+// cualquier invalidación de ['actividades', id] también lo refresca.
+export function usePeriodos(id: string) {
+  return useQuery({
+    queryKey: [...claveActividad(id), 'periodos'] as const,
+    queryFn: () => obtenerPeriodos(id),
+  })
+}
+
+export function useDefinirPeriodosMutation(id: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (periodicidad: Periodicidad | 'ninguna') => definirPeriodos(id, periodicidad),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...claveActividad(id), 'periodos'] })
+    },
+  })
+}
+
+export function useActualizarPeriodoMutation(id: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ idPeriodo, cambios }: { idPeriodo: string; cambios: CambiosPeriodo }) =>
+      actualizarPeriodo(id, idPeriodo, cambios),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...claveActividad(id), 'periodos'] })
+    },
   })
 }
 

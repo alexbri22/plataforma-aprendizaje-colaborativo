@@ -1,6 +1,6 @@
 import type { ElementoEspacioEquipo, FuncionSeguimiento } from '@plataforma/shared'
 
-// Copy en español para las nueve funciones de seguimiento y sus estados
+// Copy en español para las funciones de seguimiento y sus estados
 // (docs/diseno-desarrollo-general.md §6.2). Vive en el cliente y no en
 // @plataforma/shared porque es texto de presentación, no el catálogo de
 // valores válidos (nucleo §3.4: "no vive en él... los modelos de vista del
@@ -28,17 +28,6 @@ export const FUNCIONES_SIMPLES: DefinicionFuncion[] = [
       { valor: 'autogestionado', etiqueta: 'Autogestionada por participantes' },
       { valor: 'propuesta_sistema', etiqueta: 'Propuesta del sistema, que tú ajustas' },
       { valor: 'manual', etiqueta: 'Asignación manual, hecha por ti' },
-    ],
-  },
-  {
-    funcion: 'reporte_trabajo',
-    titulo: 'Reporte de trabajo',
-    descripcion: 'Si los equipos entregan reportes periódicos de avance.',
-    opciones: [
-      { valor: 'deshabilitado', etiqueta: 'Deshabilitado' },
-      { valor: 'libre', etiqueta: 'Libre, sin fechas' },
-      { valor: 'fechas_sugeridas', etiqueta: 'Fechas sugeridas, formato libre' },
-      { valor: 'fechas_obligatorias', etiqueta: 'Fechas obligatorias, campos estructurados' },
     ],
   },
   {
@@ -101,13 +90,34 @@ export const FUNCIONES_SIMPLES: DefinicionFuncion[] = [
 ]
 
 export const OPCIONES_ELEMENTO_ESPACIO_EQUIPO: OpcionEstado[] = [
+  { valor: 'deshabilitado', etiqueta: 'Deshabilitado' },
   { valor: 'opcional', etiqueta: 'Opcional' },
   { valor: 'obligatorio', etiqueta: 'Obligatorio' },
 ]
 
-export const ELEMENTOS_ESPACIO_EQUIPO_UI: { elemento: ElementoEspacioEquipo; etiqueta: string }[] =
-  [
-    { elemento: 'metas', etiqueta: 'Metas' },
-    { elemento: 'avances', etiqueta: 'Avances' },
-    { elemento: 'recursos', etiqueta: 'Recursos' },
-  ]
+export const ELEMENTOS_ESPACIO_EQUIPO_UI: {
+  elemento: ElementoEspacioEquipo
+  etiqueta: string
+  descripcion: string
+}[] = [
+  { elemento: 'metas', etiqueta: 'Metas', descripcion: 'Lo que el equipo se propone lograr.' },
+  {
+    elemento: 'avances',
+    etiqueta: 'Avances',
+    descripcion: 'Entregas periódicas del trabajo, con su propio calendario.',
+  },
+  {
+    elemento: 'recursos',
+    etiqueta: 'Recursos',
+    descripcion: 'Enlaces y materiales que el equipo comparte.',
+  },
+]
+
+// 'ninguna' borra el calendario de avances; las otras lo generan entre el
+// inicio y el término de la actividad (docs/diseno-desarrollo-nucleo.md §9.2).
+export const OPCIONES_PERIODICIDAD: OpcionEstado[] = [
+  { valor: 'ninguna', etiqueta: 'Sin calendario' },
+  { valor: 'semanal', etiqueta: 'Semanal' },
+  { valor: 'quincenal', etiqueta: 'Quincenal' },
+  { valor: 'mensual', etiqueta: 'Mensual' },
+]

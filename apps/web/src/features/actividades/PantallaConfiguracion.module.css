@@ -13,6 +13,41 @@
   margin: 0;
 }
 
+.contenido {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.introduccion {
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+  color: var(--color-text);
+  margin: 0;
+  max-width: 70ch;
+}
+
+.aviso {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.seccion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.tituloSeccion {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  color: var(--color-text);
+  margin: 0;
+}
+
 .seccionCard {
   display: flex;
   flex-direction: column;
@@ -73,29 +108,6 @@
   width: 220px;
 }
 
-.grupoEspacioEquipo {
-  display: flex;
-  gap: var(--space-3);
-}
-
-.controlEspacio {
-  width: 128px;
-}
-
-.indicador {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  flex-shrink: 0;
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
-  white-space: nowrap;
-}
-
-.indicadorError {
-  color: var(--color-danger-ink);
-}
-
 @media (max-width: 640px) {
   .fila {
     flex-direction: column;
@@ -106,8 +118,7 @@
     align-items: stretch;
   }
 
-  .controlAncho,
-  .controlEspacio {
+  .controlAncho {
     width: 100%;
   }
 }

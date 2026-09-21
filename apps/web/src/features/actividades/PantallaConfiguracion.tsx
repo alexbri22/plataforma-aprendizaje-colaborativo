@@ -8,15 +8,12 @@ import { useParams } from 'react-router-dom'
 import { AppShell } from '../../components/AppShell'
 import { Button, Card, IconoCargando, Select, Switch } from '../../components/ui'
 import { ErrorActividad } from './actividades.api'
-import {
-  ELEMENTOS_ESPACIO_EQUIPO_UI,
-  FUNCIONES_SIMPLES,
-  OPCIONES_ELEMENTO_ESPACIO_EQUIPO,
-} from './configuracionFunciones'
+import { FUNCIONES_SIMPLES } from './configuracionFunciones'
+import { IndicadorCampo, MENSAJE_ERROR_GUARDADO, type EstadoCampo } from './IndicadorCampo'
+import { SeccionProyectoColaborativo } from './SeccionProyectoColaborativo'
 import { useActividad, useConfigurarFuncionMutation } from './useActividades'
 import styles from './PantallaConfiguracion.module.css'
 
-const MENSAJE_ERROR_GENERICO = 'No pudimos guardar este cambio. Intenta de nuevo.'
 // Todas las de interruptor primero y luego las de picklist, para que el
 // patrón visual de cada fila no se interrumpa a media lista.
 const FUNCIONES_ORDENADAS = [
@@ -27,30 +24,6 @@ const ESPACIO_EQUIPO_POR_DEFECTO: EstadoEspacioEquipo = {
   metas: 'opcional',
   avances: 'opcional',
   recursos: 'opcional',
-}
-
-interface EstadoCampo {
-  status: 'guardando' | 'guardado' | 'error'
-  mensaje?: string
-}
-
-function IndicadorCampo({ estado }: { estado?: EstadoCampo }) {
-  if (!estado) return null
-  if (estado.status === 'guardando') {
-    return (
-      <span className={styles.indicador}>
-        <IconoCargando size={14} /> Guardando…
-      </span>
-    )
-  }
-  if (estado.status === 'error') {
-    return (
-      <span className={`${styles.indicador} ${styles.indicadorError}`} role="alert">
-        {estado.mensaje}
-      </span>
-    )
-  }
-  return <span className={styles.indicador}>Guardado</span>
 }
 
 export function PantallaConfiguracion() {
@@ -73,7 +46,7 @@ export function PantallaConfiguracion() {
         ...previo,
         [clave]: {
           status: 'error',
-          mensaje: error instanceof ErrorActividad ? error.message : MENSAJE_ERROR_GENERICO,
+          mensaje: error instanceof ErrorActividad ? error.message : MENSAJE_ERROR_GUARDADO,
         },
       }))
     }
@@ -102,6 +75,14 @@ export function PantallaConfiguracion() {
     parsearEstadoEspacioEquipo(actividad.configuracion?.espacio_equipo ?? '') ??
     ESPACIO_EQUIPO_POR_DEFECTO
 
+  // Dos capacidades distintas porque las fases donde cada una aplica también
+  // lo son: las funciones dejan de poder cambiarse al entrar a desarrollo,
+  // pero ajustar el calendario de avances (mover una fecha, cancelar una
+  // entrega) sigue siendo posible mientras la actividad se desarrolla
+  // (capacidades.ts, ajustar_periodos).
+  const puedeConfigurar = actividad.capacidades?.includes('configurar_funciones') ?? false
+  const puedeAjustarPeriodos = actividad.capacidades?.includes('ajustar_periodos') ?? false
+
   return (
     <AppShell
       seccionActiva="actividades"
@@ -112,96 +93,91 @@ export function PantallaConfiguracion() {
         </Button>
       }
     >
-      {!actividad.capacidades?.includes('configurar_funciones') ? (
+      {!puedeConfigurar && !puedeAjustarPeriodos ? (
         <Card className={styles.seccionCard}>
           <p className={styles.texto}>No tienes permiso para configurar esta actividad.</p>
         </Card>
       ) : (
-        <Card className={styles.lista}>
-          {FUNCIONES_ORDENADAS.map((definicion) => {
-            const valorActual =
-              actividad.configuracion?.[definicion.funcion] ?? definicion.opciones[0].valor
-            return (
-              <div key={definicion.funcion} className={styles.fila}>
-                <div className={styles.filaTexto}>
-                  <h2 className={styles.tituloCampo}>{definicion.titulo}</h2>
-                  <p className={styles.descripcionCampo}>{definicion.descripcion}</p>
-                </div>
-                <div className={styles.filaControl}>
-                  {definicion.opciones.length === 2 ? (
-                    <Switch
-                      label={definicion.titulo}
-                      ocultarEtiqueta
-                      checked={valorActual === definicion.opciones[1].valor}
-                      onChange={(evento: ChangeEvent<HTMLInputElement>) =>
-                        guardar(definicion.funcion, definicion.funcion, {
-                          estado: evento.target.checked
-                            ? definicion.opciones[1].valor
-                            : definicion.opciones[0].valor,
-                        })
-                      }
-                    />
-                  ) : (
-                    <div className={styles.controlAncho}>
-                      <Select
-                        label={definicion.titulo}
-                        ocultarEtiqueta
-                        value={valorActual}
-                        onChange={(evento: ChangeEvent<HTMLSelectElement>) =>
-                          guardar(definicion.funcion, definicion.funcion, {
-                            estado: evento.target.value,
-                          })
-                        }
-                      >
-                        {definicion.opciones.map((opcion) => (
-                          <option key={opcion.valor} value={opcion.valor}>
-                            {opcion.etiqueta}
-                          </option>
-                        ))}
-                      </Select>
-                    </div>
-                  )}
-                  <IndicadorCampo estado={estados[definicion.funcion]} />
-                </div>
-              </div>
-            )
-          })}
+        <div className={styles.contenido}>
+          <p className={styles.introduccion}>
+            Define cómo se organizan los equipos, qué seguimiento y evaluación tendrá la actividad y
+            con qué frecuencia se revisa el trabajo.
+          </p>
 
-          <div className={styles.fila}>
-            <div className={styles.filaTexto}>
-              <h2 className={styles.tituloCampo}>Espacio de equipo</h2>
-              <p className={styles.descripcionCampo}>
-                Qué elementos usan los equipos para compartir su trabajo, y si son obligatorios.
-              </p>
-            </div>
-            <div className={styles.filaControl}>
-              <div className={styles.grupoEspacioEquipo}>
-                {ELEMENTOS_ESPACIO_EQUIPO_UI.map(({ elemento, etiqueta }) => (
-                  <div key={elemento} className={styles.controlEspacio}>
-                    <Select
-                      label={etiqueta}
-                      value={estadoEspacioEquipo[elemento]}
-                      onChange={(evento: ChangeEvent<HTMLSelectElement>) => {
-                        const siguiente = {
-                          ...estadoEspacioEquipo,
-                          [elemento]: evento.target.value,
-                        }
-                        guardar('espacio_equipo', 'espacio_equipo', siguiente)
-                      }}
-                    >
-                      {OPCIONES_ELEMENTO_ESPACIO_EQUIPO.map((opcion) => (
-                        <option key={opcion.valor} value={opcion.valor}>
-                          {opcion.etiqueta}
-                        </option>
-                      ))}
-                    </Select>
+          {!puedeConfigurar ? (
+            <p className={styles.aviso}>
+              Las funciones ya no pueden cambiarse en esta fase. Aún puedes ajustar el calendario de
+              avances.
+            </p>
+          ) : null}
+
+          <section aria-labelledby="titulo-general" className={styles.seccion}>
+            <h2 id="titulo-general" className={styles.tituloSeccion}>
+              General
+            </h2>
+            <Card className={styles.lista}>
+              {FUNCIONES_ORDENADAS.map((definicion) => {
+                const valorActual =
+                  actividad.configuracion?.[definicion.funcion] ?? definicion.opciones[0].valor
+                return (
+                  <div key={definicion.funcion} className={styles.fila}>
+                    <div className={styles.filaTexto}>
+                      <h3 className={styles.tituloCampo}>{definicion.titulo}</h3>
+                      <p className={styles.descripcionCampo}>{definicion.descripcion}</p>
+                    </div>
+                    <div className={styles.filaControl}>
+                      {definicion.opciones.length === 2 ? (
+                        <Switch
+                          label={definicion.titulo}
+                          ocultarEtiqueta
+                          checked={valorActual === definicion.opciones[1].valor}
+                          disabled={!puedeConfigurar}
+                          onChange={(evento: ChangeEvent<HTMLInputElement>) =>
+                            guardar(definicion.funcion, definicion.funcion, {
+                              estado: evento.target.checked
+                                ? definicion.opciones[1].valor
+                                : definicion.opciones[0].valor,
+                            })
+                          }
+                        />
+                      ) : (
+                        <div className={styles.controlAncho}>
+                          <Select
+                            label={definicion.titulo}
+                            ocultarEtiqueta
+                            value={valorActual}
+                            disabled={!puedeConfigurar}
+                            onChange={(evento: ChangeEvent<HTMLSelectElement>) =>
+                              guardar(definicion.funcion, definicion.funcion, {
+                                estado: evento.target.value,
+                              })
+                            }
+                          >
+                            {definicion.opciones.map((opcion) => (
+                              <option key={opcion.valor} value={opcion.valor}>
+                                {opcion.etiqueta}
+                              </option>
+                            ))}
+                          </Select>
+                        </div>
+                      )}
+                      <IndicadorCampo estado={estados[definicion.funcion]} />
+                    </div>
                   </div>
-                ))}
-              </div>
-              <IndicadorCampo estado={estados.espacio_equipo} />
-            </div>
-          </div>
-        </Card>
+                )
+              })}
+            </Card>
+          </section>
+
+          <SeccionProyectoColaborativo
+            idActividad={id}
+            estadoEspacioEquipo={estadoEspacioEquipo}
+            puedeConfigurar={puedeConfigurar}
+            puedeAjustarPeriodos={puedeAjustarPeriodos}
+            estados={estados}
+            guardar={guardar}
+          />
+        </div>
       )}
     </AppShell>
   )

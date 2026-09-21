@@ -187,7 +187,11 @@ export function PantallaResumenActividad() {
       seccionActiva="actividades"
       titulo={actividad.nombre}
       acciones={
-        actividad.capacidades?.includes('configurar_funciones') ? (
+        // En desarrollo ya no se pueden cambiar funciones, pero sí el calendario
+        // de avances: la pantalla de configuración sigue siendo el lugar.
+        actividad.capacidades?.some(
+          (capacidad) => capacidad === 'configurar_funciones' || capacidad === 'ajustar_periodos',
+        ) ? (
           <Button variant="secondary" to={`/actividades/${actividad.id}/configuracion`}>
             Configurar
           </Button>

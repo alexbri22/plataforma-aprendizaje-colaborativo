@@ -1,0 +1,143 @@
+.seccion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.titulo {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  color: var(--color-text);
+  margin: 0;
+}
+
+.descripcion {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-muted);
+  margin: 0;
+  max-width: 70ch;
+}
+
+.tarjeta {
+  max-width: 1100px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.contenedorTabla {
+  overflow-x: auto;
+}
+
+.tabla {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+}
+
+.tabla th,
+.tabla td {
+  padding: var(--space-4);
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tabla tbody tr:last-child th,
+.tabla tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.encabezadoColumna {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+}
+
+.celdaTarea {
+  width: 28%;
+  font-weight: inherit;
+}
+
+.nombreTarea {
+  display: block;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.descripcionTarea {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-muted);
+}
+
+.celdaControl {
+  width: 190px;
+}
+
+.celdaFecha {
+  width: 130px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.celdaAccion {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.noAplica {
+  color: var(--color-text-muted);
+}
+
+.soloLectorPantalla {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.ayuda {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.filaConfirmacion td {
+  background: var(--color-surface);
+}
+
+.confirmacion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.confirmacionTexto {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--color-text);
+  margin: 0;
+  max-width: 60ch;
+}
+
+.confirmacionAcciones {
+  display: flex;
+  gap: var(--space-2);
+}

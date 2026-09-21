@@ -247,4 +247,16 @@ describe('PantallaResumenActividad', () => {
       expect(screen.queryByRole('button', { name: /Ver todos/ })).not.toBeInTheDocument()
     })
   })
+
+  it('muestra Configurar si solo puede ajustar el calendario, como en desarrollo', async () => {
+    vi.mocked(obtenerActividad).mockResolvedValueOnce({
+      ...ACTIVIDAD_BASE,
+      fase: 'desarrollo',
+      capacidades: ['ajustar_periodos', 'agregar_coorganizador'],
+    })
+
+    renderPantalla(ACTIVIDAD_BASE.id)
+
+    expect(await screen.findByRole('link', { name: 'Configurar' })).toBeInTheDocument()
+  })
 })

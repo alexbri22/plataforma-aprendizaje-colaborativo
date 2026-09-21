@@ -218,6 +218,14 @@ Soft-edged and calm is the default register — generous internal padding, comfo
 - **Status variants** (success / danger / warning): `-subtle` background with matching `-ink` text — quiet, informational, sit inline in tables and lists without competing for attention.
 - **Accent variant (recognition only):** Apothecary Amber `-subtle` background with `accent-ink` text. This is the _only_ place in the system Apothecary Amber appears at rest (a badge already earned, shown on a profile). The moment of _awarding_ a badge may use the solid Apothecary Amber fill with white text as a one-time celebratory treatment (see Do's and Don'ts) — the pill above is its permanent, quiet resting state afterward.
 
+### Side Panel (`PanelLateral`)
+
+- **Use:** editing a secondary set of values that belongs to a row of a dense view without leaving it (for example, adjusting the dates of each occurrence of a schedule from the configuration screen). Not for confirmations — those stay inline.
+- **Shape:** anchored to the right edge, full height, up to 520px wide (full width below that). Paper background, Hairline border on its inner edge, the **Overlay** shadow (it is a modal in the Elevation sense).
+- **Scrim:** `--color-scrim` (Graphite at 40% alpha) covers the page behind it; clicking it closes the panel.
+- **Behavior:** focus moves into the panel on open and returns to the trigger on close; `Esc` closes; `Tab` stays inside; the page behind does not scroll.
+- **Header:** title at Heading size, optional one-line description in Muted, a `Cerrar` button. No decorative color.
+
 ### Rank Insignia (features/insignias)
 
 The one place in the system where raster artwork appears. A rank insignia is **two layers**: a metallic frame PNG for the level (bronce / plata / oro / platino / diamante), and inside it an emblem PNG for the category at that level. A category not yet earned keeps the frame's dotted placeholder and a muted vector emblem. It is the visual payload of the recognition system, so it gets latitude nothing else in the interface gets — and correspondingly tight boundaries.
