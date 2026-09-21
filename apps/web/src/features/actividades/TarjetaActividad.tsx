@@ -18,7 +18,10 @@ export function TarjetaActividad({ actividad }: TarjetaActividadProps) {
       <Card className={styles.tarjeta}>
         <div className={styles.encabezado}>
           <h3 className={styles.nombre}>{actividad.nombre}</h3>
-          <Badge variant={fase.variant}>{fase.etiqueta}</Badge>
+          <div className={styles.estado}>
+            <span className={styles.estadoEtiqueta}>Estado</span>
+            <Badge variant={fase.variant}>{fase.etiqueta}</Badge>
+          </div>
         </div>
 
         <p className={styles.objetivo}>{actividad.objetivo}</p>

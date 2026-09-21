@@ -54,13 +54,51 @@ describe('PantallaMisActividades', () => {
     actividades = [...ACTIVIDADES_PRUEBA]
   })
 
-  it('muestra las actividades que organizo agrupadas por fase en la pestaña inicial', async () => {
+  it('muestra en una sola lista las actividades que organizo, sin importar su estado', async () => {
     renderPantalla()
 
     expect(await screen.findByText('Proyecto de ecosistemas')).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Organizo' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByText('Curso de introducción a bases de datos')).toBeInTheDocument()
+    expect(screen.getByText('Taller de retroalimentación entre pares')).toBeInTheDocument()
     expect(screen.queryByText('Debate de genética')).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { level: 2 })).not.toBeInTheDocument()
+  })
+
+  it('rotula la píldora de cada tarjeta como el estado de la actividad', async () => {
+    renderPantalla()
+
+    await screen.findByText('Proyecto de ecosistemas')
+
+    // Una etiqueta "Estado" por tarjeta (4 que organizo o co-organizo).
+    expect(screen.getAllByText('Estado')).toHaveLength(4)
+  })
+
+  it('filtra por estado y permite volver a ver todas', async () => {
+    renderPantalla()
+
+    await screen.findByText('Proyecto de ecosistemas')
+    await userEvent.selectOptions(screen.getByLabelText('Ver actividades en'), 'desarrollo')
+
+    expect(screen.getByText('Taller de retroalimentación entre pares')).toBeInTheDocument()
+    expect(screen.queryByText('Proyecto de ecosistemas')).not.toBeInTheDocument()
+    expect(screen.queryByText('Curso de introducción a bases de datos')).not.toBeInTheDocument()
+
+    await userEvent.selectOptions(screen.getByLabelText('Ver actividades en'), 'todas')
+
+    expect(screen.getByText('Proyecto de ecosistemas')).toBeInTheDocument()
+    expect(screen.getByText('Curso de introducción a bases de datos')).toBeInTheDocument()
+  })
+
+  it('avisa cuando ninguna actividad de la pestaña tiene el estado elegido', async () => {
+    renderPantalla()
+
+    await screen.findByText('Proyecto de ecosistemas')
+    await userEvent.selectOptions(screen.getByLabelText('Ver actividades en'), 'cierre')
+
+    expect(
+      screen.getByText('Ninguna actividad coincide con tu búsqueda o filtro.'),
+    ).toBeInTheDocument()
   })
 
   it('cambia a las actividades en las que participo al activar esa pestaña', async () => {
@@ -71,5 +109,39 @@ describe('PantallaMisActividades', () => {
 
     expect(await screen.findByText('Debate de genética')).toBeInTheDocument()
     expect(screen.queryByText('Proyecto de ecosistemas')).not.toBeInTheDocument()
+  })
+
+  it('busca por nombre u objetivo sin distinguir mayúsculas ni acentos', async () => {
+    renderPantalla()
+
+    await screen.findByText('Proyecto de ecosistemas')
+    await userEvent.type(screen.getByLabelText('Buscar actividades'), 'RETROALIMENTACION')
+
+    expect(screen.getByText('Taller de retroalimentación entre pares')).toBeInTheDocument()
+    expect(screen.queryByText('Proyecto de ecosistemas')).not.toBeInTheDocument()
+  })
+
+  it('combina la búsqueda con el filtro por estado', async () => {
+    renderPantalla()
+
+    await screen.findByText('Proyecto de ecosistemas')
+    await userEvent.type(screen.getByLabelText('Buscar actividades'), 'proyecto')
+    await userEvent.selectOptions(screen.getByLabelText('Ver actividades en'), 'desarrollo')
+
+    expect(
+      screen.getByText('Ninguna actividad coincide con tu búsqueda o filtro.'),
+    ).toBeInTheDocument()
+  })
+
+  it('limpia búsqueda y filtro desde el estado sin resultados', async () => {
+    renderPantalla()
+
+    await screen.findByText('Proyecto de ecosistemas')
+    await userEvent.type(screen.getByLabelText('Buscar actividades'), 'zzz')
+    await userEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }))
+
+    expect(screen.getByLabelText('Buscar actividades')).toHaveValue('')
+    expect(screen.getByLabelText('Ver actividades en')).toHaveValue('todas')
+    expect(screen.getByText('Proyecto de ecosistemas')).toBeInTheDocument()
   })
 })

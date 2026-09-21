@@ -9,6 +9,11 @@ import { useActividad, useCerrarInscripcionMutation, useParticipantes } from './
 import type { Actividad } from './tipos'
 import styles from './PantallaResumenActividad.module.css'
 
+// Cuántos participantes se muestran antes de pedir "Ver todos". La API
+// devuelve la lista completa (todavía sin paginar, ver nucleo §3.1); esto
+// solo evita que una actividad numerosa alargue la pantalla.
+const PARTICIPANTES_VISIBLES = 8
+
 const MENSAJE_ERROR_CIERRE_GENERICO = 'No pudimos cerrar la inscripción. Intenta de nuevo.'
 
 // La fase actual con la acción que la hace avanzar (docs/diseno-desarrollo-nucleo.md
@@ -91,6 +96,7 @@ function AccionDeAvance({ actividad }: { actividad: Actividad }) {
 // organizador ni co-organizadores: ellos no son a quienes se está esperando.
 function SeccionParticipantes({ id }: { id: string }) {
   const participantesQuery = useParticipantes(id)
+  const [verTodos, setVerTodos] = useState(false)
 
   return (
     <Card className={styles.seccionCard}>
@@ -117,17 +123,33 @@ function SeccionParticipantes({ id }: { id: string }) {
               </p>
             )
           }
+          const hayMas = participantes.length > PARTICIPANTES_VISIBLES
+          const visibles =
+            verTodos || !hayMas ? participantes : participantes.slice(0, PARTICIPANTES_VISIBLES)
           return (
-            <ul className={styles.listaParticipantes}>
-              {participantes.map((participante) => (
-                <li key={participante.idUsuario} className={styles.filaParticipante}>
-                  <span className={styles.nombreParticipante}>{participante.nombre}</span>
-                  <span className={styles.fechaParticipante}>
-                    Se unió el {formatearFechaHora(participante.fechaUnion)}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <>
+              <ul className={styles.listaParticipantes}>
+                {visibles.map((participante) => (
+                  <li key={participante.idUsuario} className={styles.filaParticipante}>
+                    <span className={styles.nombreParticipante}>{participante.nombre}</span>
+                    <span className={styles.fechaParticipante}>
+                      Se unió el {formatearFechaHora(participante.fechaUnion)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {hayMas ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className={styles.verTodos}
+                  aria-expanded={verTodos}
+                  onClick={() => setVerTodos((valor) => !valor)}
+                >
+                  {verTodos ? 'Ver menos' : `Ver todos (${participantes.length})`}
+                </Button>
+              ) : null}
+            </>
           )
         })()
       )}
@@ -216,7 +238,7 @@ export function PantallaResumenActividad() {
             ) : null}
             {actividad.plazoCierreDias != null ? (
               <div className={styles.detalle}>
-                <dt className={styles.detalleEtiqueta}>Plazo de honoramiento</dt>
+                <dt className={styles.detalleEtiqueta}>Plazo de reconocimiento</dt>
                 <dd className={styles.detalleValor}>{actividad.plazoCierreDias} días</dd>
               </div>
             ) : null}

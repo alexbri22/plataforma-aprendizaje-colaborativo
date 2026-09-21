@@ -203,4 +203,48 @@ describe('PantallaResumenActividad', () => {
     expect(screen.queryByText('Ada Lovelace')).not.toBeInTheDocument()
     expect(screen.getByText('Participantes (1)')).toBeInTheDocument()
   })
+
+  describe('con muchos participantes', () => {
+    const muchos: Participante[] = Array.from({ length: 12 }, (_, i) => ({
+      idUsuario: `p-${i + 1}`,
+      nombre: `Persona ${i + 1}`,
+      rol: 'participante',
+      estado: 'activa',
+      fechaUnion: '2026-08-02T12:00:00.000Z',
+    }))
+
+    it('muestra solo los primeros 8 y permite ver todos', async () => {
+      vi.mocked(obtenerActividad).mockResolvedValueOnce(ACTIVIDAD_BASE)
+      vi.mocked(obtenerParticipantes).mockResolvedValueOnce(muchos)
+
+      renderPantalla(ACTIVIDAD_BASE.id)
+
+      expect(await screen.findByText('Persona 8')).toBeInTheDocument()
+      expect(screen.queryByText('Persona 9')).not.toBeInTheDocument()
+      // El total del título sigue contando a todos, no solo a los visibles.
+      expect(screen.getByText('Participantes (12)')).toBeInTheDocument()
+
+      await userEvent.click(screen.getByRole('button', { name: 'Ver todos (12)' }))
+
+      expect(screen.getByText('Persona 12')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Ver menos' })).toHaveAttribute(
+        'aria-expanded',
+        'true',
+      )
+
+      await userEvent.click(screen.getByRole('button', { name: 'Ver menos' }))
+
+      expect(screen.queryByText('Persona 9')).not.toBeInTheDocument()
+    })
+
+    it('no muestra el botón cuando caben todos', async () => {
+      vi.mocked(obtenerActividad).mockResolvedValueOnce(ACTIVIDAD_BASE)
+      vi.mocked(obtenerParticipantes).mockResolvedValueOnce(muchos.slice(0, 8))
+
+      renderPantalla(ACTIVIDAD_BASE.id)
+
+      expect(await screen.findByText('Persona 8')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /Ver todos/ })).not.toBeInTheDocument()
+    })
+  })
 })

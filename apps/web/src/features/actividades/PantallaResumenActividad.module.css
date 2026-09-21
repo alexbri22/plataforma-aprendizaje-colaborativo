@@ -87,6 +87,10 @@
   list-style: none;
 }
 
+.verTodos {
+  align-self: flex-start;
+}
+
 .filaParticipante {
   display: flex;
   align-items: baseline;
