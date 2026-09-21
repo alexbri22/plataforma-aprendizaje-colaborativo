@@ -10,8 +10,12 @@ import {
 } from './actividades.js'
 
 describe('catálogo de funciones de seguimiento', () => {
-  it('tiene exactamente nueve funciones (nucleo §7.1)', () => {
-    expect(FUNCIONES_SEGUIMIENTO).toHaveLength(9)
+  it('tiene exactamente ocho funciones (nucleo §7.1)', () => {
+    expect(FUNCIONES_SEGUIMIENTO).toHaveLength(8)
+  })
+
+  it('el reporte de trabajo ya no es una función: vive en los avances del espacio de equipo', () => {
+    expect(FUNCIONES_SEGUIMIENTO).not.toContain('reporte_trabajo')
   })
 
   it('tiene un valor por defecto para cada función (P-25)', () => {
@@ -40,6 +44,15 @@ describe('estado compuesto de espacio_equipo', () => {
     expect(
       parsearEstadoEspacioEquipo('{"metas":"x","avances":"opcional","recursos":"opcional"}'),
     ).toBeNull()
+  })
+
+  it('admite deshabilitado en cualquiera de los tres elementos', () => {
+    const estado = {
+      metas: 'deshabilitado',
+      avances: 'opcional',
+      recursos: 'deshabilitado',
+    } as const
+    expect(parsearEstadoEspacioEquipo(serializarEstadoEspacioEquipo(estado))).toEqual(estado)
   })
 
   it('el valor por defecto del catálogo es válido', () => {

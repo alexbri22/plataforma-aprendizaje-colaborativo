@@ -188,7 +188,12 @@ describe('GET /api/actividades/:id', () => {
     expect(respuesta.status).toBe(200)
     expect(respuesta.body.actividad.id).toBe(id)
     expect(new Set(respuesta.body.actividad.capacidades)).toEqual(
-      new Set(['configurar_funciones', 'cerrar_inscripcion', 'agregar_coorganizador']),
+      new Set([
+        'configurar_funciones',
+        'ajustar_periodos',
+        'cerrar_inscripcion',
+        'agregar_coorganizador',
+      ]),
     )
     expect(respuesta.body.actividad.configuracion.formacion_equipos).toBe('autogestionado')
     expect(respuesta.body.actividad.configuracion.bitacora_individual).toBe('deshabilitada')

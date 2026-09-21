@@ -13,7 +13,7 @@ import { ACCIONES_ACTIVIDAD, type AccionActividad } from '@plataforma/shared'
 // tabla se recorre en una prueba, una cadena de condicionales se reconstruye
 // a mano.
 //
-// Alcance de este incremento: solo existen las tres acciones del catálogo
+// Alcance de este incremento: solo existen las acciones del catálogo
 // (@plataforma/shared, ACCIONES_ACTIVIDAD). Cuando Equipos, Seguimiento y
 // Evaluación tengan sus propias acciones, se agregan aquí sin tocar las
 // existentes.
@@ -42,6 +42,7 @@ export type ResultadoAutorizacion =
 // equivalente, docs/diseno-desarrollo-general.md §7.3).
 const PERMISO_REQUERIDO_POR_ACCION: Readonly<Record<AccionActividad, PermisoCoorganizador>> = {
   configurar_funciones: 'configurar_actividad',
+  ajustar_periodos: 'configurar_actividad',
   cerrar_inscripcion: 'gestionar_inscripcion',
   agregar_coorganizador: 'gestionar_coorganizadores',
 }
@@ -54,8 +55,16 @@ const PERMISO_REQUERIDO_POR_ACCION: Readonly<Record<AccionActividad, PermisoCoor
 // alcanza esa fase (Formación → Desarrollo depende de Equipos, fuera de
 // alcance). agregar_coorganizador se permite en toda fase salvo archivada,
 // que es de solo lectura para todos sin excepción (general §7.4).
+//
+// ajustar_periodos (mover las fechas de un periodo de avances o cancelarlo)
+// llega hasta desarrollo, a diferencia de configurar_funciones: el motivo de
+// editar periodos uno a uno es justo absorber lo que pasa durante la
+// actividad (un periodo que cae en vacaciones, una entrega que se cancela;
+// nucleo §9.2). Regenerar el calendario entero sí es configurar_funciones,
+// porque descartaría esos ajustes.
 const FASES_POR_ACCION: Readonly<Record<AccionActividad, readonly EstadoActividad[]>> = {
   configurar_funciones: ['configuracion', 'inscripcion', 'formacion_equipos'],
+  ajustar_periodos: ['configuracion', 'inscripcion', 'formacion_equipos', 'desarrollo'],
   cerrar_inscripcion: ['inscripcion'],
   agregar_coorganizador: [
     'configuracion',

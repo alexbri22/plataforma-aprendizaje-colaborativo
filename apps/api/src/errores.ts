@@ -16,6 +16,8 @@ export type CodigoError =
   | 'sin_participantes'
   | 'usuario_no_encontrado'
   | 'organizador_unico'
+  | 'periodo_no_encontrado'
+  | 'periodo_traslapado'
 
 export abstract class ErrorDominio extends Error {
   abstract readonly codigo: CodigoError
@@ -154,5 +156,29 @@ export class ErrorOrganizadorUnico extends ErrorDominio {
 
   constructor() {
     super('Quien organiza la actividad no puede convertirse en co-organizador.')
+  }
+}
+
+// 404 aunque el actor sí sea miembro: el periodo no existe en esta actividad
+// (o pertenece a otra, que para él es lo mismo).
+export class ErrorPeriodoNoEncontrado extends ErrorDominio {
+  readonly codigo = 'periodo_no_encontrado' as const
+  readonly status = 404
+
+  constructor() {
+    super('No encontramos ese periodo en esta actividad.')
+  }
+}
+
+// Dos periodos activos no pueden cubrir el mismo día: cada periodo es la
+// ventana de un solo avance (docs/diseno-desarrollo-nucleo.md §9.2). Un
+// periodo cancelado no cuenta, por eso puede reactivarse solo si su rango
+// sigue libre.
+export class ErrorPeriodoTraslapado extends ErrorDominio {
+  readonly codigo = 'periodo_traslapado' as const
+  readonly status = 422
+
+  constructor(ordenExistente: number) {
+    super(`Estas fechas se traslapan con el periodo ${ordenExistente}.`)
   }
 }

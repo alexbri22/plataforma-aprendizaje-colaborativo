@@ -73,13 +73,14 @@ enum EstadoMembresia {
   @@map("estado_membresia")
 }
 
-// docs/diseno-desarrollo-general.md §6.2: catálogo fijo de las nueve
-// funciones de seguimiento. El valor de estado de cada una vive en
+// docs/diseno-desarrollo-general.md §6.2: catálogo fijo de las ocho
+// funciones de seguimiento (el reporte de trabajo dejó de ser una función:
+// es el elemento `avances` de espacio_equipo, con su calendario en
+// PeriodoReporte). El valor de estado de cada una vive en
 // ConfiguracionFuncion.estado como texto (ver la nota de ese modelo): este
 // enum solo fija cuáles funciones existen, no sus estados posibles.
 enum FuncionSeguimiento {
   formacion_equipos
-  reporte_trabajo
   bitacora_individual
   calificacion
   autoevaluacion_individual
@@ -89,6 +90,14 @@ enum FuncionSeguimiento {
   insignias
 
   @@map("funcion_seguimiento")
+}
+
+// Un periodo cancelado conserva su orden y puede reactivarse (nucleo §9.2).
+enum EstadoPeriodo {
+  activo
+  cancelado
+
+  @@map("estado_periodo")
 }
 
 // docs/diseno-desarrollo-general.md §7.3: permisos otorgables a una
@@ -189,6 +198,7 @@ model Actividad {
 
   membresias       Membresia[]
   configuracion    ConfiguracionFuncion[]
+  periodos         PeriodoReporte[]
   eventosHistorial Historial[]
 
   @@map("actividades")
@@ -243,6 +253,26 @@ model ConfiguracionFuncion {
 
   @@id([idActividad, funcion])
   @@map("configuracion_funciones")
+}
+
+// docs/diseno-desarrollo-general.md §4.4 y nucleo §9.2: calendario de los
+// avances (reporte de trabajo) de una actividad. Periodos explícitos y no
+// una periodicidad guardada: se generan a partir de una y después se
+// ajustan o cancelan uno a uno. La propiedad es del módulo de Seguimiento,
+// que es el único que los lee y escribe. Fechas de calendario guardadas
+// como medianoche UTC, igual que las de Actividad.
+model PeriodoReporte {
+  idPeriodo   String        @id @default(uuid()) @map("id_periodo")
+  idActividad String        @map("id_actividad")
+  orden       Int
+  fechaInicio DateTime      @map("fecha_inicio")
+  fechaFin    DateTime      @map("fecha_fin")
+  estado      EstadoPeriodo @default(activo)
+
+  actividad Actividad @relation(fields: [idActividad], references: [idActividad], onDelete: Cascade)
+
+  @@unique([idActividad, orden])
+  @@map("periodos_reporte")
 }
 
 // docs/diseno-desarrollo-general.md §4.4: referencia polimórfica hacia la

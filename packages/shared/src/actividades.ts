@@ -11,7 +11,8 @@
  * validación" del núcleo, §4.4).
  *
  * Fuentes: docs/diseno-desarrollo-general.md §6.1, §6.2, §7.3.
- *          docs/diseno-desarrollo-nucleo.md §2.2, §7.1, §7.4, §7.6, §7.9 (P-25).
+ *          docs/diseno-desarrollo-nucleo.md §2.2, §7.1, §7.4, §7.6, §7.9 (P-25),
+ *          §9.2 (periodos de reporte, P-28).
  */
 
 /** Catálogo de acciones del módulo de Actividades (nucleo §2.2). El nombre es
@@ -19,18 +20,20 @@
  * GET /api/actividades/{id} devuelve un subconjunto de estos valores. */
 export const ACCIONES_ACTIVIDAD = [
   'configurar_funciones',
+  'ajustar_periodos',
   'cerrar_inscripcion',
   'agregar_coorganizador',
 ] as const
 
 export type AccionActividad = (typeof ACCIONES_ACTIVIDAD)[number]
 
-/** Las nueve funciones de seguimiento del catálogo (general §6.2). Cada
+/** Las ocho funciones de seguimiento del catálogo (general §6.2). Cada
  * actividad tiene exactamente una fila de configuración por función
- * (nucleo §7.1). */
+ * (nucleo §7.1). El reporte de trabajo ya no es una función aparte: es el
+ * elemento `avances` de `espacio_equipo`, con su calendario en los periodos
+ * de reporte (ver PERIODICIDADES). */
 export const FUNCIONES_SEGUIMIENTO = [
   'formacion_equipos',
-  'reporte_trabajo',
   'bitacora_individual',
   'calificacion',
   'autoevaluacion_individual',
@@ -46,7 +49,6 @@ export type FuncionSeguimiento = (typeof FUNCIONES_SEGUIMIENTO)[number]
  * salvo `espacio_equipo` tienen un estado simple, de esta lista. */
 export const ESTADOS_POR_FUNCION: Readonly<Record<FuncionSeguimiento, readonly string[]>> = {
   formacion_equipos: ['autogestionado', 'propuesta_sistema', 'manual'],
-  reporte_trabajo: ['deshabilitado', 'libre', 'fechas_sugeridas', 'fechas_obligatorias'],
   bitacora_individual: ['deshabilitada', 'habilitada'],
   calificacion: ['deshabilitada', 'directa', 'rubrica'],
   autoevaluacion_individual: ['deshabilitada', 'habilitada'],
@@ -59,13 +61,14 @@ export const ESTADOS_POR_FUNCION: Readonly<Record<FuncionSeguimiento, readonly s
 }
 
 /** `espacio_equipo` empaqueta tres sub-estados en una sola fila de las
- * nueve (general §6.2: "Por elemento: Opcional / Obligatorio"), porque
- * nucleo §7.1 inserta "las filas de configuración de las nueve funciones" y
- * no once. Se serializa como JSON en ConfiguracionFuncion.estado. */
+ * ocho (general §6.2: "Por elemento: Deshabilitado / Opcional /
+ * Obligatorio"), porque nucleo §7.1 inserta una fila de configuración por
+ * función y no una por elemento. Se serializa como JSON en
+ * ConfiguracionFuncion.estado. */
 export const ELEMENTOS_ESPACIO_EQUIPO = ['metas', 'avances', 'recursos'] as const
 export type ElementoEspacioEquipo = (typeof ELEMENTOS_ESPACIO_EQUIPO)[number]
 
-export const ESTADOS_ELEMENTO_ESPACIO_EQUIPO = ['opcional', 'obligatorio'] as const
+export const ESTADOS_ELEMENTO_ESPACIO_EQUIPO = ['deshabilitado', 'opcional', 'obligatorio'] as const
 export type EstadoElementoEspacioEquipo = (typeof ESTADOS_ELEMENTO_ESPACIO_EQUIPO)[number]
 
 export type EstadoEspacioEquipo = Readonly<
@@ -110,7 +113,6 @@ export function parsearEstadoEspacioEquipo(texto: string): EstadoEspacioEquipo |
  * deshabilitado hasta que quien organiza lo habilite. */
 export const CONFIGURACION_POR_DEFECTO: Readonly<Record<FuncionSeguimiento, string>> = {
   formacion_equipos: 'autogestionado',
-  reporte_trabajo: 'deshabilitado',
   bitacora_individual: 'deshabilitada',
   calificacion: 'deshabilitada',
   autoevaluacion_individual: 'deshabilitada',
@@ -122,6 +124,26 @@ export const CONFIGURACION_POR_DEFECTO: Readonly<Record<FuncionSeguimiento, stri
     recursos: 'opcional',
   }),
   insignias: 'deshabilitado',
+}
+
+/** Periodicidades con las que se genera el calendario de `avances`
+ * (nucleo §9.2, P-28). 'ninguna' no genera periodos: borra los existentes. */
+export const PERIODICIDADES = ['semanal', 'quincenal', 'mensual'] as const
+export type Periodicidad = (typeof PERIODICIDADES)[number]
+
+/** Un periodo cancelado sigue en el calendario (conserva su orden) y puede
+ * reactivarse; no es lo mismo que borrarlo. */
+export const ESTADOS_PERIODO = ['activo', 'cancelado'] as const
+export type EstadoPeriodo = (typeof ESTADOS_PERIODO)[number]
+
+/** Forma de un periodo de reporte en la API. Las fechas son de calendario
+ * (YYYY-MM-DD), no instantes. */
+export interface PeriodoReporte {
+  id: string
+  orden: number
+  fechaInicio: string
+  fechaFin: string
+  estado: EstadoPeriodo
 }
 
 /** Catálogo de permisos otorgables a un co-organizador (general §7.3). */

@@ -10,6 +10,7 @@ import {
   type PermisoCoorganizador,
 } from '@plataforma/shared'
 import { ErrorValidacion } from '../../errores.js'
+import { parsearFechaCalendario as fecha } from '../../utilidades/fechas.js'
 
 // Mock manual sin paquete de validación compartido todavía (ver la nota en
 // services/cuentas/validacion.ts, sigue fuera de alcance de esta tarea).
@@ -18,20 +19,6 @@ function requerido(valor: unknown): string | undefined {
   if (typeof valor !== 'string') return undefined
   const limpio = valor.trim()
   return limpio.length > 0 ? limpio : undefined
-}
-
-// `new Date` normaliza fechas de calendario inexistentes (2026-02-30 se
-// vuelve 2026-03-02 en vez de fallar) y acepta formatos fuera del contrato
-// YYYY-MM-DD. Se valida el formato con regex y se reconstruye la fecha para
-// confirmar que conserva los mismos componentes antes de aceptarla.
-function fecha(valor: unknown): Date | undefined {
-  if (typeof valor !== 'string') return undefined
-  const limpio = valor.trim()
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(limpio)) return undefined
-  const parseada = new Date(`${limpio}T00:00:00.000Z`)
-  return !Number.isNaN(parseada.getTime()) && parseada.toISOString().slice(0, 10) === limpio
-    ? parseada
-    : undefined
 }
 
 function enteroPositivo(valor: unknown): number | undefined {
@@ -115,7 +102,7 @@ export function validarDatosCrearActividad(cuerpo: unknown): DatosCrearActividad
   }
 }
 
-// Valida que el parámetro de ruta :funcion sea uno de los nueve valores del
+// Valida que el parámetro de ruta :funcion sea uno de los ocho valores del
 // catálogo (@plataforma/shared, docs/diseno-desarrollo-general.md §6.2).
 export function validarFuncion(valor: unknown): FuncionSeguimiento {
   if (typeof valor === 'string' && (FUNCIONES_SEGUIMIENTO as readonly string[]).includes(valor)) {
@@ -153,7 +140,8 @@ export function validarDatosConfigurarFuncion(
       if (esEstadoElementoValido(datos[elemento])) {
         estado[elemento] = datos[elemento] as string
       } else {
-        detallePorCampo[elemento] = 'Debe ser "opcional" u "obligatorio".'
+        detallePorCampo[elemento] =
+          `Debe ser uno de: ${ESTADOS_ELEMENTO_ESPACIO_EQUIPO.join(', ')}.`
       }
     }
 

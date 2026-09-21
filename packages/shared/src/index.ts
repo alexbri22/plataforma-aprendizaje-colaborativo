@@ -9,8 +9,10 @@ export {
   CONFIGURACION_POR_DEFECTO,
   ELEMENTOS_ESPACIO_EQUIPO,
   ESTADOS_ELEMENTO_ESPACIO_EQUIPO,
+  ESTADOS_PERIODO,
   ESTADOS_POR_FUNCION,
   FUNCIONES_SEGUIMIENTO,
+  PERIODICIDADES,
   PERMISOS_COORGANIZADOR,
   PERMISOS_COORGANIZADOR_POR_DEFECTO,
   parsearEstadoEspacioEquipo,
@@ -22,7 +24,10 @@ export type {
   ElementoEspacioEquipo,
   EstadoElementoEspacioEquipo,
   EstadoEspacioEquipo,
+  EstadoPeriodo,
   FuncionSeguimiento,
+  Periodicidad,
+  PeriodoReporte,
   PermisoCoorganizador,
 } from './actividades.js'
 

@@ -94,6 +94,41 @@ describe('autorizar: configurar_funciones', () => {
   })
 })
 
+describe('autorizar: ajustar_periodos', () => {
+  it('se permite desde configuración hasta desarrollo; no en cierre ni archivada', () => {
+    const permitidas: EstadoActividad[] = [
+      'configuracion',
+      'inscripcion',
+      'formacion_equipos',
+      'desarrollo',
+    ]
+    for (const estado of TODAS_LAS_FASES) {
+      const resultado = autorizar(actor('organizador'), 'ajustar_periodos', { estado })
+      expect(resultado.concedido).toBe(permitidas.includes(estado))
+    }
+  })
+
+  it('un co-organizador necesita configurar_actividad', () => {
+    const sin = autorizar(actor('co_organizador', ['gestionar_equipos']), 'ajustar_periodos', {
+      estado: 'desarrollo',
+    })
+    const con = autorizar(actor('co_organizador', ['configurar_actividad']), 'ajustar_periodos', {
+      estado: 'desarrollo',
+    })
+    expect(sin).toEqual({ concedido: false, motivo: 'rol' })
+    expect(con).toEqual({ concedido: true })
+  })
+
+  it('un participante nunca puede', () => {
+    expect(autorizar(actor('participante'), 'ajustar_periodos', { estado: 'inscripcion' })).toEqual(
+      {
+        concedido: false,
+        motivo: 'rol',
+      },
+    )
+  })
+})
+
 describe('autorizar: agregar_coorganizador', () => {
   it('se permite en toda fase salvo archivada', () => {
     for (const estado of TODAS_LAS_FASES) {
@@ -121,7 +156,7 @@ describe('autorizar: agregar_coorganizador', () => {
 })
 
 describe('capacidadesDe', () => {
-  it('un organizador en fase inscripción obtiene las tres acciones del catálogo', () => {
+  it('un organizador en fase inscripción obtiene todas las acciones del catálogo', () => {
     const capacidades = capacidadesDe(actor('organizador'), { estado: 'inscripcion' })
     expect(new Set(capacidades)).toEqual(new Set(ACCIONES_ACTIVIDAD))
   })

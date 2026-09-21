@@ -30,7 +30,7 @@ import {
 } from './capacidades.js'
 import { generarClaveIngreso } from './claveIngreso.js'
 import type { DatosCrearActividadValidados } from './validacion.js'
-import { finDeDiaEnCDMX } from '../../utilidades/fechas.js'
+import { aFechaCalendario, finDeDiaEnCDMX } from '../../utilidades/fechas.js'
 
 // Fase que expone la API, calcada de
 // apps/web/src/features/actividades/tipos.ts (FaseActividad): cinco valores,
@@ -60,7 +60,7 @@ export interface ActividadRespuesta {
 }
 
 // GET /api/actividades/{id} agrega el conjunto de capacidades del actor y la
-// configuración de las nueve funciones a la forma básica de
+// configuración de las ocho funciones a la forma básica de
 // ActividadRespuesta (docs/diseno-desarrollo-nucleo.md §4.3 y §7.7). El
 // listado (GET /api/actividades) no los incluye: ninguna pantalla que lo
 // consume decide acciones por elemento (§4.2, clave de query por id).
@@ -93,6 +93,20 @@ function contextoDe(membresia: MembresiaConPermisos): ContextoActorActividad {
 function lanzarErrorDeAutorizacion(motivo: MotivoRechazo, mensajeFase: string): never {
   if (motivo === 'fase') throw new ErrorFaseNoPermiteAccion(mensajeFase)
   throw new ErrorAccionNoPermitida()
+}
+
+// Punto de entrada de autorización para otros módulos (Seguimiento
+// decide sobre sus propios datos, pero la matriz de permisos de la actividad
+// es de este módulo: nucleo §2.2, "una sola función"). Lanza el error de
+// dominio que corresponde; si no lanza, la acción está concedida.
+export function exigirAccion(
+  membresia: MembresiaConPermisos,
+  accion: AccionActividad,
+  estado: EstadoActividad,
+  mensajeFase: string,
+): void {
+  const resultado = autorizar(contextoDe(membresia), accion, { estado })
+  if (!resultado.concedido) lanzarErrorDeAutorizacion(resultado.motivo, mensajeFase)
 }
 
 const FASE_POR_ESTADO: Record<EstadoActividad, FaseActividad> = {
@@ -132,16 +146,6 @@ interface ActividadConMembresiasYConfiguracion extends ActividadConMembresiasYCo
 const INCLUIR_MEMBRESIAS_Y_CONFIGURACION = {
   membresias: { select: { rol: true as const } },
   configuracion: true as const,
-}
-
-// Las tres son fechas de calendario, no instantes (el formulario de creación
-// solo captura año/mes/día vía <input type="date">): se devuelven como
-// YYYY-MM-DD y no como el datetime completo de Date#toISOString(), que es lo
-// que espera apps/web/src/features/actividades/formato.ts al construir la
-// fecha con año/mes/día locales (una fecha con hora rompe ese parseo y
-// Intl.DateTimeFormat lanza sobre el resultado inválido).
-function aFechaCalendario(fecha: Date): string {
-  return fecha.toISOString().slice(0, 10)
 }
 
 // numParticipantes cuenta solo membresías con rol=participante, no toda
@@ -250,7 +254,7 @@ export async function crearActividad(
           },
         })
 
-        // Configuración por defecto de las nueve funciones (P-25, nucleo
+        // Configuración por defecto de las ocho funciones (P-25, nucleo
         // §7.1 y §7.9): se insertan aquí y no se dejan implícitas, porque
         // una función sin fila no tiene un estado que autorizar() ni el
         // cliente puedan leer.
