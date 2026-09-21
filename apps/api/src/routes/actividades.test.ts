@@ -234,11 +234,13 @@ describe('GET /api/actividades/:id', () => {
 })
 
 describe('GET /api/actividades/:id/participantes', () => {
-  it('devuelve al organizador y a quienes se han unido, ordenados por fecha de unión', async () => {
+  it('devuelve solo a los participantes activos, con su membresía y fecha de unión, sin quien organiza', async () => {
     const cookieOrganizador = await registrarYObtenerCookie('ada@ejemplo.com')
-    const cookieParticipante = await registrarYObtenerCookie('grace@ejemplo.com')
+    const cookieUno = await registrarYObtenerCookie('grace@ejemplo.com')
+    const cookieDos = await registrarYObtenerCookie('linus@ejemplo.com')
     const { id, claveIngreso } = await crearActividad(cookieOrganizador)
-    await unirseComoParticipante(claveIngreso, cookieParticipante)
+    await unirseComoParticipante(claveIngreso, cookieUno)
+    await unirseComoParticipante(claveIngreso, cookieDos)
 
     const respuesta = await request(app)
       .get(`/api/actividades/${id}/participantes`)
@@ -246,15 +248,32 @@ describe('GET /api/actividades/:id/participantes', () => {
 
     expect(respuesta.status).toBe(200)
     expect(respuesta.body.participantes).toHaveLength(2)
-    expect(respuesta.body.participantes[0]).toMatchObject({
-      nombre: 'Ada Lovelace Byron',
-      rol: 'organizador',
+    for (const participante of respuesta.body.participantes) {
+      expect(participante).toMatchObject({ nombre: 'Ada Lovelace', rol: 'participante' })
+      expect(participante.idMembresia).toEqual(expect.any(String))
+      // Instante real (ISO completo): el cliente lo formatea con formatearFechaHora.
+      expect(new Date(participante.fechaUnion).toISOString()).toBe(participante.fechaUnion)
+    }
+    const fechas = respuesta.body.participantes.map((p: { fechaUnion: string }) => p.fechaUnion)
+    expect([...fechas].sort()).toEqual(fechas)
+  })
+
+  it('no incluye a un participante cuya membresía fue desactivada', async () => {
+    const cookieOrganizador = await registrarYObtenerCookie('ada@ejemplo.com')
+    const cookieParticipante = await registrarYObtenerCookie('grace@ejemplo.com')
+    const { id, claveIngreso } = await crearActividad(cookieOrganizador)
+    await unirseComoParticipante(claveIngreso, cookieParticipante)
+    await prisma.membresia.updateMany({
+      where: { idActividad: id, rol: 'participante' },
+      data: { estado: 'desactivada' },
     })
-    expect(respuesta.body.participantes[1]).toMatchObject({
-      nombre: 'Ada Lovelace Byron',
-      rol: 'participante',
-      estado: 'activa',
-    })
+
+    const respuesta = await request(app)
+      .get(`/api/actividades/${id}/participantes`)
+      .set('Cookie', cookieOrganizador)
+
+    expect(respuesta.status).toBe(200)
+    expect(respuesta.body.participantes).toEqual([])
   })
 
   it('es visible para un participante, no solo para el organizador', async () => {
@@ -268,7 +287,7 @@ describe('GET /api/actividades/:id/participantes', () => {
       .set('Cookie', cookieParticipante)
 
     expect(respuesta.status).toBe(200)
-    expect(respuesta.body.participantes).toHaveLength(2)
+    expect(respuesta.body.participantes).toHaveLength(1)
   })
 
   it('responde 404 a quien no es miembro', async () => {

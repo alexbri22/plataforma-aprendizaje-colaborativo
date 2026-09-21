@@ -18,7 +18,10 @@ export { IconoCategoria, type IconoCategoriaProps } from './IconoCategoria'
 export { InsigniaCategoria, type InsigniaCategoriaProps } from './InsigniaCategoria'
 export { MarcoRango, type MarcoRangoProps, type TamanoMarco } from './MarcoRango'
 export { PantallaMuestraInsignias } from './PantallaMuestraInsignias'
-export { PantallaRitualReconocimiento } from './PantallaRitualReconocimiento'
+export { PantallaMisReconocimientos } from './PantallaMisReconocimientos'
+export { PantallaParticipantes } from './PantallaParticipantes'
+export { PantallaReconocer } from './PantallaReconocer'
+export { PantallaReconocimientosDeParticipante } from './PantallaReconocimientosDeParticipante'
 export {
   RitualReconocimiento,
   type IntegranteEquipo,

@@ -18,6 +18,8 @@ export type CodigoError =
   | 'organizador_unico'
   | 'periodo_no_encontrado'
   | 'periodo_traslapado'
+  | 'sin_permiso'
+  | 'fuera_de_plazo'
 
 export abstract class ErrorDominio extends Error {
   abstract readonly codigo: CodigoError
@@ -180,5 +182,23 @@ export class ErrorPeriodoTraslapado extends ErrorDominio {
 
   constructor(ordenExistente: number) {
     super(`Estas fechas se traslapan con el periodo ${ordenExistente}.`)
+  }
+}
+
+export class ErrorSinPermiso extends ErrorDominio {
+  readonly codigo = 'sin_permiso' as const
+  readonly status = 403
+
+  constructor(mensaje = 'No tienes permiso para hacer esto en esta actividad.') {
+    super(mensaje)
+  }
+}
+
+export class ErrorFueraDePlazo extends ErrorDominio {
+  readonly codigo = 'fuera_de_plazo' as const
+  readonly status = 409
+
+  constructor(mensaje: string) {
+    super(mensaje)
   }
 }

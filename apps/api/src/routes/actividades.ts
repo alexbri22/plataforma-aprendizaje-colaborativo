@@ -10,6 +10,7 @@ import {
   listarActividadesDeUsuario,
   listarParticipantes,
   obtenerActividadPorId,
+  obtenerMembresiaActiva,
 } from '../services/actividades/actividades.service.js'
 import {
   validarDatosAgregarCoorganizador,
@@ -48,18 +49,6 @@ actividadesRouter.get(
     const { membresia } = req.contextoActividad!
     const actividad = await obtenerActividadPorId(req.params.id as string, membresia)
     res.status(200).json({ actividad })
-  },
-)
-
-// GET /api/actividades/{id}/participantes (docs/diseno-desarrollo-nucleo.md
-// §7.7): cualquier miembro puede consultarla, no solo quien organiza.
-actividadesRouter.get(
-  '/actividades/:id/participantes',
-  exigirSesion,
-  cargarContextoActividad,
-  async (req, res) => {
-    const participantes = await listarParticipantes(req.params.id as string)
-    res.status(200).json({ participantes })
   },
 )
 
@@ -123,3 +112,14 @@ actividadesRouter.put(
     res.status(200).json({ actividad })
   },
 )
+
+// GET /api/actividades/:id/participantes: miembros activos con rol
+// participante. Solo para miembros de la actividad; a quien no lo es se le
+// responde como si no existiera.
+actividadesRouter.get('/actividades/:id/participantes', exigirSesion, async (req, res) => {
+  const actor = req.actor as UsuarioPublico
+  const id = req.params.id as string
+  await obtenerMembresiaActiva(actor.idUsuario, id)
+  const participantes = await listarParticipantes(id)
+  res.status(200).json({ participantes })
+})

@@ -14,6 +14,7 @@ import {
 import { prisma } from '../../data/prisma.js'
 import {
   ErrorAccionNoPermitida,
+  ErrorActividadNoEncontrada,
   ErrorClaveInvalida,
   ErrorFaseNoPermiteAccion,
   ErrorOrganizadorUnico,
@@ -619,35 +620,66 @@ export async function agregarOPromoverCoorganizador(
   return obtenerActividadPorId(idActividad, membresiaActor)
 }
 
-export interface ParticipanteRespuesta {
+// ---------------------------------------------------------------------------
+// Lo que otros módulos necesitan saber de una actividad y sus miembros. Es la
+// única puerta: el módulo de insignias no consulta membresías por su cuenta
+// (docs/diseno-desarrollo-general.md §3.4, regla de frontera).
+// ---------------------------------------------------------------------------
+
+export interface MembresiaEnActividad {
+  idMembresia: string
+  idActividad: string
+  idUsuario: string
+  rol: RolMembresia
+  actividad: {
+    nombre: string
+    estado: EstadoActividad
+    fechaTermino: Date
+    plazoCierreDias: number
+  }
+}
+
+/** Membresía activa del usuario en la actividad. Si no existe —o la
+ * actividad no existe— lanza el mismo error en ambos casos. */
+export async function obtenerMembresiaActiva(
+  idUsuario: string,
+  idActividad: string,
+): Promise<MembresiaEnActividad> {
+  const membresia = await prisma.membresia.findFirst({
+    where: { idUsuario, idActividad, estado: 'activa' },
+    include: {
+      actividad: {
+        select: { nombre: true, estado: true, fechaTermino: true, plazoCierreDias: true },
+      },
+    },
+  })
+  if (!membresia) throw new ErrorActividadNoEncontrada()
+  return membresia
+}
+
+export interface ParticipanteDeActividad {
+  idMembresia: string
   idUsuario: string
   nombre: string
   rol: RolActividad
-  estado: EstadoMembresia
   fechaUnion: string
 }
 
-// GET /api/actividades/{id}/participantes (docs/diseno-desarrollo-nucleo.md
-// §7.7): "Miembro | Membresías con rol y estado" — cualquier miembro puede
-// consultarla, no solo quien organiza; cargarContextoActividad ya resolvió
-// esa membresía. Incluye membresías desactivadas (el estado es justamente
-// lo que este endpoint existe para distinguir); filtrar por rol para
-// preguntas como "¿ya es momento de cerrar la inscripción?" es
-// responsabilidad de quien consume la respuesta, no de esta consulta.
-export async function listarParticipantes(idActividad: string): Promise<ParticipanteRespuesta[]> {
+// Miembros activos con rol participante, que son quienes hacen el trabajo y
+// a quienes se reconoce. Organizador y co-organizadores no entran: no
+// pertenecen a un equipo (docs/diseno-desarrollo-general.md §7.3, "El
+// organizador no integra un equipo").
+export async function listarParticipantes(idActividad: string): Promise<ParticipanteDeActividad[]> {
   const membresias = await prisma.membresia.findMany({
-    where: { idActividad },
-    include: {
-      usuario: { select: { nombre: true, apellidoPaterno: true, apellidoMaterno: true } },
-    },
+    where: { idActividad, estado: 'activa', rol: 'participante' },
+    include: { usuario: { select: { nombre: true, apellidoPaterno: true } } },
     orderBy: { fechaUnion: 'asc' },
   })
-
-  return membresias.map((membresia) => ({
-    idUsuario: membresia.idUsuario,
-    nombre: nombreCompleto(membresia.usuario),
-    rol: ROL_POR_ROL_MEMBRESIA[membresia.rol],
-    estado: membresia.estado,
-    fechaUnion: membresia.fechaUnion.toISOString(),
+  return membresias.map((m) => ({
+    idMembresia: m.idMembresia,
+    idUsuario: m.idUsuario,
+    nombre: `${m.usuario.nombre} ${m.usuario.apellidoPaterno}`.trim(),
+    rol: ROL_POR_ROL_MEMBRESIA[m.rol],
+    fechaUnion: m.fechaUnion.toISOString(),
   }))
 }

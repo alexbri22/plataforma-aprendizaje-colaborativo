@@ -4,9 +4,14 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Usuario } from '../cuentas/api'
-import { cerrarInscripcion, obtenerActividad, obtenerParticipantes } from './actividades.api'
+import {
+  cerrarInscripcion,
+  obtenerActividad,
+  obtenerParticipantes,
+  type Participante,
+} from './actividades.api'
 import { PantallaResumenActividad } from './PantallaResumenActividad'
-import type { Actividad, Participante } from './tipos'
+import type { Actividad } from './tipos'
 
 vi.mock('../cuentas/api', async () => {
   const real = await vi.importActual<typeof import('../cuentas/api')>('../cuentas/api')
@@ -177,21 +182,14 @@ describe('PantallaResumenActividad', () => {
     ).toBeInTheDocument()
   })
 
-  it('lista a los participantes que se han unido, sin incluir al organizador', async () => {
+  it('lista a los participantes que se han unido, con su fecha de unión', async () => {
     vi.mocked(obtenerActividad).mockResolvedValueOnce(ACTIVIDAD_BASE)
     const participantes: Participante[] = [
       {
-        idUsuario: 'org-1',
-        nombre: 'Ada Lovelace',
-        rol: 'organizador',
-        estado: 'activa',
-        fechaUnion: '2026-08-01T12:00:00.000Z',
-      },
-      {
+        idMembresia: 'm-1',
         idUsuario: 'p-1',
         nombre: 'Grace Hopper',
         rol: 'participante',
-        estado: 'activa',
         fechaUnion: '2026-08-02T12:00:00.000Z',
       },
     ]
@@ -200,16 +198,15 @@ describe('PantallaResumenActividad', () => {
     renderPantalla(ACTIVIDAD_BASE.id)
 
     expect(await screen.findByText('Grace Hopper')).toBeInTheDocument()
-    expect(screen.queryByText('Ada Lovelace')).not.toBeInTheDocument()
     expect(screen.getByText('Participantes (1)')).toBeInTheDocument()
   })
 
   describe('con muchos participantes', () => {
     const muchos: Participante[] = Array.from({ length: 12 }, (_, i) => ({
+      idMembresia: `m-${i + 1}`,
       idUsuario: `p-${i + 1}`,
       nombre: `Persona ${i + 1}`,
       rol: 'participante',
-      estado: 'activa',
       fechaUnion: '2026-08-02T12:00:00.000Z',
     }))
 

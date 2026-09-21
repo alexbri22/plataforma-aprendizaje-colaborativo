@@ -102,9 +102,7 @@ function SeccionParticipantes({ id }: { id: string }) {
     <Card className={styles.seccionCard}>
       <h2 className={styles.tituloSeccion}>
         Participantes
-        {participantesQuery.data
-          ? ` (${participantesQuery.data.filter((p) => p.rol === 'participante').length})`
-          : ''}
+        {participantesQuery.data ? ` (${participantesQuery.data.length})` : ''}
       </h2>
 
       {participantesQuery.isPending ? (
@@ -115,7 +113,7 @@ function SeccionParticipantes({ id }: { id: string }) {
         <AvisoError mensaje="No pudimos cargar los participantes." />
       ) : (
         (() => {
-          const participantes = participantesQuery.data.filter((p) => p.rol === 'participante')
+          const participantes = participantesQuery.data
           if (participantes.length === 0) {
             return (
               <p className={styles.texto}>
@@ -181,21 +179,51 @@ export function PantallaResumenActividad() {
 
   const actividad = actividadQuery.data
   const fase = infoFase(actividad.fase)
+  const organiza = actividad.rol !== 'participante'
+
+  // Accesos al módulo de insignias. Se ofrecen siempre: la API decide si el
+  // ritual está abierto o si lo recibido ya se reveló, y cada pantalla lo
+  // explica. Ocultarlos por fase aquí duplicaría esa regla en el cliente.
+  const accionesInsignias = (
+    <>
+      <Button variant="secondary" size="sm" to={`/actividades/${actividad.id}/reconocer`}>
+        Reconocer al equipo
+      </Button>
+      <Button variant="secondary" size="sm" to={`/actividades/${actividad.id}/insignias`}>
+        Mis reconocimientos
+      </Button>
+      {organiza ? (
+        <Button variant="secondary" size="sm" to={`/actividades/${actividad.id}/participantes`}>
+          Participantes
+        </Button>
+      ) : null}
+    </>
+  )
 
   return (
     <AppShell
       seccionActiva="actividades"
       titulo={actividad.nombre}
       acciones={
-        // En desarrollo ya no se pueden cambiar funciones, pero sí el calendario
-        // de avances: la pantalla de configuración sigue siendo el lugar.
-        actividad.capacidades?.some(
-          (capacidad) => capacidad === 'configurar_funciones' || capacidad === 'ajustar_periodos',
-        ) ? (
-          <Button variant="secondary" to={`/actividades/${actividad.id}/configuracion`}>
-            Configurar
-          </Button>
-        ) : undefined
+        <>
+          {
+            // En desarrollo ya no se pueden cambiar funciones, pero sí el calendario
+            // de avances: la pantalla de configuración sigue siendo el lugar.
+            actividad.capacidades?.some(
+              (capacidad) =>
+                capacidad === 'configurar_funciones' || capacidad === 'ajustar_periodos',
+            ) ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                to={`/actividades/${actividad.id}/configuracion`}
+              >
+                Configurar
+              </Button>
+            ) : null
+          }
+          {accionesInsignias}
+        </>
       }
     >
       <div className={styles.contenido}>

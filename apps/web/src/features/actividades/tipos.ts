@@ -36,16 +36,6 @@ export interface Actividad {
   configuracion?: Partial<Record<FuncionSeguimiento, string>>
 }
 
-// GET /api/actividades/{id}/participantes (docs/diseno-desarrollo-nucleo.md
-// §7.7): membresías con rol y estado, incluidas las desactivadas.
-export interface Participante {
-  idUsuario: string
-  nombre: string
-  rol: RolActividad
-  estado: 'activa' | 'desactivada'
-  fechaUnion: string
-}
-
 // Lo mínimo que devuelve GET /api/claves/{clave} para decidir si unirse
 // (docs/diseno-desarrollo-nucleo.md §3.3): nada que permita distinguir esta
 // actividad de otra ajena más allá de lo necesario para esa decisión.

@@ -575,27 +575,27 @@ La modificación del conjunto de permisos de un co-organizador se registra en el
 
 ## **7.7 Endpoints**
 
-| Método y ruta                                            | Quién        | Qué hace                                                  |
-| :------------------------------------------------------- | :----------- | :-------------------------------------------------------- |
-| POST /api/actividades                                    | Usuario      | Crea la actividad y su membresía de organizador           |
-| GET /api/actividades                                     | Usuario      | Actividades donde tiene membresía, con su rol en cada una |
-| GET /api/actividades/{id}                                | Miembro      | Actividad, configuración y capacidades del actor (4.3)    |
-| PATCH /api/actividades/{id}                              | Organizador  | Edita objetivo, fechas y demás datos                      |
-| PUT /api/actividades/{id}/configuracion/{funcion}        | Organizador  | Fija el estado de una función                             |
-| POST /api/actividades/{id}/inscripcion                   | Organizador  | Abre la inscripción y genera la clave                     |
-| POST /api/actividades/{id}/inscripcion/cierre            | Organizador  | Cierra la inscripción y pasa a formación                  |
-| POST /api/actividades/{id}/formacion/cierre              | Organizador  | Cierra la formación, con reparto automático               |
-| POST /api/actividades/{id}/cierre                        | Organizador  | Inicia el periodo de cierre                               |
-| POST /api/actividades/{id}/archivo                       | Organizador  | Da la actividad por finalizada                            |
-| GET /api/claves/{clave}                                  | Usuario      | Vista previa mínima de la actividad (3.3)                 |
-| POST /api/claves/{clave}/union                           | Usuario      | Se une como participante                                  |
-| GET /api/actividades/{id}/participantes                  | Miembro      | Membresías con rol y estado                               |
-| POST /api/actividades/{id}/invitaciones                  | Organizador  | Emite una invitación                                      |
-| GET /api/invitaciones                                    | Usuario      | Invitaciones pendientes dirigidas al actor                |
-| POST /api/invitaciones/{id}/respuesta                    | Destinatario | Acepta o rechaza                                          |
-| PUT /api/actividades/{id}/coorganizadores/{idUsuario}    | Organizador  | Agrega o promueve, con sus permisos                       |
-| DELETE /api/actividades/{id}/coorganizadores/{idUsuario} | Organizador  | Retira el rol, con el destino elegido (7.6)               |
-| PATCH /api/actividades/{id}/participantes/{idMembresia}  | Organizador  | Desactiva o reactiva la membresía                         |
+| Método y ruta                                            | Quién        | Qué hace                                                                                                                                                                                      |
+| :------------------------------------------------------- | :----------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST /api/actividades                                    | Usuario      | Crea la actividad y su membresía de organizador                                                                                                                                               |
+| GET /api/actividades                                     | Usuario      | Actividades donde tiene membresía, con su rol en cada una                                                                                                                                     |
+| GET /api/actividades/{id}                                | Miembro      | Actividad, configuración y capacidades del actor (4.3)                                                                                                                                        |
+| PATCH /api/actividades/{id}                              | Organizador  | Edita objetivo, fechas y demás datos                                                                                                                                                          |
+| PUT /api/actividades/{id}/configuracion/{funcion}        | Organizador  | Fija el estado de una función                                                                                                                                                                 |
+| POST /api/actividades/{id}/inscripcion                   | Organizador  | Abre la inscripción y genera la clave                                                                                                                                                         |
+| POST /api/actividades/{id}/inscripcion/cierre            | Organizador  | Cierra la inscripción y pasa a formación                                                                                                                                                      |
+| POST /api/actividades/{id}/formacion/cierre              | Organizador  | Cierra la formación, con reparto automático                                                                                                                                                   |
+| POST /api/actividades/{id}/cierre                        | Organizador  | Inicia el periodo de cierre                                                                                                                                                                   |
+| POST /api/actividades/{id}/archivo                       | Organizador  | Da la actividad por finalizada                                                                                                                                                                |
+| GET /api/claves/{clave}                                  | Usuario      | Vista previa mínima de la actividad (3.3)                                                                                                                                                     |
+| POST /api/claves/{clave}/union                           | Usuario      | Se une como participante                                                                                                                                                                      |
+| GET /api/actividades/{id}/participantes                  | Miembro      | Participantes activos, con su membresía y fecha de unión. La lista completa con rol y estado (desactivados incluidos) queda para la pantalla de Participantes, cuando exista la desactivación |
+| POST /api/actividades/{id}/invitaciones                  | Organizador  | Emite una invitación                                                                                                                                                                          |
+| GET /api/invitaciones                                    | Usuario      | Invitaciones pendientes dirigidas al actor                                                                                                                                                    |
+| POST /api/invitaciones/{id}/respuesta                    | Destinatario | Acepta o rechaza                                                                                                                                                                              |
+| PUT /api/actividades/{id}/coorganizadores/{idUsuario}    | Organizador  | Agrega o promueve, con sus permisos                                                                                                                                                           |
+| DELETE /api/actividades/{id}/coorganizadores/{idUsuario} | Organizador  | Retira el rol, con el destino elegido (7.6)                                                                                                                                                   |
+| PATCH /api/actividades/{id}/participantes/{idMembresia}  | Organizador  | Desactiva o reactiva la membresía                                                                                                                                                             |
 
 La única excepción a la regla de anidamiento de 3.1 son las dos rutas de clave, que no cuelgan de la actividad porque quien las llama todavía no es miembro y no debe poder direccionarla por identificador (3.3).
 

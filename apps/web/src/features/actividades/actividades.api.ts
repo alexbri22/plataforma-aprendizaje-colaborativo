@@ -4,7 +4,7 @@ import type {
   Periodicidad,
   PeriodoReporte,
 } from '@plataforma/shared'
-import type { Actividad, Participante, VistaPreviaActividad } from './tipos'
+import type { Actividad, VistaPreviaActividad } from './tipos'
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? ''
 
@@ -161,21 +161,6 @@ export async function unirseConClave(clave: string): Promise<Actividad> {
   return actividad
 }
 
-// GET /api/actividades/{id}/participantes (docs/diseno-desarrollo-nucleo.md
-// §7.7): cualquier miembro puede consultarla, no solo quien organiza.
-export async function obtenerParticipantes(id: string): Promise<Participante[]> {
-  const respuesta = await pedir(`/api/actividades/${encodeURIComponent(id)}/participantes`)
-
-  if (!respuesta.ok) {
-    throw new ErrorActividad(
-      await leerMensajeError(respuesta, 'No pudimos cargar los participantes.'),
-    )
-  }
-
-  const { participantes } = (await respuesta.json()) as { participantes: Participante[] }
-  return participantes
-}
-
 // POST /api/actividades/{id}/inscripcion/cierre (docs/diseno-desarrollo-nucleo.md
 // §7.4 y §7.7): cierra la inscripción y pasa a formación de equipos. Es la
 // acción de avance que PantallaResumenActividad muestra cuando
@@ -285,4 +270,27 @@ export async function actualizarPeriodo(
 
   const { periodo } = (await respuesta.json()) as { periodo: PeriodoReporte }
   return periodo
+}
+
+export interface Participante {
+  idMembresia: string
+  idUsuario: string
+  nombre: string
+  rol: 'organizador' | 'co-organizador' | 'participante'
+  /** Instante real de unión (ISO completo), no una fecha de calendario. */
+  fechaUnion: string
+}
+
+// GET /api/actividades/:id/participantes: miembros activos con rol
+// participante. Lo consume el módulo de insignias para la vista de quien
+// organiza; vive aquí porque las membresías son del núcleo.
+export async function obtenerParticipantes(idActividad: string): Promise<Participante[]> {
+  const respuesta = await pedir(`/api/actividades/${idActividad}/participantes`)
+  if (!respuesta.ok) {
+    throw new ErrorActividad(
+      await leerMensajeError(respuesta, 'No pudimos cargar a los participantes.'),
+    )
+  }
+  const cuerpo = (await respuesta.json()) as { participantes: Participante[] }
+  return cuerpo.participantes
 }
