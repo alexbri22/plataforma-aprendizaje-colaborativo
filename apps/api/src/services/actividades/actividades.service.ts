@@ -30,6 +30,7 @@ import {
   capacidadesDe,
   type ContextoActorActividad,
   type MotivoRechazo,
+  type ResultadoAutorizacion,
 } from './capacidades.js'
 import { generarClaveIngreso } from './claveIngreso.js'
 import type { DatosCrearActividadValidados } from './validacion.js'
@@ -115,6 +116,24 @@ export function exigirAccion(
   formacionEquipos?: EstadoFormacionEquipos,
 ): void {
   const resultado = autorizar(contextoDe(membresia), accion, { estado, formacionEquipos })
+  if (!resultado.concedido) lanzarErrorDeAutorizacion(resultado.motivo, mensajeFase)
+}
+
+// Variante de exigirAccion que no lanza: para quien decide entre dos caminos
+// según lo que el actor pueda hacer (por ejemplo, un participante que crea un
+// equipo por elegir_equipo y quien organiza por formar_equipos). La decisión
+// sigue siendo de autorizar(): esto solo la expone.
+export function autorizarAccion(
+  membresia: MembresiaConPermisos,
+  accion: AccionActividad,
+  estado: EstadoActividad,
+  formacionEquipos?: EstadoFormacionEquipos,
+): ResultadoAutorizacion {
+  return autorizar(contextoDe(membresia), accion, { estado, formacionEquipos })
+}
+
+// Lanza el error de dominio que corresponde a un rechazo ya calculado.
+export function lanzarSiRechazada(resultado: ResultadoAutorizacion, mensajeFase: string): void {
   if (!resultado.concedido) lanzarErrorDeAutorizacion(resultado.motivo, mensajeFase)
 }
 
@@ -423,7 +442,7 @@ export async function obtenerActividadPorId(
   return aRespuestaConCapacidades(actividad, membresiaActor)
 }
 
-type ActorTransicion = { tipo: 'usuario'; idUsuario: string } | { tipo: 'sistema' }
+export type ActorTransicion = { tipo: 'usuario'; idUsuario: string } | { tipo: 'sistema' }
 
 // Escritura y evento de la transición Inscripción → Formación, compartidos
 // entre el disparo manual (cerrarInscripcion) y el automático por
@@ -690,8 +709,11 @@ export interface ParticipanteDeActividad {
 // a quienes se reconoce. Organizador y co-organizadores no entran: no
 // pertenecen a un equipo (docs/diseno-desarrollo-general.md §7.3, "El
 // organizador no integra un equipo").
-export async function listarParticipantes(idActividad: string): Promise<ParticipanteDeActividad[]> {
-  const membresias = await prisma.membresia.findMany({
+export async function listarParticipantes(
+  idActividad: string,
+  cliente: Prisma.TransactionClient = prisma,
+): Promise<ParticipanteDeActividad[]> {
+  const membresias = await cliente.membresia.findMany({
     where: { idActividad, estado: 'activa', rol: 'participante' },
     include: { usuario: { select: { nombre: true, apellidoPaterno: true } } },
     orderBy: { fechaUnion: 'asc' },
@@ -703,4 +725,113 @@ export async function listarParticipantes(idActividad: string): Promise<Particip
     rol: ROL_POR_ROL_MEMBRESIA[m.rol],
     fechaUnion: m.fechaUnion.toISOString(),
   }))
+}
+
+// ---------------------------------------------------------------------------
+// Lo que Equipos necesita de Actividades (docs/diseno-desarrollo-nucleo.md
+// §8): sus tablas son de este módulo y Equipos no las consulta.
+// ---------------------------------------------------------------------------
+
+export type MembresiaActor = MembresiaConPermisos & { idMembresia: string }
+
+/** Membresía del usuario en la actividad, activa o no, con sus permisos, o
+ * null si no es miembro. Sirve a las rutas que no cuelgan de la actividad
+ * (/equipos/{id}), donde no corre cargarContextoActividad; el llamador decide
+ * qué responder a un no miembro. */
+export async function buscarMembresiaConPermisos(
+  idUsuario: string,
+  idActividad: string,
+): Promise<MembresiaActor | null> {
+  return prisma.membresia.findUnique({
+    where: { idActividad_idUsuario: { idActividad, idUsuario } },
+    include: { permisos: true },
+  })
+}
+
+export interface MiembroDeActividad {
+  idMembresia: string
+  nombre: string
+  rol: RolActividad
+  activa: boolean
+}
+
+/** Todas las membresías de la actividad, de cualquier rol y estado, en orden
+ * de incorporación. Quien integra un equipo puede ser organizador,
+ * co-organizador o participante (general §7.3). */
+export async function listarMiembros(
+  idActividad: string,
+  cliente: Prisma.TransactionClient = prisma,
+): Promise<MiembroDeActividad[]> {
+  const membresias = await cliente.membresia.findMany({
+    where: { idActividad },
+    include: { usuario: { select: { nombre: true, apellidoPaterno: true } } },
+    orderBy: { fechaUnion: 'asc' },
+  })
+  return membresias.map((m) => ({
+    idMembresia: m.idMembresia,
+    nombre: `${m.usuario.nombre} ${m.usuario.apellidoPaterno}`.trim(),
+    rol: ROL_POR_ROL_MEMBRESIA[m.rol],
+    activa: m.estado === 'activa',
+  }))
+}
+
+export interface ActividadParaEquipos {
+  idActividad: string
+  estado: EstadoActividad
+  formacionEquipos: EstadoFormacionEquipos | undefined
+  numeroEquiposEsperado: number
+}
+
+/** Lee la actividad y toma su fila con FOR UPDATE. Toda escritura de Equipos
+ * empieza aquí: serializa las escrituras de una misma actividad, de modo que
+ * "nadie queda sin equipo" y la transición automática se evalúan sobre un
+ * estado que ninguna otra petición está cambiando a la vez. */
+export async function bloquearActividadParaEquipos(
+  tx: Prisma.TransactionClient,
+  idActividad: string,
+): Promise<ActividadParaEquipos> {
+  await tx.$queryRaw`SELECT 1 FROM actividades WHERE id_actividad = ${idActividad} FOR UPDATE`
+  const actividad = await tx.actividad.findUniqueOrThrow({
+    where: { idActividad },
+    include: { configuracion: true },
+  })
+  return {
+    idActividad,
+    estado: actividad.estado,
+    formacionEquipos: estadoFormacionEquipos(actividad.configuracion),
+    numeroEquiposEsperado: actividad.numeroEquiposEsperado,
+  }
+}
+
+/** Formación → Desarrollo (nucleo §7.4). Devuelve false, sin escribir nada,
+ * si la actividad ya no estaba en formación: una transición no se ejecuta dos
+ * veces ni se ejecuta desde otra fase. `motivo` distingue las automáticas. */
+export async function avanzarAFaseDesarrollo(
+  tx: Prisma.TransactionClient,
+  idActividad: string,
+  actor: ActorTransicion,
+  motivo?: string,
+): Promise<boolean> {
+  const { count } = await tx.actividad.updateMany({
+    where: { idActividad, estado: 'formacion_equipos' },
+    data: { estado: 'desarrollo' },
+  })
+  if (count === 0) return false
+
+  await registrarEvento(tx, {
+    idActividad,
+    tipoActor: actor.tipo,
+    idUsuarioActor: actor.tipo === 'usuario' ? actor.idUsuario : null,
+    tipoEvento: 'fase_avanzada',
+    tipoEntidad: 'actividad',
+    idEntidad: idActividad,
+    datos: {
+      faseOrigen: 'formacion_equipos',
+      faseDestino: 'desarrollo',
+      disparadoPor: actor.tipo,
+      ...(motivo ? { motivo } : {}),
+    },
+    categoria: 'estructura',
+  })
+  return true
 }

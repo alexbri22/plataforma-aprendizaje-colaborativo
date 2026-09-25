@@ -6,6 +6,7 @@ import { manejadorErrores } from './middleware/manejadorErrores.js'
 import { resolverSesion } from './middleware/sesion.js'
 import { actividadesRouter } from './routes/actividades.js'
 import { clavesRouter } from './routes/claves.js'
+import { equiposRouter } from './routes/equipos.js'
 import { insigniasRouter } from './routes/insignias.js'
 import { cuentasRouter } from './routes/cuentas.js'
 import { healthRouter } from './routes/health.js'
@@ -61,6 +62,7 @@ export function createApp(): Express {
   app.use('/api', actividadesRouter)
   app.use('/api', clavesRouter)
   app.use('/api', periodosRouter)
+  app.use('/api', equiposRouter)
   app.use('/api', tareasRouter)
   app.use('/api', insigniasRouter)
 

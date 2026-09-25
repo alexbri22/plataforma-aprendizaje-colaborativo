@@ -49,9 +49,8 @@ export type ResultadoAutorizacion =
   { concedido: true } | { concedido: false; motivo: MotivoRechazo }
 
 // Permiso de co-organizador que sustituye al rol para cada acción
-// (docs/diseno-desarrollo-general.md §7.3). `null` marca las acciones de
-// autoservicio: cualquier co-organizador activo las tiene, sin permiso
-// concreto (ver ACCIONES_DE_AUTOSERVICIO).
+// (docs/diseno-desarrollo-general.md §7.3). `null`: cualquier co-organizador
+// activo la tiene, sin permiso concreto (elegir equipo es sobre uno mismo).
 const PERMISO_REQUERIDO_POR_ACCION: Readonly<Record<AccionActividad, PermisoCoorganizador | null>> =
   {
     configurar_funciones: 'configurar_actividad',
@@ -63,16 +62,15 @@ const PERMISO_REQUERIDO_POR_ACCION: Readonly<Record<AccionActividad, PermisoCoor
     cerrar_formacion: 'gestionar_equipos',
     generar_propuesta_equipos: 'gestionar_equipos',
     elegir_equipo: null,
-    editar_equipo: null,
+    editar_equipo: 'gestionar_equipos',
   }
 
-// Acciones que cualquier miembro activo puede ejecutar sobre sí mismo o
-// sobre su propio equipo, sea cual sea su rol (participante, organizador o
-// co-organizador: quien organiza puede integrar un equipo, general §7.3).
-// autorizar() solo decide que la acción está abierta; que la persona actúe
-// solo sobre sí o sobre su equipo depende de datos y lo verifica el
-// servicio (nucleo §2.1). editar_equipo se complementa con formar_equipos:
-// quien gestiona equipos edita cualquiera.
+// Acciones abiertas además a los participantes, sobre sí mismos (elegir
+// equipo) o sobre su propio equipo (editarlo). Quien organiza o co-organiza
+// las tiene por su rol o permiso, como cualquier otra. autorizar() solo
+// decide que la acción está abierta al rol; que un participante actúe solo
+// sobre sí o sobre su equipo depende de datos y lo verifica el servicio
+// (nucleo §2.1).
 const ACCIONES_DE_AUTOSERVICIO: readonly AccionActividad[] = ['elegir_equipo', 'editar_equipo']
 
 // Estados de `formacion_equipos` en los que cada acción está abierta.

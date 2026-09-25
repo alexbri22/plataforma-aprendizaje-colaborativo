@@ -195,8 +195,11 @@ function esperado(
   if (accion === 'elegir_equipo' && formacion !== 'autogestionado') return false
   if (accion === 'generar_propuesta_equipos' && formacion !== 'propuesta_sistema') return false
 
-  const autoservicio = accion === 'elegir_equipo' || accion === 'editar_equipo'
-  if (autoservicio) return true
+  // Elegir equipo es sobre uno mismo: lo tiene todo miembro. Editar un equipo
+  // lo tiene el participante (el suyo, lo verifica el servicio) y quien
+  // gestiona equipos. El resto, solo quien gestiona.
+  if (accion === 'elegir_equipo') return true
+  if (accion === 'editar_equipo' && rol === 'participante') return true
   return rol === 'organizador' || rol === 'co_con_permiso'
 }
 

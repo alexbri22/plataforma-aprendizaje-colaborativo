@@ -61,3 +61,13 @@ export type {
   ProgresoNivel,
   RangoCategoria,
 } from './insignias.js'
+
+export { LONGITUD_MAXIMA_NOMBRE_EQUIPO, LONGITUD_MAXIMA_TEXTO_EQUIPO } from './equipos.js'
+
+export type {
+  Equipo,
+  IntegranteEquipo,
+  ListaEquipos,
+  ParticipanteSinEquipo,
+  RolIntegrante,
+} from './equipos.js'

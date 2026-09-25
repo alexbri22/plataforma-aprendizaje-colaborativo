@@ -20,6 +20,12 @@ export type CodigoError =
   | 'periodo_traslapado'
   | 'sin_permiso'
   | 'fuera_de_plazo'
+  | 'equipo_no_encontrado'
+  | 'nombre_equipo_duplicado'
+  | 'equipo_no_vacio'
+  | 'sin_equipos'
+  | 'miembro_no_asignable'
+  | 'participante_requiere_equipo'
 
 export abstract class ErrorDominio extends Error {
   abstract readonly codigo: CodigoError
@@ -200,5 +206,74 @@ export class ErrorFueraDePlazo extends ErrorDominio {
 
   constructor(mensaje: string) {
     super(mensaje)
+  }
+}
+
+// Mismo criterio que ErrorActividadNoEncontrada: quien no es miembro de la
+// actividad del equipo no puede distinguir entre que el equipo no existe y que
+// no es suyo (docs/diseno-desarrollo-nucleo.md §3.3).
+export class ErrorEquipoNoEncontrado extends ErrorDominio {
+  readonly codigo = 'equipo_no_encontrado' as const
+  readonly status = 404
+
+  constructor() {
+    super('No encontramos este equipo, o no formas parte de su actividad.')
+  }
+}
+
+// El nombre del equipo es único dentro de la actividad, sin distinguir
+// mayúsculas (docs/diseno-desarrollo-general.md §4.4).
+export class ErrorNombreEquipoDuplicado extends ErrorDominio {
+  readonly codigo = 'nombre_equipo_duplicado' as const
+  readonly status = 409
+
+  constructor() {
+    super('Ya existe un equipo con ese nombre en esta actividad.')
+  }
+}
+
+// Un equipo con integrantes o con contenido no se elimina solo
+// (docs/diseno-desarrollo-nucleo.md §8.5).
+export class ErrorEquipoNoVacio extends ErrorDominio {
+  readonly codigo = 'equipo_no_vacio' as const
+  readonly status = 422
+
+  constructor() {
+    super('Solo puede eliminarse un equipo sin integrantes. Muévelos a otro equipo primero.')
+  }
+}
+
+// Precondición de la transición Formación → Desarrollo
+// (docs/diseno-desarrollo-nucleo.md §7.4): sin equipos, el reparto automático
+// no tiene destino.
+export class ErrorSinEquipos extends ErrorDominio {
+  readonly codigo = 'sin_equipos' as const
+  readonly status = 422
+
+  constructor() {
+    super('No puedes cerrar la formación sin al menos un equipo.')
+  }
+}
+
+// La membresía que se quiere asignar no existe en la actividad, o está
+// desactivada (una membresía desactivada pierde toda capacidad de acción,
+// docs/diseno-desarrollo-general.md §6.3).
+export class ErrorMiembroNoAsignable extends ErrorDominio {
+  readonly codigo = 'miembro_no_asignable' as const
+  readonly status = 422
+
+  constructor() {
+    super('Esa persona no es un miembro activo de la actividad.')
+  }
+}
+
+// Todo participante pertenece a exactamente un equipo (general §4.6): se
+// mueve a otro, no se deja sin ninguno.
+export class ErrorParticipanteRequiereEquipo extends ErrorDominio {
+  readonly codigo = 'participante_requiere_equipo' as const
+  readonly status = 422
+
+  constructor() {
+    super('Un participante siempre pertenece a un equipo: muévelo a otro en lugar de retirarlo.')
   }
 }
