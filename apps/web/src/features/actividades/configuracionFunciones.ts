@@ -25,9 +25,9 @@ export const FUNCIONES_SIMPLES: DefinicionFuncion[] = [
     titulo: 'Formación de equipos',
     descripcion: 'Cómo se conforman los equipos al cerrar la inscripción.',
     opciones: [
-      { valor: 'autogestionado', etiqueta: 'Autogestionada por participantes' },
-      { valor: 'propuesta_sistema', etiqueta: 'Propuesta del sistema, que tú ajustas' },
-      { valor: 'manual', etiqueta: 'Asignación manual, hecha por ti' },
+      { valor: 'autogestionado', etiqueta: 'Autogestionada' },
+      { valor: 'propuesta_sistema', etiqueta: 'Propuesta del sistema' },
+      { valor: 'manual', etiqueta: 'Asignación manual' },
     ],
   },
   {

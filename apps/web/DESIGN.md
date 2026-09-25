@@ -267,5 +267,7 @@ Should follow the Linear reference for the organizer-facing shell (activity conf
 - **Don't** introduce mascots, confetti bursts, or loud Duolingo-style reward animations when a badge is awarded — the celebratory moment is the solid Apothecary Amber fill and nothing louder.
 - **Don't** use stock photography of people (students, teachers, meeting rooms) anywhere in the UI — use abstract shapes, icons, or simple illustration instead.
 - **Don't** add a second typeface for "warmth" or "technical feel" (The One-Face Rule) — hierarchy comes from size and weight on the single system sans stack.
+- **Don't** tint a whole card, panel or notice with a brand or status color to signal an action or a message (a blue "call to action" box, a yellow "warning" box). Every card stays Paper with a hairline border; emphasis comes from the Primary button, typography and small Badges. Color lives in Badges, buttons and inline error text only.
+- **Don't** explain how a screen works in paragraphs of interface text. Labels, Badges with figures, disabled states and short empty states carry it; prose is for consequences that are hard to undo and for server errors.
 - **Don't** put a shadow on a resting card heavier than Ambient, and never on a table row, list item, or form section at rest.
 - **Don't** apply `border-left`/`border-right` as a colored accent stripe on cards, list items, or callouts — use a full border, a subtle background tint, or a leading icon instead.

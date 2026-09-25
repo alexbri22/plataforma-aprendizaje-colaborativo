@@ -1,7 +1,15 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { AppShell } from '../../components/AppShell'
-import { AvisoError, Badge, Button, Card, IconoCargando } from '../../components/ui'
+import {
+  AvisoError,
+  Badge,
+  Button,
+  Card,
+  IconoCargando,
+  Paginacion,
+  rebanar,
+} from '../../components/ui'
 import { infoFase } from './fase'
 import { formatearFecha, formatearFechaHora } from './formato'
 import { ErrorActividad } from './actividades.api'
@@ -9,10 +17,10 @@ import { useActividad, useCerrarInscripcionMutation, useParticipantes } from './
 import type { Actividad } from './tipos'
 import styles from './PantallaResumenActividad.module.css'
 
-// Cuántos participantes se muestran antes de pedir "Ver todos". La API
-// devuelve la lista completa (todavía sin paginar, ver nucleo §3.1); esto
-// solo evita que una actividad numerosa alargue la pantalla.
-const PARTICIPANTES_VISIBLES = 8
+// Personas por página. La API devuelve la lista completa (todavía sin paginar,
+// ver nucleo §3.1); la paginación evita que una actividad numerosa alargue la
+// pantalla.
+const PARTICIPANTES_POR_PAGINA = 10
 
 const MENSAJE_ERROR_CIERRE_GENERICO = 'No pudimos cerrar la inscripción. Intenta de nuevo.'
 
@@ -115,7 +123,7 @@ function AccionDeAvance({ actividad }: { actividad: Actividad }) {
 // organizador ni co-organizadores: ellos no son a quienes se está esperando.
 function SeccionParticipantes({ id }: { id: string }) {
   const participantesQuery = useParticipantes(id)
-  const [verTodos, setVerTodos] = useState(false)
+  const [pagina, setPagina] = useState(0)
 
   return (
     <Card className={styles.seccionCard}>
@@ -140,9 +148,11 @@ function SeccionParticipantes({ id }: { id: string }) {
               </p>
             )
           }
-          const hayMas = participantes.length > PARTICIPANTES_VISIBLES
-          const visibles =
-            verTodos || !hayMas ? participantes : participantes.slice(0, PARTICIPANTES_VISIBLES)
+          const { visibles, pagina: paginaActual } = rebanar(
+            participantes,
+            pagina,
+            PARTICIPANTES_POR_PAGINA,
+          )
           return (
             <>
               <ul className={styles.listaParticipantes}>
@@ -155,17 +165,13 @@ function SeccionParticipantes({ id }: { id: string }) {
                   </li>
                 ))}
               </ul>
-              {hayMas ? (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className={styles.verTodos}
-                  aria-expanded={verTodos}
-                  onClick={() => setVerTodos((valor) => !valor)}
-                >
-                  {verTodos ? 'Ver menos' : `Ver todos (${participantes.length})`}
-                </Button>
-              ) : null}
+              <Paginacion
+                etiqueta="Participantes"
+                total={participantes.length}
+                tamano={PARTICIPANTES_POR_PAGINA}
+                pagina={paginaActual}
+                onCambiar={setPagina}
+              />
             </>
           )
         })()

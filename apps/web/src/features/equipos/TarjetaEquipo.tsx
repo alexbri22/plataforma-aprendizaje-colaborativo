@@ -1,5 +1,4 @@
 import type { AccionActividad, Equipo, LimitesEquipo, RolIntegrante } from '@plataforma/shared'
-import { useState } from 'react'
 import { Badge, Button, Card } from '../../components/ui'
 import styles from './TarjetaEquipo.module.css'
 
@@ -13,7 +12,6 @@ interface TarjetaEquipoProps {
   onUnirme: (idEquipo: string) => void
   onSalir: (idEquipo: string) => void
   onEditar: (equipo: Equipo) => void
-  onEliminar: (idEquipo: string) => void
 }
 
 const ETIQUETA_ROL: Record<RolIntegrante, string | null> = {
@@ -37,9 +35,7 @@ export function TarjetaEquipo({
   onUnirme,
   onSalir,
   onEditar,
-  onEliminar,
 }: TarjetaEquipoProps) {
-  const [confirmandoEliminar, setConfirmandoEliminar] = useState(false)
   const puede = (accion: AccionActividad) => capacidades.includes(accion)
 
   const soyIntegrante = equipo.integrantes.some((i) => i.idMembresia === idMiMembresia)
@@ -59,7 +55,6 @@ export function TarjetaEquipo({
   const mostrarUnirme = !soyIntegrante && puedeMoverme
   const mostrarSalir = soyIntegrante && puedeMoverme && miRol !== 'participante'
   const mostrarEditar = puede('editar_equipo') && (miRol !== 'participante' || soyIntegrante)
-  const mostrarEliminar = puede('formar_equipos') && equipo.integrantes.length === 0
 
   return (
     <Card className={styles.tarjeta}>
@@ -120,68 +115,34 @@ export function TarjetaEquipo({
         </ul>
       ) : null}
 
-      {mostrarUnirme || mostrarSalir || mostrarEditar || mostrarEliminar ? (
-        confirmandoEliminar ? (
-          <div className={styles.confirmacion}>
-            <p className={styles.vacio}>¿Eliminar el equipo?</p>
-            <div className={styles.acciones}>
-              <Button
-                variant="danger"
-                size="sm"
-                disabled={ocupado}
-                onClick={() => onEliminar(equipo.id)}
-              >
-                Sí, eliminar
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={ocupado}
-                onClick={() => setConfirmandoEliminar(false)}
-              >
-                Cancelar
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className={styles.acciones}>
-            {mostrarUnirme ? (
-              <Button size="sm" disabled={ocupado || lleno} onClick={() => onUnirme(equipo.id)}>
-                {lleno ? 'Equipo lleno' : 'Unirme'}
-              </Button>
-            ) : null}
-            {mostrarSalir ? (
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={ocupado}
-                onClick={() => onSalir(equipo.id)}
-              >
-                Salir del equipo
-              </Button>
-            ) : null}
-            {mostrarEditar ? (
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={ocupado}
-                onClick={() => onEditar(equipo)}
-              >
-                Editar
-              </Button>
-            ) : null}
-            {mostrarEliminar ? (
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={ocupado}
-                onClick={() => setConfirmandoEliminar(true)}
-              >
-                Eliminar
-              </Button>
-            ) : null}
-          </div>
-        )
+      {mostrarUnirme || mostrarSalir || mostrarEditar ? (
+        <div className={styles.acciones}>
+          {mostrarUnirme ? (
+            <Button size="sm" disabled={ocupado || lleno} onClick={() => onUnirme(equipo.id)}>
+              {lleno ? 'Equipo lleno' : 'Unirme'}
+            </Button>
+          ) : null}
+          {mostrarSalir ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={ocupado}
+              onClick={() => onSalir(equipo.id)}
+            >
+              Salir del equipo
+            </Button>
+          ) : null}
+          {mostrarEditar ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={ocupado}
+              onClick={() => onEditar(equipo)}
+            >
+              Editar
+            </Button>
+          ) : null}
+        </div>
       ) : null}
     </Card>
   )

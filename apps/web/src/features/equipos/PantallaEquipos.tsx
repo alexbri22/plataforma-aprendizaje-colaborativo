@@ -20,7 +20,9 @@ import {
 } from '../../components/ui'
 import { useActividad, type Actividad } from '../actividades'
 import { AsignacionManual } from './AsignacionManual'
+import { PanelAjustesFormacion } from './PanelAjustesFormacion'
 import { PanelEditarEquipo } from './PanelEditarEquipo'
+import { ETIQUETA_FORMACION } from './etiquetas'
 import { TarjetaEquipo } from './TarjetaEquipo'
 import {
   useAsignarIntegranteMutation,
@@ -34,16 +36,8 @@ import {
 } from './useEquipos'
 import styles from './PantallaEquipos.module.css'
 
-// El estado de la función formacion_equipos, con nombre corto. Es la
-// configuración hecha legible (PRODUCT.md), no un tipo de actividad.
 // Personas por página en las listas largas.
 const TAMANO_PAGINA = 10
-
-const ETIQUETA_FORMACION: Record<string, string> = {
-  autogestionado: 'Autogestionada',
-  propuesta_sistema: 'Propuesta del sistema',
-  manual: 'Asignación manual',
-}
 
 function mensajeDe(error: unknown): string {
   return error instanceof Error
@@ -291,7 +285,9 @@ export function PantallaEquipos() {
   const equiposQuery = useEquipos(id)
 
   const [error, setError] = useState<string | null>(null)
-  const [equipoEnEdicion, setEquipoEnEdicion] = useState<Equipo | null>(null)
+  const [idEquipoEnEdicion, setIdEquipoEnEdicion] = useState<string | null>(null)
+  const [errorPanel, setErrorPanel] = useState<string | null>(null)
+  const [ajustesAbiertos, setAjustesAbiertos] = useState(false)
   const [paginaSinEquipo, setPaginaSinEquipo] = useState(0)
 
   const asignar = useAsignarIntegranteMutation(id)
@@ -333,6 +329,8 @@ export function PantallaEquipos() {
   const puedeCrear = puede('formar_equipos') || puede('elegir_equipo')
   const sinEquipoPagina = rebanar(sinEquipo, paginaSinEquipo, TAMANO_PAGINA)
   const ocupado = asignar.isPending || retirar.isPending || editar.isPending || eliminar.isPending
+  const equipoEnEdicion = equipos.find((e) => e.id === idEquipoEnEdicion) ?? null
+  const enFormacion = actividad.fase === 'formacion_equipos'
 
   const alFallar = (e: unknown) => setError(mensajeDe(e))
   const unirme = (idEquipo: string) => {
@@ -343,9 +341,11 @@ export function PantallaEquipos() {
     setError(null)
     retirar.mutate({ idEquipo, idMembresia: idMiMembresia }, { onError: alFallar })
   }
-  const eliminarEquipo = (idEquipo: string) => {
-    setError(null)
-    eliminar.mutate(idEquipo, { onError: alFallar })
+  // Las acciones del panel de edición muestran su error dentro del panel.
+  const alFallarEnPanel = (e: unknown) => setErrorPanel(mensajeDe(e))
+  const abrirPanel = (equipo: Equipo) => {
+    setErrorPanel(null)
+    setIdEquipoEnEdicion(equipo.id)
   }
 
   return (
@@ -373,11 +373,7 @@ export function PantallaEquipos() {
               <Badge variant="neutral">Mín. {limites.minimo}</Badge>
             ) : null}
             {puede('configurar_funciones') ? (
-              <Button
-                variant="secondary"
-                size="sm"
-                to={`/actividades/${actividad.id}/configuracion`}
-              >
+              <Button variant="secondary" size="sm" onClick={() => setAjustesAbiertos(true)}>
                 Configurar
               </Button>
             ) : null}
@@ -429,8 +425,7 @@ export function PantallaEquipos() {
                 ocupado={ocupado}
                 onUnirme={unirme}
                 onSalir={salir}
-                onEditar={setEquipoEnEdicion}
-                onEliminar={eliminarEquipo}
+                onEditar={abrirPanel}
               />
             ))}
           </div>
@@ -440,6 +435,7 @@ export function PantallaEquipos() {
           <AsignacionManual
             equipos={equipos}
             sinEquipo={sinEquipo}
+            enFormacion={enFormacion}
             ocupado={ocupado}
             onAsignar={(idEquipo, idMembresia) => {
               setError(null)
@@ -474,10 +470,39 @@ export function PantallaEquipos() {
 
       <PanelEditarEquipo
         equipo={equipoEnEdicion}
-        onCerrar={() => setEquipoEnEdicion(null)}
+        sinEquipo={sinEquipo}
+        puedeEditar={puede('editar_equipo')}
+        puedeAsignar={puede('asignar_integrantes')}
+        puedeEliminar={puede('formar_equipos')}
+        enFormacion={enFormacion}
+        ocupado={ocupado}
+        error={errorPanel}
+        onCerrar={() => setIdEquipoEnEdicion(null)}
         onGuardar={async (idEquipo, cambios) => {
+          setErrorPanel(null)
           await editar.mutateAsync({ idEquipo, cambios })
         }}
+        onAsignar={(idEquipo, idMembresia) => {
+          setErrorPanel(null)
+          asignar.mutate({ idEquipo, idMembresia }, { onError: alFallarEnPanel })
+        }}
+        onRetirar={(idEquipo, idMembresia) => {
+          setErrorPanel(null)
+          retirar.mutate({ idEquipo, idMembresia }, { onError: alFallarEnPanel })
+        }}
+        onEliminar={(idEquipo) => {
+          setErrorPanel(null)
+          eliminar.mutate(idEquipo, {
+            onSuccess: () => setIdEquipoEnEdicion(null),
+            onError: alFallarEnPanel,
+          })
+        }}
+      />
+
+      <PanelAjustesFormacion
+        abierto={ajustesAbiertos}
+        actividad={actividad}
+        onCerrar={() => setAjustesAbiertos(false)}
       />
     </AppShell>
   )

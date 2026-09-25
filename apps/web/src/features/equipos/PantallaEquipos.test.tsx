@@ -4,7 +4,11 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { obtenerActividad } from '../actividades/actividades.api'
+import {
+  configurarFuncion,
+  fijarLimitesEquipo,
+  obtenerActividad,
+} from '../actividades/actividades.api'
 import type { Actividad } from '../actividades'
 import type { Usuario } from '../cuentas/api'
 import {
@@ -41,7 +45,12 @@ vi.mock('../actividades/actividades.api', async () => {
   const real = await vi.importActual<typeof import('../actividades/actividades.api')>(
     '../actividades/actividades.api',
   )
-  return { ...real, obtenerActividad: vi.fn() }
+  return {
+    ...real,
+    obtenerActividad: vi.fn(),
+    configurarFuncion: vi.fn(),
+    fijarLimitesEquipo: vi.fn(),
+  }
 })
 
 vi.mock('./equipos.api', async () => {
@@ -116,6 +125,8 @@ describe('PantallaEquipos', () => {
   beforeEach(() => {
     for (const mock of [
       obtenerActividad,
+      configurarFuncion,
+      fijarLimitesEquipo,
       obtenerEquipos,
       crearEquipo,
       asignarIntegrante,
@@ -279,14 +290,25 @@ describe('PantallaEquipos', () => {
       await waitFor(() => expect(asignarIntegrante).toHaveBeenCalledWith('e2', 'm3'))
     })
 
-    it('a un participante con equipo no se le ofrece dejarlo sin equipo', async () => {
+    it('en formación se puede dejar a un participante sin equipo; en desarrollo ya no', async () => {
       vi.mocked(obtenerEquipos).mockResolvedValue(
         lista([equipo('e1', 'Alfa', [persona('m2', 'Luis Pérez')])]),
       )
-      renderPantalla()
+      const { unmount } = renderPantalla()
+      const enFormacion = await screen.findByLabelText('Equipo de Luis Pérez')
+      expect(within(enFormacion).getByRole('option', { name: 'Sin equipo' })).toBeEnabled()
+      unmount()
 
-      const selector = await screen.findByLabelText('Equipo de Luis Pérez')
-      expect(within(selector).getByRole('option', { name: 'Sin equipo' })).toBeDisabled()
+      vi.mocked(obtenerActividad).mockResolvedValue(
+        actividad({
+          fase: 'desarrollo',
+          rol: 'organizador',
+          capacidades: ['asignar_integrantes'],
+        }),
+      )
+      renderPantalla()
+      const enDesarrollo = await screen.findByLabelText('Equipo de Luis Pérez')
+      expect(within(enDesarrollo).getByRole('option', { name: 'Sin equipo' })).toBeDisabled()
     })
 
     it('el cierre de la formación se confirma y resume cuántos quedan sin equipo', async () => {
@@ -320,7 +342,7 @@ describe('PantallaEquipos', () => {
       expect(screen.getByText('Aún no hay equipos.')).toBeInTheDocument()
     })
 
-    it('elimina un equipo vacío solo tras confirmar', async () => {
+    it('elimina un equipo, aunque tenga integrantes, desde su panel y tras confirmar', async () => {
       vi.mocked(obtenerEquipos).mockResolvedValue(
         lista([equipo('e1', 'Alfa', [persona('m2', 'Luis Pérez')]), equipo('e2', 'Beta')]),
       )
@@ -328,12 +350,116 @@ describe('PantallaEquipos', () => {
       const usuario = userEvent.setup()
       renderPantalla()
 
-      // Solo el equipo vacío ofrece eliminar.
-      await usuario.click(await screen.findByRole('button', { name: 'Eliminar' }))
+      await usuario.click((await screen.findAllByRole('button', { name: 'Editar' }))[0])
+      const panel = await screen.findByRole('dialog')
+      await usuario.click(within(panel).getByRole('button', { name: 'Eliminar equipo' }))
       expect(eliminarEquipo).not.toHaveBeenCalled()
-      await usuario.click(screen.getByRole('button', { name: 'Sí, eliminar' }))
+      expect(within(panel).getByText('Sus integrantes quedan sin equipo.')).toBeInTheDocument()
+      await usuario.click(within(panel).getByRole('button', { name: 'Eliminar equipo' }))
 
-      await waitFor(() => expect(eliminarEquipo).toHaveBeenCalledWith('e2'))
+      await waitFor(() => expect(eliminarEquipo).toHaveBeenCalledWith('e1'))
+    })
+
+    it('desde el panel se agregan y se quitan integrantes', async () => {
+      vi.mocked(obtenerEquipos).mockResolvedValue(
+        lista(
+          [equipo('e1', 'Alfa', [persona('m2', 'Luis Pérez'), persona('m3', 'Eva Ruiz')])],
+          [{ idMembresia: 'm9', nombre: 'Tomás Gil' }],
+        ),
+      )
+      vi.mocked(asignarIntegrante).mockResolvedValue(equipo('e1', 'Alfa'))
+      vi.mocked(retirarIntegrante).mockResolvedValue(equipo('e1', 'Alfa'))
+      const usuario = userEvent.setup()
+      renderPantalla()
+
+      await usuario.click(await screen.findByRole('button', { name: 'Editar' }))
+      const panel = await screen.findByRole('dialog')
+      expect(within(panel).getByText('Integrantes (2)')).toBeInTheDocument()
+
+      await usuario.click(within(panel).getByRole('button', { name: 'Quitar a Luis Pérez' }))
+      await waitFor(() => expect(retirarIntegrante).toHaveBeenCalledWith('e1', 'm2'))
+
+      await usuario.selectOptions(within(panel).getByLabelText('Agregar persona'), 'Tomás Gil')
+      await waitFor(() => expect(asignarIntegrante).toHaveBeenCalledWith('e1', 'm9'))
+    })
+
+    it('el panel muestra el error del servidor dentro del panel', async () => {
+      vi.mocked(obtenerEquipos).mockResolvedValue(
+        lista([equipo('e1', 'Alfa')], [{ idMembresia: 'm9', nombre: 'Tomás Gil' }]),
+      )
+      vi.mocked(asignarIntegrante).mockRejectedValue(
+        new ErrorEquipos('Este equipo ya tiene el máximo de 1 integrante.'),
+      )
+      const usuario = userEvent.setup()
+      renderPantalla()
+
+      await usuario.click(await screen.findByRole('button', { name: 'Editar' }))
+      const panel = await screen.findByRole('dialog')
+      await usuario.selectOptions(within(panel).getByLabelText('Agregar persona'), 'Tomás Gil')
+
+      expect(
+        await within(panel).findByText('Este equipo ya tiene el máximo de 1 integrante.'),
+      ).toBeInTheDocument()
+    })
+
+    it('un participante solo ve los datos de su equipo: ni integrantes ni eliminar', async () => {
+      vi.mocked(obtenerActividad).mockResolvedValue(
+        actividad({ capacidades: ['elegir_equipo', 'editar_equipo'] }),
+      )
+      vi.mocked(obtenerEquipos).mockResolvedValue(
+        lista([equipo('e1', 'Alfa', [persona(YO, 'Ana García')])]),
+      )
+      const usuario = userEvent.setup()
+      renderPantalla()
+
+      await usuario.click(await screen.findByRole('button', { name: 'Editar' }))
+      const panel = await screen.findByRole('dialog')
+      expect(within(panel).getByLabelText('Nombre del equipo')).toBeInTheDocument()
+      expect(within(panel).queryByText(/Integrantes/)).not.toBeInTheDocument()
+      expect(
+        within(panel).queryByRole('button', { name: 'Eliminar equipo' }),
+      ).not.toBeInTheDocument()
+    })
+
+    it('la formación se configura ahí mismo, en un panel, sin ir a otra pantalla', async () => {
+      vi.mocked(obtenerEquipos).mockResolvedValue(lista([]))
+      vi.mocked(configurarFuncion).mockResolvedValue(actividad({ capacidades: [] }))
+      vi.mocked(fijarLimitesEquipo).mockResolvedValue(actividad({ capacidades: [] }))
+      vi.mocked(obtenerActividad).mockResolvedValue(
+        actividad({
+          rol: 'organizador',
+          capacidades: ['configurar_funciones', 'formar_equipos'],
+          configuracion: { formacion_equipos: 'manual' },
+        }),
+      )
+      const usuario = userEvent.setup()
+      renderPantalla()
+
+      await usuario.click(await screen.findByRole('button', { name: 'Configurar' }))
+      const panel = await screen.findByRole('dialog')
+      expect(within(panel).getByLabelText('Cómo se forman')).toHaveValue('manual')
+
+      await usuario.selectOptions(within(panel).getByLabelText('Cómo se forman'), 'Autogestionada')
+      await waitFor(() =>
+        expect(configurarFuncion).toHaveBeenCalledWith('act-1', 'formacion_equipos', {
+          estado: 'autogestionado',
+        }),
+      )
+
+      await usuario.type(within(panel).getByLabelText('Máximo de integrantes'), '4')
+      await usuario.tab()
+      await waitFor(() => expect(fijarLimitesEquipo).toHaveBeenCalledWith('act-1', { maximo: 4 }))
+    })
+
+    it('sin configurar_funciones no se ofrece configurar la formación', async () => {
+      vi.mocked(obtenerActividad).mockResolvedValue(
+        actividad({ rol: 'organizador', capacidades: ['formar_equipos'] }),
+      )
+      vi.mocked(obtenerEquipos).mockResolvedValue(lista([]))
+      renderPantalla()
+
+      await screen.findByText('Autogestionada')
+      expect(screen.queryByRole('button', { name: 'Configurar' })).not.toBeInTheDocument()
     })
 
     it('puede integrar un equipo y salir de él; los participantes no salen', async () => {

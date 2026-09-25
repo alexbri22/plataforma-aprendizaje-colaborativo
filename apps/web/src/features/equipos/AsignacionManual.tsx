@@ -6,6 +6,8 @@ import styles from './AsignacionManual.module.css'
 interface AsignacionManualProps {
   equipos: Equipo[]
   sinEquipo: ParticipanteSinEquipo[]
+  /** Durante la formación un participante puede quedar sin equipo. */
+  enFormacion: boolean
   ocupado: boolean
   onAsignar: (idEquipo: string, idMembresia: string) => void
   onRetirar: (idEquipo: string, idMembresia: string) => void
@@ -17,8 +19,8 @@ interface Fila {
   idMembresia: string
   nombre: string
   idEquipoActual: string
-  // Un participante siempre pertenece a un equipo: no se le ofrece "sin
-  // equipo" una vez asignado. Quien organiza sí puede salir de uno.
+  // Ya en desarrollo un participante pertenece siempre a un equipo: no se le
+  // ofrece "sin equipo". Durante la formación sí, y quien organiza siempre.
   puedeQuedarSinEquipo: boolean
 }
 
@@ -29,6 +31,7 @@ interface Fila {
 export function AsignacionManual({
   equipos,
   sinEquipo,
+  enFormacion,
   ocupado,
   onAsignar,
   onRetirar,
@@ -45,7 +48,7 @@ export function AsignacionManual({
         idMembresia: i.idMembresia,
         nombre: i.nombre,
         idEquipoActual: equipo.id,
-        puedeQuedarSinEquipo: i.rol !== 'participante',
+        puedeQuedarSinEquipo: enFormacion || i.rol !== 'participante',
       })),
     ),
   ]

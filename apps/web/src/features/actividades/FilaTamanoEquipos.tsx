@@ -6,7 +6,7 @@ import { IndicadorCampo, MENSAJE_ERROR_GUARDADO, type EstadoCampo } from './Indi
 import { useFijarLimitesEquipoMutation } from './useActividades'
 import styles from './FilaTamanoEquipos.module.css'
 
-interface FilaTamanoEquiposProps {
+interface CamposTamanoEquiposProps {
   idActividad: string
   minimo: number | null | undefined
   maximo: number | null | undefined
@@ -22,12 +22,12 @@ const texto = (valor: number | null | undefined) => (valor == null ? '' : String
 // puede tener un equipo. Vacío es sin límite. El máximo lo aplica el servidor
 // a todos, también a quien organiza; el mínimo solo advierte. Autoguardado al
 // salir del campo, como el resto de la configuración.
-export function FilaTamanoEquipos({
+export function CamposTamanoEquipos({
   idActividad,
   minimo,
   maximo,
   habilitado,
-}: FilaTamanoEquiposProps) {
+}: CamposTamanoEquiposProps) {
   const [valores, setValores] = useState<Record<Campo, string>>({
     minimo: texto(minimo),
     maximo: texto(maximo),
@@ -68,6 +68,35 @@ export function FilaTamanoEquipos({
   }
 
   return (
+    <div className={styles.control}>
+      <div className={styles.campos}>
+        {(['minimo', 'maximo'] as const).map((campo) => (
+          <Input
+            key={campo}
+            label={campo === 'minimo' ? 'Mínimo de integrantes' : 'Máximo de integrantes'}
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={LIMITE_MAXIMO_TAMANO_EQUIPO}
+            placeholder="Sin límite"
+            value={valores[campo]}
+            disabled={!habilitado}
+            error={errores[campo]}
+            onChange={(e) => setValores((previo) => ({ ...previo, [campo]: e.target.value }))}
+            onBlur={() => alSalir(campo)}
+          />
+        ))}
+      </div>
+      <IndicadorCampo estado={estado} />
+    </div>
+  )
+}
+
+type FilaTamanoEquiposProps = CamposTamanoEquiposProps
+
+// La misma configuración como una fila de la pantalla de Configuración.
+export function FilaTamanoEquipos(props: FilaTamanoEquiposProps) {
+  return (
     <div className={styles.fila}>
       <div className={styles.texto}>
         <h3 className={styles.titulo}>Tamaño de los equipos</h3>
@@ -75,27 +104,7 @@ export function FilaTamanoEquipos({
           Cuántas personas puede tener cada equipo. Vacío, sin límite.
         </p>
       </div>
-      <div className={styles.control}>
-        <div className={styles.campos}>
-          {(['minimo', 'maximo'] as const).map((campo) => (
-            <Input
-              key={campo}
-              label={campo === 'minimo' ? 'Mínimo de integrantes' : 'Máximo de integrantes'}
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={LIMITE_MAXIMO_TAMANO_EQUIPO}
-              placeholder="Sin límite"
-              value={valores[campo]}
-              disabled={!habilitado}
-              error={errores[campo]}
-              onChange={(e) => setValores((previo) => ({ ...previo, [campo]: e.target.value }))}
-              onBlur={() => alSalir(campo)}
-            />
-          ))}
-        </div>
-        <IndicadorCampo estado={estado} />
-      </div>
+      <CamposTamanoEquipos {...props} />
     </div>
   )
 }

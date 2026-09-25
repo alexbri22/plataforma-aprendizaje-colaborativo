@@ -687,7 +687,7 @@ Quien organiza puede mover a un participante de un equipo a otro mientras la act
 
 ## **8.5 Ciclo de vida del equipo**
 
-Un equipo se crea durante la fase de formación, por quien organiza o por un participante según el modo. Puede renombrarse mientras la actividad no esté archivada. Solo puede eliminarse si está vacío y no tiene contenido en su espacio; si lo tiene, la operación se impide y se explica, por la misma razón por la que un equipo vacío no desaparece solo.
+Un equipo se crea durante la fase de formación, por quien organiza o por un participante según el modo. Puede renombrarse mientras la actividad no esté archivada. **Decisión de producto — eliminar un equipo en formación.** Durante la formación un equipo puede eliminarse aunque tenga integrantes: no tiene contenido que perder (el espacio de equipo llega con el desarrollo) y sus integrantes quedan sin equipo, que en formación es un estado válido. El evento conserva el nombre, los textos y la lista de integrantes. Desde el desarrollo ya no se elimina, porque puede tener contenido. Por la misma razón, durante la formación se puede quitar a un participante de su equipo; desde el desarrollo pertenece siempre a uno (general §4.6) y solo se mueve.
 
 El nombre es único dentro de la actividad (4.4 del general). La descripción de la actividad del equipo y su forma de trabajo son campos que el propio equipo llena, y son la primera manifestación de la definición de responsabilidades de Johnson y Johnson dentro del sistema.
 
@@ -699,9 +699,9 @@ El nombre es único dentro de la actividad (4.4 del general). La descripción de
 | POST /api/actividades/{id}/equipos                 | Organizador o participante           | Crea un equipo. Quien no gestiona equipos, solo con la función autogestionada, y queda en él |
 | POST /api/actividades/{id}/equipos/propuesta       | Organizador                          | Genera la propuesta y la materializa como equipos en formación (ver 8.2)                     |
 | PATCH /api/equipos/{id}                            | Integrante u organizador             | Nombre, descripción y forma de trabajo                                                       |
-| DELETE /api/equipos/{id}                           | Organizador                          | Elimina el equipo si está vacío y sin contenido                                              |
+| DELETE /api/equipos/{id}                           | Organizador                          | Elimina el equipo, solo durante la formación; sus integrantes quedan sin equipo              |
 | PUT /api/equipos/{id}/integrantes/{idMembresia}    | Organizador o el propio participante | Asigna o mueve. Cada persona solo a sí misma y solo con la función autogestionada            |
-| DELETE /api/equipos/{id}/integrantes/{idMembresia} | Organizador o la propia persona      | Saca a quien organiza o co-organiza de un equipo. Un participante no se retira: se mueve     |
+| DELETE /api/equipos/{id}/integrantes/{idMembresia} | Organizador o la propia persona      | Saca a alguien de un equipo. Un participante, solo durante la formación; después se mueve    |
 
 ## **8.7 Pantallas**
 
