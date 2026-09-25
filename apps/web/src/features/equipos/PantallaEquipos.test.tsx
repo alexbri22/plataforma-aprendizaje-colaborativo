@@ -14,6 +14,7 @@ import {
   editarEquipo,
   eliminarEquipo,
   ErrorEquipos,
+  generarPropuesta,
   obtenerEquipos,
   retirarIntegrante,
 } from './equipos.api'
@@ -54,6 +55,7 @@ vi.mock('./equipos.api', async () => {
     editarEquipo: vi.fn(),
     eliminarEquipo: vi.fn(),
     cerrarFormacion: vi.fn(),
+    generarPropuesta: vi.fn(),
   }
 })
 
@@ -119,6 +121,7 @@ describe('PantallaEquipos', () => {
       editarEquipo,
       eliminarEquipo,
       cerrarFormacion,
+      generarPropuesta,
     ]) {
       vi.mocked(mock).mockReset()
     }
@@ -431,6 +434,112 @@ describe('PantallaEquipos', () => {
       await screen.findByText(/La actividad está archivada: los equipos se pueden consultar/),
     ).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Unirme|Editar|Eliminar/ })).not.toBeInTheDocument()
+  })
+
+  describe('propuesta del sistema', () => {
+    const capacidades: AccionActividad[] = [
+      'formar_equipos',
+      'asignar_integrantes',
+      'cerrar_formacion',
+      'elegir_equipo',
+      'editar_equipo',
+      'generar_propuesta_equipos',
+    ]
+
+    function propuesta(numeroEquipos: number, esperado: number) {
+      return {
+        idMiMembresia: YO,
+        equipos: [],
+        sinEquipo: [],
+        semilla: 4242,
+        numeroEquipos,
+        numeroEquiposEsperado: esperado,
+      }
+    }
+
+    beforeEach(() => {
+      vi.mocked(obtenerActividad).mockResolvedValue(
+        actividad({
+          rol: 'organizador',
+          capacidades,
+          numeroEquiposEsperado: 3,
+          configuracion: { formacion_equipos: 'propuesta_sistema' },
+        }),
+      )
+    })
+
+    it('sin equipos genera la propuesta directamente y muestra la semilla', async () => {
+      vi.mocked(obtenerEquipos).mockResolvedValue(lista([]))
+      vi.mocked(generarPropuesta).mockResolvedValue(propuesta(3, 3))
+      const usuario = userEvent.setup()
+      renderPantalla()
+
+      expect(await screen.findByText(/en 3 equipos/)).toBeInTheDocument()
+      await usuario.click(screen.getByRole('button', { name: 'Generar propuesta' }))
+
+      await waitFor(() => expect(generarPropuesta).toHaveBeenCalledWith('act-1'))
+      expect(
+        await screen.findByText(/Propuesta generada: 3 equipos \(semilla 4242\)/),
+      ).toBeInTheDocument()
+    })
+
+    it('con equipos ya creados pide confirmar el reemplazo antes de regenerar', async () => {
+      vi.mocked(obtenerEquipos).mockResolvedValue(
+        lista([equipo('e1', 'Alfa', [persona('m2', 'Luis Pérez')]), equipo('e2', 'Beta')]),
+      )
+      vi.mocked(generarPropuesta).mockResolvedValue(propuesta(3, 3))
+      const usuario = userEvent.setup()
+      renderPantalla()
+
+      await usuario.click(await screen.findByRole('button', { name: 'Generar otra propuesta' }))
+      expect(generarPropuesta).not.toHaveBeenCalled()
+      expect(screen.getByText(/Esto reemplaza los 2 equipos actuales/)).toBeInTheDocument()
+      await usuario.click(screen.getByRole('button', { name: 'Sí, generar otra propuesta' }))
+
+      await waitFor(() => expect(generarPropuesta).toHaveBeenCalledWith('act-1'))
+    })
+
+    it('avisa cuando hubo menos participantes que equipos esperados', async () => {
+      vi.mocked(obtenerEquipos).mockResolvedValue(lista([]))
+      vi.mocked(generarPropuesta).mockResolvedValue(propuesta(2, 3))
+      const usuario = userEvent.setup()
+      renderPantalla()
+
+      await usuario.click(await screen.findByRole('button', { name: 'Generar propuesta' }))
+
+      expect(
+        await screen.findByText(/menos participantes que los 3 equipos esperados/),
+      ).toBeInTheDocument()
+    })
+
+    it('muestra el mensaje del servidor si no se puede generar', async () => {
+      vi.mocked(obtenerEquipos).mockResolvedValue(lista([]))
+      vi.mocked(generarPropuesta).mockRejectedValue(
+        new ErrorEquipos(
+          'No hay participantes activos entre quienes repartir una propuesta de equipos.',
+        ),
+      )
+      const usuario = userEvent.setup()
+      renderPantalla()
+
+      await usuario.click(await screen.findByRole('button', { name: 'Generar propuesta' }))
+
+      expect(await screen.findByText(/No hay participantes activos/)).toBeInTheDocument()
+    })
+
+    it('sin la capacidad no se ofrece, aunque la función esté en propuesta_sistema', async () => {
+      vi.mocked(obtenerActividad).mockResolvedValue(
+        actividad({
+          capacidades: ['editar_equipo'],
+          configuracion: { formacion_equipos: 'propuesta_sistema' },
+        }),
+      )
+      vi.mocked(obtenerEquipos).mockResolvedValue(lista([]))
+      renderPantalla()
+
+      await screen.findByText(/Quien organiza genera una propuesta del sistema/)
+      expect(screen.queryByRole('button', { name: /Generar/ })).not.toBeInTheDocument()
+    })
   })
 
   it('muestra un aviso si no se pueden cargar los equipos', async () => {

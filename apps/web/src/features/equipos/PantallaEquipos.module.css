@@ -93,3 +93,9 @@
 .persona:first-child {
   border-top: none;
 }
+
+.confirmacionPropuesta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}

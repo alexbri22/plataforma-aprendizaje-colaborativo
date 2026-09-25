@@ -1,4 +1,4 @@
-import type { Equipo, ListaEquipos } from '@plataforma/shared'
+import type { Equipo, ListaEquipos, PropuestaEquipos } from '@plataforma/shared'
 import type { Actividad } from '../actividades'
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? ''
@@ -121,4 +121,15 @@ export async function cerrarFormacion(idActividad: string): Promise<Actividad> {
     'No pudimos cerrar la formación de equipos. Intenta de nuevo.',
   )
   return ((await respuesta.json()) as { actividad: Actividad }).actividad
+}
+
+// POST /api/actividades/{id}/equipos/propuesta: la propuesta del sistema, ya
+// materializada como equipos normales en formación. Regenerar reemplaza los
+// equipos anteriores.
+export async function generarPropuesta(idActividad: string): Promise<PropuestaEquipos> {
+  const respuesta = await exigirOk(
+    await pedir(`/api/actividades/${idActividadEnRuta(idActividad)}/equipos/propuesta`, 'POST'),
+    'No pudimos generar la propuesta de equipos. Intenta de nuevo.',
+  )
+  return (await respuesta.json()) as PropuestaEquipos
 }

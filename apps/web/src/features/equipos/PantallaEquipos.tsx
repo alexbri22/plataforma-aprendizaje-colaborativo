@@ -19,6 +19,7 @@ import {
   useEditarEquipoMutation,
   useEliminarEquipoMutation,
   useEquipos,
+  useGenerarPropuestaMutation,
   useRetirarIntegranteMutation,
 } from './useEquipos'
 import styles from './PantallaEquipos.module.css'
@@ -106,6 +107,110 @@ function AccionCerrarFormacion({
           onClick={() => setConfirmando(true)}
         >
           Cerrar la formación
+        </Button>
+      )}
+    </Card>
+  )
+}
+
+// Propuesta del sistema (acción 'generar_propuesta_equipos', solo con la
+// función en propuesta_sistema). Crea equipos normales en formación: se
+// ajustan con la asignación y confirmar es cerrar la formación. Regenerar
+// reemplaza los equipos actuales, así que pide confirmación.
+function AccionPropuesta({
+  idActividad,
+  numEquipos,
+  numeroEquiposEsperado,
+  onError,
+}: {
+  idActividad: string
+  numEquipos: number
+  numeroEquiposEsperado: number | undefined
+  onError: (mensaje: string | null) => void
+}) {
+  const [confirmando, setConfirmando] = useState(false)
+  const [aviso, setAviso] = useState<string | null>(null)
+  const generar = useGenerarPropuestaMutation(idActividad)
+  const reemplaza = numEquipos > 0
+
+  function ejecutar() {
+    onError(null)
+    generar.mutate(undefined, {
+      onSuccess: (propuesta) => {
+        setConfirmando(false)
+        const menos = propuesta.numeroEquipos < propuesta.numeroEquiposEsperado
+        setAviso(
+          `Propuesta generada: ${propuesta.numeroEquipos} ${propuesta.numeroEquipos === 1 ? 'equipo' : 'equipos'} (semilla ${propuesta.semilla}). ` +
+            (menos
+              ? `Hay menos participantes que los ${propuesta.numeroEquiposEsperado} equipos esperados, así que no se crearon equipos vacíos. `
+              : '') +
+            'Ajústala con la asignación de personas y cierra la formación para confirmarla.',
+        )
+      },
+      onError: (e) => {
+        setConfirmando(false)
+        onError(mensajeDe(e))
+      },
+    })
+  }
+
+  return (
+    <Card className={styles.seccion}>
+      <h2 className={styles.tituloSeccion}>Propuesta del sistema</h2>
+      <p className={styles.texto}>
+        El sistema reparte a todos los participantes, en orden aleatorio y de forma equilibrada, en
+        {numeroEquiposEsperado ? ` ${numeroEquiposEsperado} equipos` : ' los equipos esperados'}.
+        Los equipos quedan creados: puedes ajustarlos y, al cerrar la formación, se confirman.
+      </p>
+      {aviso ? (
+        <p className={styles.texto} role="status">
+          {aviso}
+        </p>
+      ) : null}
+      {confirmando ? (
+        <div className={styles.confirmacionPropuesta}>
+          <p className={styles.texto}>
+            Esto reemplaza{' '}
+            {numEquipos === 1 ? 'el equipo actual' : `los ${numEquipos} equipos actuales`} y sus
+            asignaciones. El historial conserva lo que había.
+          </p>
+          <div className={styles.botones}>
+            <Button disabled={generar.isPending} onClick={ejecutar}>
+              {generar.isPending ? (
+                <>
+                  <IconoCargando />
+                  Generando…
+                </>
+              ) : (
+                'Sí, generar otra propuesta'
+              )}
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={generar.isPending}
+              onClick={() => setConfirmando(false)}
+            >
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <Button
+          className={styles.botonAccion}
+          variant={reemplaza ? 'secondary' : 'primary'}
+          disabled={generar.isPending}
+          onClick={reemplaza ? () => setConfirmando(true) : ejecutar}
+        >
+          {generar.isPending ? (
+            <>
+              <IconoCargando />
+              Generando…
+            </>
+          ) : reemplaza ? (
+            'Generar otra propuesta'
+          ) : (
+            'Generar propuesta'
+          )}
         </Button>
       )}
     </Card>
@@ -264,6 +369,15 @@ export function PantallaEquipos() {
         ) : null}
 
         {error ? <AvisoError mensaje={error} /> : null}
+
+        {puede('generar_propuesta_equipos') ? (
+          <AccionPropuesta
+            idActividad={id}
+            numEquipos={equipos.length}
+            numeroEquiposEsperado={actividad.numeroEquiposEsperado}
+            onError={setError}
+          />
+        ) : null}
 
         {puede('cerrar_formacion') ? (
           <AccionCerrarFormacion

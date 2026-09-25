@@ -6,6 +6,7 @@ import {
   crearEquipo,
   editarEquipo,
   eliminarEquipo,
+  generarPropuesta,
   obtenerEquipos,
   retirarIntegrante,
   type CambiosEquipo,
@@ -86,5 +87,15 @@ export function useCerrarFormacionMutation(idActividad: string) {
       queryClient.invalidateQueries({ queryKey: claveActividad(idActividad) })
       queryClient.invalidateQueries({ queryKey: CLAVE_ACTIVIDADES })
     },
+  })
+}
+
+// La propuesta crea y reemplaza equipos: invalida la actividad completa por la
+// misma razón que el resto de mutaciones de equipos.
+export function useGenerarPropuestaMutation(idActividad: string) {
+  const invalidar = useInvalidarActividad(idActividad)
+  return useMutation({
+    mutationFn: () => generarPropuesta(idActividad),
+    onSuccess: invalidar,
   })
 }
