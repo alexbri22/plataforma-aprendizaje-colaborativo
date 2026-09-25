@@ -56,10 +56,10 @@ function esNombreDuplicado(error: unknown): boolean {
 // lugar y su autoría) pero no aparece ni cuenta: sale del equipo a efectos de
 // equilibrio, de "sin equipo" y de la transición automática, y al reactivarse
 // vuelve a su equipo.
-export async function listarEquipos(
+async function cargarEquipos(
+  cliente: ClienteBD,
   idActividad: string,
-  cliente: ClienteBD = prisma,
-): Promise<ListaEquipos> {
+): Promise<Omit<ListaEquipos, 'idMiMembresia'>> {
   const [filas, miembros] = await Promise.all([
     cliente.equipo.findMany({
       where: { idActividad },
@@ -101,12 +101,21 @@ export async function listarEquipos(
   return { equipos, sinEquipo }
 }
 
+// GET /api/actividades/{id}/equipos: la lista, con la membresía de quien
+// consulta para que la pantalla sepa cuál es su equipo.
+export async function listarEquipos(
+  idActividad: string,
+  idMiMembresia: string,
+): Promise<ListaEquipos> {
+  return { idMiMembresia, ...(await cargarEquipos(prisma, idActividad)) }
+}
+
 async function obtenerEquipo(
   cliente: ClienteBD,
   idActividad: string,
   idEquipo: string,
 ): Promise<Equipo> {
-  const { equipos } = await listarEquipos(idActividad, cliente)
+  const { equipos } = await cargarEquipos(cliente, idActividad)
   const equipo = equipos.find((e) => e.id === idEquipo)
   if (!equipo) throw new ErrorEquipoNoEncontrado()
   return equipo
@@ -202,7 +211,7 @@ interface EstadoDeEquipos {
 // y los participantes activos sin equipo en orden de incorporación (nucleo
 // §8.3, paso 1). Un desactivado no cuenta en ninguna de las dos cosas.
 async function leerEstadoDeEquipos(tx: ClienteBD, idActividad: string): Promise<EstadoDeEquipos> {
-  const { equipos, sinEquipo } = await listarEquipos(idActividad, tx)
+  const { equipos, sinEquipo } = await cargarEquipos(tx, idActividad)
   const miembros = await listarMiembros(idActividad, tx)
   const porId = new Map(miembros.map((m) => [m.idMembresia, m]))
   return {

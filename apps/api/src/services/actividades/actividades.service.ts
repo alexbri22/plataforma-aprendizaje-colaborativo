@@ -37,12 +37,12 @@ import type { DatosCrearActividadValidados } from './validacion.js'
 import { aFechaCalendario, finDeDiaEnCDMX } from '../../utilidades/fechas.js'
 
 // Fase que expone la API, calcada de
-// apps/web/src/features/actividades/tipos.ts (FaseActividad): cinco valores,
-// sin formacion_equipos. Ese tipo ya lo pliega dentro de 'inscripcion' por
-// ser transicional y breve (mismo criterio documentado ahí); el enum de la
-// base de datos conserva las seis fases completas del ciclo de vida
-// (docs/diseno-desarrollo-general.md §6.1).
-export type FaseActividad = 'configuracion' | 'inscripcion' | 'desarrollo' | 'cierre' | 'archivada'
+// apps/web/src/features/actividades/tipos.ts (FaseActividad): las seis fases
+// del ciclo de vida (docs/diseno-desarrollo-general.md §6.1). Formación de
+// equipos ya no se pliega en inscripción: con Equipos deja de ser transicional
+// y las pantallas necesitan distinguirla.
+export type FaseActividad =
+  'configuracion' | 'inscripcion' | 'formacion_equipos' | 'desarrollo' | 'cierre' | 'archivada'
 
 export type RolActividad = 'organizador' | 'co-organizador' | 'participante'
 
@@ -140,7 +140,7 @@ export function lanzarSiRechazada(resultado: ResultadoAutorizacion, mensajeFase:
 const FASE_POR_ESTADO: Record<EstadoActividad, FaseActividad> = {
   configuracion: 'configuracion',
   inscripcion: 'inscripcion',
-  formacion_equipos: 'inscripcion',
+  formacion_equipos: 'formacion_equipos',
   desarrollo: 'desarrollo',
   cierre: 'cierre',
   archivada: 'archivada',

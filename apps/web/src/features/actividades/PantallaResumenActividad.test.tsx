@@ -256,4 +256,31 @@ describe('PantallaResumenActividad', () => {
 
     expect(await screen.findByRole('link', { name: 'Configurar' })).toBeInTheDocument()
   })
+
+  it('en formación de equipos apunta a la pantalla de Equipos, sin repetir su lógica', async () => {
+    vi.mocked(obtenerActividad).mockResolvedValueOnce({
+      ...ACTIVIDAD_BASE,
+      fase: 'formacion_equipos',
+      capacidades: [],
+    })
+
+    renderPantalla(ACTIVIDAD_BASE.id)
+
+    expect(await screen.findByText('Formación de equipos', { selector: 'h2' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Ir a los equipos' })).toHaveAttribute(
+      'href',
+      `/actividades/${ACTIVIDAD_BASE.id}/equipos`,
+    )
+    expect(screen.getByRole('link', { name: 'Equipos' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Cerrar inscripción' })).not.toBeInTheDocument()
+  })
+
+  it('durante la inscripción todavía no ofrece el acceso a Equipos', async () => {
+    vi.mocked(obtenerActividad).mockResolvedValueOnce(ACTIVIDAD_BASE)
+
+    renderPantalla(ACTIVIDAD_BASE.id)
+
+    await screen.findByRole('button', { name: 'Cerrar inscripción' })
+    expect(screen.queryByRole('link', { name: 'Equipos' })).not.toBeInTheDocument()
+  })
 })

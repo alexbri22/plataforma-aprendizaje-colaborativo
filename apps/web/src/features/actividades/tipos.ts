@@ -1,10 +1,8 @@
 import type { AccionActividad, FuncionSeguimiento } from '@plataforma/shared'
 
-// El ciclo de vida real tiene seis estados (docs/diseno-desarrollo-nucleo.md
-// §7.4): configuración, inscripción, formación, desarrollo, cierre y
-// archivada. 'formacion' se pliega dentro de 'inscripcion' en este tipo
-// porque es transicional y breve.
-export type FaseActividad = 'configuracion' | 'inscripcion' | 'desarrollo' | 'cierre' | 'archivada'
+// Las seis fases del ciclo de vida (docs/diseno-desarrollo-nucleo.md §7.4).
+export type FaseActividad =
+  'configuracion' | 'inscripcion' | 'formacion_equipos' | 'desarrollo' | 'cierre' | 'archivada'
 
 export type RolActividad = 'organizador' | 'co-organizador' | 'participante'
 

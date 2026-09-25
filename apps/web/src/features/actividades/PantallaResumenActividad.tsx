@@ -26,6 +26,25 @@ function AccionDeAvance({ actividad }: { actividad: Actividad }) {
   const [confirmando, setConfirmando] = useState(false)
   const cerrarInscripcionMutacion = useCerrarInscripcionMutation(actividad.id)
 
+  // En formación de equipos el avance vive en la pantalla de Equipos (cerrar
+  // la formación, asignar, elegir equipo); aquí solo se apunta a ella.
+  if (actividad.fase === 'formacion_equipos') {
+    return (
+      <Card className={styles.accion}>
+        <div>
+          <h2 className={styles.tituloSeccion}>Formación de equipos</h2>
+          <p className={styles.accionTexto}>
+            La inscripción está cerrada y los equipos se están formando. Cuando termine, la
+            actividad pasa a desarrollo.
+          </p>
+        </div>
+        <Button className={styles.accionBoton} to={`/actividades/${actividad.id}/equipos`}>
+          Ir a los equipos
+        </Button>
+      </Card>
+    )
+  }
+
   if (!actividad.capacidades?.includes('cerrar_inscripcion')) return null
 
   return (
@@ -219,6 +238,19 @@ export function PantallaResumenActividad() {
                 to={`/actividades/${actividad.id}/configuracion`}
               >
                 Configurar
+              </Button>
+            ) : null
+          }
+          {
+            // Los equipos existen desde la formación. Se muestra el acceso
+            // desde ahí; qué puede hacer cada quien dentro lo dicen las
+            // capacidades, no esta condición.
+            actividad.fase === 'formacion_equipos' ||
+            actividad.fase === 'desarrollo' ||
+            actividad.fase === 'cierre' ||
+            actividad.fase === 'archivada' ? (
+              <Button variant="secondary" size="sm" to={`/actividades/${actividad.id}/equipos`}>
+                Equipos
               </Button>
             ) : null
           }

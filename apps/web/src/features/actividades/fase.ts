@@ -10,11 +10,12 @@ interface InfoFase {
 // organiza (calificar, evaluar); la archivada usa 'accent' porque el cierre o
 // archivado es uno de los dos únicos usos sancionados de Apothecary Amber
 // fuera de insignias (ver DESIGN.md, "The One-Bottle Rule"). 'configuracion'
-// comparte variant con 'inscripcion': ambas son fases tempranas que esperan
+// comparte variant con 'inscripcion' y 'formacion_equipos': son fases tempranas que esperan
 // una acción de quien organiza.
 const INFO_POR_FASE: Record<FaseActividad, InfoFase> = {
   configuracion: { etiqueta: 'Configuración', variant: 'primary' },
   inscripcion: { etiqueta: 'Inscripción', variant: 'primary' },
+  formacion_equipos: { etiqueta: 'Formación de equipos', variant: 'primary' },
   desarrollo: { etiqueta: 'En desarrollo', variant: 'neutral' },
   cierre: { etiqueta: 'Cierre', variant: 'warning' },
   archivada: { etiqueta: 'Archivada', variant: 'accent' },
@@ -30,4 +31,10 @@ export function infoFase(fase: FaseActividad): InfoFase {
 // las actividades nacen en 'inscripcion' y ninguna pasa por ahí todavía
 // (docs/diseno-desarrollo-general.md §5.1); agregarla cuando exista la
 // transición manual.
-export const ORDEN_FASES: FaseActividad[] = ['inscripcion', 'desarrollo', 'cierre', 'archivada']
+export const ORDEN_FASES: FaseActividad[] = [
+  'inscripcion',
+  'formacion_equipos',
+  'desarrollo',
+  'cierre',
+  'archivada',
+]

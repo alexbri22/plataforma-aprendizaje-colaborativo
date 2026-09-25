@@ -385,7 +385,7 @@ describe('POST /api/actividades/:id/inscripcion/cierre', () => {
       .set('Cookie', cookieOrganizador)
 
     expect(respuesta.status).toBe(200)
-    expect(respuesta.body.actividad.fase).toBe('inscripcion') // formacion_equipos se pliega en 'inscripcion' (ver FASE_POR_ESTADO)
+    expect(respuesta.body.actividad.fase).toBe('formacion_equipos')
     const actividadEnBD = await prisma.actividad.findUniqueOrThrow({ where: { idActividad: id } })
     expect(actividadEnBD.estado).toBe('formacion_equipos')
 

@@ -28,7 +28,8 @@ equiposRouter.get(
   exigirSesion,
   cargarContextoActividad,
   async (req, res) => {
-    const lista = await listarEquipos(req.params.id as string)
+    const { membresia } = req.contextoActividad!
+    const lista = await listarEquipos(req.params.id as string, membresia.idMembresia)
     res.status(200).json(lista)
   },
 )

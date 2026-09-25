@@ -23,7 +23,7 @@ import {
 // invalidación.
 export const CLAVE_ACTIVIDADES = ['actividades'] as const
 
-function claveActividad(id: string) {
+export function claveActividad(id: string) {
   return [...CLAVE_ACTIVIDADES, id] as const
 }
 

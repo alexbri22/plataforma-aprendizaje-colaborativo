@@ -1,0 +1,95 @@
+.cargando {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16) 0;
+  color: var(--color-text-muted);
+}
+
+.contenido {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: 1100px;
+}
+
+.seccion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.insignia {
+  align-self: flex-start;
+}
+
+.texto {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.tituloSeccion {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  margin: 0;
+}
+
+.accion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  background: var(--color-primary-subtle);
+  border: 1px solid var(--color-primary);
+}
+
+.accion .texto {
+  color: var(--color-text);
+}
+
+.botonAccion {
+  align-self: flex-start;
+}
+
+.botones {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.formularioCrear {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+.formularioCrear > :first-child {
+  flex: 1 1 240px;
+}
+
+.rejilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-4);
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.persona {
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--color-border);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+
+.persona:first-child {
+  border-top: none;
+}

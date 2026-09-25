@@ -167,9 +167,10 @@ describe('GET /api/actividades/:id/equipos', () => {
     const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
     await asignar(idA, e.participantes[0].idMembresia, e.organizador.cookie)
 
-    for (const cookie of [e.organizador.cookie, e.participantes[2].cookie]) {
-      const respuesta = await listar(e.id, cookie)
+    for (const persona of [e.organizador, e.participantes[2]]) {
+      const respuesta = await listar(e.id, persona.cookie)
       expect(respuesta.status).toBe(200)
+      expect(respuesta.body.idMiMembresia).toBe(persona.idMembresia)
       expect(respuesta.body.equipos).toHaveLength(1)
       expect(respuesta.body.equipos[0]).toMatchObject({
         nombre: 'Alfa',

@@ -37,6 +37,9 @@ export interface ParticipanteSinEquipo {
 /** GET /api/actividades/{id}/equipos: los equipos en orden de creación y
  * quiénes quedan sin equipo. Todo miembro ve ambas cosas (P-04). */
 export interface ListaEquipos {
+  /** Membresía de quien consulta: la pantalla la necesita para saber cuál es
+   * su equipo (unirse, salir, editar el suyo). */
+  idMiMembresia: string
   equipos: Equipo[]
   sinEquipo: ParticipanteSinEquipo[]
 }
