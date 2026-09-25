@@ -11,7 +11,6 @@ import {
   ErrorAccionNoPermitida,
   ErrorEquipoLleno,
   ErrorEquipoNoEncontrado,
-  ErrorEquipoNoVacio,
   ErrorMiembroNoAsignable,
   ErrorNombreEquipoDuplicado,
   ErrorParticipanteRequiereEquipo,
@@ -393,10 +392,11 @@ export async function asignarIntegrante(
   return obtenerEquipo(prisma, idActividad, idEquipo)
 }
 
-// DELETE /api/equipos/{id}/integrantes/{idMembresia}: saca a quien organiza o
-// co-organiza de un equipo. Un participante no se retira: pertenece siempre a
-// un equipo (general §4.6) y solo se mueve. Idempotente: retirar a quien no
-// integra el equipo no escribe nada.
+// DELETE /api/equipos/{id}/integrantes/{idMembresia}: saca a alguien de un
+// equipo. Quien organiza o co-organiza puede salir siempre; un participante,
+// solo durante la formación (después pertenece siempre a un equipo, general
+// §4.6, y solo se mueve). Idempotente: retirar a quien no integra el equipo no
+// escribe nada.
 export async function retirarIntegrante(
   idEquipo: string,
   idMembresiaObjetivo: string,
@@ -413,7 +413,12 @@ export async function retirarIntegrante(
 
     const miembro = await encontrarMiembro(tx, idActividad, idMembresiaObjetivo)
     if (!miembro) throw new ErrorMiembroNoAsignable()
-    if (miembro.rol === 'participante') throw new ErrorParticipanteRequiereEquipo()
+    // Durante la formación un participante puede quedar sin equipo (es lo que
+    // pasa antes de asignarlo). Ya en desarrollo pertenece siempre a uno
+    // (general §4.6) y solo se mueve.
+    if (miembro.rol === 'participante' && actividad.estado !== 'formacion_equipos') {
+      throw new ErrorParticipanteRequiereEquipo()
+    }
 
     const fila = await tx.integranteEquipo.findUnique({
       where: { idEquipo_idMembresia: { idEquipo, idMembresia: idMembresiaObjetivo } },
@@ -506,9 +511,10 @@ export async function editarEquipo(
   return obtenerEquipo(prisma, idActividad, idEquipo)
 }
 
-// DELETE /api/equipos/{id}: solo un equipo sin integrantes, en formación.
-// Cuenta también a quienes estén desactivados: su fila es su lugar, y borrar
-// el equipo la arrastraría (nucleo §8.5). El evento conserva lo eliminado.
+// DELETE /api/equipos/{id}: elimina el equipo, solo durante la formación.
+// Sus integrantes quedan sin equipo, que en formación es un estado válido; en
+// esa fase el equipo no tiene contenido que perder (el espacio de equipo llega
+// con el desarrollo). El evento conserva lo eliminado, con sus integrantes.
 export async function eliminarEquipo(idEquipo: string, idUsuarioActor: string): Promise<void> {
   const { idActividad, membresia } = await contextoDeEquipo(idEquipo, idUsuarioActor)
 
@@ -524,11 +530,13 @@ export async function eliminarEquipo(idEquipo: string, idUsuarioActor: string): 
 
     const equipo = await tx.equipo.findUnique({
       where: { idEquipo },
-      include: { _count: { select: { integrantes: true } } },
+      include: { integrantes: { select: { idMembresia: true } } },
     })
     if (!equipo) throw new ErrorEquipoNoEncontrado()
-    if (equipo._count.integrantes > 0) throw new ErrorEquipoNoVacio()
 
+    const nombreMiembro = new Map(
+      (await listarMiembros(idActividad, tx)).map((m) => [m.idMembresia, m.nombre]),
+    )
     await tx.equipo.delete({ where: { idEquipo } })
     await registrarEvento(tx, {
       idActividad,
@@ -541,6 +549,10 @@ export async function eliminarEquipo(idEquipo: string, idUsuarioActor: string): 
         nombre: equipo.nombre,
         descripcionActividad: equipo.descripcionActividad,
         formaDeTrabajo: equipo.formaDeTrabajo,
+        integrantes: equipo.integrantes.map((i) => ({
+          idMembresia: i.idMembresia,
+          nombre: nombreMiembro.get(i.idMembresia) ?? '',
+        })),
       },
       categoria: 'estructura',
     })

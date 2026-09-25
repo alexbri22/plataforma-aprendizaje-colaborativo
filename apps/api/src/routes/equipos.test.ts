@@ -451,32 +451,59 @@ describe('PUT /api/equipos/:id/integrantes/:idMembresia', () => {
 })
 
 describe('DELETE /api/equipos/:id/integrantes/:idMembresia', () => {
-  it('quien organiza sale de un equipo; un participante no se retira, se mueve', async () => {
-    const e = await actividadEnFormacion(1)
+  it('quien organiza sale de un equipo, y es idempotente', async () => {
+    const e = await actividadEnFormacion(2)
     const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
     await asignar(idA, e.organizador.idMembresia, e.organizador.cookie)
-    await asignar(idA, e.participantes[0].idMembresia, e.organizador.cookie)
 
-    const participante = await request(app)
-      .delete(`/api/equipos/${idA}/integrantes/${e.participantes[0].idMembresia}`)
-      .set('Cookie', e.organizador.cookie)
-    expect(participante.status).toBe(422)
-    expect(participante.body.codigo).toBe('participante_requiere_equipo')
-
-    const organizador = await request(app)
-      .delete(`/api/equipos/${idA}/integrantes/${e.organizador.idMembresia}`)
-      .set('Cookie', e.organizador.cookie)
-    expect(organizador.status).toBe(200)
-    expect(organizador.body.equipo.integrantes).toHaveLength(1)
+    const salir = () =>
+      request(app)
+        .delete(`/api/equipos/${idA}/integrantes/${e.organizador.idMembresia}`)
+        .set('Cookie', e.organizador.cookie)
+    const respuesta = await salir()
+    expect(respuesta.status).toBe(200)
+    expect(respuesta.body.equipo.integrantes).toHaveLength(0)
     const retirados = await eventos(e.id, 'integrante_retirado')
     expect(retirados).toHaveLength(1)
     expect(retirados[0].datos).toMatchObject({ nombre: 'Olga Prueba' })
 
-    // Idempotente: no escribe ni registra nada la segunda vez.
-    await request(app)
-      .delete(`/api/equipos/${idA}/integrantes/${e.organizador.idMembresia}`)
-      .set('Cookie', e.organizador.cookie)
+    await salir()
     expect(await eventos(e.id, 'integrante_retirado')).toHaveLength(1)
+  })
+
+  it('durante la formación también se puede quitar a un participante: queda sin equipo', async () => {
+    const e = await actividadEnFormacion(3)
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    await asignar(idA, e.participantes[0].idMembresia, e.organizador.cookie)
+
+    const respuesta = await request(app)
+      .delete(`/api/equipos/${idA}/integrantes/${e.participantes[0].idMembresia}`)
+      .set('Cookie', e.organizador.cookie)
+    expect(respuesta.status).toBe(200)
+    expect((await listar(e.id, e.organizador.cookie)).body.sinEquipo).toHaveLength(3)
+  })
+
+  it('en desarrollo un participante ya no se retira, solo se mueve: 422', async () => {
+    const e = await actividadEnFormacion(2)
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    await asignar(idA, e.participantes[0].idMembresia, e.organizador.cookie)
+    await prisma.actividad.update({ where: { idActividad: e.id }, data: { estado: 'desarrollo' } })
+
+    const respuesta = await request(app)
+      .delete(`/api/equipos/${idA}/integrantes/${e.participantes[0].idMembresia}`)
+      .set('Cookie', e.organizador.cookie)
+    expect(respuesta.status).toBe(422)
+    expect(respuesta.body.codigo).toBe('participante_requiere_equipo')
+  })
+
+  it('un participante no puede quitar a otros: 403', async () => {
+    const e = await actividadEnFormacion(3)
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    await asignar(idA, e.participantes[1].idMembresia, e.organizador.cookie)
+    const respuesta = await request(app)
+      .delete(`/api/equipos/${idA}/integrantes/${e.participantes[1].idMembresia}`)
+      .set('Cookie', e.participantes[0].cookie)
+    expect(respuesta.status).toBe(403)
   })
 })
 
@@ -578,21 +605,40 @@ describe('DELETE /api/equipos/:id', () => {
     expect((await listar(e.id, e.organizador.cookie)).body.equipos).toEqual([])
   })
 
-  it('no elimina un equipo con integrantes (tampoco desactivados): 422', async () => {
-    const e = await actividadEnFormacion(2)
+  it('elimina un equipo con integrantes: quedan sin equipo y el evento los conserva', async () => {
+    const e = await actividadEnFormacion(3)
     const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
     await asignar(idA, e.participantes[0].idMembresia, e.organizador.cookie)
-    await prisma.membresia.update({
-      where: { idMembresia: e.participantes[0].idMembresia },
-      data: { estado: 'desactivada' },
-    })
+    await asignar(idA, e.participantes[1].idMembresia, e.organizador.cookie)
 
     const respuesta = await request(app)
       .delete(`/api/equipos/${idA}`)
       .set('Cookie', e.organizador.cookie)
-    expect(respuesta.status).toBe(422)
-    expect(respuesta.body.codigo).toBe('equipo_no_vacio')
-    expect(await eventos(e.id, 'equipo_eliminado')).toHaveLength(0)
+    expect(respuesta.status).toBe(204)
+
+    const lista = (await listar(e.id, e.organizador.cookie)).body
+    expect(lista.equipos).toEqual([])
+    expect(lista.sinEquipo).toHaveLength(3)
+    expect(await prisma.integranteEquipo.count()).toBe(0)
+
+    const [eliminado] = await eventos(e.id, 'equipo_eliminado')
+    expect(eliminado.datos).toMatchObject({
+      nombre: 'Alfa',
+      integrantes: [
+        { idMembresia: e.participantes[0].idMembresia, nombre: 'Pablo1 Prueba' },
+        { idMembresia: e.participantes[1].idMembresia, nombre: 'Pablo2 Prueba' },
+      ],
+    })
+  })
+
+  it('solo durante la formación: en desarrollo no se elimina, 409', async () => {
+    const e = await actividadEnFormacion(2)
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    await prisma.actividad.update({ where: { idActividad: e.id }, data: { estado: 'desarrollo' } })
+    const respuesta = await request(app)
+      .delete(`/api/equipos/${idA}`)
+      .set('Cookie', e.organizador.cookie)
+    expect(respuesta.status).toBe(409)
   })
 
   it('un participante no elimina equipos: 403', async () => {

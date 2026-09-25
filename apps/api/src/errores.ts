@@ -22,7 +22,6 @@ export type CodigoError =
   | 'fuera_de_plazo'
   | 'equipo_no_encontrado'
   | 'nombre_equipo_duplicado'
-  | 'equipo_no_vacio'
   | 'sin_equipos'
   | 'miembro_no_asignable'
   | 'participante_requiere_equipo'
@@ -232,17 +231,6 @@ export class ErrorNombreEquipoDuplicado extends ErrorDominio {
 
   constructor() {
     super('Ya existe un equipo con ese nombre en esta actividad.')
-  }
-}
-
-// Un equipo con integrantes o con contenido no se elimina solo
-// (docs/diseno-desarrollo-nucleo.md §8.5).
-export class ErrorEquipoNoVacio extends ErrorDominio {
-  readonly codigo = 'equipo_no_vacio' as const
-  readonly status = 422
-
-  constructor() {
-    super('Solo puede eliminarse un equipo sin integrantes. Muévelos a otro equipo primero.')
   }
 }
 
