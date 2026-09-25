@@ -1,5 +1,11 @@
 import { Prisma } from '@prisma/client'
-import type { Equipo, ListaEquipos } from '@plataforma/shared'
+import { randomInt } from 'node:crypto'
+import {
+  SEMILLA_MAXIMA,
+  type Equipo,
+  type ListaEquipos,
+  type PropuestaEquipos,
+} from '@plataforma/shared'
 import { prisma } from '../../data/prisma.js'
 import {
   ErrorAccionNoPermitida,
@@ -8,9 +14,14 @@ import {
   ErrorMiembroNoAsignable,
   ErrorNombreEquipoDuplicado,
   ErrorParticipanteRequiereEquipo,
+  ErrorPropuestaSinParticipantes,
   ErrorSinEquipos,
 } from '../../errores.js'
-import { repartirEquilibrado } from '../../utilidades/reparto.js'
+import {
+  numeroEquiposDePropuesta,
+  proponerEquipos,
+  repartirEquilibrado,
+} from '../../utilidades/reparto.js'
 import {
   autorizarAccion,
   avanzarAFaseDesarrollo,
@@ -559,4 +570,109 @@ export async function cerrarFormacion(
 
     await avanzarAFaseDesarrollo(tx, idActividad, { tipo: 'usuario', idUsuario: idUsuarioActor })
   })
+}
+
+// POST /api/actividades/{id}/equipos/propuesta (nucleo §8.2, con la decisión
+// de producto de materializarla): reparte a todos los participantes activos en
+// `numero_equipos_esperado` equipos vacíos, con el orden barajado por una
+// semilla, y los deja como equipos normales en formación. Se ajustan con la
+// asignación manual, y confirmar es la propia transición a desarrollo: no hay
+// estado "borrador".
+//
+// Si ya había equipos, los reemplaza (en formación no tienen contenido). Con
+// menos participantes que equipos esperados propone tantos equipos como
+// participantes, para no dejar equipos vacíos. Puede repetirse: cada vez, con
+// una semilla nueva. La semilla, el resultado y lo reemplazado quedan en un
+// solo evento, de modo que la propuesta se explica y se reproduce.
+export async function generarPropuesta(
+  idActividad: string,
+  semillaSolicitada: number | undefined,
+  idUsuarioActor: string,
+  membresiaActor: MembresiaActor,
+): Promise<PropuestaEquipos> {
+  const resultado = await prisma.$transaction(async (tx) => {
+    const actividad = await bloquearActividadParaEquipos(tx, idActividad)
+    exigirAccion(
+      membresiaActor,
+      'generar_propuesta_equipos',
+      actividad.estado,
+      'La propuesta de equipos solo puede generarse durante la formación.',
+      actividad.formacionEquipos,
+    )
+
+    const miembros = await listarMiembros(idActividad, tx)
+    const participantes = miembros.filter((m) => m.activa && m.rol === 'participante')
+    const numeroEquipos = numeroEquiposDePropuesta(
+      actividad.numeroEquiposEsperado,
+      participantes.length,
+    )
+    if (numeroEquipos === 0) throw new ErrorPropuestaSinParticipantes()
+
+    const semilla = semillaSolicitada ?? randomInt(0, SEMILLA_MAXIMA + 1)
+    const reparto = proponerEquipos(
+      participantes.map((p) => p.idMembresia),
+      numeroEquipos,
+      semilla,
+    )
+
+    // Lo que se reemplaza queda en el evento: es el único lugar donde
+    // sobrevive. Se leen las filas tal cual, con quienes estén desactivados:
+    // su lugar también se pierde al borrar el equipo.
+    const nombreMiembro = new Map(miembros.map((m) => [m.idMembresia, m.nombre]))
+    const previos = await tx.equipo.findMany({
+      where: { idActividad },
+      orderBy: { orden: 'asc' },
+      include: { integrantes: { select: { idMembresia: true } } },
+    })
+    await tx.equipo.deleteMany({ where: { idActividad } })
+
+    const propuestos: { nombre: string; integrantes: { idMembresia: string; nombre: string }[] }[] =
+      []
+    for (let i = 0; i < reparto.length; i += 1) {
+      // Uno por uno: `orden` es una secuencia y define el orden de creación.
+      const creado = await tx.equipo.create({ data: { idActividad, nombre: `Equipo ${i + 1}` } })
+      await tx.integranteEquipo.createMany({
+        data: reparto[i].map((idMembresia) => ({ idEquipo: creado.idEquipo, idMembresia })),
+      })
+      propuestos.push({
+        nombre: creado.nombre,
+        integrantes: reparto[i].map((idMembresia) => ({
+          idMembresia,
+          nombre: nombreMiembro.get(idMembresia) ?? '',
+        })),
+      })
+    }
+
+    await registrarEvento(tx, {
+      idActividad,
+      tipoActor: 'usuario',
+      idUsuarioActor,
+      tipoEvento: 'propuesta_generada',
+      tipoEntidad: 'actividad',
+      idEntidad: idActividad,
+      datos: {
+        semilla,
+        numeroEquipos,
+        numeroEquiposEsperado: actividad.numeroEquiposEsperado,
+        equipos: propuestos,
+        reemplazados: previos.map((e) => ({
+          nombre: e.nombre,
+          descripcionActividad: e.descripcionActividad,
+          formaDeTrabajo: e.formaDeTrabajo,
+          integrantes: e.integrantes.map((i) => ({
+            idMembresia: i.idMembresia,
+            nombre: nombreMiembro.get(i.idMembresia) ?? '',
+          })),
+        })),
+      },
+      categoria: 'estructura',
+    })
+
+    return { semilla, numeroEquipos, numeroEquiposEsperado: actividad.numeroEquiposEsperado }
+  })
+
+  return {
+    ...resultado,
+    ...(await listarEquipos(idActividad, membresiaActor.idMembresia)),
+  }
 }

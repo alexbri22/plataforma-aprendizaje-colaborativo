@@ -43,3 +43,17 @@ export interface ListaEquipos {
   equipos: Equipo[]
   sinEquipo: ParticipanteSinEquipo[]
 }
+
+/** POST /api/actividades/{id}/equipos/propuesta: la propuesta ya materializada
+ * como equipos normales en formación (nucleo §8.2), con la semilla que la
+ * hace reproducible. `numeroEquipos` puede ser menor que
+ * `numeroEquiposEsperado` si hay menos participantes que equipos esperados. */
+export interface PropuestaEquipos extends ListaEquipos {
+  semilla: number
+  numeroEquipos: number
+  numeroEquiposEsperado: number
+}
+
+/** Rango de la semilla: un entero sin signo de 32 bits, lo que admite el
+ * generador determinista del reparto. */
+export const SEMILLA_MAXIMA = 4294967295

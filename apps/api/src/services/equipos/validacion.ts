@@ -1,4 +1,8 @@
-import { LONGITUD_MAXIMA_NOMBRE_EQUIPO, LONGITUD_MAXIMA_TEXTO_EQUIPO } from '@plataforma/shared'
+import {
+  LONGITUD_MAXIMA_NOMBRE_EQUIPO,
+  LONGITUD_MAXIMA_TEXTO_EQUIPO,
+  SEMILLA_MAXIMA,
+} from '@plataforma/shared'
 import { ErrorValidacion } from '../../errores.js'
 
 // Mock manual sin paquete de validación compartido todavía (mismo criterio
@@ -69,4 +73,23 @@ export function validarDatosActualizarEquipo(cuerpo: unknown): CambiosEquipo {
     })
   }
   return cambios
+}
+
+// POST propuesta: el cuerpo es opcional. `semilla` permite reproducir una
+// propuesta anterior (la guarda el evento del historial); sin ella, el
+// servidor elige una.
+export function validarDatosGenerarPropuesta(cuerpo: unknown): { semilla?: number } {
+  const { semilla } = comoObjeto(cuerpo)
+  if (semilla === undefined) return {}
+  if (
+    typeof semilla === 'number' &&
+    Number.isInteger(semilla) &&
+    semilla >= 0 &&
+    semilla <= SEMILLA_MAXIMA
+  ) {
+    return { semilla }
+  }
+  throw new ErrorValidacion({
+    semilla: `Debe ser un entero entre 0 y ${SEMILLA_MAXIMA}.`,
+  })
 }

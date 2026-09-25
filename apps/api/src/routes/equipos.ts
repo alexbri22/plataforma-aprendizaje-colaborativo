@@ -9,12 +9,14 @@ import {
   crearEquipo,
   editarEquipo,
   eliminarEquipo,
+  generarPropuesta,
   listarEquipos,
   retirarIntegrante,
 } from '../services/equipos/equipos.service.js'
 import {
   validarDatosActualizarEquipo,
   validarDatosCrearEquipo,
+  validarDatosGenerarPropuesta,
 } from '../services/equipos/validacion.js'
 
 export const equiposRouter = Router()
@@ -47,6 +49,28 @@ equiposRouter.post(
 
     const equipo = await crearEquipo(req.params.id as string, nombre, actor.idUsuario, membresia)
     res.status(201).location(`/api/equipos/${equipo.id}`).json({ equipo })
+  },
+)
+
+// POST /api/actividades/{id}/equipos/propuesta (nucleo §8.6, con la decisión de
+// producto de materializarla): genera la propuesta del sistema como equipos
+// normales en formación.
+equiposRouter.post(
+  '/actividades/:id/equipos/propuesta',
+  exigirSesion,
+  cargarContextoActividad,
+  async (req, res) => {
+    const { membresia } = req.contextoActividad!
+    const actor = req.actor as UsuarioPublico
+    const { semilla } = validarDatosGenerarPropuesta(req.body)
+
+    const propuesta = await generarPropuesta(
+      req.params.id as string,
+      semilla,
+      actor.idUsuario,
+      membresia,
+    )
+    res.status(201).json(propuesta)
   },
 )
 

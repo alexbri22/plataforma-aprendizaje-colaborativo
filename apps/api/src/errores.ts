@@ -26,6 +26,7 @@ export type CodigoError =
   | 'sin_equipos'
   | 'miembro_no_asignable'
   | 'participante_requiere_equipo'
+  | 'propuesta_sin_participantes'
 
 export abstract class ErrorDominio extends Error {
   abstract readonly codigo: CodigoError
@@ -275,5 +276,16 @@ export class ErrorParticipanteRequiereEquipo extends ErrorDominio {
 
   constructor() {
     super('Un participante siempre pertenece a un equipo: muévelo a otro en lugar de retirarlo.')
+  }
+}
+
+// La propuesta reparte a todos los participantes activos: sin ninguno no hay
+// nada que proponer.
+export class ErrorPropuestaSinParticipantes extends ErrorDominio {
+  readonly codigo = 'propuesta_sin_participantes' as const
+  readonly status = 422
+
+  constructor() {
+    super('No hay participantes activos entre quienes repartir una propuesta de equipos.')
   }
 }
