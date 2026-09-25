@@ -20,6 +20,9 @@
  * GET /api/actividades/{id} devuelve un subconjunto de estos valores. */
 export const ACCIONES_ACTIVIDAD = [
   'configurar_funciones',
+  // Cambiar funciones una vez iniciado el desarrollo (general §6.2, P-17):
+  // habilitar siempre; deshabilitar o cambiar de modo solo sin datos.
+  'ajustar_funciones',
   'ajustar_periodos',
   'cerrar_inscripcion',
   'agregar_coorganizador',

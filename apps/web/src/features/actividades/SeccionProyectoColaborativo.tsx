@@ -33,8 +33,11 @@ function NoAplica() {
 export interface SeccionProyectoColaborativoProps {
   idActividad: string
   estadoEspacioEquipo: EstadoEspacioEquipo
-  /** configurar_funciones: cambiar el estado de un elemento o regenerar el calendario. */
+  /** configurar_funciones o ajustar_funciones: cambiar el estado de un elemento. */
   puedeConfigurar: boolean
+  /** configurar_funciones: regenerar el calendario, que descarta los ajustes
+   * individuales y solo procede antes del desarrollo. */
+  puedeRegenerarCalendario: boolean
   /** ajustar_periodos: mover fechas de un avance o cancelarlo. */
   puedeAjustarPeriodos: boolean
   estados: Record<string, EstadoCampo>
@@ -53,6 +56,7 @@ export function SeccionProyectoColaborativo({
   idActividad,
   estadoEspacioEquipo,
   puedeConfigurar,
+  puedeRegenerarCalendario,
   puedeAjustarPeriodos,
   estados,
   guardar,
@@ -115,7 +119,7 @@ export function SeccionProyectoColaborativo({
           label="Periodicidad de Avances"
           ocultarEtiqueta
           value={inferida}
-          disabled={!puedeConfigurar || definirMutacion.isPending}
+          disabled={!puedeRegenerarCalendario || definirMutacion.isPending}
           onChange={elegirPeriodicidad}
         >
           {OPCIONES_PERIODICIDAD.map((opcion) => (

@@ -596,3 +596,123 @@ describe('transicionarActividadesVencidas (tarea programada, nucleo §7.5)', () 
     expect(actividadEnBD.estado).toBe('inscripcion')
   })
 })
+
+describe('PUT /api/actividades/:id/configuracion/:funcion durante el desarrollo y el cierre', () => {
+  async function actividadEn(
+    estado: 'desarrollo' | 'cierre' | 'archivada',
+    correo = 'ada@ejemplo.com',
+  ) {
+    const cookie = await registrarYObtenerCookie(correo)
+    const { id } = await crearActividad(cookie)
+    await prisma.actividad.update({ where: { idActividad: id }, data: { estado } })
+    return { cookie, id }
+  }
+
+  const configurar = (id: string, cookie: string, funcion: string, cuerpo: object) =>
+    request(app)
+      .put(`/api/actividades/${id}/configuracion/${funcion}`)
+      .set('Cookie', cookie)
+      .send(cuerpo)
+
+  it('se puede habilitar una función y volver a deshabilitarla si no tiene datos', async () => {
+    for (const estado of ['desarrollo', 'cierre'] as const) {
+      const { cookie, id } = await actividadEn(estado, `${estado}@ejemplo.com`)
+
+      const habilitar = await configurar(id, cookie, 'bitacora_individual', {
+        estado: 'habilitada',
+      })
+      expect(habilitar.status, estado).toBe(200)
+      expect(habilitar.body.actividad.configuracion.bitacora_individual).toBe('habilitada')
+
+      const deshabilitar = await configurar(id, cookie, 'bitacora_individual', {
+        estado: 'deshabilitada',
+      })
+      expect(deshabilitar.status, estado).toBe(200)
+
+      const cambios = await prisma.historial.findMany({
+        where: { idActividad: id, tipoEvento: 'configuracion_modificada' },
+        orderBy: { fecha: 'asc' },
+      })
+      expect(cambios.map((c) => c.datos)).toEqual([
+        {
+          funcion: 'bitacora_individual',
+          estadoAnterior: 'deshabilitada',
+          estadoNuevo: 'habilitada',
+        },
+        {
+          funcion: 'bitacora_individual',
+          estadoAnterior: 'habilitada',
+          estadoNuevo: 'deshabilitada',
+        },
+      ])
+    }
+  })
+
+  it('el espacio de equipo también cambia por elemento sin datos', async () => {
+    const { cookie, id } = await actividadEn('desarrollo')
+    const respuesta = await configurar(id, cookie, 'espacio_equipo', {
+      metas: 'obligatorio',
+      avances: 'deshabilitado',
+      recursos: 'opcional',
+    })
+    expect(respuesta.status).toBe(200)
+  })
+
+  it('la formación de equipos ya cerrada no cambia, con explicación: 422', async () => {
+    const { cookie, id } = await actividadEn('desarrollo')
+    const respuesta = await configurar(id, cookie, 'formacion_equipos', { estado: 'manual' })
+    expect(respuesta.status).toBe(422)
+    expect(respuesta.body.codigo).toBe('funcion_con_datos')
+    expect(respuesta.body.mensaje).toMatch(/formación de equipos ya se cerró/)
+    const actividad = await request(app).get(`/api/actividades/${id}`).set('Cookie', cookie)
+    expect(actividad.body.actividad.configuracion.formacion_equipos).toBe('autogestionado')
+  })
+
+  it('las insignias pueden habilitarse, pero no deshabilitarse mientras no se pueda comprobar que no hay otorgamientos', async () => {
+    const { cookie, id } = await actividadEn('cierre')
+    expect((await configurar(id, cookie, 'insignias', { estado: 'solo_organizador' })).status).toBe(
+      200,
+    )
+    const deshabilitar = await configurar(id, cookie, 'insignias', { estado: 'deshabilitado' })
+    expect(deshabilitar.status).toBe(422)
+    expect(deshabilitar.body.codigo).toBe('funcion_con_datos')
+  })
+
+  it('un cambio rechazado no escribe ni registra evento', async () => {
+    const { cookie, id } = await actividadEn('desarrollo')
+    await configurar(id, cookie, 'formacion_equipos', { estado: 'manual' })
+    expect(
+      await prisma.historial.count({
+        where: { idActividad: id, tipoEvento: 'configuracion_modificada' },
+      }),
+    ).toBe(0)
+  })
+
+  it('en una actividad archivada sigue siendo de solo lectura: 409', async () => {
+    const { cookie, id } = await actividadEn('archivada')
+    expect(
+      (await configurar(id, cookie, 'bitacora_individual', { estado: 'habilitada' })).status,
+    ).toBe(409)
+  })
+
+  it('un participante no puede: 403; y las capacidades incluyen ajustar_funciones para quien organiza', async () => {
+    const { cookie, id } = await actividadEn('desarrollo')
+    const cookieParticipante = await registrarYObtenerCookie('grace@ejemplo.com')
+    await prisma.membresia.create({
+      data: {
+        idActividad: id,
+        idUsuario: (await request(app).get('/api/sesion').set('Cookie', cookieParticipante)).body
+          .usuario.idUsuario,
+        rol: 'participante',
+      },
+    })
+
+    expect(
+      (await configurar(id, cookieParticipante, 'bitacora_individual', { estado: 'habilitada' }))
+        .status,
+    ).toBe(403)
+    const detalle = await request(app).get(`/api/actividades/${id}`).set('Cookie', cookie)
+    expect(detalle.body.actividad.capacidades).toContain('ajustar_funciones')
+    expect(detalle.body.actividad.capacidades).not.toContain('configurar_funciones')
+  })
+})

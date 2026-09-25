@@ -54,6 +54,7 @@ export type ResultadoAutorizacion =
 const PERMISO_REQUERIDO_POR_ACCION: Readonly<Record<AccionActividad, PermisoCoorganizador | null>> =
   {
     configurar_funciones: 'configurar_actividad',
+    ajustar_funciones: 'configurar_actividad',
     ajustar_periodos: 'configurar_actividad',
     cerrar_inscripcion: 'gestionar_inscripcion',
     agregar_coorganizador: 'gestionar_coorganizadores',
@@ -85,22 +86,24 @@ const ESTADOS_FORMACION_POR_ACCION: Readonly<
 }
 
 // Tabla acción por fase (docs/diseno-desarrollo-nucleo.md §7.4 y general
-// §6.2). configurar_funciones se limita a las tres fases donde general §6.2
-// permite cambiar libremente el estado de cualquier función; el matiz de
-// "habilitar sin deshabilitar si ya hay datos" a partir de desarrollo (P-17)
-// no se implementa todavía: ahora que las actividades sí llegan a desarrollo
-// (Equipos), configurar_funciones queda cerrada desde ahí, más estricta que
-// P-17, que permitiría habilitar. agregar_coorganizador se permite en toda fase salvo archivada,
-// que es de solo lectura para todos sin excepción (general §7.4).
+// §6.2). configurar_funciones es el cambio libre de las tres fases previas al
+// desarrollo; ajustar_funciones cubre desarrollo y cierre, donde una función
+// puede habilitarse pero no deshabilitarse ni cambiar de modo si ya tiene datos
+// (P-17). Esa condición depende de datos de otros módulos y la verifica el
+// servicio (services/actividades/cambiosDeFuncion.ts). Son dos acciones y no
+// una porque regenerar el calendario de avances descarta los ajustes
+// individuales y solo procede antes del desarrollo (nucleo §9.2), y usa
+// configurar_funciones. agregar_coorganizador se permite en toda fase salvo
+// archivada, que es de solo lectura para todos sin excepción (general §7.4).
 //
 // ajustar_periodos (mover las fechas de un periodo de avances o cancelarlo)
 // llega hasta desarrollo, a diferencia de configurar_funciones: el motivo de
 // editar periodos uno a uno es justo absorber lo que pasa durante la
 // actividad (un periodo que cae en vacaciones, una entrega que se cancela;
-// nucleo §9.2). Regenerar el calendario entero sí es configurar_funciones,
-// porque descartaría esos ajustes.
+// nucleo §9.2).
 const FASES_POR_ACCION: Readonly<Record<AccionActividad, readonly EstadoActividad[]>> = {
   configurar_funciones: ['configuracion', 'inscripcion', 'formacion_equipos'],
+  ajustar_funciones: ['desarrollo', 'cierre'],
   ajustar_periodos: ['configuracion', 'inscripcion', 'formacion_equipos', 'desarrollo'],
   cerrar_inscripcion: ['inscripcion'],
   agregar_coorganizador: [

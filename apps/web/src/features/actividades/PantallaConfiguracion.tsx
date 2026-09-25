@@ -75,12 +75,15 @@ export function PantallaConfiguracion() {
     parsearEstadoEspacioEquipo(actividad.configuracion?.espacio_equipo ?? '') ??
     ESPACIO_EQUIPO_POR_DEFECTO
 
-  // Dos capacidades distintas porque las fases donde cada una aplica también
-  // lo son: las funciones dejan de poder cambiarse al entrar a desarrollo,
-  // pero ajustar el calendario de avances (mover una fecha, cancelar una
-  // entrega) sigue siendo posible mientras la actividad se desarrolla
-  // (capacidades.ts, ajustar_periodos).
-  const puedeConfigurar = actividad.capacidades?.includes('configurar_funciones') ?? false
+  // Tres capacidades porque las fases donde cada una aplica también lo son
+  // (capacidades.ts): configurar_funciones es el cambio libre previo al
+  // desarrollo; ajustar_funciones, en desarrollo y cierre, permite habilitar y
+  // deshabilitar solo lo que aún no tiene datos (P-17), y el servidor explica
+  // el rechazo junto al control; ajustar_periodos mueve o cancela un avance.
+  // Regenerar el calendario entero sigue siendo solo configurar_funciones.
+  const puedeConfigurarLibre = actividad.capacidades?.includes('configurar_funciones') ?? false
+  const puedeAjustarFunciones = actividad.capacidades?.includes('ajustar_funciones') ?? false
+  const puedeConfigurar = puedeConfigurarLibre || puedeAjustarFunciones
   const puedeAjustarPeriodos = actividad.capacidades?.includes('ajustar_periodos') ?? false
 
   return (
@@ -108,6 +111,11 @@ export function PantallaConfiguracion() {
             <p className={styles.aviso}>
               Las funciones ya no pueden cambiarse en esta fase. Aún puedes ajustar el calendario de
               avances.
+            </p>
+          ) : puedeAjustarFunciones ? (
+            <p className={styles.aviso}>
+              La actividad ya está en marcha: puedes habilitar funciones, y deshabilitarlas o
+              cambiar su modo mientras aún no tengan datos.
             </p>
           ) : null}
 
@@ -173,6 +181,7 @@ export function PantallaConfiguracion() {
             idActividad={id}
             estadoEspacioEquipo={estadoEspacioEquipo}
             puedeConfigurar={puedeConfigurar}
+            puedeRegenerarCalendario={puedeConfigurarLibre}
             puedeAjustarPeriodos={puedeAjustarPeriodos}
             estados={estados}
             guardar={guardar}

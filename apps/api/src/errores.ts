@@ -27,6 +27,7 @@ export type CodigoError =
   | 'miembro_no_asignable'
   | 'participante_requiere_equipo'
   | 'propuesta_sin_participantes'
+  | 'funcion_con_datos'
 
 export abstract class ErrorDominio extends Error {
   abstract readonly codigo: CodigoError
@@ -287,5 +288,17 @@ export class ErrorPropuestaSinParticipantes extends ErrorDominio {
 
   constructor() {
     super('No hay participantes activos entre quienes repartir una propuesta de equipos.')
+  }
+}
+
+// A partir del desarrollo una función puede habilitarse, pero no deshabilitarse
+// ni cambiar de modo si ya tiene datos (docs/diseno-desarrollo-general.md
+// §6.2, P-17). El mensaje explica cuáles datos lo impiden.
+export class ErrorFuncionConDatos extends ErrorDominio {
+  readonly codigo = 'funcion_con_datos' as const
+  readonly status = 422
+
+  constructor(mensaje: string) {
+    super(mensaje)
   }
 }

@@ -19,6 +19,7 @@ import {
   ErrorActividadNoEncontrada,
   ErrorClaveInvalida,
   ErrorFaseNoPermiteAccion,
+  ErrorFuncionConDatos,
   ErrorOrganizadorUnico,
   ErrorSinParticipantes,
   ErrorUsuarioNoEncontrado,
@@ -32,6 +33,7 @@ import {
   type MotivoRechazo,
   type ResultadoAutorizacion,
 } from './capacidades.js'
+import { COMPROBADORES_DE_DATOS, evaluarCambioEnCurso } from './cambiosDeFuncion.js'
 import { generarClaveIngreso } from './claveIngreso.js'
 import type { DatosCrearActividadValidados } from './validacion.js'
 import { aFechaCalendario, finDeDiaEnCDMX } from '../../utilidades/fechas.js'
@@ -546,6 +548,9 @@ export async function transicionarActividadesVencidas(
 // PUT /api/actividades/{id}/configuracion/{funcion} (docs/diseno-desarrollo-nucleo.md
 // §7.7 y general §6.2): fija el estado de una función. `estadoNuevo` ya
 // llegó validado contra el catálogo de la función (validarDatosConfigurarFuncion).
+// Antes del desarrollo el cambio es libre (configurar_funciones); desde el
+// desarrollo y hasta el cierre se puede habilitar y, si la función no tiene
+// datos, también deshabilitar o cambiar de modo (ajustar_funciones, P-17).
 export async function configurarFuncion(
   idActividad: string,
   funcion: FuncionSeguimiento,
@@ -554,10 +559,13 @@ export async function configurarFuncion(
   membresiaActor: MembresiaConPermisos,
 ): Promise<ActividadConCapacidades> {
   const actividad = await cargarActividadConMembresiasYConfiguracion(idActividad)
+  const enCurso = actividad.estado === 'desarrollo' || actividad.estado === 'cierre'
 
-  const resultado = autorizar(contextoDe(membresiaActor), 'configurar_funciones', {
-    estado: actividad.estado,
-  })
+  const resultado = autorizar(
+    contextoDe(membresiaActor),
+    enCurso ? 'ajustar_funciones' : 'configurar_funciones',
+    { estado: actividad.estado },
+  )
   if (!resultado.concedido) {
     lanzarErrorDeAutorizacion(
       resultado.motivo,
@@ -565,9 +573,20 @@ export async function configurarFuncion(
     )
   }
 
-  const estadoAnterior = actividad.configuracion.find((c) => c.funcion === funcion)?.estado ?? null
-
   await prisma.$transaction(async (tx) => {
+    // Se relee dentro de la transacción: el estado anterior que se registra y
+    // contra el que se evalúa el cambio es el que realmente hay.
+    const actual = await tx.configuracionFuncion.findUnique({
+      where: { idActividad_funcion: { idActividad, funcion } },
+    })
+    const estadoAnterior = actual?.estado ?? null
+
+    if (enCurso) {
+      const motivoDatos = await COMPROBADORES_DE_DATOS[funcion](tx, idActividad)
+      const evaluacion = evaluarCambioEnCurso(funcion, estadoAnterior, estadoNuevo, motivoDatos)
+      if (!evaluacion.permitido) throw new ErrorFuncionConDatos(evaluacion.motivo)
+    }
+
     await tx.configuracionFuncion.upsert({
       where: { idActividad_funcion: { idActividad, funcion } },
       update: { estado: estadoNuevo },

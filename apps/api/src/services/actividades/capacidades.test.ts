@@ -100,6 +100,42 @@ describe('autorizar: configurar_funciones', () => {
   })
 })
 
+describe('autorizar: ajustar_funciones', () => {
+  it('se permite en desarrollo y cierre; no antes (ahí es configurar_funciones) ni archivada', () => {
+    const permitidas: EstadoActividad[] = ['desarrollo', 'cierre']
+    for (const estado of TODAS_LAS_FASES) {
+      const resultado = autorizar(actor('organizador'), 'ajustar_funciones', { estado })
+      expect(resultado.concedido, estado).toBe(permitidas.includes(estado))
+    }
+  })
+
+  it('las dos acciones de configuración cubren juntas todas las fases salvo archivada', () => {
+    for (const estado of TODAS_LAS_FASES) {
+      const alguna =
+        autorizar(actor('organizador'), 'configurar_funciones', { estado }).concedido ||
+        autorizar(actor('organizador'), 'ajustar_funciones', { estado }).concedido
+      expect(alguna, estado).toBe(estado !== 'archivada')
+    }
+  })
+
+  it('un co-organizador necesita configurar_actividad; un participante nunca puede', () => {
+    const en = { estado: 'desarrollo' as const }
+    expect(
+      autorizar(actor('co_organizador', ['gestionar_equipos']), 'ajustar_funciones', en),
+    ).toEqual({
+      concedido: false,
+      motivo: 'rol',
+    })
+    expect(
+      autorizar(actor('co_organizador', ['configurar_actividad']), 'ajustar_funciones', en),
+    ).toEqual({ concedido: true })
+    expect(autorizar(actor('participante'), 'ajustar_funciones', en)).toEqual({
+      concedido: false,
+      motivo: 'rol',
+    })
+  })
+})
+
 describe('autorizar: ajustar_periodos', () => {
   it('se permite desde configuración hasta desarrollo; no en cierre ni archivada', () => {
     const permitidas: EstadoActividad[] = [
@@ -164,6 +200,7 @@ describe('autorizar: agregar_coorganizador', () => {
 // Acciones de Actividades: las que ya existían antes de Equipos.
 const ACCIONES_DE_ACTIVIDADES: AccionActividad[] = [
   'configurar_funciones',
+  'ajustar_funciones',
   'ajustar_periodos',
   'cerrar_inscripcion',
   'agregar_coorganizador',

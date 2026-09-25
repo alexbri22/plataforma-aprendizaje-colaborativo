@@ -549,4 +549,19 @@ describe('PantallaConfiguracion', () => {
       )
     })
   })
+
+  it('en desarrollo permite cambiar funciones, avisa de la condición y no deja regenerar el calendario', async () => {
+    vi.mocked(obtenerActividad).mockResolvedValueOnce({
+      ...ACTIVIDAD_BASE,
+      fase: 'desarrollo',
+      capacidades: ['ajustar_funciones', 'ajustar_periodos', 'agregar_coorganizador'],
+    })
+
+    renderPantalla(ACTIVIDAD_BASE.id)
+
+    expect(await screen.findByText(/La actividad ya está en marcha/)).toBeInTheDocument()
+    expect(screen.queryByText(/Las funciones ya no pueden cambiarse/)).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Bitácora individual')).toBeEnabled()
+    expect(await screen.findByLabelText('Periodicidad de Avances')).toBeDisabled()
+  })
 })
