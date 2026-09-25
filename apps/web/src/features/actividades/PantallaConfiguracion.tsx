@@ -6,7 +6,7 @@ import {
 import { useState, type ChangeEvent } from 'react'
 import { useParams } from 'react-router-dom'
 import { AppShell } from '../../components/AppShell'
-import { Button, Card, IconoCargando, Select, Switch } from '../../components/ui'
+import { Card, IconoCargando, Select, Switch } from '../../components/ui'
 import { ErrorActividad } from './actividades.api'
 import { FUNCIONES_SIMPLES } from './configuracionFunciones'
 import { IndicadorCampo, MENSAJE_ERROR_GUARDADO, type EstadoCampo } from './IndicadorCampo'
@@ -58,7 +58,7 @@ export function PantallaConfiguracion() {
 
   if (actividadQuery.isPending) {
     return (
-      <AppShell seccionActiva="actividades" titulo="Configuración">
+      <AppShell seccionActiva="actividades" titulo="Configuración" volverA={`/actividades/${id}`}>
         <div className={styles.cargando} role="status" aria-label="Cargando la configuración">
           <IconoCargando size={24} />
         </div>
@@ -68,7 +68,11 @@ export function PantallaConfiguracion() {
 
   if (actividadQuery.isError || !actividadQuery.data) {
     return (
-      <AppShell seccionActiva="actividades" titulo="Actividad no encontrada">
+      <AppShell
+        seccionActiva="actividades"
+        titulo="Actividad no encontrada"
+        volverA={`/actividades/${id}`}
+      >
         <p className={styles.texto}>No encontramos esta actividad, o ya no formas parte de ella.</p>
       </AppShell>
     )
@@ -94,11 +98,7 @@ export function PantallaConfiguracion() {
     <AppShell
       seccionActiva="actividades"
       titulo={`Configuración — ${actividad.nombre}`}
-      acciones={
-        <Button variant="secondary" to={`/actividades/${id}`}>
-          Volver al resumen
-        </Button>
-      }
+      volverA={`/actividades/${id}`}
     >
       {!puedeConfigurar && !puedeAjustarPeriodos ? (
         <Card className={styles.seccionCard}>

@@ -1,4 +1,4 @@
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { CATALOGO_INSIGNIAS } from '@plataforma/shared'
 import { AppShell } from '../../components/AppShell'
 import { AvisoError, Card, IconoCargando } from '../../components/ui'
@@ -18,7 +18,11 @@ export function PantallaReconocimientosDeParticipante() {
 
   if (consulta.isPending) {
     return (
-      <AppShell seccionActiva="actividades" titulo="Reconocimientos">
+      <AppShell
+        seccionActiva="actividades"
+        titulo="Reconocimientos"
+        volverA={`/actividades/${id}/participantes`}
+      >
         <div className={styles.cargando} role="status" aria-label="Cargando reconocimientos">
           <IconoCargando size={24} />
         </div>
@@ -28,7 +32,11 @@ export function PantallaReconocimientosDeParticipante() {
 
   if (consulta.isError || !consulta.data) {
     return (
-      <AppShell seccionActiva="actividades" titulo="Reconocimientos">
+      <AppShell
+        seccionActiva="actividades"
+        titulo="Reconocimientos"
+        volverA={`/actividades/${id}/participantes`}
+      >
         <AvisoError mensaje={consulta.error?.message ?? 'No pudimos cargar esta vista.'} />
       </AppShell>
     )
@@ -45,11 +53,7 @@ export function PantallaReconocimientosDeParticipante() {
     <AppShell
       seccionActiva="actividades"
       titulo={participante.nombre}
-      acciones={
-        <Link to={`/actividades/${id}/participantes`} className={styles.volver}>
-          Todos los participantes
-        </Link>
-      }
+      volverA={`/actividades/${id}/participantes`}
     >
       <Card>
         {porCategoria.length === 0 ? (

@@ -118,7 +118,7 @@ export function PantallaEquipos() {
 
   if (actividadQuery.isPending || equiposQuery.isPending) {
     return (
-      <AppShell seccionActiva="actividades" titulo="Equipos">
+      <AppShell seccionActiva="actividades" titulo="Equipos" volverA={`/actividades/${id}`}>
         <div className={styles.cargando} role="status" aria-label="Cargando los equipos">
           <IconoCargando size={24} />
         </div>
@@ -128,7 +128,11 @@ export function PantallaEquipos() {
 
   if (actividadQuery.isError || !actividadQuery.data) {
     return (
-      <AppShell seccionActiva="actividades" titulo="Actividad no encontrada">
+      <AppShell
+        seccionActiva="actividades"
+        titulo="Actividad no encontrada"
+        volverA={`/actividades/${id}`}
+      >
         <p className={styles.texto}>No encontramos esta actividad, o ya no formas parte de ella.</p>
       </AppShell>
     )
@@ -176,11 +180,7 @@ export function PantallaEquipos() {
     <AppShell
       seccionActiva="actividades"
       titulo={`Equipos de ${actividad.nombre}`}
-      acciones={
-        <Button variant="secondary" size="sm" to={`/actividades/${actividad.id}`}>
-          Volver a la actividad
-        </Button>
-      }
+      volverA={`/actividades/${actividad.id}`}
     >
       <div className={styles.contenido}>
         {fasePrevia ? (

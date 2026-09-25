@@ -251,7 +251,7 @@ describe('PantallaResumenActividad', () => {
     expect(await screen.findByRole('link', { name: 'Configurar' })).toBeInTheDocument()
   })
 
-  it('en formación de equipos apunta a la pantalla de Equipos, sin repetir su lógica', async () => {
+  it('en formación de equipos no repite el acceso a Equipos en una tarjeta: ya está en el encabezado', async () => {
     vi.mocked(obtenerActividad).mockResolvedValueOnce({
       ...ACTIVIDAD_BASE,
       fase: 'formacion_equipos',
@@ -260,13 +260,24 @@ describe('PantallaResumenActividad', () => {
 
     renderPantalla(ACTIVIDAD_BASE.id)
 
-    expect(await screen.findByText('Formación de equipos', { selector: 'h2' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Ir a los equipos' })).toHaveAttribute(
+    await screen.findByText('Formación de equipos')
+    expect(screen.getByRole('link', { name: 'Equipos' })).toHaveAttribute(
       'href',
       `/actividades/${ACTIVIDAD_BASE.id}/equipos`,
     )
-    expect(screen.getByRole('link', { name: 'Equipos' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Cerrar inscripción' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Ir a los equipos' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Formación de equipos' })).not.toBeInTheDocument()
+  })
+
+  it('tiene una flecha para volver a Mis actividades', async () => {
+    vi.mocked(obtenerActividad).mockResolvedValueOnce(ACTIVIDAD_BASE)
+
+    renderPantalla(ACTIVIDAD_BASE.id)
+
+    expect(await screen.findByRole('link', { name: 'Volver' })).toHaveAttribute(
+      'href',
+      '/actividades',
+    )
   })
 
   it('durante la inscripción ya ofrece el acceso a Equipos, para configurar cómo se forman', async () => {

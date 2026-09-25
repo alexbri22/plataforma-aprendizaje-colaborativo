@@ -565,4 +565,14 @@ describe('PantallaConfiguracion', () => {
     expect(screen.getByLabelText('Bitácora individual')).toBeEnabled()
     expect(await screen.findByLabelText('Periodicidad de Avances')).toBeDisabled()
   })
+
+  it('tiene una flecha para volver al resumen', async () => {
+    vi.mocked(obtenerActividad).mockResolvedValueOnce(ACTIVIDAD_BASE)
+    renderPantalla(ACTIVIDAD_BASE.id)
+
+    expect(await screen.findByRole('link', { name: 'Volver' })).toHaveAttribute(
+      'href',
+      `/actividades/${ACTIVIDAD_BASE.id}`,
+    )
+  })
 })

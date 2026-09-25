@@ -34,25 +34,6 @@ function AccionDeAvance({ actividad }: { actividad: Actividad }) {
   const [confirmando, setConfirmando] = useState(false)
   const cerrarInscripcionMutacion = useCerrarInscripcionMutation(actividad.id)
 
-  // En formación de equipos el avance vive en la pantalla de Equipos (cerrar
-  // la formación, asignar, elegir equipo); aquí solo se apunta a ella.
-  if (actividad.fase === 'formacion_equipos') {
-    // Tarjeta neutral, no la azul de "Cerrar inscripción": solo apunta a otra
-    // pantalla, no es la acción principal de la actividad.
-    return (
-      <Card className={styles.seccionCard}>
-        <h2 className={styles.tituloSeccion}>Formación de equipos</h2>
-        <Button
-          variant="secondary"
-          className={styles.accionBoton}
-          to={`/actividades/${actividad.id}/equipos`}
-        >
-          Ir a los equipos
-        </Button>
-      </Card>
-    )
-  }
-
   if (!actividad.capacidades?.includes('cerrar_inscripcion')) return null
 
   return (
@@ -186,7 +167,7 @@ export function PantallaResumenActividad() {
 
   if (actividadQuery.isPending) {
     return (
-      <AppShell seccionActiva="actividades" titulo="Actividad">
+      <AppShell seccionActiva="actividades" titulo="Actividad" volverA={'/actividades'}>
         <div className={styles.cargando} role="status" aria-label="Cargando la actividad">
           <IconoCargando size={24} />
         </div>
@@ -196,7 +177,11 @@ export function PantallaResumenActividad() {
 
   if (actividadQuery.isError || !actividadQuery.data) {
     return (
-      <AppShell seccionActiva="actividades" titulo="Actividad no encontrada">
+      <AppShell
+        seccionActiva="actividades"
+        titulo="Actividad no encontrada"
+        volverA={'/actividades'}
+      >
         <p className={styles.texto}>No encontramos esta actividad, o ya no formas parte de ella.</p>
       </AppShell>
     )
@@ -211,14 +196,14 @@ export function PantallaResumenActividad() {
   // explica. Ocultarlos por fase aquí duplicaría esa regla en el cliente.
   const accionesInsignias = (
     <>
-      <Button variant="secondary" size="sm" to={`/actividades/${actividad.id}/reconocer`}>
+      <Button variant="ghost" size="sm" to={`/actividades/${actividad.id}/reconocer`}>
         Reconocer al equipo
       </Button>
-      <Button variant="secondary" size="sm" to={`/actividades/${actividad.id}/insignias`}>
+      <Button variant="ghost" size="sm" to={`/actividades/${actividad.id}/insignias`}>
         Mis reconocimientos
       </Button>
       {organiza ? (
-        <Button variant="secondary" size="sm" to={`/actividades/${actividad.id}/participantes`}>
+        <Button variant="ghost" size="sm" to={`/actividades/${actividad.id}/participantes`}>
           Participantes
         </Button>
       ) : null}
@@ -238,16 +223,12 @@ export function PantallaResumenActividad() {
               (capacidad) =>
                 capacidad === 'configurar_funciones' || capacidad === 'ajustar_periodos',
             ) ? (
-              <Button
-                variant="secondary"
-                size="sm"
-                to={`/actividades/${actividad.id}/configuracion`}
-              >
+              <Button variant="ghost" size="sm" to={`/actividades/${actividad.id}/configuracion`}>
                 Configurar
               </Button>
             ) : null
           }
-          <Button variant="secondary" size="sm" to={`/actividades/${actividad.id}/equipos`}>
+          <Button variant="ghost" size="sm" to={`/actividades/${actividad.id}/equipos`}>
             Equipos
           </Button>
           {accionesInsignias}

@@ -246,6 +246,11 @@ The one place in the system where raster artwork appears. A rank insignia is **t
 - **Shape:** a hairline top border, the visible range on the left ("11–20 de 45", Soft Graphite, `aria-live="polite"`) and two secondary small icon buttons on the right, a left and a right chevron, named Anterior and Siguiente for assistive technology (`aria-label`). Nothing renders when everything fits on one page.
 - **Behavior:** the page clamps to the last one if the list shrinks. Ten rows per page is the default for people lists. It is client-side today; the API still returns whole lists, which are bounded by an activity's size.
 
+### Back arrow (`AppShell`, `volverA`)
+
+- **Use:** every screen that is not a root of the sidebar (activity summary, teams, configuration, participants, recognition screens, create and join) leads back with a left arrow icon in front of its title, never a text button in the header. The arrow goes to the screen you came from in the hierarchy (activity → list of activities; anything inside an activity → the activity; a participant's recognitions → the participants).
+- **Shape:** icon only, no box, `surface-hover` on hover, 2.25rem square target, `aria-label="Volver"`. Header actions next to the title are Ghost buttons.
+
 ### Navigation (not yet built — guidance for when it is)
 
 Should follow the Linear reference for the organizer-facing shell (activity configuration, participant management): compact, label-forward, Study Ink for the active item via `primary-subtle` background rather than a bold color block. Avoid a colored sidebar or top bar — navigation chrome stays Paper/Shelf so it never competes with Apothecary Amber's rarity.

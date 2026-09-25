@@ -936,6 +936,18 @@ describe('PantallaEquipos', () => {
     })
   })
 
+  it('tiene una flecha para volver a la actividad, en lugar de un botón con texto', async () => {
+    vi.mocked(obtenerActividad).mockResolvedValue(actividad({ capacidades: [] }))
+    vi.mocked(obtenerEquipos).mockResolvedValue(lista([]))
+    renderPantalla()
+
+    expect(await screen.findByRole('link', { name: 'Volver' })).toHaveAttribute(
+      'href',
+      '/actividades/act-1',
+    )
+    expect(screen.queryByText('Volver a la actividad')).not.toBeInTheDocument()
+  })
+
   it('muestra un aviso si no se pueden cargar los equipos', async () => {
     vi.mocked(obtenerActividad).mockResolvedValue(actividad({ capacidades: [] }))
     vi.mocked(obtenerEquipos).mockRejectedValue(new ErrorEquipos('No pudimos cargar los equipos.'))
