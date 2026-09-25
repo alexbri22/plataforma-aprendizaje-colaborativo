@@ -72,9 +72,7 @@ export function FilaTamanoEquipos({
       <div className={styles.texto}>
         <h3 className={styles.titulo}>Tamaño de los equipos</h3>
         <p className={styles.descripcion}>
-          Cuántas personas puede tener cada equipo. El máximo se respeta siempre, también cuando
-          asignas tú; si no alcanza al cerrar la formación, se crean equipos nuevos. El mínimo solo
-          avisa. Déjalos vacíos para no limitar.
+          Cuántas personas puede tener cada equipo. Vacío, sin límite.
         </p>
       </div>
       <div className={styles.control}>

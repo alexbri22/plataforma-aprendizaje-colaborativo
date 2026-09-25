@@ -10,6 +10,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "migrate:deploy": "prisma migrate deploy",
+    "seed:dev": "tsx scripts/sembrar-desarrollo.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "pretest": "node scripts/migrar-bd-pruebas.mjs",
