@@ -104,12 +104,7 @@ function FormularioEquipo({
 
 export function PanelEditarEquipo({ equipo, onCerrar, onGuardar }: PanelEditarEquipoProps) {
   return (
-    <PanelLateral
-      abierto={equipo !== null}
-      titulo="Editar equipo"
-      descripcion="Lo que escribas aquí lo ve toda la actividad."
-      onCerrar={onCerrar}
-    >
+    <PanelLateral abierto={equipo !== null} titulo="Editar equipo" onCerrar={onCerrar}>
       {equipo ? (
         <FormularioEquipo
           key={equipo.id}

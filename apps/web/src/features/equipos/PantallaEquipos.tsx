@@ -6,9 +6,18 @@ import {
   type RolIntegrante,
 } from '@plataforma/shared'
 import { useState, type FormEvent } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { AppShell } from '../../components/AppShell'
-import { AvisoError, Badge, Button, Card, IconoCargando, Input } from '../../components/ui'
+import {
+  AvisoError,
+  Badge,
+  Button,
+  Card,
+  IconoCargando,
+  Input,
+  Paginacion,
+  rebanar,
+} from '../../components/ui'
 import { useActividad, type Actividad } from '../actividades'
 import { AsignacionManual } from './AsignacionManual'
 import { PanelEditarEquipo } from './PanelEditarEquipo'
@@ -25,14 +34,15 @@ import {
 } from './useEquipos'
 import styles from './PantallaEquipos.module.css'
 
-// Cómo se forman los equipos según el estado de la función. Es la
-// configuración hecha legible (PRODUCT.md: "make the current configuration
-// state legible"), no un tipo de actividad: no existe tal cosa.
-const DESCRIPCION_FORMACION: Record<string, string> = {
-  autogestionado:
-    'Cada participante crea un equipo o se une a uno. La formación se cierra sola cuando nadie queda sin equipo.',
-  propuesta_sistema: 'Quien organiza genera una propuesta del sistema, la ajusta y la confirma.',
-  manual: 'Quien organiza crea los equipos y asigna a cada persona.',
+// El estado de la función formacion_equipos, con nombre corto. Es la
+// configuración hecha legible (PRODUCT.md), no un tipo de actividad.
+// Personas por página en las listas largas.
+const TAMANO_PAGINA = 10
+
+const ETIQUETA_FORMACION: Record<string, string> = {
+  autogestionado: 'Autogestionada',
+  propuesta_sistema: 'Propuesta del sistema',
+  manual: 'Asignación manual',
 }
 
 function mensajeDe(error: unknown): string {
@@ -85,26 +95,25 @@ function AccionCerrarFormacion({
 
   return (
     <Card className={styles.seccion}>
-      <div>
-        <h2 className={styles.tituloSeccion}>Cerrar la formación de equipos</h2>
-        <p className={styles.texto}>
-          {sinEquipos
-            ? 'Crea al menos un equipo para poder cerrar la formación.'
-            : numSinEquipo > 0
-              ? `${numSinEquipo} ${numSinEquipo === 1 ? 'persona sigue' : 'personas siguen'} sin equipo: al cerrar, el sistema las reparte entre los equipos de la forma más equilibrada. La actividad pasa a desarrollo.`
-              : 'Todas las personas tienen equipo. La actividad pasa a desarrollo.'}
-        </p>
+      <h2 className={styles.tituloSeccion}>Cerrar la formación</h2>
+      {/* Lo que pasaría al cerrar, en cifras y no en frases. */}
+      <div className={styles.resumen}>
+        {sinEquipos ? (
+          <span className={styles.texto}>Crea un equipo para poder cerrar.</span>
+        ) : numSinEquipo > 0 ? (
+          <Badge variant="warning">{numSinEquipo} sin equipo</Badge>
+        ) : (
+          <Badge variant="success">Todos con equipo</Badge>
+        )}
         {nuevos > 0 ? (
-          <p className={styles.texto}>
-            No caben en los equipos actuales con el máximo de {limites.maximo}: se{' '}
-            {nuevos === 1 ? 'creará 1 equipo nuevo' : `crearán ${nuevos} equipos nuevos`}.
-          </p>
+          <Badge variant="neutral">
+            {nuevos === 1 ? '+1 equipo nuevo' : `+${nuevos} equipos nuevos`}
+          </Badge>
         ) : null}
         {bajoMinimo > 0 ? (
-          <p className={styles.texto}>
-            {bajoMinimo === 1 ? '1 equipo tiene' : `${bajoMinimo} equipos tienen`} menos del mínimo
-            de {limites.minimo}. Es solo un aviso: puedes cerrar igualmente.
-          </p>
+          <Badge variant="warning">
+            {bajoMinimo === 1 ? '1 equipo' : `${bajoMinimo} equipos`} bajo el mínimo
+          </Badge>
         ) : null}
       </div>
       {confirmando ? (
@@ -122,7 +131,7 @@ function AccionCerrarFormacion({
                 Cerrando…
               </>
             ) : (
-              'Sí, cerrar la formación'
+              'Confirmar cierre'
             )}
           </Button>
           <Button
@@ -153,16 +162,14 @@ function AccionCerrarFormacion({
 function AccionPropuesta({
   idActividad,
   numEquipos,
-  numeroEquiposEsperado,
   onError,
 }: {
   idActividad: string
   numEquipos: number
-  numeroEquiposEsperado: number | undefined
   onError: (mensaje: string | null) => void
 }) {
   const [confirmando, setConfirmando] = useState(false)
-  const [aviso, setAviso] = useState<string | null>(null)
+  const [generados, setGenerados] = useState<number | null>(null)
   const generar = useGenerarPropuestaMutation(idActividad)
   const reemplaza = numEquipos > 0
 
@@ -171,18 +178,7 @@ function AccionPropuesta({
     generar.mutate(undefined, {
       onSuccess: (propuesta) => {
         setConfirmando(false)
-        const menos = propuesta.numeroEquipos < propuesta.numeroEquiposEsperado
-        const mas = propuesta.numeroEquipos > propuesta.numeroEquiposEsperado
-        setAviso(
-          `Propuesta generada: ${propuesta.numeroEquipos} ${propuesta.numeroEquipos === 1 ? 'equipo' : 'equipos'} (semilla ${propuesta.semilla}). ` +
-            (menos
-              ? `Hay menos participantes que los ${propuesta.numeroEquiposEsperado} equipos esperados, así que no se crearon equipos vacíos. `
-              : '') +
-            (mas
-              ? `Son más que los ${propuesta.numeroEquiposEsperado} esperados para respetar el máximo de integrantes. `
-              : '') +
-            'Ajústala con la asignación de personas y cierra la formación para confirmarla.',
-        )
+        setGenerados(propuesta.numeroEquipos)
       },
       onError: (e) => {
         setConfirmando(false)
@@ -191,36 +187,30 @@ function AccionPropuesta({
     })
   }
 
+  const cargando = (
+    <>
+      <IconoCargando />
+      Generando…
+    </>
+  )
+
   return (
     <Card className={styles.seccion}>
       <h2 className={styles.tituloSeccion}>Propuesta del sistema</h2>
-      <p className={styles.texto}>
-        El sistema reparte a todos los participantes, en orden aleatorio y de forma equilibrada, en
-        {numeroEquiposEsperado ? ` ${numeroEquiposEsperado} equipos` : ' los equipos esperados'}.
-        Los equipos quedan creados: puedes ajustarlos y, al cerrar la formación, se confirman.
-      </p>
-      {aviso ? (
+      {generados !== null ? (
         <p className={styles.texto} role="status">
-          {aviso}
+          Propuesta generada: {generados} {generados === 1 ? 'equipo' : 'equipos'}.
         </p>
       ) : null}
       {confirmando ? (
         <div className={styles.confirmacionPropuesta}>
           <p className={styles.texto}>
-            Esto reemplaza{' '}
-            {numEquipos === 1 ? 'el equipo actual' : `los ${numEquipos} equipos actuales`} y sus
-            asignaciones. El historial conserva lo que había.
+            Reemplaza {numEquipos === 1 ? 'el equipo actual' : `los ${numEquipos} equipos actuales`}
+            .
           </p>
           <div className={styles.botones}>
             <Button disabled={generar.isPending} onClick={ejecutar}>
-              {generar.isPending ? (
-                <>
-                  <IconoCargando />
-                  Generando…
-                </>
-              ) : (
-                'Sí, generar otra propuesta'
-              )}
+              {generar.isPending ? cargando : 'Reemplazar'}
             </Button>
             <Button
               variant="secondary"
@@ -238,16 +228,11 @@ function AccionPropuesta({
           disabled={generar.isPending}
           onClick={reemplaza ? () => setConfirmando(true) : ejecutar}
         >
-          {generar.isPending ? (
-            <>
-              <IconoCargando />
-              Generando…
-            </>
-          ) : reemplaza ? (
-            'Generar otra propuesta'
-          ) : (
-            'Generar propuesta'
-          )}
+          {generar.isPending
+            ? cargando
+            : reemplaza
+              ? 'Generar otra propuesta'
+              : 'Generar propuesta'}
         </Button>
       )}
     </Card>
@@ -293,16 +278,11 @@ function FormularioCrearEquipo({
   )
 }
 
-function textoSinEquipos(actividad: Actividad, puedeCrear: boolean): string {
+function textoSinEquipos(actividad: Actividad): string {
   if (actividad.fase === 'configuracion' || actividad.fase === 'inscripcion') {
-    return 'La formación de equipos empieza cuando se cierra la inscripción.'
+    return 'La formación empieza al cerrar la inscripción.'
   }
-  if (actividad.fase === 'formacion_equipos') {
-    return puedeCrear
-      ? 'Todavía no hay equipos. Crea el primero para empezar.'
-      : 'Todavía no hay equipos. Cuando los haya, aquí verás quién integra cada uno.'
-  }
-  return 'Esta actividad no tiene equipos.'
+  return actividad.fase === 'formacion_equipos' ? 'Aún no hay equipos.' : 'Sin equipos.'
 }
 
 export function PantallaEquipos() {
@@ -312,6 +292,7 @@ export function PantallaEquipos() {
 
   const [error, setError] = useState<string | null>(null)
   const [equipoEnEdicion, setEquipoEnEdicion] = useState<Equipo | null>(null)
+  const [paginaSinEquipo, setPaginaSinEquipo] = useState(0)
 
   const asignar = useAsignarIntegranteMutation(id)
   const retirar = useRetirarIntegranteMutation(id)
@@ -350,6 +331,7 @@ export function PantallaEquipos() {
 
   const { equipos, sinEquipo, idMiMembresia, limites } = equiposQuery.data
   const puedeCrear = puede('formar_equipos') || puede('elegir_equipo')
+  const sinEquipoPagina = rebanar(sinEquipo, paginaSinEquipo, TAMANO_PAGINA)
   const ocupado = asignar.isPending || retirar.isPending || editar.isPending || eliminar.isPending
 
   const alFallar = (e: unknown) => setError(mensajeDe(e))
@@ -366,11 +348,6 @@ export function PantallaEquipos() {
     eliminar.mutate(idEquipo, { onError: alFallar })
   }
 
-  const descripcionFormacion =
-    actividad.fase === 'formacion_equipos'
-      ? DESCRIPCION_FORMACION[actividad.configuracion?.formacion_equipos ?? '']
-      : undefined
-
   return (
     <AppShell
       seccionActiva="actividades"
@@ -382,53 +359,39 @@ export function PantallaEquipos() {
       }
     >
       <div className={styles.contenido}>
-        {descripcionFormacion ? (
-          <Card className={styles.seccion}>
-            <Badge variant="primary" className={styles.insignia}>
-              Formación de equipos
-            </Badge>
-            <p className={styles.texto}>{descripcionFormacion}</p>
-            {limites.maximo !== null || limites.minimo !== null ? (
-              <p className={styles.texto}>
-                {limites.maximo !== null
-                  ? `Cada equipo puede tener hasta ${limites.maximo} integrantes.`
-                  : ''}
-                {limites.maximo !== null && limites.minimo !== null ? ' ' : ''}
-                {limites.minimo !== null ? `Se espera que tengan al menos ${limites.minimo}.` : ''}
-              </p>
+        {actividad.fase === 'formacion_equipos' ? (
+          <div className={styles.resumen}>
+            {ETIQUETA_FORMACION[actividad.configuracion?.formacion_equipos ?? ''] ? (
+              <Badge variant="primary">
+                {ETIQUETA_FORMACION[actividad.configuracion?.formacion_equipos ?? '']}
+              </Badge>
+            ) : null}
+            {limites.maximo !== null ? (
+              <Badge variant="neutral">Máx. {limites.maximo}</Badge>
+            ) : null}
+            {limites.minimo !== null ? (
+              <Badge variant="neutral">Mín. {limites.minimo}</Badge>
             ) : null}
             {puede('configurar_funciones') ? (
-              <p className={styles.texto}>
-                Puedes cambiar cómo se forman en{' '}
-                <Link to={`/actividades/${actividad.id}/configuracion`}>Configuración</Link>.
-              </p>
+              <Button
+                variant="secondary"
+                size="sm"
+                to={`/actividades/${actividad.id}/configuracion`}
+              >
+                Configurar
+              </Button>
             ) : null}
-          </Card>
-        ) : null}
-
-        {actividad.fase === 'archivada' ? (
-          <Card className={styles.seccion}>
-            <p className={styles.texto}>
-              La actividad está archivada: los equipos se pueden consultar, pero ya no cambian.
-            </p>
-          </Card>
+          </div>
+        ) : actividad.fase === 'archivada' ? (
+          <p className={styles.texto}>Actividad archivada: solo lectura.</p>
         ) : actividad.fase === 'cierre' ? (
-          <Card className={styles.seccion}>
-            <p className={styles.texto}>
-              La actividad está en cierre: ya no cambia la composición de los equipos.
-            </p>
-          </Card>
+          <p className={styles.texto}>En cierre: los equipos ya no cambian.</p>
         ) : null}
 
         {error ? <AvisoError mensaje={error} /> : null}
 
         {puede('generar_propuesta_equipos') ? (
-          <AccionPropuesta
-            idActividad={id}
-            numEquipos={equipos.length}
-            numeroEquiposEsperado={actividad.numeroEquiposEsperado}
-            onError={setError}
-          />
+          <AccionPropuesta idActividad={id} numEquipos={equipos.length} onError={setError} />
         ) : null}
 
         {puede('cerrar_formacion') ? (
@@ -451,7 +414,7 @@ export function PantallaEquipos() {
 
         {equipos.length === 0 ? (
           <Card>
-            <p className={styles.texto}>{textoSinEquipos(actividad, puedeCrear)}</p>
+            <p className={styles.texto}>{textoSinEquipos(actividad)}</p>
           </Card>
         ) : (
           <div className={styles.rejilla}>
@@ -491,13 +454,20 @@ export function PantallaEquipos() {
           <Card className={styles.seccion}>
             <h2 className={styles.tituloSeccion}>Sin equipo ({sinEquipo.length})</h2>
             <ul className={styles.lista}>
-              {sinEquipo.map((persona) => (
+              {sinEquipoPagina.visibles.map((persona) => (
                 <li key={persona.idMembresia} className={styles.persona}>
                   {persona.nombre}
                   {persona.idMembresia === idMiMembresia ? ' (tú)' : ''}
                 </li>
               ))}
             </ul>
+            <Paginacion
+              etiqueta="Personas sin equipo"
+              total={sinEquipo.length}
+              tamano={TAMANO_PAGINA}
+              pagina={sinEquipoPagina.pagina}
+              onCambiar={setPaginaSinEquipo}
+            />
           </Card>
         ) : null}
       </div>

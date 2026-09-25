@@ -1,5 +1,6 @@
 import type { Equipo, IntegranteEquipo, ParticipanteSinEquipo } from '@plataforma/shared'
-import { Card, Select } from '../../components/ui'
+import { useState } from 'react'
+import { Card, Paginacion, rebanar, Select } from '../../components/ui'
 import styles from './AsignacionManual.module.css'
 
 interface AsignacionManualProps {
@@ -9,6 +10,8 @@ interface AsignacionManualProps {
   onAsignar: (idEquipo: string, idMembresia: string) => void
   onRetirar: (idEquipo: string, idMembresia: string) => void
 }
+
+const TAMANO_PAGINA = 10
 
 interface Fila {
   idMembresia: string
@@ -47,13 +50,15 @@ export function AsignacionManual({
     ),
   ]
 
+  const [pagina, setPagina] = useState(0)
   if (filas.length === 0) return null
+  const { visibles, pagina: paginaActual } = rebanar(filas, pagina, TAMANO_PAGINA)
 
   return (
     <Card className={styles.tarjeta}>
       <h2 className={styles.titulo}>Asignación de personas</h2>
       <ul className={styles.lista}>
-        {filas.map((fila) => (
+        {visibles.map((fila) => (
           <li key={fila.idMembresia} className={styles.fila}>
             <span className={styles.nombre}>{fila.nombre}</span>
             <Select
@@ -80,6 +85,13 @@ export function AsignacionManual({
           </li>
         ))}
       </ul>
+      <Paginacion
+        etiqueta="Personas"
+        total={filas.length}
+        tamano={TAMANO_PAGINA}
+        pagina={paginaActual}
+        onCambiar={setPagina}
+      />
     </Card>
   )
 }

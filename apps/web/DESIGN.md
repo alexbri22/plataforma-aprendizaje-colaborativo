@@ -239,6 +239,12 @@ The one place in the system where raster artwork appears. A rank insignia is **t
 
 **Why this doesn't break the One-Bottle Rule.** Amber is reserved because recognition is supposed to be rare and earned; the insignia artwork exists for exactly that reason and appears only in that context. What would break the rule is this artwork leaking outward — a gold frame on a nav item, a diamond on a marketing panel. The frames are the bottle, not a new palette.
 
+### Pagination (`Paginacion`)
+
+- **Use:** long lists of people (assignment, participants), so a screen never turns into an endless scroll. Not for tabs or steps.
+- **Shape:** a hairline top border, the visible range on the left ("11–20 de 45", Soft Graphite, `aria-live="polite"`) and two secondary small buttons, Anterior and Siguiente, on the right. Nothing renders when everything fits on one page.
+- **Behavior:** the page clamps to the last one if the list shrinks. Ten rows per page is the default for people lists. It is client-side today; the API still returns whole lists, which are bounded by an activity's size.
+
 ### Navigation (not yet built — guidance for when it is)
 
 Should follow the Linear reference for the organizer-facing shell (activity configuration, participant management): compact, label-forward, Study Ink for the active item via `primary-subtle` background rather than a bold color block. Avoid a colored sidebar or top bar — navigation chrome stays Paper/Shelf so it never competes with Apothecary Amber's rarity.

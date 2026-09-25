@@ -1,0 +1,18 @@
+.paginacion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.rango {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.botones {
+  display: flex;
+  gap: var(--space-2);
+}

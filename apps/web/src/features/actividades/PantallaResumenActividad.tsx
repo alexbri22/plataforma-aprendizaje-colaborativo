@@ -29,15 +29,11 @@ function AccionDeAvance({ actividad }: { actividad: Actividad }) {
   // En formación de equipos el avance vive en la pantalla de Equipos (cerrar
   // la formación, asignar, elegir equipo); aquí solo se apunta a ella.
   if (actividad.fase === 'formacion_equipos') {
-    // Tarjeta neutral, no la azul de "Cerrar inscripción": esta solo apunta a
-    // otra pantalla, no es la acción principal de la actividad.
+    // Tarjeta neutral, no la azul de "Cerrar inscripción": solo apunta a otra
+    // pantalla, no es la acción principal de la actividad.
     return (
       <Card className={styles.seccionCard}>
         <h2 className={styles.tituloSeccion}>Formación de equipos</h2>
-        <p className={styles.texto}>
-          La inscripción está cerrada y los equipos se están formando. Cuando termine, la actividad
-          pasa a desarrollo.
-        </p>
         <Button
           variant="secondary"
           className={styles.accionBoton}

@@ -118,21 +118,12 @@ export function TarjetaEquipo({
             </li>
           ))}
         </ul>
-      ) : (
-        <p className={styles.vacio}>Nadie ha entrado a este equipo todavía.</p>
-      )}
-
-      {mostrarUnirme && lleno ? (
-        <p className={styles.vacio}>
-          Equipo lleno: ya tiene el máximo de {limites.maximo}{' '}
-          {limites.maximo === 1 ? 'integrante' : 'integrantes'}.
-        </p>
       ) : null}
 
       {mostrarUnirme || mostrarSalir || mostrarEditar || mostrarEliminar ? (
         confirmandoEliminar ? (
           <div className={styles.confirmacion}>
-            <p className={styles.vacio}>¿Eliminar «{equipo.nombre}»? Esta acción no se deshace.</p>
+            <p className={styles.vacio}>¿Eliminar el equipo?</p>
             <div className={styles.acciones}>
               <Button
                 variant="danger"
@@ -156,9 +147,7 @@ export function TarjetaEquipo({
           <div className={styles.acciones}>
             {mostrarUnirme ? (
               <Button size="sm" disabled={ocupado || lleno} onClick={() => onUnirme(equipo.id)}>
-                {puede('asignar_integrantes') || miRol !== 'participante'
-                  ? 'Unirme a este equipo'
-                  : 'Unirme'}
+                {lleno ? 'Equipo lleno' : 'Unirme'}
               </Button>
             ) : null}
             {mostrarSalir ? (

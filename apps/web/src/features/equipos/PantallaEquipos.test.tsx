@@ -145,12 +145,10 @@ describe('PantallaEquipos', () => {
       )
     })
 
-    it('explica cómo se forman los equipos y lista quiénes no tienen equipo', async () => {
+    it('nombra cómo se forman los equipos y lista quiénes no tienen equipo', async () => {
       renderPantalla()
 
-      expect(
-        await screen.findByText(/Cada participante crea un equipo o se une a uno/),
-      ).toBeInTheDocument()
+      expect(await screen.findByText('Autogestionada')).toBeInTheDocument()
       expect(screen.getByText('Sin equipo (1)')).toBeInTheDocument()
       expect(screen.getByText('Ana García (tú)')).toBeInTheDocument()
     })
@@ -239,9 +237,7 @@ describe('PantallaEquipos', () => {
     )
     renderPantalla()
 
-    expect(
-      await screen.findByText(/Quien organiza crea los equipos y asigna a cada persona/),
-    ).toBeInTheDocument()
+    expect(await screen.findByText('Asignación manual')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Unirme|Crear equipo/ })).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Nombre del equipo')).not.toBeInTheDocument()
   })
@@ -293,7 +289,7 @@ describe('PantallaEquipos', () => {
       expect(within(selector).getByRole('option', { name: 'Sin equipo' })).toBeDisabled()
     })
 
-    it('el cierre de la formación se confirma y avisa a quiénes reparte', async () => {
+    it('el cierre de la formación se confirma y resume cuántos quedan sin equipo', async () => {
       vi.mocked(obtenerEquipos).mockResolvedValue(
         lista(
           [equipo('e1', 'Alfa', [persona('m2', 'Luis Pérez')])],
@@ -307,25 +303,21 @@ describe('PantallaEquipos', () => {
       const usuario = userEvent.setup()
       renderPantalla()
 
-      expect(await screen.findByText(/2 personas siguen sin equipo/)).toBeInTheDocument()
+      expect(await screen.findByText('2 sin equipo')).toBeInTheDocument()
       await usuario.click(screen.getByRole('button', { name: 'Cerrar la formación' }))
       expect(cerrarFormacion).not.toHaveBeenCalled()
-      await usuario.click(screen.getByRole('button', { name: 'Sí, cerrar la formación' }))
+      await usuario.click(screen.getByRole('button', { name: 'Confirmar cierre' }))
 
       await waitFor(() => expect(cerrarFormacion).toHaveBeenCalledWith('act-1'))
     })
 
-    it('sin equipos no se puede cerrar la formación y se explica por qué', async () => {
+    it('sin equipos no se puede cerrar la formación', async () => {
       vi.mocked(obtenerEquipos).mockResolvedValue(lista([]))
       renderPantalla()
 
-      expect(
-        await screen.findByText('Crea al menos un equipo para poder cerrar la formación.'),
-      ).toBeInTheDocument()
+      expect(await screen.findByText('Crea un equipo para poder cerrar.')).toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'Cerrar la formación' })).toBeDisabled()
-      expect(
-        screen.getByText('Todavía no hay equipos. Crea el primero para empezar.'),
-      ).toBeInTheDocument()
+      expect(screen.getByText('Aún no hay equipos.')).toBeInTheDocument()
     })
 
     it('elimina un equipo vacío solo tras confirmar', async () => {
@@ -360,7 +352,7 @@ describe('PantallaEquipos', () => {
 
       expect(await screen.findByText('Olga Prueba (tú)')).toBeInTheDocument()
       expect(screen.getByText('Organiza')).toBeInTheDocument()
-      expect(screen.getAllByRole('button', { name: 'Unirme a este equipo' })).toHaveLength(1)
+      expect(screen.getAllByRole('button', { name: 'Unirme' })).toHaveLength(1)
       await usuario.click(screen.getByRole('button', { name: 'Salir del equipo' }))
 
       await waitFor(() => expect(retirarIntegrante).toHaveBeenCalledWith('e1', YO))
@@ -401,7 +393,7 @@ describe('PantallaEquipos', () => {
   })
 
   describe('estados vacíos: cada uno nombra su causa', () => {
-    it('durante la inscripción, explica que la formación aún no empieza', async () => {
+    it('durante la inscripción, dice que la formación aún no empieza', async () => {
       vi.mocked(obtenerActividad).mockResolvedValue(
         actividad({ fase: 'inscripcion', capacidades: [] }),
       )
@@ -409,7 +401,7 @@ describe('PantallaEquipos', () => {
       renderPantalla()
 
       expect(
-        await screen.findByText('La formación de equipos empieza cuando se cierra la inscripción.'),
+        await screen.findByText('La formación empieza al cerrar la inscripción.'),
       ).toBeInTheDocument()
     })
 
@@ -420,21 +412,19 @@ describe('PantallaEquipos', () => {
       vi.mocked(obtenerEquipos).mockResolvedValue(lista([]))
       renderPantalla()
 
-      expect(await screen.findByText(/Todavía no hay equipos. Cuando los haya/)).toBeInTheDocument()
+      expect(await screen.findByText('Aún no hay equipos.')).toBeInTheDocument()
       expect(screen.queryByRole('button', { name: /Crear equipo/ })).not.toBeInTheDocument()
     })
   })
 
-  it('en una actividad archivada explica por qué no hay acciones', async () => {
+  it('en una actividad archivada indica que es de solo lectura', async () => {
     vi.mocked(obtenerActividad).mockResolvedValue(actividad({ fase: 'archivada', capacidades: [] }))
     vi.mocked(obtenerEquipos).mockResolvedValue(
       lista([equipo('e1', 'Alfa', [persona('m2', 'Luis Pérez')])]),
     )
     renderPantalla()
 
-    expect(
-      await screen.findByText(/La actividad está archivada: los equipos se pueden consultar/),
-    ).toBeInTheDocument()
+    expect(await screen.findByText('Actividad archivada: solo lectura.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Unirme|Editar|Eliminar/ })).not.toBeInTheDocument()
   })
 
@@ -471,19 +461,17 @@ describe('PantallaEquipos', () => {
       )
     })
 
-    it('sin equipos genera la propuesta directamente y muestra la semilla', async () => {
+    it('sin equipos genera la propuesta directamente, sin mostrar la semilla', async () => {
       vi.mocked(obtenerEquipos).mockResolvedValue(lista([]))
       vi.mocked(generarPropuesta).mockResolvedValue(propuesta(3, 3))
       const usuario = userEvent.setup()
       renderPantalla()
 
-      expect(await screen.findByText(/en 3 equipos/)).toBeInTheDocument()
-      await usuario.click(screen.getByRole('button', { name: 'Generar propuesta' }))
+      await usuario.click(await screen.findByRole('button', { name: 'Generar propuesta' }))
 
       await waitFor(() => expect(generarPropuesta).toHaveBeenCalledWith('act-1'))
-      expect(
-        await screen.findByText(/Propuesta generada: 3 equipos \(semilla 4242\)/),
-      ).toBeInTheDocument()
+      expect(await screen.findByText('Propuesta generada: 3 equipos.')).toBeInTheDocument()
+      expect(screen.queryByText(/semilla/i)).not.toBeInTheDocument()
     })
 
     it('con equipos ya creados pide confirmar el reemplazo antes de regenerar', async () => {
@@ -496,23 +484,10 @@ describe('PantallaEquipos', () => {
 
       await usuario.click(await screen.findByRole('button', { name: 'Generar otra propuesta' }))
       expect(generarPropuesta).not.toHaveBeenCalled()
-      expect(screen.getByText(/Esto reemplaza los 2 equipos actuales/)).toBeInTheDocument()
-      await usuario.click(screen.getByRole('button', { name: 'Sí, generar otra propuesta' }))
+      expect(screen.getByText('Reemplaza los 2 equipos actuales.')).toBeInTheDocument()
+      await usuario.click(screen.getByRole('button', { name: 'Reemplazar' }))
 
       await waitFor(() => expect(generarPropuesta).toHaveBeenCalledWith('act-1'))
-    })
-
-    it('avisa cuando hubo menos participantes que equipos esperados', async () => {
-      vi.mocked(obtenerEquipos).mockResolvedValue(lista([]))
-      vi.mocked(generarPropuesta).mockResolvedValue(propuesta(2, 3))
-      const usuario = userEvent.setup()
-      renderPantalla()
-
-      await usuario.click(await screen.findByRole('button', { name: 'Generar propuesta' }))
-
-      expect(
-        await screen.findByText(/menos participantes que los 3 equipos esperados/),
-      ).toBeInTheDocument()
     })
 
     it('muestra el mensaje del servidor si no se puede generar', async () => {
@@ -540,7 +515,7 @@ describe('PantallaEquipos', () => {
       vi.mocked(obtenerEquipos).mockResolvedValue(lista([]))
       renderPantalla()
 
-      await screen.findByText(/Quien organiza genera una propuesta del sistema/)
+      await screen.findByText('Propuesta del sistema')
       expect(screen.queryByRole('button', { name: /Generar/ })).not.toBeInTheDocument()
     })
   })
@@ -578,12 +553,8 @@ describe('PantallaEquipos', () => {
       expect(await screen.findByText('3 de 3 integrantes')).toBeInTheDocument()
       expect(screen.getByText('1 de 3 integrantes')).toBeInTheDocument()
       expect(screen.getByText('Menos del mínimo de 2')).toBeInTheDocument()
-      expect(
-        screen.getByText(/Equipo lleno: ya tiene el máximo de 3 integrantes/),
-      ).toBeInTheDocument()
-      const botones = screen.getAllByRole('button', { name: 'Unirme' })
-      expect(botones[0]).toBeDisabled()
-      expect(botones[1]).toBeEnabled()
+      expect(screen.getByRole('button', { name: 'Equipo lleno' })).toBeDisabled()
+      expect(screen.getByRole('button', { name: 'Unirme' })).toBeEnabled()
     })
 
     it('un equipo que excede el máximo, porque se bajó después, se marca sin desarmarlo', async () => {
@@ -604,14 +575,13 @@ describe('PantallaEquipos', () => {
       expect(screen.getByText('3 de 2 integrantes')).toBeInTheDocument()
     })
 
-    it('explica los límites en la descripción de la formación', async () => {
+    it('muestra los límites como etiquetas junto al nombre de la formación', async () => {
       vi.mocked(obtenerActividad).mockResolvedValue(actividad({ capacidades: [] }))
       vi.mocked(obtenerEquipos).mockResolvedValue(conLimites([]))
       renderPantalla()
 
-      expect(
-        await screen.findByText(/hasta 3 integrantes\. Se espera que tengan al menos 2/),
-      ).toBeInTheDocument()
+      expect(await screen.findByText('Máx. 3')).toBeInTheDocument()
+      expect(screen.getByText('Mín. 2')).toBeInTheDocument()
     })
 
     it('al cerrar avisa de los equipos nuevos que hará falta crear y de los que están bajo el mínimo', async () => {
@@ -647,37 +617,63 @@ describe('PantallaEquipos', () => {
       renderPantalla()
 
       // Caben 2 más en Beta; la tercera persona abre un equipo nuevo.
-      expect(await screen.findByText(/se creará 1 equipo nuevo/)).toBeInTheDocument()
-      expect(screen.getByText(/1 equipo tiene menos del mínimo de 2/)).toBeInTheDocument()
+      expect(await screen.findByText('+1 equipo nuevo')).toBeInTheDocument()
+      expect(screen.getByText('1 equipo bajo el mínimo')).toBeInTheDocument()
     })
+  })
 
-    it('la propuesta avisa cuando creó más equipos de los esperados por el máximo', async () => {
+  describe('listas largas de personas', () => {
+    const muchas = Array.from({ length: 25 }, (_, n) => ({
+      idMembresia: `m${n + 1}`,
+      nombre: `Persona ${String(n + 1).padStart(2, '0')}`,
+    }))
+
+    it('la asignación pagina de 10 en 10 y conserva la página al cambiar a otra', async () => {
       vi.mocked(obtenerActividad).mockResolvedValue(
         actividad({
           rol: 'organizador',
-          capacidades: ['formar_equipos', 'generar_propuesta_equipos', 'asignar_integrantes'],
-          numeroEquiposEsperado: 3,
-          configuracion: { formacion_equipos: 'propuesta_sistema' },
+          capacidades: ['formar_equipos', 'asignar_integrantes'],
+          configuracion: { formacion_equipos: 'manual' },
         }),
       )
-      vi.mocked(obtenerEquipos).mockResolvedValue(conLimites([]))
-      vi.mocked(generarPropuesta).mockResolvedValue({
-        idMiMembresia: YO,
-        limites: { minimo: 2, maximo: 3 },
-        equipos: [],
-        sinEquipo: [],
-        semilla: 1,
-        numeroEquipos: 4,
-        numeroEquiposEsperado: 3,
-      })
+      vi.mocked(obtenerEquipos).mockResolvedValue(lista([equipo('e1', 'Alfa')], muchas))
       const usuario = userEvent.setup()
       renderPantalla()
 
-      await usuario.click(await screen.findByRole('button', { name: 'Generar propuesta' }))
+      const asignacion = (await screen.findByText('Asignación de personas')).closest(
+        'div',
+      ) as HTMLElement
+      expect(within(asignacion).getAllByRole('combobox')).toHaveLength(10)
+      expect(within(asignacion).getByText('1–10 de 25')).toBeInTheDocument()
+      expect(within(asignacion).getByLabelText('Equipo de Persona 10')).toBeInTheDocument()
+      expect(within(asignacion).queryByLabelText('Equipo de Persona 11')).not.toBeInTheDocument()
 
+      await usuario.click(within(asignacion).getByRole('button', { name: 'Siguiente' }))
+      expect(within(asignacion).getByText('11–20 de 25')).toBeInTheDocument()
+      expect(within(asignacion).getByLabelText('Equipo de Persona 11')).toBeInTheDocument()
+    })
+
+    it('quienes no tienen equipo también se paginan, y con pocas no aparece la paginación', async () => {
+      vi.mocked(obtenerActividad).mockResolvedValue(actividad({ capacidades: [] }))
+      vi.mocked(obtenerEquipos).mockResolvedValue(lista([equipo('e1', 'Alfa')], muchas))
+      renderPantalla()
+
+      expect(await screen.findByText('Sin equipo (25)')).toBeInTheDocument()
+      expect(screen.getByText('1–10 de 25')).toBeInTheDocument()
+      expect(screen.queryByText('Persona 11')).not.toBeInTheDocument()
+    })
+
+    it('con 10 o menos personas no se muestra la paginación', async () => {
+      vi.mocked(obtenerActividad).mockResolvedValue(actividad({ capacidades: [] }))
+      vi.mocked(obtenerEquipos).mockResolvedValue(
+        lista([equipo('e1', 'Alfa')], muchas.slice(0, 10)),
+      )
+      renderPantalla()
+
+      await screen.findByText('Sin equipo (10)')
       expect(
-        await screen.findByText(/Son más que los 3 esperados para respetar el máximo/),
-      ).toBeInTheDocument()
+        screen.queryByRole('navigation', { name: 'Personas sin equipo' }),
+      ).not.toBeInTheDocument()
     })
   })
 
