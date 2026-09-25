@@ -36,8 +36,46 @@ const NOMBRES = [
   'Marta',
   'Nico',
   'Olivia',
+  'Pedro',
+  'Queta',
+  'Rafa',
+  'Sofía',
+  'Tomás',
+  'Ursula',
+  'Víctor',
+  'Wendy',
+  'Ximena',
+  'Yair',
+  'Zoe',
+  'Abel',
+  'Brenda',
+  'César',
+  'Dalia',
+  'Emilio',
+  'Flor',
+  'Gael',
+  'Hilda',
+  'Iván',
+  'Julia',
+  'Kevin',
+  'Lucía',
+  'Mateo',
+  'Nora',
 ]
-const APELLIDOS = ['Soto', 'Vega', 'Rios', 'Luna', 'Mora', 'Paz', 'Cruz', 'Gil', 'Nava', 'Ortiz']
+const APELLIDOS = [
+  'Soto',
+  'Vega',
+  'Rios',
+  'Luna',
+  'Mora',
+  'Paz',
+  'Cruz',
+  'Gil',
+  'Nava',
+  'Ortiz',
+  'Reyes',
+  'Salas',
+]
 
 async function crearUsuario(correoLocal: string, nombre: string, apellido: string, hash: string) {
   return prisma.usuario.create({
@@ -254,11 +292,46 @@ async function main() {
     idPorCorreo,
   )
 
+  await sembrar(
+    {
+      nombre: 'Seed · Muchos participantes',
+      organizador: 'org',
+      participantes: a(1, 40),
+      estado: 'formacion_equipos',
+      formacion: 'manual',
+      equiposEsperados: 5,
+      equipos: [
+        { nombre: 'Alfa', integrantes: a(1, 6) },
+        { nombre: 'Beta', integrantes: a(7, 12) },
+        { nombre: 'Gamma', integrantes: [] },
+      ],
+    },
+    idPorCorreo,
+  )
+  await sembrar(
+    {
+      nombre: 'Seed · Equipos llenos (probar el intercambio)',
+      organizador: 'org',
+      participantes: a(1, 8),
+      estado: 'formacion_equipos',
+      formacion: 'manual',
+      equiposEsperados: 4,
+      limites: { maximo: 2 },
+      equipos: [
+        { nombre: 'Alfa', integrantes: a(1, 2) },
+        { nombre: 'Beta', integrantes: a(3, 4) },
+        { nombre: 'Gamma', integrantes: a(5, 6) },
+        { nombre: 'Delta', integrantes: a(7, 8) },
+      ],
+    },
+    idPorCorreo,
+  )
+
   console.log(`
 Cuentas (contraseña: ${CONTRASENA})
   org${DOMINIO}      organiza casi todas las actividades
   profe${DOMINIO}    co-organizador en "Formación autogestionada" y en la creada por un estudiante
-  alumno01${DOMINIO} … alumno15${DOMINIO}   participantes (alumno01 organiza "Creada por un estudiante")
+  alumno01${DOMINIO} … alumno40${DOMINIO}   participantes (alumno01 organiza "Creada por un estudiante")
 `)
 }
 
