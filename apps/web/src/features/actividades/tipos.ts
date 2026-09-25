@@ -26,6 +26,9 @@ export interface Actividad {
   fechaLimiteInscripcion?: string
   plazoCierreDias?: number
   numeroEquiposEsperado?: number
+  // Ajuste de la formación de equipos (nucleo §8.8, P-27); nulo = sin límite.
+  tamanoMinimoEquipo?: number | null
+  tamanoMaximoEquipo?: number | null
   // Solo GET /api/actividades/{id} los incluye, no el listado (docs/diseno-desarrollo-nucleo.md
   // §4.3 y §4.2): el conjunto de acciones que el actor puede ejecutar ahora
   // mismo. La pantalla nunca vuelve a evaluar rol ni fase por su cuenta,

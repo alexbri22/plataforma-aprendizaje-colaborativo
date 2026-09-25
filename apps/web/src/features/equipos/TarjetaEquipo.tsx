@@ -1,4 +1,4 @@
-import type { AccionActividad, Equipo, RolIntegrante } from '@plataforma/shared'
+import type { AccionActividad, Equipo, LimitesEquipo, RolIntegrante } from '@plataforma/shared'
 import { useState } from 'react'
 import { Badge, Button, Card } from '../../components/ui'
 import styles from './TarjetaEquipo.module.css'
@@ -8,6 +8,7 @@ interface TarjetaEquipoProps {
   idMiMembresia: string
   miRol: RolIntegrante
   capacidades: readonly AccionActividad[]
+  limites: LimitesEquipo
   ocupado: boolean
   onUnirme: (idEquipo: string) => void
   onSalir: (idEquipo: string) => void
@@ -31,6 +32,7 @@ export function TarjetaEquipo({
   idMiMembresia,
   miRol,
   capacidades,
+  limites,
   ocupado,
   onUnirme,
   onSalir,
@@ -43,6 +45,16 @@ export function TarjetaEquipo({
   const soyIntegrante = equipo.integrantes.some((i) => i.idMembresia === idMiMembresia)
   const puedeMoverme = puede('elegir_equipo') || puede('asignar_integrantes')
 
+  const cantidad = equipo.integrantes.length
+  // El máximo lo impone el servidor a todos; aquí solo se explica por qué no se
+  // puede unir nadie más. Un equipo que ya lo excede (se bajó el máximo después
+  // de formarse) cuenta como lleno y no se desarma.
+  const lleno = limites.maximo !== null && cantidad >= limites.maximo
+  const excede = limites.maximo !== null && cantidad > limites.maximo
+  // El mínimo solo avisa. Sin mínimo, se sigue avisando de un equipo de una sola
+  // persona (P-27).
+  const bajoMinimo = limites.minimo !== null ? cantidad < limites.minimo : cantidad === 1
+
   // Un participante siempre pertenece a un equipo: solo se mueve, no sale.
   const mostrarUnirme = !soyIntegrante && puedeMoverme
   const mostrarSalir = soyIntegrante && puedeMoverme && miRol !== 'participante'
@@ -53,16 +65,27 @@ export function TarjetaEquipo({
     <Card className={styles.tarjeta}>
       <div className={styles.encabezado}>
         <h2 className={styles.nombre}>{equipo.nombre}</h2>
-        {equipo.integrantes.length === 1 ? (
-          <Badge variant="warning">Un solo integrante</Badge>
-        ) : (
-          <Badge variant="neutral">
-            {equipo.integrantes.length === 0
-              ? 'Sin integrantes'
-              : `${equipo.integrantes.length} integrantes`}
-          </Badge>
-        )}
+        <Badge variant="neutral">
+          {cantidad === 0
+            ? 'Sin integrantes'
+            : limites.maximo !== null
+              ? `${cantidad} de ${limites.maximo} integrantes`
+              : `${cantidad} ${cantidad === 1 ? 'integrante' : 'integrantes'}`}
+        </Badge>
       </div>
+
+      {excede || bajoMinimo ? (
+        <div className={styles.avisos}>
+          {excede ? <Badge variant="warning">Por encima del máximo</Badge> : null}
+          {bajoMinimo ? (
+            <Badge variant="warning">
+              {limites.minimo !== null
+                ? `Menos del mínimo de ${limites.minimo}`
+                : 'Un solo integrante'}
+            </Badge>
+          ) : null}
+        </div>
+      ) : null}
 
       {equipo.descripcionActividad || equipo.formaDeTrabajo ? (
         <dl className={styles.textos}>
@@ -99,6 +122,13 @@ export function TarjetaEquipo({
         <p className={styles.vacio}>Nadie ha entrado a este equipo todavía.</p>
       )}
 
+      {mostrarUnirme && lleno ? (
+        <p className={styles.vacio}>
+          Equipo lleno: ya tiene el máximo de {limites.maximo}{' '}
+          {limites.maximo === 1 ? 'integrante' : 'integrantes'}.
+        </p>
+      ) : null}
+
       {mostrarUnirme || mostrarSalir || mostrarEditar || mostrarEliminar ? (
         confirmandoEliminar ? (
           <div className={styles.confirmacion}>
@@ -125,7 +155,7 @@ export function TarjetaEquipo({
         ) : (
           <div className={styles.acciones}>
             {mostrarUnirme ? (
-              <Button size="sm" disabled={ocupado} onClick={() => onUnirme(equipo.id)}>
+              <Button size="sm" disabled={ocupado || lleno} onClick={() => onUnirme(equipo.id)}>
                 {puede('asignar_integrantes') || miRol !== 'participante'
                   ? 'Unirme a este equipo'
                   : 'Unirme'}

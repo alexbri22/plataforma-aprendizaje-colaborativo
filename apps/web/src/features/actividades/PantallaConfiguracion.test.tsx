@@ -12,6 +12,7 @@ import {
   ErrorActividad,
   obtenerActividad,
   obtenerPeriodos,
+  fijarLimitesEquipo,
 } from './actividades.api'
 import { formatearFecha } from './formato'
 import { PantallaConfiguracion } from './PantallaConfiguracion'
@@ -43,6 +44,7 @@ vi.mock('./actividades.api', async () => {
     obtenerPeriodos: vi.fn(),
     definirPeriodos: vi.fn(),
     actualizarPeriodo: vi.fn(),
+    fijarLimitesEquipo: vi.fn(),
   }
 })
 
@@ -563,5 +565,93 @@ describe('PantallaConfiguracion', () => {
     expect(screen.queryByText(/Las funciones ya no pueden cambiarse/)).not.toBeInTheDocument()
     expect(screen.getByLabelText('Bitácora individual')).toBeEnabled()
     expect(await screen.findByLabelText('Periodicidad de Avances')).toBeDisabled()
+  })
+
+  describe('tamaño de los equipos', () => {
+    beforeEach(() => {
+      vi.mocked(fijarLimitesEquipo).mockReset()
+    })
+
+    it('guarda el máximo al salir del campo y deja vacío el que no se toca', async () => {
+      vi.mocked(obtenerActividad).mockResolvedValueOnce(ACTIVIDAD_BASE)
+      vi.mocked(fijarLimitesEquipo).mockResolvedValue({ ...ACTIVIDAD_BASE, tamanoMaximoEquipo: 4 })
+      const usuario = userEvent.setup()
+      renderPantalla(ACTIVIDAD_BASE.id)
+
+      const maximo = await screen.findByLabelText('Máximo de integrantes')
+      expect(screen.getByLabelText('Mínimo de integrantes')).toHaveValue(null)
+      await usuario.type(maximo, '4')
+      await usuario.tab()
+
+      await waitFor(() =>
+        expect(fijarLimitesEquipo).toHaveBeenCalledWith(ACTIVIDAD_BASE.id, { maximo: 4 }),
+      )
+    })
+
+    it('muestra los valores actuales y vaciar un campo quita el límite', async () => {
+      vi.mocked(obtenerActividad).mockResolvedValueOnce({
+        ...ACTIVIDAD_BASE,
+        tamanoMinimoEquipo: 2,
+        tamanoMaximoEquipo: 5,
+      })
+      vi.mocked(fijarLimitesEquipo).mockResolvedValue(ACTIVIDAD_BASE)
+      const usuario = userEvent.setup()
+      renderPantalla(ACTIVIDAD_BASE.id)
+
+      const minimo = await screen.findByLabelText('Mínimo de integrantes')
+      expect(minimo).toHaveValue(2)
+      expect(screen.getByLabelText('Máximo de integrantes')).toHaveValue(5)
+      await usuario.clear(minimo)
+      await usuario.tab()
+
+      await waitFor(() =>
+        expect(fijarLimitesEquipo).toHaveBeenCalledWith(ACTIVIDAD_BASE.id, { minimo: null }),
+      )
+    })
+
+    it('un valor inválido se rechaza en el campo, sin llamar al servidor', async () => {
+      vi.mocked(obtenerActividad).mockResolvedValueOnce(ACTIVIDAD_BASE)
+      const usuario = userEvent.setup()
+      renderPantalla(ACTIVIDAD_BASE.id)
+
+      await usuario.type(await screen.findByLabelText('Máximo de integrantes'), '0')
+      await usuario.tab()
+
+      expect(await screen.findByText(/Escribe un entero de 1 a 100/)).toBeInTheDocument()
+      expect(fijarLimitesEquipo).not.toHaveBeenCalled()
+    })
+
+    it('si el servidor lo rechaza, muestra su mensaje y restaura el valor', async () => {
+      vi.mocked(obtenerActividad).mockResolvedValueOnce({
+        ...ACTIVIDAD_BASE,
+        tamanoMaximoEquipo: 3,
+      })
+      vi.mocked(fijarLimitesEquipo).mockRejectedValue(
+        new ErrorActividad('El mínimo no puede ser mayor que el máximo.'),
+      )
+      const usuario = userEvent.setup()
+      renderPantalla(ACTIVIDAD_BASE.id)
+
+      const minimo = await screen.findByLabelText('Mínimo de integrantes')
+      await usuario.type(minimo, '9')
+      await usuario.tab()
+
+      expect(
+        await screen.findByText('El mínimo no puede ser mayor que el máximo.'),
+      ).toBeInTheDocument()
+      await waitFor(() => expect(minimo).toHaveValue(null))
+    })
+
+    it('en desarrollo los campos quedan bloqueados: es un cambio de las fases previas', async () => {
+      vi.mocked(obtenerActividad).mockResolvedValueOnce({
+        ...ACTIVIDAD_BASE,
+        fase: 'desarrollo',
+        capacidades: ['ajustar_funciones'],
+      })
+      renderPantalla(ACTIVIDAD_BASE.id)
+
+      expect(await screen.findByLabelText('Máximo de integrantes')).toBeDisabled()
+      expect(screen.getByLabelText('Mínimo de integrantes')).toBeDisabled()
+    })
   })
 })

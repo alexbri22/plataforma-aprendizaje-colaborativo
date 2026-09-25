@@ -106,8 +106,10 @@ const persona = (
   rol,
 })
 
+const SIN_LIMITES = { minimo: null, maximo: null }
+
 function lista(equipos: Equipo[], sinEquipo: ListaEquipos['sinEquipo'] = []): ListaEquipos {
-  return { idMiMembresia: YO, equipos, sinEquipo }
+  return { idMiMembresia: YO, limites: SIN_LIMITES, equipos, sinEquipo }
 }
 
 describe('PantallaEquipos', () => {
@@ -449,6 +451,7 @@ describe('PantallaEquipos', () => {
     function propuesta(numeroEquipos: number, esperado: number) {
       return {
         idMiMembresia: YO,
+        limites: SIN_LIMITES,
         equipos: [],
         sinEquipo: [],
         semilla: 4242,
@@ -539,6 +542,142 @@ describe('PantallaEquipos', () => {
 
       await screen.findByText(/Quien organiza genera una propuesta del sistema/)
       expect(screen.queryByRole('button', { name: /Generar/ })).not.toBeInTheDocument()
+    })
+  })
+
+  describe('tamaño de los equipos', () => {
+    const conLimites = (
+      equipos: Equipo[],
+      sinEquipo: ListaEquipos['sinEquipo'] = [],
+    ): ListaEquipos => ({
+      idMiMembresia: YO,
+      limites: { minimo: 2, maximo: 3 },
+      equipos,
+      sinEquipo,
+    })
+
+    it('muestra cuántos caben, avisa de los que están bajo el mínimo y bloquea unirse a uno lleno', async () => {
+      vi.mocked(obtenerActividad).mockResolvedValue(
+        actividad({ capacidades: ['elegir_equipo', 'editar_equipo'] }),
+      )
+      vi.mocked(obtenerEquipos).mockResolvedValue(
+        conLimites(
+          [
+            equipo('e1', 'Lleno', [
+              persona('m1', 'Ana A'),
+              persona('m2', 'Bea B'),
+              persona('m3', 'Cai C'),
+            ]),
+            equipo('e2', 'Solo', [persona('m4', 'Dan D')]),
+          ],
+          [{ idMembresia: YO, nombre: 'Yo Mismo' }],
+        ),
+      )
+      renderPantalla()
+
+      expect(await screen.findByText('3 de 3 integrantes')).toBeInTheDocument()
+      expect(screen.getByText('1 de 3 integrantes')).toBeInTheDocument()
+      expect(screen.getByText('Menos del mínimo de 2')).toBeInTheDocument()
+      expect(
+        screen.getByText(/Equipo lleno: ya tiene el máximo de 3 integrantes/),
+      ).toBeInTheDocument()
+      const botones = screen.getAllByRole('button', { name: 'Unirme' })
+      expect(botones[0]).toBeDisabled()
+      expect(botones[1]).toBeEnabled()
+    })
+
+    it('un equipo que excede el máximo, porque se bajó después, se marca sin desarmarlo', async () => {
+      vi.mocked(obtenerActividad).mockResolvedValue(actividad({ capacidades: [] }))
+      vi.mocked(obtenerEquipos).mockResolvedValue({
+        ...conLimites([
+          equipo('e1', 'Grande', [
+            persona('m1', 'A A'),
+            persona('m2', 'B B'),
+            persona('m3', 'C C'),
+          ]),
+        ]),
+        limites: { minimo: null, maximo: 2 },
+      })
+      renderPantalla()
+
+      expect(await screen.findByText('Por encima del máximo')).toBeInTheDocument()
+      expect(screen.getByText('3 de 2 integrantes')).toBeInTheDocument()
+    })
+
+    it('explica los límites en la descripción de la formación', async () => {
+      vi.mocked(obtenerActividad).mockResolvedValue(actividad({ capacidades: [] }))
+      vi.mocked(obtenerEquipos).mockResolvedValue(conLimites([]))
+      renderPantalla()
+
+      expect(
+        await screen.findByText(/hasta 3 integrantes\. Se espera que tengan al menos 2/),
+      ).toBeInTheDocument()
+    })
+
+    it('al cerrar avisa de los equipos nuevos que hará falta crear y de los que están bajo el mínimo', async () => {
+      vi.mocked(obtenerActividad).mockResolvedValue(
+        actividad({
+          rol: 'organizador',
+          capacidades: [
+            'formar_equipos',
+            'asignar_integrantes',
+            'cerrar_formacion',
+            'elegir_equipo',
+          ],
+          configuracion: { formacion_equipos: 'manual' },
+        }),
+      )
+      vi.mocked(obtenerEquipos).mockResolvedValue(
+        conLimites(
+          [
+            equipo('e1', 'Alfa', [
+              persona('m1', 'A A'),
+              persona('m2', 'B B'),
+              persona('m3', 'C C'),
+            ]),
+            equipo('e2', 'Beta', [persona('m4', 'D D')]),
+          ],
+          [
+            { idMembresia: 'm5', nombre: 'E E' },
+            { idMembresia: 'm6', nombre: 'F F' },
+            { idMembresia: 'm7', nombre: 'G G' },
+          ],
+        ),
+      )
+      renderPantalla()
+
+      // Caben 2 más en Beta; la tercera persona abre un equipo nuevo.
+      expect(await screen.findByText(/se creará 1 equipo nuevo/)).toBeInTheDocument()
+      expect(screen.getByText(/1 equipo tiene menos del mínimo de 2/)).toBeInTheDocument()
+    })
+
+    it('la propuesta avisa cuando creó más equipos de los esperados por el máximo', async () => {
+      vi.mocked(obtenerActividad).mockResolvedValue(
+        actividad({
+          rol: 'organizador',
+          capacidades: ['formar_equipos', 'generar_propuesta_equipos', 'asignar_integrantes'],
+          numeroEquiposEsperado: 3,
+          configuracion: { formacion_equipos: 'propuesta_sistema' },
+        }),
+      )
+      vi.mocked(obtenerEquipos).mockResolvedValue(conLimites([]))
+      vi.mocked(generarPropuesta).mockResolvedValue({
+        idMiMembresia: YO,
+        limites: { minimo: 2, maximo: 3 },
+        equipos: [],
+        sinEquipo: [],
+        semilla: 1,
+        numeroEquipos: 4,
+        numeroEquiposEsperado: 3,
+      })
+      const usuario = userEvent.setup()
+      renderPantalla()
+
+      await usuario.click(await screen.findByRole('button', { name: 'Generar propuesta' }))
+
+      expect(
+        await screen.findByText(/Son más que los 3 esperados para respetar el máximo/),
+      ).toBeInTheDocument()
     })
   })
 

@@ -2,6 +2,7 @@ import {
   LONGITUD_MAXIMA_NOMBRE_EQUIPO,
   type AccionActividad,
   type Equipo,
+  type LimitesEquipo,
   type RolIntegrante,
 } from '@plataforma/shared'
 import { useState, type FormEvent } from 'react'
@@ -47,20 +48,40 @@ function rolIntegrante(rol: Actividad['rol']): RolIntegrante {
 // Quien puede cerrar la formación (acción 'cerrar_formacion'): avisa qué pasa
 // con quienes no tienen equipo. Con la formación autogestionada la fase se
 // cierra sola al completarse; esto cubre cerrarla antes.
+// Cuántos equipos nuevos habrá que crear para que quepan quienes no tienen
+// equipo, con el máximo de integrantes (P-27). Es el mismo cálculo que hace el
+// servidor al cerrar, solo para avisarlo.
+function equiposNuevosNecesarios(equipos: Equipo[], numSinEquipo: number, maximo: number | null) {
+  if (maximo === null || numSinEquipo === 0) return 0
+  const lugares = equipos.reduce(
+    (total, e) => total + Math.max(0, maximo - e.integrantes.length),
+    0,
+  )
+  return Math.ceil(Math.max(0, numSinEquipo - lugares) / maximo)
+}
+
 function AccionCerrarFormacion({
   idActividad,
-  numEquipos,
+  equipos,
   numSinEquipo,
+  limites,
   onError,
 }: {
   idActividad: string
-  numEquipos: number
+  equipos: Equipo[]
   numSinEquipo: number
+  limites: LimitesEquipo
   onError: (mensaje: string | null) => void
 }) {
   const [confirmando, setConfirmando] = useState(false)
   const cerrar = useCerrarFormacionMutation(idActividad)
+  const numEquipos = equipos.length
   const sinEquipos = numEquipos === 0
+  const nuevos = equiposNuevosNecesarios(equipos, numSinEquipo, limites.maximo)
+  const bajoMinimo =
+    limites.minimo === null
+      ? 0
+      : equipos.filter((e) => e.integrantes.length < (limites.minimo as number)).length
 
   return (
     <Card className={styles.seccion}>
@@ -73,6 +94,18 @@ function AccionCerrarFormacion({
               ? `${numSinEquipo} ${numSinEquipo === 1 ? 'persona sigue' : 'personas siguen'} sin equipo: al cerrar, el sistema las reparte entre los equipos de la forma más equilibrada. La actividad pasa a desarrollo.`
               : 'Todas las personas tienen equipo. La actividad pasa a desarrollo.'}
         </p>
+        {nuevos > 0 ? (
+          <p className={styles.texto}>
+            No caben en los equipos actuales con el máximo de {limites.maximo}: se{' '}
+            {nuevos === 1 ? 'creará 1 equipo nuevo' : `crearán ${nuevos} equipos nuevos`}.
+          </p>
+        ) : null}
+        {bajoMinimo > 0 ? (
+          <p className={styles.texto}>
+            {bajoMinimo === 1 ? '1 equipo tiene' : `${bajoMinimo} equipos tienen`} menos del mínimo
+            de {limites.minimo}. Es solo un aviso: puedes cerrar igualmente.
+          </p>
+        ) : null}
       </div>
       {confirmando ? (
         <div className={styles.botones}>
@@ -139,10 +172,14 @@ function AccionPropuesta({
       onSuccess: (propuesta) => {
         setConfirmando(false)
         const menos = propuesta.numeroEquipos < propuesta.numeroEquiposEsperado
+        const mas = propuesta.numeroEquipos > propuesta.numeroEquiposEsperado
         setAviso(
           `Propuesta generada: ${propuesta.numeroEquipos} ${propuesta.numeroEquipos === 1 ? 'equipo' : 'equipos'} (semilla ${propuesta.semilla}). ` +
             (menos
               ? `Hay menos participantes que los ${propuesta.numeroEquiposEsperado} equipos esperados, así que no se crearon equipos vacíos. `
+              : '') +
+            (mas
+              ? `Son más que los ${propuesta.numeroEquiposEsperado} esperados para respetar el máximo de integrantes. `
               : '') +
             'Ajústala con la asignación de personas y cierra la formación para confirmarla.',
         )
@@ -311,7 +348,7 @@ export function PantallaEquipos() {
     )
   }
 
-  const { equipos, sinEquipo, idMiMembresia } = equiposQuery.data
+  const { equipos, sinEquipo, idMiMembresia, limites } = equiposQuery.data
   const puedeCrear = puede('formar_equipos') || puede('elegir_equipo')
   const ocupado = asignar.isPending || retirar.isPending || editar.isPending || eliminar.isPending
 
@@ -351,6 +388,15 @@ export function PantallaEquipos() {
               Formación de equipos
             </Badge>
             <p className={styles.texto}>{descripcionFormacion}</p>
+            {limites.maximo !== null || limites.minimo !== null ? (
+              <p className={styles.texto}>
+                {limites.maximo !== null
+                  ? `Cada equipo puede tener hasta ${limites.maximo} integrantes.`
+                  : ''}
+                {limites.maximo !== null && limites.minimo !== null ? ' ' : ''}
+                {limites.minimo !== null ? `Se espera que tengan al menos ${limites.minimo}.` : ''}
+              </p>
+            ) : null}
             {puede('configurar_funciones') ? (
               <p className={styles.texto}>
                 Puedes cambiar cómo se forman en{' '}
@@ -388,8 +434,9 @@ export function PantallaEquipos() {
         {puede('cerrar_formacion') ? (
           <AccionCerrarFormacion
             idActividad={id}
-            numEquipos={equipos.length}
+            equipos={equipos}
             numSinEquipo={sinEquipo.length}
+            limites={limites}
             onError={setError}
           />
         ) : null}
@@ -415,6 +462,7 @@ export function PantallaEquipos() {
                 idMiMembresia={idMiMembresia}
                 miRol={rolIntegrante(actividad.rol)}
                 capacidades={capacidades}
+                limites={limites}
                 ocupado={ocupado}
                 onUnirme={unirme}
                 onSalir={salir}

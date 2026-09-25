@@ -7,6 +7,7 @@ import {
   actualizarPeriodo,
   crearActividad,
   definirPeriodos,
+  fijarLimitesEquipo,
   obtenerActividad,
   obtenerActividades,
   obtenerParticipantes,
@@ -14,6 +15,7 @@ import {
   unirseConClave,
   type CambiosPeriodo,
   type DatosCrearActividad,
+  type LimitesEquipoCambios,
 } from './actividades.api'
 
 // docs/diseno-desarrollo-nucleo.md §4.2 fija ['actividades'] y
@@ -65,6 +67,16 @@ export function useConfigurarFuncionMutation(id: string) {
       funcion: FuncionSeguimiento
       cuerpo: Record<string, string>
     }) => configurarFuncion(id, funcion, cuerpo),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: claveActividad(id) })
+    },
+  })
+}
+
+export function useFijarLimitesEquipoMutation(id: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (cambios: LimitesEquipoCambios) => fijarLimitesEquipo(id, cambios),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: claveActividad(id) })
     },

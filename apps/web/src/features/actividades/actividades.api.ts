@@ -206,6 +206,34 @@ export async function configurarFuncion(
   return actividad
 }
 
+// PUT /api/actividades/{id}/formacion/limites (nucleo §8.8, P-27): tamaño
+// mínimo y máximo de un equipo. null quita el límite; lo que no se envía se
+// conserva.
+export interface LimitesEquipoCambios {
+  minimo?: number | null
+  maximo?: number | null
+}
+
+export async function fijarLimitesEquipo(
+  id: string,
+  cambios: LimitesEquipoCambios,
+): Promise<Actividad> {
+  const respuesta = await enviar(
+    `/api/actividades/${encodeURIComponent(id)}/formacion/limites`,
+    cambios,
+    'PUT',
+  )
+
+  if (!respuesta.ok) {
+    throw new ErrorActividad(
+      await leerMensajeError(respuesta, 'No pudimos guardar el tamaño de los equipos.'),
+    )
+  }
+
+  const { actividad } = (await respuesta.json()) as { actividad: Actividad }
+  return actividad
+}
+
 // GET /api/actividades/{id}/periodos (docs/diseno-desarrollo-nucleo.md §9.4):
 // calendario de avances, cancelados incluidos.
 export async function obtenerPeriodos(id: string): Promise<PeriodoReporte[]> {
