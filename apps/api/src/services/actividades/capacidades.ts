@@ -88,9 +88,9 @@ const ESTADOS_FORMACION_POR_ACCION: Readonly<
 // §6.2). configurar_funciones se limita a las tres fases donde general §6.2
 // permite cambiar libremente el estado de cualquier función; el matiz de
 // "habilitar sin deshabilitar si ya hay datos" a partir de desarrollo (P-17)
-// no se implementa todavía porque ninguna actividad de este incremento
-// alcanza esa fase (Formación → Desarrollo depende de Equipos, fuera de
-// alcance). agregar_coorganizador se permite en toda fase salvo archivada,
+// no se implementa todavía: ahora que las actividades sí llegan a desarrollo
+// (Equipos), configurar_funciones queda cerrada desde ahí, más estricta que
+// P-17, que permitiría habilitar. agregar_coorganizador se permite en toda fase salvo archivada,
 // que es de solo lectura para todos sin excepción (general §7.4).
 //
 // ajustar_periodos (mover las fechas de un periodo de avances o cancelarlo)

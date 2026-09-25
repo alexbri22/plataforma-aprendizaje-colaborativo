@@ -324,9 +324,10 @@ La categoría, y no el tipo, determina la visibilidad del evento (8.1 del genera
 | Estructura | Participante incorporado por clave de ingreso                                                   | Actividades |
 | Estructura | Participante desactivado de la actividad                                                        | Actividades |
 | Estructura | Co-organizador agregado, retirado, o sus permisos modificados                                   | Actividades |
-| Estructura | Equipo creado o renombrado                                                                      | Equipos     |
-| Estructura | Participante asignado a un equipo o reasignado entre equipos                                    | Equipos     |
+| Estructura | Equipo creado, modificado (nombre, descripción, forma de trabajo) o eliminado                   | Equipos     |
+| Estructura | Integrante asignado a un equipo, reasignado entre equipos o retirado                            | Equipos     |
 | Estructura | Reparto automático de participantes sin equipo ejecutado, con actor de tipo sistema             | Equipos     |
+| Estructura | Propuesta de equipos generada, con su semilla y lo que reemplazó                                | Equipos     |
 | Evaluación | Calificación asignada o modificada                                                              | Evaluación  |
 | Evaluación | Comentario dirigido a un equipo escrito                                                         | Evaluación  |
 | Evaluación | Comentario individual escrito                                                                   | Evaluación  |
@@ -546,6 +547,8 @@ El general fija la secuencia de fases y las reglas que ningún subsistema puede 
 | Desarrollo → Cierre         | Acción, o llegada de la fecha de término                                                       | Ninguna                     | Cierra las aportaciones; abre calificación, evaluaciones e insignias; caducan las invitaciones pendientes |
 | Cierre → Archivada          | Acción, o vencimiento del plazo de cierre                                                      | Ninguna                     | Solo lectura para todos, sin excepción de rol                                                             |
 
+**Cómo se dispara la transición automática de Formación → Desarrollo.** Con la función en autogestionado se evalúa al final de toda escritura de integrantes durante la formación (crear un equipo y unirse, asignar, mover), dentro de la misma transacción, que toma la fila de la actividad para que dos escrituras simultáneas produzcan una sola transición. Exige al menos un equipo y un participante activo. Cambiar la función a autogestionado no la dispara por sí solo. El evento de fase lleva al sistema como actor y `motivo: sin_rezagados`. La API expone la fase `formacion_equipos` tal cual: ya no se pliega dentro de inscripción.
+
 Los casos límite son los que deciden si la máquina de estados se comporta de forma previsible cuando la configuración y el uso no coinciden. Ninguno de los siguientes está resuelto por el general y todos ocurren con facilidad.
 
 | Situación                                                                         | Comportamiento                                                                                                                                                              |
@@ -567,7 +570,7 @@ La comparación se hace contra el final del día en la zona horaria de la plataf
 
 Agregar un co-organizador es crear o transformar una membresía. Si la persona no es miembro, se crea con el rol correspondiente y el conjunto de permisos por defecto de 7.3 del general. Si ya es participante, su membresía cambia de rol.
 
-**Consecuencia de promover a un participante.** Organizar y participar son condiciones excluyentes dentro de una misma actividad (7.3 del general), de modo que al pasar a co-organizador la persona deja su equipo y su lugar queda libre. Sus aportaciones previas permanecen en el espacio de ese equipo con su autoría, porque pertenecen al equipo y no a quien las escribió.
+**Consecuencia de promover a un participante.** Por la decisión de producto de 7.3 del general, quien organiza o co-organiza puede integrar un equipo, de modo que un participante promovido conserva su lugar. Sus aportaciones previas permanecen en el espacio de ese equipo con su autoría, porque pertenecen al equipo y no a quien las escribió.
 
 **Retirar el rol obliga a elegir destino.** Quitar el rol sin más dejaría una membresía de participante sin equipo, lo que rompe la regla de que todo participante de una actividad en desarrollo pertenece a exactamente un equipo (4.6 del general), que es una de las cubiertas por pruebas de contrato. La operación exige por tanto que quien organiza elija en el mismo paso entre asignarlo a un equipo como participante o desactivar su membresía. El sistema no ofrece un tercer camino porque el tercero es el estado inconsistente.
 
@@ -641,11 +644,15 @@ El módulo cubre los tres modos de formación, el reparto automático de quienes
 | Propuesta del sistema            | El sistema genera una propuesta que quien organiza edita y confirma | Siempre por acción explícita                                                                         |
 | Asignación manual                | Quien organiza crea los equipos y asigna a cada persona             | Siempre por acción explícita                                                                         |
 
+**"Modo" es el estado de una función, no un tipo de actividad.** En este capítulo, "modo" nombra cada estado de la función `formacion_equipos` (autogestionado, propuesta del sistema, manual). La actividad no tiene modo: qué puede hacer cada persona sale de su rol, de los permisos del co-organizador, de la fase y del estado de esa función, y de nada más. Una actividad "autogestionada" es simplemente la que crea un estudiante y a la que agrega al profesor como co-organizador.
+
 En el modo autogestionado, el número de equipos esperado que quien organiza definió se muestra como referencia y no como límite, conforme al diccionario de 5.1 del general, que lo declara explícitamente como no restrictivo.
 
 ## **8.2 La propuesta del sistema**
 
 La propuesta reparte a los participantes de forma equilibrada en el número de equipos esperado, en orden aleatorio, y quien organiza la ajusta antes de confirmarla.
+
+**Decisión de producto — la propuesta se materializa.** La propuesta no es un borrador que se confirma aparte: `POST /equipos/propuesta` crea de inmediato equipos normales en formación (`Equipo 1` … `Equipo N`), que se ajustan con la asignación manual, y confirmarla es la propia transición a desarrollo. No existe el estado "borrador" ni el `GET` que generaba sin persistir. Reglas: solo está disponible con la función en `propuesta_sistema` y durante la formación; reparte a todos los participantes activos, con el orden barajado por una semilla y después con el mismo reparto equilibrado de 8.3; con menos participantes que equipos esperados propone tantos equipos como participantes, para no dejar equipos vacíos; puede repetirse mientras dure la formación, y cada vez reemplaza todos los equipos existentes (en formación no tienen contenido). Un solo evento del historial guarda la semilla, el resultado y lo reemplazado, de modo que la propuesta se explica y se reproduce. Quien organiza o co-organiza que integre un equipo lo pierde al reemplazarse.
 
 **Registro de decisión — por qué el reparto es aleatorio y no ponderado.** Se evaluó equilibrar los equipos por rango de insignia, mezclando rangos altos y bajos para que ninguno quedara concentrado. Se descartó por tres razones. Introduce una dependencia con el subsistema de recompensas en la ruta crítica del proyecto, cuando 1.3 se ocupa precisamente de que el núcleo no dependa de él. El rango mide participación acumulada en la plataforma y no habilidad ni desempeño, de modo que usarlo como criterio de reparto le atribuye un significado que no tiene. Y en actividades tempranas casi todos los participantes tendrían rango cero, con lo que el criterio no distinguiría nada. Declarar el reparto como aleatorio es preferible a aparentar un criterio que el sistema no está en condiciones de aplicar.
 
@@ -660,6 +667,8 @@ Se ejecuta al cerrar la formación de equipos, conforme a 6.1 del general, que l
 3. Se asigna y se actualiza el conteo antes de pasar al siguiente.
 
 **Dos propiedades.** La primera es que el procedimiento minimiza el tamaño del equipo mayor resultante, que es lo que la palabra equilibrado significa aquí; no reequilibra a quienes ya tenían equipo, porque mover a alguien que eligió contradiría el modo autogestionado que lo permitió elegir. La segunda es que es determinista: no interviene el azar, de modo que la prueba es reproducible y el resultado puede explicarse a quien organiza si pregunta por qué alguien acabó donde acabó.
+
+Solo los participantes activos entran al reparto: quien organiza o co-organiza no está obligado a integrar un equipo, y una membresía desactivada no cuenta (conserva su fila de integrante, pero se ignora para el equilibrio y para "sin equipo"; al reactivarse vuelve a su equipo).
 
 El reparto completo emite un solo evento del historial, con el sistema como actor y la lista de asignaciones en su campo de datos (5.2). Emitir uno por persona haría ilegible la consulta justo en el momento de mayor actividad.
 
@@ -683,23 +692,23 @@ El nombre es único dentro de la actividad (4.4 del general). La descripción de
 
 ## **8.6 Endpoints**
 
-| Método y ruta                                   | Quién                                | Qué hace                                                                               |
-| :---------------------------------------------- | :----------------------------------- | :------------------------------------------------------------------------------------- |
-| GET /api/actividades/{id}/equipos               | Miembro                              | Equipos con sus integrantes (P-04)                                                     |
-| POST /api/actividades/{id}/equipos              | Organizador o participante           | Crea un equipo. El participante solo en modo autogestionado                            |
-| GET /api/actividades/{id}/equipos/propuesta     | Organizador                          | Genera la propuesta del sistema sin persistirla                                        |
-| POST /api/actividades/{id}/equipos/propuesta    | Organizador                          | Confirma la propuesta, con los ajustes aplicados                                       |
-| PATCH /api/equipos/{id}                         | Integrante u organizador             | Nombre, descripción y forma de trabajo                                                 |
-| DELETE /api/equipos/{id}                        | Organizador                          | Elimina el equipo si está vacío y sin contenido                                        |
-| PUT /api/equipos/{id}/integrantes/{idMembresia} | Organizador o el propio participante | Asigna o mueve. El participante solo se mueve a sí mismo y solo en modo autogestionado |
+| Método y ruta                                      | Quién                                | Qué hace                                                                                     |
+| :------------------------------------------------- | :----------------------------------- | :------------------------------------------------------------------------------------------- |
+| GET /api/actividades/{id}/equipos                  | Miembro                              | Equipos con sus integrantes (P-04)                                                           |
+| POST /api/actividades/{id}/equipos                 | Organizador o participante           | Crea un equipo. Quien no gestiona equipos, solo con la función autogestionada, y queda en él |
+| POST /api/actividades/{id}/equipos/propuesta       | Organizador                          | Genera la propuesta y la materializa como equipos en formación (ver 8.2)                     |
+| PATCH /api/equipos/{id}                            | Integrante u organizador             | Nombre, descripción y forma de trabajo                                                       |
+| DELETE /api/equipos/{id}                           | Organizador                          | Elimina el equipo si está vacío y sin contenido                                              |
+| PUT /api/equipos/{id}/integrantes/{idMembresia}    | Organizador o el propio participante | Asigna o mueve. Cada persona solo a sí misma y solo con la función autogestionada            |
+| DELETE /api/equipos/{id}/integrantes/{idMembresia} | Organizador o la propia persona      | Saca a quien organiza o co-organiza de un equipo. Un participante no se retira: se mueve     |
 
 ## **8.7 Pantallas**
 
-| Pantalla                | Contenido                                                                                                                                                                            |
-| :---------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Equipos de la actividad | Los equipos con sus integrantes y quiénes quedan sin equipo. Para quien organiza, con arrastre para asignar; para el participante, con la acción de unirse cuando el modo lo permite |
-| Propuesta de equipos    | La propuesta generada, editable antes de confirmar, con el aviso de que no se ha guardado                                                                                            |
-| Espacio del equipo      | Descripción, forma de trabajo y las secciones de metas, avances y recursos que la configuración habilite (capítulo 9\)                                                               |
+| Pantalla                | Contenido                                                                                                                                                                                                                                                                        |
+| :---------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Equipos de la actividad | Los equipos con sus integrantes y quiénes quedan sin equipo. Para quien organiza, con un selector por persona para asignar (en lugar de arrastrar: es accesible por teclado sin un componente nuevo); para el participante, con la acción de unirse cuando la función lo permite |
+| Propuesta de equipos    | Un bloque de la pantalla anterior, no una pantalla aparte: genera la propuesta, avisa la semilla y pide confirmar antes de reemplazar equipos existentes                                                                                                                         |
+| Espacio del equipo      | Descripción, forma de trabajo y las secciones de metas, avances y recursos que la configuración habilite (capítulo 9\)                                                                                                                                                           |
 
 ## **8.8 Pregunta abierta de este módulo**
 
@@ -708,6 +717,8 @@ El nombre es único dentro de la actividad (4.4 del general). La descripción de
 **Afecta:** formación (8.1), reparto automático (8.3), evaluación por pares (10.3).
 
 **Propuesta por defecto:** no se imponen límites. El número de equipos esperado es una referencia y un equipo puede tener un solo integrante.
+
+**Resolución:** adoptada tal cual. La interfaz marca "un solo integrante" como aviso informativo, sin bloquear.
 
 **Qué necesitamos confirmar:** un equipo de una persona contradice el objeto de la plataforma y deja sin destinatarios la evaluación por pares (7.4). La pregunta es si el sistema debe impedirlo, advertirlo sin impedirlo, o permitirlo sin más porque el caso lo resuelve quien organiza.
 

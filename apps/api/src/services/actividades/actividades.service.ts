@@ -590,9 +590,9 @@ export async function configurarFuncion(
 }
 
 // PUT /api/actividades/{id}/coorganizadores/{idUsuario} (docs/diseno-desarrollo-nucleo.md
-// §7.6 y §7.7): agrega o promueve. Retirar el rol (DELETE) queda fuera de
-// este incremento porque su regla obliga a elegir entre desactivar la
-// membresía o reasignar a un equipo, y Equipos todavía no existe.
+// §7.6 y §7.7): agrega o promueve. Un participante promovido conserva su
+// lugar en un equipo (general §7.3, quien organiza puede integrar uno). Retirar
+// el rol (DELETE) queda fuera del incremento de Equipos.
 export async function agregarOPromoverCoorganizador(
   idActividad: string,
   idUsuarioObjetivo: string,
