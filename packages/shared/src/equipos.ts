@@ -34,12 +34,22 @@ export interface ParticipanteSinEquipo {
   nombre: string
 }
 
+/** Ajuste de la función `formacion_equipos` (nucleo §8.8, P-27). Nulo, sin
+ * límite. El máximo lo aplica el servidor a todos; el mínimo solo advierte. */
+export interface LimitesEquipo {
+  minimo: number | null
+  maximo: number | null
+}
+
+export const LIMITE_MAXIMO_TAMANO_EQUIPO = 100
+
 /** GET /api/actividades/{id}/equipos: los equipos en orden de creación y
  * quiénes quedan sin equipo. Todo miembro ve ambas cosas (P-04). */
 export interface ListaEquipos {
   /** Membresía de quien consulta: la pantalla la necesita para saber cuál es
    * su equipo (unirse, salir, editar el suyo). */
   idMiMembresia: string
+  limites: LimitesEquipo
   equipos: Equipo[]
   sinEquipo: ParticipanteSinEquipo[]
 }

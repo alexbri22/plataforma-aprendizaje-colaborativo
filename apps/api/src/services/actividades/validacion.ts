@@ -1,4 +1,5 @@
 import {
+  LIMITE_MAXIMO_TAMANO_EQUIPO,
   ELEMENTOS_ESPACIO_EQUIPO,
   ESTADOS_ELEMENTO_ESPACIO_EQUIPO,
   ESTADOS_POR_FUNCION,
@@ -185,4 +186,42 @@ export function validarDatosAgregarCoorganizador(cuerpo: unknown): DatosAgregarC
   }
 
   return { permisos: datos.permisos as PermisoCoorganizador[] }
+}
+
+// PUT /formacion/limites: tamaño mínimo y máximo de un equipo. Cada campo es
+// un entero de 1 a LIMITE_MAXIMO_TAMANO_EQUIPO, o null para quitar el límite;
+// el que no llega se conserva. Debe llegar al menos uno.
+export interface CambiosLimitesEquipo {
+  minimo?: number | null
+  maximo?: number | null
+}
+
+export function validarDatosLimitesEquipo(cuerpo: unknown): CambiosLimitesEquipo {
+  const datos = (cuerpo && typeof cuerpo === 'object' ? cuerpo : {}) as Record<string, unknown>
+  const detallePorCampo: Record<string, string> = {}
+  const cambios: CambiosLimitesEquipo = {}
+
+  for (const campo of ['minimo', 'maximo'] as const) {
+    const valor = datos[campo]
+    if (valor === undefined) continue
+    if (valor === null) {
+      cambios[campo] = null
+    } else if (
+      typeof valor === 'number' &&
+      Number.isInteger(valor) &&
+      valor >= 1 &&
+      valor <= LIMITE_MAXIMO_TAMANO_EQUIPO
+    ) {
+      cambios[campo] = valor
+    } else {
+      detallePorCampo[campo] =
+        `Debe ser un entero de 1 a ${LIMITE_MAXIMO_TAMANO_EQUIPO}, o vacío para no limitar.`
+    }
+  }
+
+  if (Object.keys(detallePorCampo).length > 0) throw new ErrorValidacion(detallePorCampo)
+  if (Object.keys(cambios).length === 0) {
+    throw new ErrorValidacion({ cuerpo: 'Indica al menos un cambio: minimo o maximo.' })
+  }
+  return cambios
 }

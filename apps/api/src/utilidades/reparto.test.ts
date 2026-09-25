@@ -3,6 +3,7 @@ import {
   barajarConSemilla,
   numeroEquiposDePropuesta,
   proponerEquipos,
+  repartirConMaximo,
   repartirEquilibrado,
   type EquipoParaReparto,
 } from './reparto.js'
@@ -130,6 +131,109 @@ describe('numeroEquiposDePropuesta', () => {
     expect(numeroEquiposDePropuesta(4, 10)).toBe(4)
     expect(numeroEquiposDePropuesta(4, 3)).toBe(3)
     expect(numeroEquiposDePropuesta(4, 0)).toBe(0)
+  })
+})
+
+describe('numeroEquiposDePropuesta con máximo', () => {
+  it('crea los equipos que hagan falta para que todos quepan', () => {
+    expect(numeroEquiposDePropuesta(3, 12, 3)).toBe(4)
+    expect(numeroEquiposDePropuesta(3, 12, 4)).toBe(3)
+    expect(numeroEquiposDePropuesta(3, 12, null)).toBe(3)
+    expect(numeroEquiposDePropuesta(5, 2, 3)).toBe(2)
+    expect(numeroEquiposDePropuesta(3, 0, 3)).toBe(0)
+  })
+
+  it('la propuesta resultante respeta el máximo', () => {
+    for (const [n, esperado, maximo] of [
+      [12, 3, 3],
+      [10, 2, 4],
+      [7, 7, 2],
+      [1, 1, 1],
+    ]) {
+      const equipos = proponerEquipos(personas(n), numeroEquiposDePropuesta(esperado, n, maximo), 3)
+      expect(Math.max(...equipos.map((e) => e.length))).toBeLessThanOrEqual(maximo)
+      expect(equipos.flat()).toHaveLength(n)
+    }
+  })
+})
+
+describe('repartirConMaximo', () => {
+  it('sin máximo es exactamente el reparto equilibrado', () => {
+    const equipos = [
+      { id: 'A', integrantes: 2 },
+      { id: 'B', integrantes: 0 },
+    ]
+    expect(repartirConMaximo(equipos, personas(4), null)).toEqual({
+      asignaciones: repartirEquilibrado(equipos, personas(4)),
+      equiposNuevos: [],
+    })
+  })
+
+  it('si caben todos no crea equipos', () => {
+    const equipos = [
+      { id: 'A', integrantes: 1 },
+      { id: 'B', integrantes: 0 },
+    ]
+    const resultado = repartirConMaximo(equipos, personas(3), 2)
+    expect(resultado.equiposNuevos).toEqual([])
+    expect(tamanosFinales(equipos, resultado.asignaciones)).toEqual([2, 2])
+  })
+
+  it('crea un equipo solo cuando todos están llenos, y lo llena antes de crear otro', () => {
+    const equipos = [
+      { id: 'A', integrantes: 2 },
+      { id: 'B', integrantes: 2 },
+    ]
+    const resultado = repartirConMaximo(equipos, personas(5), 2)
+    expect(resultado.equiposNuevos).toEqual(['nuevo-1', 'nuevo-2', 'nuevo-3'])
+    expect(resultado.asignaciones.map((a) => a.idEquipo)).toEqual([
+      'nuevo-1',
+      'nuevo-1',
+      'nuevo-2',
+      'nuevo-2',
+      'nuevo-3',
+    ])
+  })
+
+  it('nunca supera el máximo y crea el mínimo de equipos, contra fuerza bruta', () => {
+    for (let maximo = 1; maximo <= 3; maximo += 1) {
+      for (let a = 0; a <= maximo; a += 1) {
+        for (let b = 0; b <= maximo; b += 1) {
+          for (let nuevos = 0; nuevos <= 7; nuevos += 1) {
+            const equipos = [
+              { id: 'A', integrantes: a },
+              { id: 'B', integrantes: b },
+            ]
+            const r = repartirConMaximo(equipos, personas(nuevos), maximo)
+            const capacidadLibre = Math.max(0, maximo - a) + Math.max(0, maximo - b)
+            const faltan = Math.max(0, nuevos - capacidadLibre)
+            expect(r.equiposNuevos.length, `${a},${b}+${nuevos}/${maximo}`).toBe(
+              Math.ceil(faltan / maximo),
+            )
+            const conteo = new Map<string, number>()
+            for (const x of r.asignaciones)
+              conteo.set(x.idEquipo, (conteo.get(x.idEquipo) ?? 0) + 1)
+            expect((conteo.get('A') ?? 0) + a).toBeLessThanOrEqual(Math.max(maximo, a))
+            expect((conteo.get('B') ?? 0) + b).toBeLessThanOrEqual(Math.max(maximo, b))
+            for (const id of r.equiposNuevos)
+              expect(conteo.get(id) ?? 0).toBeLessThanOrEqual(maximo)
+          }
+        }
+      }
+    }
+  })
+
+  it('un equipo que ya excede el máximo cuenta como lleno y no se toca', () => {
+    const r = repartirConMaximo([{ id: 'A', integrantes: 5 }], personas(1), 3)
+    expect(r.equiposNuevos).toEqual(['nuevo-1'])
+    expect(r.asignaciones).toEqual([{ idMembresia: 'm1', idEquipo: 'nuevo-1' }])
+  })
+
+  it('es determinista', () => {
+    const equipos = [{ id: 'A', integrantes: 1 }]
+    expect(repartirConMaximo(equipos, personas(6), 2)).toEqual(
+      repartirConMaximo(equipos, personas(6), 2),
+    )
   })
 })
 

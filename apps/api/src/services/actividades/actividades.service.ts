@@ -22,6 +22,7 @@ import {
   ErrorFuncionConDatos,
   ErrorOrganizadorUnico,
   ErrorSinParticipantes,
+  ErrorValidacion,
   ErrorUsuarioNoEncontrado,
   ErrorYaEsMiembro,
 } from '../../errores.js'
@@ -35,7 +36,7 @@ import {
 } from './capacidades.js'
 import { COMPROBADORES_DE_DATOS, evaluarCambioEnCurso } from './cambiosDeFuncion.js'
 import { generarClaveIngreso } from './claveIngreso.js'
-import type { DatosCrearActividadValidados } from './validacion.js'
+import type { CambiosLimitesEquipo, DatosCrearActividadValidados } from './validacion.js'
 import { aFechaCalendario, finDeDiaEnCDMX } from '../../utilidades/fechas.js'
 
 // Fase que expone la API, calcada de
@@ -63,6 +64,9 @@ export interface ActividadRespuesta {
   fechaLimiteInscripcion: string
   plazoCierreDias: number
   numeroEquiposEsperado: number
+  // Ajuste de la formación de equipos (P-27); nulo = sin límite.
+  tamanoMinimoEquipo: number | null
+  tamanoMaximoEquipo: number | null
 }
 
 // GET /api/actividades/{id} agrega el conjunto de capacidades del actor y la
@@ -164,6 +168,8 @@ interface ActividadConMembresiasYConteo {
   fechaLimiteInscripcion: Date
   plazoCierreDias: number
   numeroEquiposEsperado: number
+  tamanoMinimoEquipo: number | null
+  tamanoMaximoEquipo: number | null
   estado: EstadoActividad
   claveIngreso: string | null
   membresias: { rol: RolMembresia }[]
@@ -205,6 +211,8 @@ function aRespuesta(
     fechaLimiteInscripcion: aFechaCalendario(actividad.fechaLimiteInscripcion),
     plazoCierreDias: actividad.plazoCierreDias,
     numeroEquiposEsperado: actividad.numeroEquiposEsperado,
+    tamanoMinimoEquipo: actividad.tamanoMinimoEquipo,
+    tamanoMaximoEquipo: actividad.tamanoMaximoEquipo,
   }
 }
 
@@ -608,6 +616,55 @@ export async function configurarFuncion(
   return obtenerActividadPorId(idActividad, membresiaActor)
 }
 
+// PUT /api/actividades/{id}/formacion/limites (nucleo §8.8, P-27): tamaño mínimo
+// y máximo de un equipo, ajuste de la función formacion_equipos. Es un cambio
+// de configuración, así que sigue la regla de configurar_funciones (antes del
+// desarrollo). El máximo lo aplica Equipos a todos; el mínimo solo advierte.
+export async function fijarLimitesEquipo(
+  idActividad: string,
+  cambios: CambiosLimitesEquipo,
+  idUsuarioActor: string,
+  membresiaActor: MembresiaConPermisos,
+): Promise<ActividadConCapacidades> {
+  const actividad = await cargarActividadConMembresiasYConfiguracion(idActividad)
+  exigirAccion(
+    membresiaActor,
+    'configurar_funciones',
+    actividad.estado,
+    'Los límites de los equipos no pueden modificarse en esta fase.',
+  )
+
+  const antes = { minimo: actividad.tamanoMinimoEquipo, maximo: actividad.tamanoMaximoEquipo }
+  const despues = {
+    minimo: cambios.minimo === undefined ? antes.minimo : cambios.minimo,
+    maximo: cambios.maximo === undefined ? antes.maximo : cambios.maximo,
+  }
+  if (despues.minimo !== null && despues.maximo !== null && despues.minimo > despues.maximo) {
+    throw new ErrorValidacion({ minimo: 'El mínimo no puede ser mayor que el máximo.' })
+  }
+
+  if (despues.minimo !== antes.minimo || despues.maximo !== antes.maximo) {
+    await prisma.$transaction(async (tx) => {
+      await tx.actividad.update({
+        where: { idActividad },
+        data: { tamanoMinimoEquipo: despues.minimo, tamanoMaximoEquipo: despues.maximo },
+      })
+      await registrarEvento(tx, {
+        idActividad,
+        tipoActor: 'usuario',
+        idUsuarioActor,
+        tipoEvento: 'configuracion_modificada',
+        tipoEntidad: 'configuracion_funcion',
+        idEntidad: 'formacion_equipos',
+        datos: { funcion: 'formacion_equipos', campo: 'limites_de_tamano', antes, despues },
+        categoria: 'estructura',
+      })
+    })
+  }
+
+  return obtenerActividadPorId(idActividad, membresiaActor)
+}
+
 // PUT /api/actividades/{id}/coorganizadores/{idUsuario} (docs/diseno-desarrollo-nucleo.md
 // §7.6 y §7.7): agrega o promueve. Un participante promovido conserva su
 // lugar en un equipo (general §7.3, quien organiza puede integrar uno). Retirar
@@ -799,6 +856,19 @@ export interface ActividadParaEquipos {
   estado: EstadoActividad
   formacionEquipos: EstadoFormacionEquipos | undefined
   numeroEquiposEsperado: number
+  limites: { minimo: number | null; maximo: number | null }
+}
+
+/** Tamaño mínimo y máximo de un equipo (P-27); nulo, sin límite. */
+export async function obtenerLimitesEquipo(
+  idActividad: string,
+  cliente: Prisma.TransactionClient = prisma,
+): Promise<{ minimo: number | null; maximo: number | null }> {
+  const actividad = await cliente.actividad.findUniqueOrThrow({
+    where: { idActividad },
+    select: { tamanoMinimoEquipo: true, tamanoMaximoEquipo: true },
+  })
+  return { minimo: actividad.tamanoMinimoEquipo, maximo: actividad.tamanoMaximoEquipo }
 }
 
 /** Lee la actividad y toma su fila con FOR UPDATE. Toda escritura de Equipos
@@ -819,6 +889,7 @@ export async function bloquearActividadParaEquipos(
     estado: actividad.estado,
     formacionEquipos: estadoFormacionEquipos(actividad.configuracion),
     numeroEquiposEsperado: actividad.numeroEquiposEsperado,
+    limites: { minimo: actividad.tamanoMinimoEquipo, maximo: actividad.tamanoMaximoEquipo },
   }
 }
 

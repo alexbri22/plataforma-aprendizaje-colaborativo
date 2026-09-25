@@ -63,6 +63,7 @@ export type {
 } from './insignias.js'
 
 export {
+  LIMITE_MAXIMO_TAMANO_EQUIPO,
   LONGITUD_MAXIMA_NOMBRE_EQUIPO,
   LONGITUD_MAXIMA_TEXTO_EQUIPO,
   SEMILLA_MAXIMA,
@@ -71,6 +72,7 @@ export {
 export type {
   Equipo,
   IntegranteEquipo,
+  LimitesEquipo,
   ListaEquipos,
   ParticipanteSinEquipo,
   PropuestaEquipos,

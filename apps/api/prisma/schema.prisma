@@ -192,6 +192,11 @@ model Actividad {
   fechaLimiteInscripcion DateTime        @map("fecha_limite_inscripcion")
   plazoCierreDias        Int             @map("plazo_cierre_dias")
   numeroEquiposEsperado  Int             @map("numero_equipos_esperado")
+  // Ajuste de la función formacion_equipos (nucleo §8.8, P-27): tamaño que
+  // puede tener un equipo. Nulo = sin límite. Ninguno es restricción de esquema:
+  // los aplica la capa de servicios de Equipos.
+  tamanoMinimoEquipo     Int?            @map("tamano_minimo_equipo")
+  tamanoMaximoEquipo     Int?            @map("tamano_maximo_equipo")
   estado                 EstadoActividad @default(inscripcion)
   claveIngreso           String?         @unique @map("clave_ingreso")
   fechaCreacion          DateTime        @default(now()) @map("fecha_creacion")

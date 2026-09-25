@@ -28,6 +28,7 @@ export type CodigoError =
   | 'participante_requiere_equipo'
   | 'propuesta_sin_participantes'
   | 'funcion_con_datos'
+  | 'equipo_lleno'
 
 export abstract class ErrorDominio extends Error {
   abstract readonly codigo: CodigoError
@@ -300,5 +301,18 @@ export class ErrorFuncionConDatos extends ErrorDominio {
 
   constructor(mensaje: string) {
     super(mensaje)
+  }
+}
+
+// El máximo de integrantes por equipo se aplica a todos, también a quien
+// organiza (docs/diseno-desarrollo-nucleo.md §8.8, P-27).
+export class ErrorEquipoLleno extends ErrorDominio {
+  readonly codigo = 'equipo_lleno' as const
+  readonly status = 422
+
+  constructor(maximo: number) {
+    super(
+      `Este equipo ya tiene el máximo de ${maximo} ${maximo === 1 ? 'integrante' : 'integrantes'}.`,
+    )
   }
 }

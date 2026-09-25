@@ -42,6 +42,46 @@ export function repartirEquilibrado(
   })
 }
 
+export interface RepartoConMaximo {
+  asignaciones: AsignacionReparto[]
+  /** Equipos que hubo que crear porque los existentes ya estaban llenos, en
+   * orden. Sus identificadores son provisionales: `nuevo-1`, `nuevo-2`… */
+  equiposNuevos: string[]
+}
+
+// Igual que repartirEquilibrado, respetando un máximo de integrantes por
+// equipo (P-27). Cuando el equipo más chico ya tiene el máximo, todos están
+// llenos: se crea un equipo nuevo y se le asigna a la persona. Solo se crean
+// equipos cuando no cabe nadie más, así que son los mínimos necesarios. Un
+// equipo que ya excedía el máximo cuenta como lleno y no se toca. Con
+// `maximo` nulo es exactamente repartirEquilibrado.
+export function repartirConMaximo(
+  equipos: readonly EquipoParaReparto[],
+  sinEquipo: readonly string[],
+  maximo: number | null,
+): RepartoConMaximo {
+  if (maximo === null)
+    return { asignaciones: repartirEquilibrado(equipos, sinEquipo), equiposNuevos: [] }
+
+  const lista = equipos.map((equipo) => ({ ...equipo }))
+  const equiposNuevos: string[] = []
+  const asignaciones = sinEquipo.map((idMembresia) => {
+    let elegido = 0
+    for (let i = 1; i < lista.length; i += 1) {
+      if (lista[i].integrantes < lista[elegido].integrantes) elegido = i
+    }
+    if (lista.length === 0 || lista[elegido].integrantes >= maximo) {
+      const id = `nuevo-${equiposNuevos.length + 1}`
+      equiposNuevos.push(id)
+      lista.push({ id, integrantes: 0 })
+      elegido = lista.length - 1
+    }
+    lista[elegido].integrantes += 1
+    return { idMembresia, idEquipo: lista[elegido].id }
+  })
+  return { asignaciones, equiposNuevos }
+}
+
 // PRNG de 32 bits (mulberry32): pequeño, sin dependencias y estable entre
 // versiones de Node, que es lo que necesita una semilla guardada en el
 // historial para poder reproducir la propuesta.
@@ -68,9 +108,16 @@ export function barajarConSemilla<T>(elementos: readonly T[], semilla: number): 
 }
 
 // La propuesta no crea equipos que no tendrían a nadie: con menos personas
-// que equipos esperados, propone tantos equipos como personas.
-export function numeroEquiposDePropuesta(esperado: number, participantes: number): number {
-  return Math.max(0, Math.min(esperado, participantes))
+// que equipos esperados, propone tantos equipos como personas. Y si hay un
+// máximo de integrantes, crea los que hagan falta para que todos quepan.
+export function numeroEquiposDePropuesta(
+  esperado: number,
+  participantes: number,
+  maximo: number | null = null,
+): number {
+  if (participantes <= 0) return 0
+  const base = Math.min(esperado, participantes)
+  return maximo === null ? base : Math.max(base, Math.ceil(participantes / maximo))
 }
 
 // §8.2: reparte a todos los participantes entre `numeroEquipos` equipos

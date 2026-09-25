@@ -9,6 +9,7 @@ import {
 import { prisma } from '../../data/prisma.js'
 import {
   ErrorAccionNoPermitida,
+  ErrorEquipoLleno,
   ErrorEquipoNoEncontrado,
   ErrorEquipoNoVacio,
   ErrorMiembroNoAsignable,
@@ -20,7 +21,7 @@ import {
 import {
   numeroEquiposDePropuesta,
   proponerEquipos,
-  repartirEquilibrado,
+  repartirConMaximo,
 } from '../../utilidades/reparto.js'
 import {
   autorizarAccion,
@@ -30,6 +31,7 @@ import {
   exigirAccion,
   lanzarSiRechazada,
   listarMiembros,
+  obtenerLimitesEquipo,
   type ActividadParaEquipos,
   type MembresiaActor,
   type MiembroDeActividad,
@@ -70,7 +72,7 @@ function esNombreDuplicado(error: unknown): boolean {
 async function cargarEquipos(
   cliente: ClienteBD,
   idActividad: string,
-): Promise<Omit<ListaEquipos, 'idMiMembresia'>> {
+): Promise<Pick<ListaEquipos, 'equipos' | 'sinEquipo'>> {
   const [filas, miembros] = await Promise.all([
     cliente.equipo.findMany({
       where: { idActividad },
@@ -118,7 +120,11 @@ export async function listarEquipos(
   idActividad: string,
   idMiMembresia: string,
 ): Promise<ListaEquipos> {
-  return { idMiMembresia, ...(await cargarEquipos(prisma, idActividad)) }
+  return {
+    idMiMembresia,
+    limites: await obtenerLimitesEquipo(idActividad),
+    ...(await cargarEquipos(prisma, idActividad)),
+  }
 }
 
 async function obtenerEquipo(
@@ -169,6 +175,21 @@ function exigirAsignacion(
   lanzarSiRechazada(rechazoRelevante(membresia, gestion, autoservicio), MENSAJE_FORMACION)
 }
 
+async function contarIntegrantesActivos(
+  tx: ClienteBD,
+  idActividad: string,
+  idEquipo: string,
+): Promise<number> {
+  const filas = await tx.integranteEquipo.findMany({
+    where: { idEquipo },
+    select: { idMembresia: true },
+  })
+  const activos = new Set(
+    (await listarMiembros(idActividad, tx)).filter((m) => m.activa).map((m) => m.idMembresia),
+  )
+  return filas.filter((f) => activos.has(f.idMembresia)).length
+}
+
 // Ubica a una membresía en un equipo, sacándola del anterior si lo tenía.
 // Devuelve false, sin escribir ni registrar nada, si ya estaba ahí.
 async function colocarIntegrante(
@@ -183,6 +204,16 @@ async function colocarIntegrante(
     include: { equipo: { select: { idEquipo: true, nombre: true } } },
   })
   if (previo?.idEquipo === equipo.idEquipo) return false
+
+  // El máximo de integrantes se aplica a todos, también a quien organiza
+  // (P-27). Cuentan los integrantes activos: un desactivado no ocupa lugar.
+  const maximo = actividad.limites.maximo
+  if (
+    maximo !== null &&
+    (await contarIntegrantesActivos(tx, actividad.idActividad, equipo.idEquipo)) >= maximo
+  ) {
+    throw new ErrorEquipoLleno(maximo)
+  }
 
   if (previo) {
     await tx.integranteEquipo.delete({
@@ -539,15 +570,37 @@ export async function cerrarFormacion(
     if (equipos.length === 0) throw new ErrorSinEquipos()
 
     if (participantesSinEquipo.length > 0) {
-      const asignaciones = repartirEquilibrado(
+      // Con un máximo de integrantes, si todos los equipos están llenos se crean
+      // los equipos nuevos que hagan falta (P-27). Los provisionales del
+      // reparto se sustituyen por los reales, con el primer "Equipo N" libre.
+      const { asignaciones, equiposNuevos } = repartirConMaximo(
         equipos.map((e) => ({ id: e.id, integrantes: e.integrantes })),
         participantesSinEquipo.map((p) => p.idMembresia),
+        actividad.limites.maximo,
       )
-      await tx.integranteEquipo.createMany({
-        data: asignaciones.map((a) => ({ idEquipo: a.idEquipo, idMembresia: a.idMembresia })),
-      })
 
       const nombreEquipo = new Map(equipos.map((e) => [e.id, e.nombre]))
+      const idReal = new Map<string, string>()
+      const usados = new Set(equipos.map((e) => e.nombre.toLowerCase()))
+      const equiposCreados: { id: string; nombre: string }[] = []
+      let siguiente = equipos.length + 1
+      for (const idProvisional of equiposNuevos) {
+        while (usados.has(`equipo ${siguiente}`)) siguiente += 1
+        const creado = await tx.equipo.create({
+          data: { idActividad, nombre: `Equipo ${siguiente}` },
+        })
+        usados.add(creado.nombre.toLowerCase())
+        idReal.set(idProvisional, creado.idEquipo)
+        nombreEquipo.set(creado.idEquipo, creado.nombre)
+        equiposCreados.push({ id: creado.idEquipo, nombre: creado.nombre })
+      }
+
+      const definitivas = asignaciones.map((a) => ({
+        idMembresia: a.idMembresia,
+        idEquipo: idReal.get(a.idEquipo) ?? a.idEquipo,
+      }))
+      await tx.integranteEquipo.createMany({ data: definitivas })
+
       const nombreMiembro = new Map(participantesSinEquipo.map((p) => [p.idMembresia, p.nombre]))
       await registrarEvento(tx, {
         idActividad,
@@ -557,12 +610,14 @@ export async function cerrarFormacion(
         tipoEntidad: 'actividad',
         idEntidad: idActividad,
         datos: {
-          asignaciones: asignaciones.map((a) => ({
+          asignaciones: definitivas.map((a) => ({
             idMembresia: a.idMembresia,
             nombre: nombreMiembro.get(a.idMembresia) ?? '',
             idEquipo: a.idEquipo,
             nombreEquipo: nombreEquipo.get(a.idEquipo) ?? '',
           })),
+          equiposCreados,
+          maximo: actividad.limites.maximo,
         },
         categoria: 'estructura',
       })
@@ -605,6 +660,7 @@ export async function generarPropuesta(
     const numeroEquipos = numeroEquiposDePropuesta(
       actividad.numeroEquiposEsperado,
       participantes.length,
+      actividad.limites.maximo,
     )
     if (numeroEquipos === 0) throw new ErrorPropuestaSinParticipantes()
 
@@ -654,6 +710,7 @@ export async function generarPropuesta(
         semilla,
         numeroEquipos,
         numeroEquiposEsperado: actividad.numeroEquiposEsperado,
+        maximo: actividad.limites.maximo,
         equipos: propuestos,
         reemplazados: previos.map((e) => ({
           nombre: e.nombre,
