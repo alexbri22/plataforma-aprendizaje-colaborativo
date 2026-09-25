@@ -2,7 +2,6 @@ import {
   LONGITUD_MAXIMA_NOMBRE_EQUIPO,
   type AccionActividad,
   type Equipo,
-  type LimitesEquipo,
   type RolIntegrante,
 } from '@plataforma/shared'
 import { useState, type FormEvent } from 'react'
@@ -10,7 +9,6 @@ import { useParams } from 'react-router-dom'
 import { AppShell } from '../../components/AppShell'
 import {
   AvisoError,
-  Badge,
   Button,
   Card,
   IconoCargando,
@@ -20,6 +18,7 @@ import {
 } from '../../components/ui'
 import { useActividad, type Actividad } from '../actividades'
 import { AsignacionManual } from './AsignacionManual'
+import { BarraFormacion } from './BarraFormacion'
 import { PanelAjustesFormacion } from './PanelAjustesFormacion'
 import { PanelEditarEquipo } from './PanelEditarEquipo'
 import { PanelIntercambio } from './PanelIntercambio'
@@ -27,12 +26,10 @@ import { ETIQUETA_FORMACION } from './etiquetas'
 import { TarjetaEquipo } from './TarjetaEquipo'
 import {
   useAsignarIntegranteMutation,
-  useCerrarFormacionMutation,
   useCrearEquipoMutation,
   useEditarEquipoMutation,
   useEliminarEquipoMutation,
   useEquipos,
-  useGenerarPropuestaMutation,
   useIntercambiarIntegrantesMutation,
   useRetirarIntegranteMutation,
 } from './useEquipos'
@@ -54,187 +51,6 @@ function rolIntegrante(rol: Actividad['rol']): RolIntegrante {
 // Quien puede cerrar la formación (acción 'cerrar_formacion'): avisa qué pasa
 // con quienes no tienen equipo. Con la formación autogestionada la fase se
 // cierra sola al completarse; esto cubre cerrarla antes.
-// Cuántos equipos nuevos habrá que crear para que quepan quienes no tienen
-// equipo, con el máximo de integrantes (P-27). Es el mismo cálculo que hace el
-// servidor al cerrar, solo para avisarlo.
-function equiposNuevosNecesarios(equipos: Equipo[], numSinEquipo: number, maximo: number | null) {
-  if (maximo === null || numSinEquipo === 0) return 0
-  const lugares = equipos.reduce(
-    (total, e) => total + Math.max(0, maximo - e.integrantes.length),
-    0,
-  )
-  return Math.ceil(Math.max(0, numSinEquipo - lugares) / maximo)
-}
-
-function AccionCerrarFormacion({
-  idActividad,
-  equipos,
-  numSinEquipo,
-  limites,
-  onError,
-}: {
-  idActividad: string
-  equipos: Equipo[]
-  numSinEquipo: number
-  limites: LimitesEquipo
-  onError: (mensaje: string | null) => void
-}) {
-  const [confirmando, setConfirmando] = useState(false)
-  const cerrar = useCerrarFormacionMutation(idActividad)
-  const numEquipos = equipos.length
-  const sinEquipos = numEquipos === 0
-  const nuevos = equiposNuevosNecesarios(equipos, numSinEquipo, limites.maximo)
-  const bajoMinimo =
-    limites.minimo === null
-      ? 0
-      : equipos.filter((e) => e.integrantes.length < (limites.minimo as number)).length
-
-  return (
-    <Card className={styles.seccion}>
-      <h2 className={styles.tituloSeccion}>Cerrar la formación</h2>
-      {/* Lo que pasaría al cerrar, en cifras y no en frases. */}
-      <div className={styles.resumen}>
-        {sinEquipos ? (
-          <span className={styles.texto}>Crea un equipo para poder cerrar.</span>
-        ) : numSinEquipo > 0 ? (
-          <Badge variant="warning">{numSinEquipo} sin equipo</Badge>
-        ) : (
-          <Badge variant="success">Todos con equipo</Badge>
-        )}
-        {nuevos > 0 ? (
-          <Badge variant="neutral">
-            {nuevos === 1 ? '+1 equipo nuevo' : `+${nuevos} equipos nuevos`}
-          </Badge>
-        ) : null}
-        {bajoMinimo > 0 ? (
-          <Badge variant="warning">
-            {bajoMinimo === 1 ? '1 equipo' : `${bajoMinimo} equipos`} bajo el mínimo
-          </Badge>
-        ) : null}
-      </div>
-      {confirmando ? (
-        <div className={styles.botones}>
-          <Button
-            disabled={cerrar.isPending}
-            onClick={() => {
-              onError(null)
-              cerrar.mutate(undefined, { onError: (e) => onError(mensajeDe(e)) })
-            }}
-          >
-            {cerrar.isPending ? (
-              <>
-                <IconoCargando />
-                Cerrando…
-              </>
-            ) : (
-              'Confirmar cierre'
-            )}
-          </Button>
-          <Button
-            variant="secondary"
-            disabled={cerrar.isPending}
-            onClick={() => setConfirmando(false)}
-          >
-            Cancelar
-          </Button>
-        </div>
-      ) : (
-        <Button
-          className={styles.botonAccion}
-          disabled={sinEquipos}
-          onClick={() => setConfirmando(true)}
-        >
-          Cerrar la formación
-        </Button>
-      )}
-    </Card>
-  )
-}
-
-// Propuesta del sistema (acción 'generar_propuesta_equipos', solo con la
-// función en manual). Crea equipos normales en formación: se
-// ajustan con la asignación y confirmar es cerrar la formación. Regenerar
-// reemplaza los equipos actuales, así que pide confirmación.
-function AccionPropuesta({
-  idActividad,
-  numEquipos,
-  onError,
-}: {
-  idActividad: string
-  numEquipos: number
-  onError: (mensaje: string | null) => void
-}) {
-  const [confirmando, setConfirmando] = useState(false)
-  const [generados, setGenerados] = useState<number | null>(null)
-  const generar = useGenerarPropuestaMutation(idActividad)
-  const reemplaza = numEquipos > 0
-
-  function ejecutar() {
-    onError(null)
-    generar.mutate(undefined, {
-      onSuccess: (propuesta) => {
-        setConfirmando(false)
-        setGenerados(propuesta.numeroEquipos)
-      },
-      onError: (e) => {
-        setConfirmando(false)
-        onError(mensajeDe(e))
-      },
-    })
-  }
-
-  const cargando = (
-    <>
-      <IconoCargando />
-      Generando…
-    </>
-  )
-
-  return (
-    <Card className={styles.seccion}>
-      <h2 className={styles.tituloSeccion}>Propuesta del sistema</h2>
-      {generados !== null ? (
-        <p className={styles.texto} role="status">
-          Propuesta generada: {generados} {generados === 1 ? 'equipo' : 'equipos'}.
-        </p>
-      ) : null}
-      {confirmando ? (
-        <div className={styles.confirmacionPropuesta}>
-          <p className={styles.texto}>
-            Reemplaza {numEquipos === 1 ? 'el equipo actual' : `los ${numEquipos} equipos actuales`}
-            .
-          </p>
-          <div className={styles.botones}>
-            <Button disabled={generar.isPending} onClick={ejecutar}>
-              {generar.isPending ? cargando : 'Reemplazar'}
-            </Button>
-            <Button
-              variant="secondary"
-              disabled={generar.isPending}
-              onClick={() => setConfirmando(false)}
-            >
-              Cancelar
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <Button
-          className={styles.botonAccion}
-          variant={reemplaza ? 'secondary' : 'primary'}
-          disabled={generar.isPending}
-          onClick={reemplaza ? () => setConfirmando(true) : ejecutar}
-        >
-          {generar.isPending
-            ? cargando
-            : reemplaza
-              ? 'Generar otra propuesta'
-              : 'Generar propuesta'}
-        </Button>
-      )}
-    </Card>
-  )
-}
-
 function FormularioCrearEquipo({
   idActividad,
   seUne,
@@ -368,24 +184,18 @@ export function PantallaEquipos() {
     >
       <div className={styles.contenido}>
         {fasePrevia ? (
-          <div className={styles.resumen}>
-            {ETIQUETA_FORMACION[actividad.configuracion?.formacion_equipos ?? ''] ? (
-              <Badge variant="primary">
-                {ETIQUETA_FORMACION[actividad.configuracion?.formacion_equipos ?? '']}
-              </Badge>
-            ) : null}
-            {limites.maximo !== null ? (
-              <Badge variant="neutral">Máx. {limites.maximo}</Badge>
-            ) : null}
-            {limites.minimo !== null ? (
-              <Badge variant="neutral">Mín. {limites.minimo}</Badge>
-            ) : null}
-            {puede('configurar_funciones') ? (
-              <Button variant="secondary" size="sm" onClick={() => setAjustesAbiertos(true)}>
-                Configurar
-              </Button>
-            ) : null}
-          </div>
+          <BarraFormacion
+            idActividad={id}
+            etiqueta={ETIQUETA_FORMACION[actividad.configuracion?.formacion_equipos ?? '']}
+            limites={limites}
+            equipos={equipos}
+            numSinEquipo={sinEquipo.length}
+            puedeConfigurar={puede('configurar_funciones')}
+            puedePropuesta={puede('generar_propuesta_equipos')}
+            puedeCerrar={puede('cerrar_formacion')}
+            onConfigurar={() => setAjustesAbiertos(true)}
+            onError={setError}
+          />
         ) : actividad.fase === 'archivada' ? (
           <p className={styles.texto}>Actividad archivada: solo lectura.</p>
         ) : actividad.fase === 'cierre' ? (
@@ -393,20 +203,6 @@ export function PantallaEquipos() {
         ) : null}
 
         {error ? <AvisoError mensaje={error} /> : null}
-
-        {puede('generar_propuesta_equipos') ? (
-          <AccionPropuesta idActividad={id} numEquipos={equipos.length} onError={setError} />
-        ) : null}
-
-        {puede('cerrar_formacion') ? (
-          <AccionCerrarFormacion
-            idActividad={id}
-            equipos={equipos}
-            numSinEquipo={sinEquipo.length}
-            limites={limites}
-            onError={setError}
-          />
-        ) : null}
 
         {puedeCrear ? (
           <FormularioCrearEquipo

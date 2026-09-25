@@ -336,11 +336,36 @@ describe('PantallaEquipos', () => {
       await waitFor(() => expect(cerrarFormacion).toHaveBeenCalledWith('act-1'))
     })
 
+    it('las acciones de la formación van en una sola barra, no en una tarjeta por botón', async () => {
+      vi.mocked(obtenerEquipos).mockResolvedValue(lista([equipo('e1', 'Alfa')]))
+      renderPantalla()
+
+      await screen.findByRole('button', { name: 'Cerrar la formación' })
+      expect(screen.queryByRole('heading', { name: 'Cerrar la formación' })).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole('heading', { name: 'Propuesta del sistema' }),
+      ).not.toBeInTheDocument()
+    })
+
+    it('cerrar pregunta en la misma barra y se puede cancelar', async () => {
+      vi.mocked(obtenerEquipos).mockResolvedValue(lista([equipo('e1', 'Alfa')]))
+      const usuario = userEvent.setup()
+      renderPantalla()
+
+      await usuario.click(await screen.findByRole('button', { name: 'Cerrar la formación' }))
+      expect(screen.getByText('¿Cerrar la formación?')).toBeInTheDocument()
+      await usuario.click(screen.getByRole('button', { name: 'Cancelar' }))
+
+      expect(screen.queryByText('¿Cerrar la formación?')).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Cerrar la formación' })).toBeInTheDocument()
+      expect(cerrarFormacion).not.toHaveBeenCalled()
+    })
+
     it('sin equipos no se puede cerrar la formación', async () => {
       vi.mocked(obtenerEquipos).mockResolvedValue(lista([]))
       renderPantalla()
 
-      expect(await screen.findByText('Crea un equipo para poder cerrar.')).toBeInTheDocument()
+      await screen.findByText('Aún no hay equipos.')
       expect(screen.getByRole('button', { name: 'Cerrar la formación' })).toBeDisabled()
       expect(screen.getByText('Aún no hay equipos.')).toBeInTheDocument()
     })

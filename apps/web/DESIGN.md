@@ -195,6 +195,7 @@ Soft-edged and calm is the default register — generous internal padding, comfo
 - **Shape:** `rounded-md` (8px) — soft enough to feel calm, not sharp enough to feel clinical.
 - **Primary:** Study Ink fill, white text, `8px 16px` padding. Used once per view as the clear default action.
 - **Secondary:** Paper background, Graphite text, Hairline Strong border — same resting-surface pattern as Cards/Inputs, so it stays legible regardless of what page tone sits behind it. For the paired "Cancelar"-style action, never competing visually with Primary.
+- **Ghost:** no fill and no border, Graphite text, `surface-hover` on hover. For the row of actions of a toolbar that sits inside a screen (configure, generate, close), so it never reads as one of the outlined Secondary buttons in the page header. Pair it with at most one Primary in the same row.
 - **Danger:** Flag Red fill, white text — reserved for destructive, hard-to-reverse actions (removing a participant, deleting a report), never for routine negative actions like "Cancelar."
 - **Hover / Focus:** background shifts to the `-hover` step over 0.15s ease; `:focus-visible` gets a 2px Study Ink outline, 2px offset — never removed, never replaced with a subtler box-shadow-only treatment.
 
