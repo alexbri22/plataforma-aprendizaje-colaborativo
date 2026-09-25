@@ -230,7 +230,7 @@ function esperado(
   if (!fases[accion].includes(fase)) return false
 
   if (accion === 'elegir_equipo' && formacion !== 'autogestionado') return false
-  if (accion === 'generar_propuesta_equipos' && formacion !== 'propuesta_sistema') return false
+  if (accion === 'generar_propuesta_equipos' && formacion !== 'manual') return false
 
   // Elegir equipo es sobre uno mismo: lo tiene todo miembro. Editar un equipo
   // lo tiene el participante (el suyo, lo verifica el servicio) y quien

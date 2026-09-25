@@ -191,7 +191,7 @@ describe('tamaño de los equipos: el máximo se aplica a todos', () => {
 
   it('la propuesta crea los equipos necesarios para respetar el máximo', async () => {
     const e = await actividadEnFormacion(7)
-    await fijarFormacion(e, 'propuesta_sistema')
+    await fijarFormacion(e, 'manual')
     await fijar(e.id, e.organizador.cookie, { maximo: 2 })
 
     const respuesta = await request(app)

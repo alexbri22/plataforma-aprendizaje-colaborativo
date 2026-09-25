@@ -242,7 +242,7 @@ The one place in the system where raster artwork appears. A rank insignia is **t
 ### Pagination (`Paginacion`)
 
 - **Use:** long lists of people (assignment, participants), so a screen never turns into an endless scroll. Not for tabs or steps.
-- **Shape:** a hairline top border, the visible range on the left ("11–20 de 45", Soft Graphite, `aria-live="polite"`) and two secondary small buttons, Anterior and Siguiente, on the right. Nothing renders when everything fits on one page.
+- **Shape:** a hairline top border, the visible range on the left ("11–20 de 45", Soft Graphite, `aria-live="polite"`) and two secondary small icon buttons on the right, a left and a right chevron, named Anterior and Siguiente for assistive technology (`aria-label`). Nothing renders when everything fits on one page.
 - **Behavior:** the page clamps to the last one if the list shrinks. Ten rows per page is the default for people lists. It is client-side today; the API still returns whole lists, which are bounded by an activity's size.
 
 ### Navigation (not yet built — guidance for when it is)

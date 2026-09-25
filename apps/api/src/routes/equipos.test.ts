@@ -119,8 +119,8 @@ describe('POST /api/actividades/:id/equipos', () => {
     expect(lista.equipos[1].integrantes).toHaveLength(1)
   })
 
-  it('un participante no puede crear equipos si la función es manual o de propuesta', async () => {
-    for (const estado of ['manual', 'propuesta_sistema']) {
+  it('un participante no puede crear equipos si la función es manual', async () => {
+    for (const estado of ['manual']) {
       const e = await actividadEnFormacion(2)
       await fijarFormacion(e, estado)
       const respuesta = await crear(e.id, e.participantes[0].cookie, 'Alfa')
@@ -634,9 +634,9 @@ describe('POST /api/actividades/:id/formacion/cierre', () => {
     })
   })
 
-  it('sin nadie sin equipo no hay evento de reparto; con la función en propuesta también cierra', async () => {
+  it('sin nadie sin equipo no hay evento de reparto; con la función en manual también cierra', async () => {
     const e = await actividadEnFormacion(1)
-    await fijarFormacion(e, 'propuesta_sistema')
+    await fijarFormacion(e, 'manual')
     const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
     await asignar(idA, e.participantes[0].idMembresia, e.organizador.cookie)
 
@@ -721,8 +721,8 @@ describe('transición automática con la formación autogestionada', () => {
     expect(await estadoDe(e.id)).toBe('desarrollo')
   })
 
-  it('no ocurre con la función en manual ni en propuesta_sistema: el cierre es siempre una acción', async () => {
-    for (const estado of ['manual', 'propuesta_sistema']) {
+  it('no ocurre con la función en manual: el cierre es siempre una acción', async () => {
+    for (const estado of ['manual']) {
       const e = await actividadEnFormacion(1)
       await fijarFormacion(e, estado)
       const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')

@@ -76,12 +76,8 @@ describe('catálogo de permisos de co-organizador', () => {
 })
 
 describe('estados de formacion_equipos', () => {
-  it('son los tres estados de la función, y coinciden con el catálogo por función', () => {
-    expect([...ESTADOS_FORMACION_EQUIPOS]).toEqual([
-      'autogestionado',
-      'propuesta_sistema',
-      'manual',
-    ])
+  it('son los dos estados de la función, y coinciden con el catálogo por función', () => {
+    expect([...ESTADOS_FORMACION_EQUIPOS]).toEqual(['autogestionado', 'manual'])
     expect(ESTADOS_POR_FUNCION.formacion_equipos).toEqual(ESTADOS_FORMACION_EQUIPOS)
   })
 

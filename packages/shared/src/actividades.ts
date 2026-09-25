@@ -57,9 +57,10 @@ export const FUNCIONES_SEGUIMIENTO = [
 
 export type FuncionSeguimiento = (typeof FUNCIONES_SEGUIMIENTO)[number]
 
-/** Estados de la función `formacion_equipos` (general §6.2). Son estados de
+/** Estados de la función `formacion_equipos` (general §6.2). La propuesta del
+ * sistema no es un estado: es una acción disponible en `manual`. Son estados de
  * la función, no tipos de actividad: la actividad no tiene modo. */
-export const ESTADOS_FORMACION_EQUIPOS = ['autogestionado', 'propuesta_sistema', 'manual'] as const
+export const ESTADOS_FORMACION_EQUIPOS = ['autogestionado', 'manual'] as const
 export type EstadoFormacionEquipos = (typeof ESTADOS_FORMACION_EQUIPOS)[number]
 
 export function esEstadoFormacionEquipos(valor: unknown): valor is EstadoFormacionEquipos {

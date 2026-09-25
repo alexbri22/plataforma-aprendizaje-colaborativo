@@ -77,12 +77,13 @@ const ACCIONES_DE_AUTOSERVICIO: readonly AccionActividad[] = ['elegir_equipo', '
 // Estados de `formacion_equipos` en los que cada acción está abierta.
 // Sin entrada: en cualquiera. Elegir equipo es cosa de los participantes
 // solo cuando el organizador dejó la formación autogestionada; la propuesta
-// del sistema solo existe cuando la función está en ese estado.
+// del sistema es una ayuda de la asignación por quien organiza, así que solo
+// existe en `manual`.
 const ESTADOS_FORMACION_POR_ACCION: Readonly<
   Partial<Record<AccionActividad, readonly EstadoFormacionEquipos[]>>
 > = {
   elegir_equipo: ['autogestionado'],
-  generar_propuesta_equipos: ['propuesta_sistema'],
+  generar_propuesta_equipos: ['manual'],
 }
 
 // Tabla acción por fase (docs/diseno-desarrollo-nucleo.md §7.4 y general

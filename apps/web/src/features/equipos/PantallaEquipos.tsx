@@ -152,7 +152,7 @@ function AccionCerrarFormacion({
 }
 
 // Propuesta del sistema (acción 'generar_propuesta_equipos', solo con la
-// función en propuesta_sistema). Crea equipos normales en formación: se
+// función en manual). Crea equipos normales en formación: se
 // ajustan con la asignación y confirmar es cerrar la formación. Regenerar
 // reemplaza los equipos actuales, así que pide confirmación.
 function AccionPropuesta({

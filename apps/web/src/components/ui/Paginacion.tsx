@@ -13,6 +13,21 @@ export interface PaginacionProps {
   etiqueta?: string
 }
 
+function Flecha({ direccion }: { direccion: 'izquierda' | 'derecha' }) {
+  return (
+    <svg className={styles.icono} viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+      <path
+        d={direccion === 'izquierda' ? 'M10 3.5 5.5 8 10 12.5' : 'M6 3.5 10.5 8 6 12.5'}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 // Paginación de listas largas (DESIGN.md, "Pagination"): rango visible y dos
 // botones. No se pinta si todo cabe en una página.
 export function Paginacion({
@@ -37,18 +52,22 @@ export function Paginacion({
         <Button
           variant="secondary"
           size="sm"
+          className={styles.flecha}
           disabled={pagina <= 0}
+          aria-label="Anterior"
           onClick={() => onCambiar(pagina - 1)}
         >
-          Anterior
+          <Flecha direccion="izquierda" />
         </Button>
         <Button
           variant="secondary"
           size="sm"
+          className={styles.flecha}
           disabled={pagina >= ultima}
+          aria-label="Siguiente"
           onClick={() => onCambiar(pagina + 1)}
         >
-          Siguiente
+          <Flecha direccion="derecha" />
         </Button>
       </div>
     </nav>

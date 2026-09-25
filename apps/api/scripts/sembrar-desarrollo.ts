@@ -120,7 +120,7 @@ interface Escenario {
   participantes: string[]
   coorganizadores?: string[]
   estado: 'inscripcion' | 'formacion_equipos'
-  formacion: 'autogestionado' | 'propuesta_sistema' | 'manual'
+  formacion: 'autogestionado' | 'manual'
   equiposEsperados: number
   limites?: { minimo?: number; maximo?: number }
   // Equipos ya formados: nombre y quiénes los integran.
@@ -254,11 +254,11 @@ async function main() {
   )
   await sembrar(
     {
-      nombre: 'Seed · Propuesta del sistema',
+      nombre: 'Seed · Manual sin equipos (probar la propuesta)',
       organizador: 'org',
       participantes: a(1, 10),
       estado: 'formacion_equipos',
-      formacion: 'propuesta_sistema',
+      formacion: 'manual',
       equiposEsperados: 3,
     },
     idPorCorreo,

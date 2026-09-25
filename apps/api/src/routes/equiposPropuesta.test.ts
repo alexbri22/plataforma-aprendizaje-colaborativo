@@ -31,7 +31,7 @@ describe('POST /api/actividades/:id/equipos/propuesta', () => {
 
   async function conPropuesta(participantes: number) {
     const e = await actividadEnFormacion(participantes)
-    await fijarFormacion(e, 'propuesta_sistema')
+    await fijarFormacion(e, 'manual')
     return e
   }
 
@@ -191,8 +191,8 @@ describe('POST /api/actividades/:id/equipos/propuesta', () => {
     expect(await eventos(e.id, 'propuesta_generada')).toHaveLength(0)
   })
 
-  it('solo existe con la función en propuesta_sistema: 409 en los otros estados', async () => {
-    for (const estado of ['autogestionado', 'manual']) {
+  it('no existe con la formación autogestionada: 409', async () => {
+    for (const estado of ['autogestionado']) {
       const e = await actividadEnFormacion(2)
       await fijarFormacion(e, estado)
       const respuesta = await proponer(e.id, e.organizador.cookie)
@@ -204,7 +204,7 @@ describe('POST /api/actividades/:id/equipos/propuesta', () => {
 
   it('solo en formación: 409 durante la inscripción y en desarrollo', async () => {
     const enInscripcion = await actividadConParticipantes(2)
-    await fijarFormacion(enInscripcion, 'propuesta_sistema')
+    await fijarFormacion(enInscripcion, 'manual')
     expect((await proponer(enInscripcion.id, enInscripcion.organizador.cookie)).status).toBe(409)
 
     const e = await conPropuesta(2)
@@ -259,13 +259,13 @@ describe('POST /api/actividades/:id/equipos/propuesta', () => {
     )
   })
 
-  it('las capacidades ofrecen la propuesta solo con la función en propuesta_sistema', async () => {
+  it('las capacidades ofrecen la propuesta solo con la formación manual', async () => {
     const e = await conPropuesta(1)
     const capacidades = async () =>
       (await request(app).get(`/api/actividades/${e.id}`).set('Cookie', e.organizador.cookie)).body
         .actividad.capacidades as string[]
     expect(await capacidades()).toContain('generar_propuesta_equipos')
-    await fijarFormacion(e, 'manual')
+    await fijarFormacion(e, 'autogestionado')
     expect(await capacidades()).not.toContain('generar_propuesta_equipos')
   })
 })

@@ -619,7 +619,7 @@ describe('PantallaEquipos', () => {
           rol: 'organizador',
           capacidades,
           numeroEquiposEsperado: 3,
-          configuracion: { formacion_equipos: 'propuesta_sistema' },
+          configuracion: { formacion_equipos: 'manual' },
         }),
       )
     })
@@ -668,17 +668,17 @@ describe('PantallaEquipos', () => {
       expect(await screen.findByText(/No hay participantes activos/)).toBeInTheDocument()
     })
 
-    it('sin la capacidad no se ofrece, aunque la función esté en propuesta_sistema', async () => {
+    it('sin la capacidad no se ofrece, aunque la función esté en manual', async () => {
       vi.mocked(obtenerActividad).mockResolvedValue(
         actividad({
           capacidades: ['editar_equipo'],
-          configuracion: { formacion_equipos: 'propuesta_sistema' },
+          configuracion: { formacion_equipos: 'manual' },
         }),
       )
       vi.mocked(obtenerEquipos).mockResolvedValue(lista([]))
       renderPantalla()
 
-      await screen.findByText('Propuesta del sistema')
+      await screen.findByText('Asignación manual')
       expect(screen.queryByRole('button', { name: /Generar/ })).not.toBeInTheDocument()
     })
   })

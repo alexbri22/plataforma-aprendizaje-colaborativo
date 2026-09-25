@@ -26,7 +26,6 @@ export const FUNCIONES_SIMPLES: DefinicionFuncion[] = [
     descripcion: 'Cómo se conforman los equipos al cerrar la inscripción.',
     opciones: [
       { valor: 'autogestionado', etiqueta: 'Autogestionada' },
-      { valor: 'propuesta_sistema', etiqueta: 'Propuesta del sistema' },
       { valor: 'manual', etiqueta: 'Asignación manual' },
     ],
   },
