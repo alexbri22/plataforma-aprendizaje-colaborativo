@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
   CONFIGURACION_POR_DEFECTO,
+  ESTADOS_FORMACION_EQUIPOS,
   ESTADOS_POR_FUNCION,
   FUNCIONES_SEGUIMIENTO,
   PERMISOS_COORGANIZADOR,
   PERMISOS_COORGANIZADOR_POR_DEFECTO,
+  esEstadoFormacionEquipos,
   parsearEstadoEspacioEquipo,
   serializarEstadoEspacioEquipo,
 } from './actividades.js'
@@ -70,5 +72,22 @@ describe('catálogo de permisos de co-organizador', () => {
   it('gestionar_coorganizadores e iniciar_cierre_y_archivar no están en el conjunto por defecto', () => {
     expect(PERMISOS_COORGANIZADOR_POR_DEFECTO).not.toContain('gestionar_coorganizadores')
     expect(PERMISOS_COORGANIZADOR_POR_DEFECTO).not.toContain('iniciar_cierre_y_archivar')
+  })
+})
+
+describe('estados de formacion_equipos', () => {
+  it('son los tres estados de la función, y coinciden con el catálogo por función', () => {
+    expect([...ESTADOS_FORMACION_EQUIPOS]).toEqual([
+      'autogestionado',
+      'propuesta_sistema',
+      'manual',
+    ])
+    expect(ESTADOS_POR_FUNCION.formacion_equipos).toEqual(ESTADOS_FORMACION_EQUIPOS)
+  })
+
+  it('esEstadoFormacionEquipos rechaza cualquier otro valor', () => {
+    expect(esEstadoFormacionEquipos('manual')).toBe(true)
+    expect(esEstadoFormacionEquipos('dirigido')).toBe(false)
+    expect(esEstadoFormacionEquipos(undefined)).toBe(false)
   })
 })

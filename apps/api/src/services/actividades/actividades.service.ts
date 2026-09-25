@@ -7,7 +7,9 @@ import {
 import {
   CONFIGURACION_POR_DEFECTO,
   PERMISOS_COORGANIZADOR_POR_DEFECTO,
+  esEstadoFormacionEquipos,
   type AccionActividad,
+  type EstadoFormacionEquipos,
   type FuncionSeguimiento,
   type PermisoCoorganizador,
 } from '@plataforma/shared'
@@ -93,6 +95,11 @@ function contextoDe(membresia: MembresiaConPermisos): ContextoActorActividad {
 // la acción, 403 si es el rol.
 function lanzarErrorDeAutorizacion(motivo: MotivoRechazo, mensajeFase: string): never {
   if (motivo === 'fase') throw new ErrorFaseNoPermiteAccion(mensajeFase)
+  if (motivo === 'funcion') {
+    throw new ErrorFaseNoPermiteAccion(
+      'La configuración actual de la formación de equipos no permite esta acción.',
+    )
+  }
   throw new ErrorAccionNoPermitida()
 }
 
@@ -105,8 +112,9 @@ export function exigirAccion(
   accion: AccionActividad,
   estado: EstadoActividad,
   mensajeFase: string,
+  formacionEquipos?: EstadoFormacionEquipos,
 ): void {
-  const resultado = autorizar(contextoDe(membresia), accion, { estado })
+  const resultado = autorizar(contextoDe(membresia), accion, { estado, formacionEquipos })
   if (!resultado.concedido) lanzarErrorDeAutorizacion(resultado.motivo, mensajeFase)
 }
 
@@ -187,13 +195,26 @@ function aMapaConfiguracion(
   return mapa
 }
 
+// Estado de la función `formacion_equipos` a partir de las filas de
+// configuración de la actividad. Un valor que no esté en el catálogo (dato
+// corrupto) se trata como ausente: las acciones que dependen de él se cierran.
+export function estadoFormacionEquipos(
+  filas: { funcion: FuncionSeguimiento; estado: string }[],
+): EstadoFormacionEquipos | undefined {
+  const estado = filas.find((fila) => fila.funcion === 'formacion_equipos')?.estado
+  return esEstadoFormacionEquipos(estado) ? estado : undefined
+}
+
 function aRespuestaConCapacidades(
   actividad: ActividadConMembresiasYConfiguracion,
   membresiaActor: MembresiaConPermisos,
 ): ActividadConCapacidades {
   return {
     ...aRespuesta(actividad, membresiaActor.rol),
-    capacidades: capacidadesDe(contextoDe(membresiaActor), { estado: actividad.estado }),
+    capacidades: capacidadesDe(contextoDe(membresiaActor), {
+      estado: actividad.estado,
+      formacionEquipos: estadoFormacionEquipos(actividad.configuracion),
+    }),
     configuracion: aMapaConfiguracion(actividad.configuracion),
   }
 }

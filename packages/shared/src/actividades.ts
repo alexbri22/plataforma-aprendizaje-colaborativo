@@ -23,6 +23,15 @@ export const ACCIONES_ACTIVIDAD = [
   'ajustar_periodos',
   'cerrar_inscripcion',
   'agregar_coorganizador',
+  // Equipos (nucleo §8). Sus permisos salen del rol, del permiso de
+  // co-organizador y del estado de `formacion_equipos`; nunca de un tipo de
+  // actividad.
+  'formar_equipos',
+  'asignar_integrantes',
+  'cerrar_formacion',
+  'elegir_equipo',
+  'editar_equipo',
+  'generar_propuesta_equipos',
 ] as const
 
 export type AccionActividad = (typeof ACCIONES_ACTIVIDAD)[number]
@@ -45,10 +54,19 @@ export const FUNCIONES_SEGUIMIENTO = [
 
 export type FuncionSeguimiento = (typeof FUNCIONES_SEGUIMIENTO)[number]
 
+/** Estados de la función `formacion_equipos` (general §6.2). Son estados de
+ * la función, no tipos de actividad: la actividad no tiene modo. */
+export const ESTADOS_FORMACION_EQUIPOS = ['autogestionado', 'propuesta_sistema', 'manual'] as const
+export type EstadoFormacionEquipos = (typeof ESTADOS_FORMACION_EQUIPOS)[number]
+
+export function esEstadoFormacionEquipos(valor: unknown): valor is EstadoFormacionEquipos {
+  return ESTADOS_FORMACION_EQUIPOS.includes(valor as EstadoFormacionEquipos)
+}
+
 /** Estados válidos por función, tal como los enumera general §6.2. Todas
  * salvo `espacio_equipo` tienen un estado simple, de esta lista. */
 export const ESTADOS_POR_FUNCION: Readonly<Record<FuncionSeguimiento, readonly string[]>> = {
-  formacion_equipos: ['autogestionado', 'propuesta_sistema', 'manual'],
+  formacion_equipos: ESTADOS_FORMACION_EQUIPOS,
   bitacora_individual: ['deshabilitada', 'habilitada'],
   calificacion: ['deshabilitada', 'directa', 'rubrica'],
   autoevaluacion_individual: ['deshabilitada', 'habilitada'],

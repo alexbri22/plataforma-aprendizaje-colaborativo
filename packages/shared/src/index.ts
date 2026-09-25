@@ -8,6 +8,7 @@ export {
   ACCIONES_ACTIVIDAD,
   CONFIGURACION_POR_DEFECTO,
   ELEMENTOS_ESPACIO_EQUIPO,
+  ESTADOS_FORMACION_EQUIPOS,
   ESTADOS_ELEMENTO_ESPACIO_EQUIPO,
   ESTADOS_PERIODO,
   ESTADOS_POR_FUNCION,
@@ -15,6 +16,7 @@ export {
   PERIODICIDADES,
   PERMISOS_COORGANIZADOR,
   PERMISOS_COORGANIZADOR_POR_DEFECTO,
+  esEstadoFormacionEquipos,
   parsearEstadoEspacioEquipo,
   serializarEstadoEspacioEquipo,
 } from './actividades.js'
@@ -24,6 +26,7 @@ export type {
   ElementoEspacioEquipo,
   EstadoElementoEspacioEquipo,
   EstadoEspacioEquipo,
+  EstadoFormacionEquipos,
   EstadoPeriodo,
   FuncionSeguimiento,
   Periodicidad,
