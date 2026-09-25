@@ -5,7 +5,7 @@ import {
   type RolIntegrante,
 } from '@plataforma/shared'
 import { useState, type FormEvent } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { AppShell } from '../../components/AppShell'
 import { AvisoError, Badge, Button, Card, IconoCargando, Input } from '../../components/ui'
 import { useActividad, type Actividad } from '../actividades'
@@ -63,7 +63,7 @@ function AccionCerrarFormacion({
   const sinEquipos = numEquipos === 0
 
   return (
-    <Card className={styles.accion}>
+    <Card className={styles.seccion}>
       <div>
         <h2 className={styles.tituloSeccion}>Cerrar la formación de equipos</h2>
         <p className={styles.texto}>
@@ -351,6 +351,12 @@ export function PantallaEquipos() {
               Formación de equipos
             </Badge>
             <p className={styles.texto}>{descripcionFormacion}</p>
+            {puede('configurar_funciones') ? (
+              <p className={styles.texto}>
+                Puedes cambiar cómo se forman en{' '}
+                <Link to={`/actividades/${actividad.id}/configuracion`}>Configuración</Link>.
+              </p>
+            ) : null}
           </Card>
         ) : null}
 

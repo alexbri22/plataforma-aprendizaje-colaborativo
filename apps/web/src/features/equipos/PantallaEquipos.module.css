@@ -37,18 +37,6 @@
   margin: 0;
 }
 
-.accion {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  background: var(--color-primary-subtle);
-  border: 1px solid var(--color-primary);
-}
-
-.accion .texto {
-  color: var(--color-text);
-}
-
 .botonAccion {
   align-self: flex-start;
 }
