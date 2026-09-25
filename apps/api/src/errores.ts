@@ -28,6 +28,7 @@ export type CodigoError =
   | 'propuesta_sin_participantes'
   | 'funcion_con_datos'
   | 'equipo_lleno'
+  | 'intercambio_invalido'
 
 export abstract class ErrorDominio extends Error {
   abstract readonly codigo: CodigoError
@@ -302,5 +303,16 @@ export class ErrorEquipoLleno extends ErrorDominio {
     super(
       `Este equipo ya tiene el máximo de ${maximo} ${maximo === 1 ? 'integrante' : 'integrantes'}.`,
     )
+  }
+}
+
+// Un intercambio necesita dos personas distintas, ambas con equipo y en
+// equipos distintos: si no, no hay nada que intercambiar.
+export class ErrorIntercambioInvalido extends ErrorDominio {
+  readonly codigo = 'intercambio_invalido' as const
+  readonly status = 422
+
+  constructor() {
+    super('Elige dos personas que estén en equipos distintos.')
   }
 }

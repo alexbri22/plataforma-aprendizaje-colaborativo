@@ -11,6 +11,7 @@ import {
   ErrorAccionNoPermitida,
   ErrorEquipoLleno,
   ErrorEquipoNoEncontrado,
+  ErrorIntercambioInvalido,
   ErrorMiembroNoAsignable,
   ErrorNombreEquipoDuplicado,
   ErrorParticipanteRequiereEquipo,
@@ -390,6 +391,92 @@ export async function asignarIntegrante(
   })
 
   return obtenerEquipo(prisma, idActividad, idEquipo)
+}
+
+// POST /api/actividades/{id}/equipos/intercambio: dos personas de equipos
+// distintos se cambian de lugar en una sola operación. Es la única forma de
+// moverlas cuando ambos equipos están llenos (con el máximo de integrantes, P-27,
+// ninguna puede entrar a un equipo lleno) y, ya en desarrollo, cuando nadie
+// puede quedar sin equipo. El tamaño de los dos equipos no cambia, así que
+// respeta el máximo. Es gestión de equipos: la acción de asignar integrantes.
+export async function intercambiarIntegrantes(
+  idActividad: string,
+  idMembresiaA: string,
+  idMembresiaB: string,
+  idUsuarioActor: string,
+  membresiaActor: MembresiaActor,
+): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    const actividad = await bloquearActividadParaEquipos(tx, idActividad)
+    exigirAccion(
+      membresiaActor,
+      'asignar_integrantes',
+      actividad.estado,
+      'Los equipos no pueden modificarse en esta fase.',
+      actividad.formacionEquipos,
+    )
+
+    if (idMembresiaA === idMembresiaB) throw new ErrorIntercambioInvalido()
+
+    const miembros = await listarMiembros(idActividad, tx)
+    const miembroA = miembros.find((m) => m.idMembresia === idMembresiaA)
+    const miembroB = miembros.find((m) => m.idMembresia === idMembresiaB)
+    if (!miembroA || !miembroA.activa || !miembroB || !miembroB.activa) {
+      throw new ErrorMiembroNoAsignable()
+    }
+
+    const filas = await tx.integranteEquipo.findMany({
+      where: { idMembresia: { in: [idMembresiaA, idMembresiaB] } },
+      include: { equipo: { select: { idEquipo: true, nombre: true, idActividad: true } } },
+    })
+    const filaA = filas.find((f) => f.idMembresia === idMembresiaA)
+    const filaB = filas.find((f) => f.idMembresia === idMembresiaB)
+    if (
+      !filaA ||
+      !filaB ||
+      filaA.equipo.idActividad !== idActividad ||
+      filaB.equipo.idActividad !== idActividad ||
+      filaA.idEquipo === filaB.idEquipo
+    ) {
+      throw new ErrorIntercambioInvalido()
+    }
+
+    // La unicidad es por membresía: se borran las dos filas antes de crear las
+    // cruzadas.
+    await tx.integranteEquipo.deleteMany({
+      where: { idMembresia: { in: [idMembresiaA, idMembresiaB] } },
+    })
+    await tx.integranteEquipo.createMany({
+      data: [
+        { idEquipo: filaB.idEquipo, idMembresia: idMembresiaA },
+        { idEquipo: filaA.idEquipo, idMembresia: idMembresiaB },
+      ],
+    })
+
+    await registrarEvento(tx, {
+      idActividad,
+      tipoActor: 'usuario',
+      idUsuarioActor,
+      tipoEvento: 'integrantes_intercambiados',
+      tipoEntidad: 'actividad',
+      idEntidad: idActividad,
+      datos: {
+        a: {
+          idMembresia: idMembresiaA,
+          nombre: miembroA.nombre,
+          de: { id: filaA.equipo.idEquipo, nombre: filaA.equipo.nombre },
+          a: { id: filaB.equipo.idEquipo, nombre: filaB.equipo.nombre },
+        },
+        b: {
+          idMembresia: idMembresiaB,
+          nombre: miembroB.nombre,
+          de: { id: filaB.equipo.idEquipo, nombre: filaB.equipo.nombre },
+          a: { id: filaA.equipo.idEquipo, nombre: filaA.equipo.nombre },
+        },
+      },
+      categoria: 'estructura',
+    })
+  })
 }
 
 // DELETE /api/equipos/{id}/integrantes/{idMembresia}: saca a alguien de un

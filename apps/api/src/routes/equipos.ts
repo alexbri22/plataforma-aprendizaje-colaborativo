@@ -10,6 +10,7 @@ import {
   editarEquipo,
   eliminarEquipo,
   generarPropuesta,
+  intercambiarIntegrantes,
   listarEquipos,
   retirarIntegrante,
 } from '../services/equipos/equipos.service.js'
@@ -17,6 +18,7 @@ import {
   validarDatosActualizarEquipo,
   validarDatosCrearEquipo,
   validarDatosGenerarPropuesta,
+  validarDatosIntercambio,
 } from '../services/equipos/validacion.js'
 
 export const equiposRouter = Router()
@@ -71,6 +73,30 @@ equiposRouter.post(
       membresia,
     )
     res.status(201).json(propuesta)
+  },
+)
+
+// POST /api/actividades/{id}/equipos/intercambio: dos personas de equipos
+// distintos se cambian de lugar de una vez, sin pasar por "sin equipo" ni
+// chocar con el máximo de integrantes.
+equiposRouter.post(
+  '/actividades/:id/equipos/intercambio',
+  exigirSesion,
+  cargarContextoActividad,
+  async (req, res) => {
+    const { membresia } = req.contextoActividad!
+    const actor = req.actor as UsuarioPublico
+    const { idMembresiaA, idMembresiaB } = validarDatosIntercambio(req.body)
+    const idActividad = req.params.id as string
+
+    await intercambiarIntegrantes(
+      idActividad,
+      idMembresiaA,
+      idMembresiaB,
+      actor.idUsuario,
+      membresia,
+    )
+    res.status(200).json(await listarEquipos(idActividad, membresia.idMembresia))
   },
 )
 

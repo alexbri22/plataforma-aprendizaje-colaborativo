@@ -93,3 +93,20 @@ export function validarDatosGenerarPropuesta(cuerpo: unknown): { semilla?: numbe
     semilla: `Debe ser un entero entre 0 y ${SEMILLA_MAXIMA}.`,
   })
 }
+
+// POST intercambio: dos membresías distintas.
+export function validarDatosIntercambio(cuerpo: unknown): {
+  idMembresiaA: string
+  idMembresiaB: string
+} {
+  const { idMembresiaA, idMembresiaB } = comoObjeto(cuerpo)
+  const detallePorCampo: Record<string, string> = {}
+  for (const [campo, valor] of [
+    ['idMembresiaA', idMembresiaA],
+    ['idMembresiaB', idMembresiaB],
+  ] as const) {
+    if (typeof valor !== 'string' || valor.trim() === '') detallePorCampo[campo] = 'Es obligatorio.'
+  }
+  if (Object.keys(detallePorCampo).length > 0) throw new ErrorValidacion(detallePorCampo)
+  return { idMembresiaA: idMembresiaA as string, idMembresiaB: idMembresiaB as string }
+}

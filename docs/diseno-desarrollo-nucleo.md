@@ -325,7 +325,7 @@ La categoría, y no el tipo, determina la visibilidad del evento (8.1 del genera
 | Estructura | Participante desactivado de la actividad                                                        | Actividades |
 | Estructura | Co-organizador agregado, retirado, o sus permisos modificados                                   | Actividades |
 | Estructura | Equipo creado, modificado (nombre, descripción, forma de trabajo) o eliminado                   | Equipos     |
-| Estructura | Integrante asignado a un equipo, reasignado entre equipos o retirado                            | Equipos     |
+| Estructura | Integrante asignado a un equipo, reasignado entre equipos, retirado o intercambiado con otro    | Equipos     |
 | Estructura | Reparto automático de participantes sin equipo ejecutado, con actor de tipo sistema             | Equipos     |
 | Estructura | Propuesta de equipos generada, con su semilla y lo que reemplazó                                | Equipos     |
 | Evaluación | Calificación asignada o modificada                                                              | Evaluación  |
@@ -685,6 +685,8 @@ Quien organiza puede mover a un participante de un equipo a otro mientras la act
 
 - Un equipo que queda vacío se conserva con su contenido. No se elimina solo: contiene trabajo y su desaparición automática sería una pérdida silenciosa.
 
+**Decisión de producto — intercambio de integrantes.** Con un máximo de integrantes (P-27), mover a alguien a un equipo lleno se rechaza, de modo que dos personas de equipos llenos no podrían cambiarse nunca; y ya en desarrollo tampoco pueden pasar por "sin equipo". Por eso existe el intercambio: dos personas de equipos distintos cambian de lugar en una sola operación, que deja intacto el tamaño de ambos equipos y por tanto respeta el máximo. Es gestión de equipos (asignar integrantes), vale en formación y en desarrollo, y emite un solo evento con los dos movimientos.
+
 ## **8.5 Ciclo de vida del equipo**
 
 Un equipo se crea durante la fase de formación, por quien organiza o por un participante según el modo. Puede renombrarse mientras la actividad no esté archivada. **Decisión de producto — eliminar un equipo en formación.** Durante la formación un equipo puede eliminarse aunque tenga integrantes: no tiene contenido que perder (el espacio de equipo llega con el desarrollo) y sus integrantes quedan sin equipo, que en formación es un estado válido. El evento conserva el nombre, los textos y la lista de integrantes. Desde el desarrollo ya no se elimina, porque puede tener contenido. Por la misma razón, durante la formación se puede quitar a un participante de su equipo; desde el desarrollo pertenece siempre a uno (general §4.6) y solo se mueve.
@@ -702,6 +704,7 @@ El nombre es único dentro de la actividad (4.4 del general). La descripción de
 | DELETE /api/equipos/{id}                           | Organizador                          | Elimina el equipo, solo durante la formación; sus integrantes quedan sin equipo              |
 | PUT /api/equipos/{id}/integrantes/{idMembresia}    | Organizador o el propio participante | Asigna o mueve. Cada persona solo a sí misma y solo con la función autogestionada            |
 | DELETE /api/equipos/{id}/integrantes/{idMembresia} | Organizador o la propia persona      | Saca a alguien de un equipo. Un participante, solo durante la formación; después se mueve    |
+| POST /api/actividades/{id}/equipos/intercambio     | Organizador                          | Cambia de lugar a dos personas de equipos distintos, sin pasar por "sin equipo" (8.4)        |
 
 ## **8.7 Pantallas**
 
