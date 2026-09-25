@@ -12,7 +12,6 @@ import {
   ErrorActividad,
   obtenerActividad,
   obtenerPeriodos,
-  fijarLimitesEquipo,
 } from './actividades.api'
 import { formatearFecha } from './formato'
 import { PantallaConfiguracion } from './PantallaConfiguracion'
@@ -44,7 +43,6 @@ vi.mock('./actividades.api', async () => {
     obtenerPeriodos: vi.fn(),
     definirPeriodos: vi.fn(),
     actualizarPeriodo: vi.fn(),
-    fijarLimitesEquipo: vi.fn(),
   }
 })
 
@@ -129,7 +127,7 @@ describe('PantallaConfiguracion', () => {
     expect(
       await screen.findByText('No tienes permiso para configurar esta actividad.'),
     ).toBeInTheDocument()
-    expect(screen.queryByLabelText('Formación de equipos')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Bitácora individual')).not.toBeInTheDocument()
   })
 
   it('separa la configuración en General y Proyecto colaborativo', async () => {
@@ -139,7 +137,9 @@ describe('PantallaConfiguracion', () => {
 
     const general = await screen.findByRole('region', { name: 'General' })
     const proyecto = screen.getByRole('region', { name: 'Proyecto colaborativo' })
-    expect(within(general).getByLabelText('Formación de equipos')).toBeInTheDocument()
+    // La formación de equipos se configura en Equipos, no aquí.
+    expect(within(general).queryByLabelText('Formación de equipos')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Máximo de integrantes')).not.toBeInTheDocument()
     expect(within(general).getByLabelText('Bitácora individual')).toBeInTheDocument()
     expect(within(general).queryByLabelText('Estado de Metas')).not.toBeInTheDocument()
     expect(within(proyecto).getByLabelText('Estado de Metas')).toBeInTheDocument()
@@ -161,8 +161,8 @@ describe('PantallaConfiguracion', () => {
 
     renderPantalla(ACTIVIDAD_BASE.id)
 
-    const select = (await screen.findByLabelText('Formación de equipos')) as HTMLSelectElement
-    expect(select.value).toBe('autogestionado')
+    const select = (await screen.findByLabelText('Evaluación por pares')) as HTMLSelectElement
+    expect(select.value).toBe('deshabilitada')
   })
 
   it('guarda un cambio simple y no deja ninguna etiqueta de éxito', async () => {
@@ -522,8 +522,7 @@ describe('PantallaConfiguracion', () => {
 
       renderPantalla(ACTIVIDAD_BASE.id)
 
-      expect(await screen.findByLabelText('Formación de equipos')).toBeDisabled()
-      expect(screen.getByLabelText('Bitácora individual')).toBeDisabled()
+      expect(await screen.findByLabelText('Bitácora individual')).toBeDisabled()
       expect(screen.getByLabelText('Estado de Metas')).toBeDisabled()
       expect(await screen.findByLabelText('Periodicidad de Avances')).toBeDisabled()
       expect(
@@ -565,93 +564,5 @@ describe('PantallaConfiguracion', () => {
     expect(screen.queryByText(/Las funciones ya no pueden cambiarse/)).not.toBeInTheDocument()
     expect(screen.getByLabelText('Bitácora individual')).toBeEnabled()
     expect(await screen.findByLabelText('Periodicidad de Avances')).toBeDisabled()
-  })
-
-  describe('tamaño de los equipos', () => {
-    beforeEach(() => {
-      vi.mocked(fijarLimitesEquipo).mockReset()
-    })
-
-    it('guarda el máximo al salir del campo y deja vacío el que no se toca', async () => {
-      vi.mocked(obtenerActividad).mockResolvedValueOnce(ACTIVIDAD_BASE)
-      vi.mocked(fijarLimitesEquipo).mockResolvedValue({ ...ACTIVIDAD_BASE, tamanoMaximoEquipo: 4 })
-      const usuario = userEvent.setup()
-      renderPantalla(ACTIVIDAD_BASE.id)
-
-      const maximo = await screen.findByLabelText('Máximo de integrantes')
-      expect(screen.getByLabelText('Mínimo de integrantes')).toHaveValue(null)
-      await usuario.type(maximo, '4')
-      await usuario.tab()
-
-      await waitFor(() =>
-        expect(fijarLimitesEquipo).toHaveBeenCalledWith(ACTIVIDAD_BASE.id, { maximo: 4 }),
-      )
-    })
-
-    it('muestra los valores actuales y vaciar un campo quita el límite', async () => {
-      vi.mocked(obtenerActividad).mockResolvedValueOnce({
-        ...ACTIVIDAD_BASE,
-        tamanoMinimoEquipo: 2,
-        tamanoMaximoEquipo: 5,
-      })
-      vi.mocked(fijarLimitesEquipo).mockResolvedValue(ACTIVIDAD_BASE)
-      const usuario = userEvent.setup()
-      renderPantalla(ACTIVIDAD_BASE.id)
-
-      const minimo = await screen.findByLabelText('Mínimo de integrantes')
-      expect(minimo).toHaveValue(2)
-      expect(screen.getByLabelText('Máximo de integrantes')).toHaveValue(5)
-      await usuario.clear(minimo)
-      await usuario.tab()
-
-      await waitFor(() =>
-        expect(fijarLimitesEquipo).toHaveBeenCalledWith(ACTIVIDAD_BASE.id, { minimo: null }),
-      )
-    })
-
-    it('un valor inválido se rechaza en el campo, sin llamar al servidor', async () => {
-      vi.mocked(obtenerActividad).mockResolvedValueOnce(ACTIVIDAD_BASE)
-      const usuario = userEvent.setup()
-      renderPantalla(ACTIVIDAD_BASE.id)
-
-      await usuario.type(await screen.findByLabelText('Máximo de integrantes'), '0')
-      await usuario.tab()
-
-      expect(await screen.findByText(/Escribe un entero de 1 a 100/)).toBeInTheDocument()
-      expect(fijarLimitesEquipo).not.toHaveBeenCalled()
-    })
-
-    it('si el servidor lo rechaza, muestra su mensaje y restaura el valor', async () => {
-      vi.mocked(obtenerActividad).mockResolvedValueOnce({
-        ...ACTIVIDAD_BASE,
-        tamanoMaximoEquipo: 3,
-      })
-      vi.mocked(fijarLimitesEquipo).mockRejectedValue(
-        new ErrorActividad('El mínimo no puede ser mayor que el máximo.'),
-      )
-      const usuario = userEvent.setup()
-      renderPantalla(ACTIVIDAD_BASE.id)
-
-      const minimo = await screen.findByLabelText('Mínimo de integrantes')
-      await usuario.type(minimo, '9')
-      await usuario.tab()
-
-      expect(
-        await screen.findByText('El mínimo no puede ser mayor que el máximo.'),
-      ).toBeInTheDocument()
-      await waitFor(() => expect(minimo).toHaveValue(null))
-    })
-
-    it('en desarrollo los campos quedan bloqueados: es un cambio de las fases previas', async () => {
-      vi.mocked(obtenerActividad).mockResolvedValueOnce({
-        ...ACTIVIDAD_BASE,
-        fase: 'desarrollo',
-        capacidades: ['ajustar_funciones'],
-      })
-      renderPantalla(ACTIVIDAD_BASE.id)
-
-      expect(await screen.findByLabelText('Máximo de integrantes')).toBeDisabled()
-      expect(screen.getByLabelText('Mínimo de integrantes')).toBeDisabled()
-    })
   })
 })

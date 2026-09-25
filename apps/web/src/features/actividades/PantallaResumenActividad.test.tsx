@@ -269,12 +269,12 @@ describe('PantallaResumenActividad', () => {
     expect(screen.queryByRole('button', { name: 'Cerrar inscripción' })).not.toBeInTheDocument()
   })
 
-  it('durante la inscripción todavía no ofrece el acceso a Equipos', async () => {
+  it('durante la inscripción ya ofrece el acceso a Equipos, para configurar cómo se forman', async () => {
     vi.mocked(obtenerActividad).mockResolvedValueOnce(ACTIVIDAD_BASE)
 
     renderPantalla(ACTIVIDAD_BASE.id)
 
     await screen.findByRole('button', { name: 'Cerrar inscripción' })
-    expect(screen.queryByRole('link', { name: 'Equipos' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Equipos' })).toBeInTheDocument()
   })
 })

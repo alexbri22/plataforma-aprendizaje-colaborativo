@@ -331,6 +331,9 @@ export function PantallaEquipos() {
   const ocupado = asignar.isPending || retirar.isPending || editar.isPending || eliminar.isPending
   const equipoEnEdicion = equipos.find((e) => e.id === idEquipoEnEdicion) ?? null
   const enFormacion = actividad.fase === 'formacion_equipos'
+  // Cómo se forman los equipos se configura desde aquí, antes del desarrollo.
+  const fasePrevia =
+    enFormacion || actividad.fase === 'inscripcion' || actividad.fase === 'configuracion'
 
   const alFallar = (e: unknown) => setError(mensajeDe(e))
   const unirme = (idEquipo: string) => {
@@ -359,7 +362,7 @@ export function PantallaEquipos() {
       }
     >
       <div className={styles.contenido}>
-        {actividad.fase === 'formacion_equipos' ? (
+        {fasePrevia ? (
           <div className={styles.resumen}>
             {ETIQUETA_FORMACION[actividad.configuracion?.formacion_equipos ?? ''] ? (
               <Badge variant="primary">

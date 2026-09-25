@@ -451,6 +451,40 @@ describe('PantallaEquipos', () => {
       await waitFor(() => expect(fijarLimitesEquipo).toHaveBeenCalledWith('act-1', { maximo: 4 }))
     })
 
+    it('también se puede configurar durante la inscripción, antes de que empiece la formación', async () => {
+      vi.mocked(obtenerActividad).mockResolvedValue(
+        actividad({
+          fase: 'inscripcion',
+          rol: 'organizador',
+          capacidades: ['configurar_funciones'],
+        }),
+      )
+      vi.mocked(obtenerEquipos).mockResolvedValue(lista([]))
+      renderPantalla()
+
+      expect(
+        await screen.findByText('La formación empieza al cerrar la inscripción.'),
+      ).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Configurar' })).toBeInTheDocument()
+    })
+
+    it('un valor de tamaño inválido se rechaza en el campo, sin llamar al servidor', async () => {
+      vi.mocked(obtenerEquipos).mockResolvedValue(lista([]))
+      vi.mocked(obtenerActividad).mockResolvedValue(
+        actividad({ rol: 'organizador', capacidades: ['configurar_funciones'] }),
+      )
+      const usuario = userEvent.setup()
+      renderPantalla()
+
+      await usuario.click(await screen.findByRole('button', { name: 'Configurar' }))
+      const panel = await screen.findByRole('dialog')
+      await usuario.type(within(panel).getByLabelText('Máximo de integrantes'), '0')
+      await usuario.tab()
+
+      expect(await within(panel).findByText(/Escribe un entero de 1 a 100/)).toBeInTheDocument()
+      expect(fijarLimitesEquipo).not.toHaveBeenCalled()
+    })
+
     it('sin configurar_funciones no se ofrece configurar la formación', async () => {
       vi.mocked(obtenerActividad).mockResolvedValue(
         actividad({ rol: 'organizador', capacidades: ['formar_equipos'] }),

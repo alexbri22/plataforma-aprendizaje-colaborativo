@@ -247,19 +247,9 @@ export function PantallaResumenActividad() {
               </Button>
             ) : null
           }
-          {
-            // Los equipos existen desde la formación. Se muestra el acceso
-            // desde ahí; qué puede hacer cada quien dentro lo dicen las
-            // capacidades, no esta condición.
-            actividad.fase === 'formacion_equipos' ||
-            actividad.fase === 'desarrollo' ||
-            actividad.fase === 'cierre' ||
-            actividad.fase === 'archivada' ? (
-              <Button variant="secondary" size="sm" to={`/actividades/${actividad.id}/equipos`}>
-                Equipos
-              </Button>
-            ) : null
-          }
+          <Button variant="secondary" size="sm" to={`/actividades/${actividad.id}/equipos`}>
+            Equipos
+          </Button>
           {accionesInsignias}
         </>
       }

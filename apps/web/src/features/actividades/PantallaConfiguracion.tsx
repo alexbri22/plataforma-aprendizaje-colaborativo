@@ -3,23 +3,26 @@ import {
   type EstadoEspacioEquipo,
   type FuncionSeguimiento,
 } from '@plataforma/shared'
-import { Fragment, useState, type ChangeEvent } from 'react'
+import { useState, type ChangeEvent } from 'react'
 import { useParams } from 'react-router-dom'
 import { AppShell } from '../../components/AppShell'
 import { Button, Card, IconoCargando, Select, Switch } from '../../components/ui'
 import { ErrorActividad } from './actividades.api'
 import { FUNCIONES_SIMPLES } from './configuracionFunciones'
-import { FilaTamanoEquipos } from './FilaTamanoEquipos'
 import { IndicadorCampo, MENSAJE_ERROR_GUARDADO, type EstadoCampo } from './IndicadorCampo'
 import { SeccionProyectoColaborativo } from './SeccionProyectoColaborativo'
 import { useActividad, useConfigurarFuncionMutation } from './useActividades'
 import styles from './PantallaConfiguracion.module.css'
 
-// Todas las de interruptor primero y luego las de picklist, para que el
-// patrón visual de cada fila no se interrumpa a media lista.
+// La formación de equipos no está aquí: se configura en la pantalla de Equipos,
+// donde se usa. Todas las de interruptor primero y luego las de picklist, para
+// que el patrón visual de cada fila no se interrumpa a media lista.
+const FUNCIONES_CONFIGURABLES_AQUI = FUNCIONES_SIMPLES.filter(
+  (definicion) => definicion.funcion !== 'formacion_equipos',
+)
 const FUNCIONES_ORDENADAS = [
-  ...FUNCIONES_SIMPLES.filter((definicion) => definicion.opciones.length === 2),
-  ...FUNCIONES_SIMPLES.filter((definicion) => definicion.opciones.length !== 2),
+  ...FUNCIONES_CONFIGURABLES_AQUI.filter((definicion) => definicion.opciones.length === 2),
+  ...FUNCIONES_CONFIGURABLES_AQUI.filter((definicion) => definicion.opciones.length !== 2),
 ]
 const ESPACIO_EQUIPO_POR_DEFECTO: EstadoEspacioEquipo = {
   metas: 'opcional',
@@ -104,8 +107,8 @@ export function PantallaConfiguracion() {
       ) : (
         <div className={styles.contenido}>
           <p className={styles.introduccion}>
-            Define cómo se organizan los equipos, qué seguimiento y evaluación tendrá la actividad y
-            con qué frecuencia se revisa el trabajo.
+            Qué seguimiento y evaluación tendrá la actividad y con qué frecuencia se revisa el
+            trabajo. La formación de equipos se configura en Equipos.
           </p>
 
           {!puedeConfigurar ? (
@@ -129,60 +132,50 @@ export function PantallaConfiguracion() {
                 const valorActual =
                   actividad.configuracion?.[definicion.funcion] ?? definicion.opciones[0].valor
                 return (
-                  <Fragment key={definicion.funcion}>
-                    <div className={styles.fila}>
-                      <div className={styles.filaTexto}>
-                        <h3 className={styles.tituloCampo}>{definicion.titulo}</h3>
-                        <p className={styles.descripcionCampo}>{definicion.descripcion}</p>
-                      </div>
-                      <div className={styles.filaControl}>
-                        {definicion.opciones.length === 2 ? (
-                          <Switch
+                  <div key={definicion.funcion} className={styles.fila}>
+                    <div className={styles.filaTexto}>
+                      <h3 className={styles.tituloCampo}>{definicion.titulo}</h3>
+                      <p className={styles.descripcionCampo}>{definicion.descripcion}</p>
+                    </div>
+                    <div className={styles.filaControl}>
+                      {definicion.opciones.length === 2 ? (
+                        <Switch
+                          label={definicion.titulo}
+                          ocultarEtiqueta
+                          checked={valorActual === definicion.opciones[1].valor}
+                          disabled={!puedeConfigurar}
+                          onChange={(evento: ChangeEvent<HTMLInputElement>) =>
+                            guardar(definicion.funcion, definicion.funcion, {
+                              estado: evento.target.checked
+                                ? definicion.opciones[1].valor
+                                : definicion.opciones[0].valor,
+                            })
+                          }
+                        />
+                      ) : (
+                        <div className={styles.controlAncho}>
+                          <Select
                             label={definicion.titulo}
                             ocultarEtiqueta
-                            checked={valorActual === definicion.opciones[1].valor}
+                            value={valorActual}
                             disabled={!puedeConfigurar}
-                            onChange={(evento: ChangeEvent<HTMLInputElement>) =>
+                            onChange={(evento: ChangeEvent<HTMLSelectElement>) =>
                               guardar(definicion.funcion, definicion.funcion, {
-                                estado: evento.target.checked
-                                  ? definicion.opciones[1].valor
-                                  : definicion.opciones[0].valor,
+                                estado: evento.target.value,
                               })
                             }
-                          />
-                        ) : (
-                          <div className={styles.controlAncho}>
-                            <Select
-                              label={definicion.titulo}
-                              ocultarEtiqueta
-                              value={valorActual}
-                              disabled={!puedeConfigurar}
-                              onChange={(evento: ChangeEvent<HTMLSelectElement>) =>
-                                guardar(definicion.funcion, definicion.funcion, {
-                                  estado: evento.target.value,
-                                })
-                              }
-                            >
-                              {definicion.opciones.map((opcion) => (
-                                <option key={opcion.valor} value={opcion.valor}>
-                                  {opcion.etiqueta}
-                                </option>
-                              ))}
-                            </Select>
-                          </div>
-                        )}
-                        <IndicadorCampo estado={estados[definicion.funcion]} />
-                      </div>
+                          >
+                            {definicion.opciones.map((opcion) => (
+                              <option key={opcion.valor} value={opcion.valor}>
+                                {opcion.etiqueta}
+                              </option>
+                            ))}
+                          </Select>
+                        </div>
+                      )}
+                      <IndicadorCampo estado={estados[definicion.funcion]} />
                     </div>
-                    {definicion.funcion === 'formacion_equipos' ? (
-                      <FilaTamanoEquipos
-                        idActividad={id}
-                        minimo={actividad.tamanoMinimoEquipo}
-                        maximo={actividad.tamanoMaximoEquipo}
-                        habilitado={puedeConfigurarLibre}
-                      />
-                    ) : null}
-                  </Fragment>
+                  </div>
                 )
               })}
             </Card>

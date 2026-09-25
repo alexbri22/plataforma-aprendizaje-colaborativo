@@ -4,7 +4,7 @@ import { Input } from '../../components/ui'
 import { ErrorActividad } from './actividades.api'
 import { IndicadorCampo, MENSAJE_ERROR_GUARDADO, type EstadoCampo } from './IndicadorCampo'
 import { useFijarLimitesEquipoMutation } from './useActividades'
-import styles from './FilaTamanoEquipos.module.css'
+import styles from './CamposTamanoEquipos.module.css'
 
 interface CamposTamanoEquiposProps {
   idActividad: string
@@ -88,23 +88,6 @@ export function CamposTamanoEquipos({
         ))}
       </div>
       <IndicadorCampo estado={estado} />
-    </div>
-  )
-}
-
-type FilaTamanoEquiposProps = CamposTamanoEquiposProps
-
-// La misma configuración como una fila de la pantalla de Configuración.
-export function FilaTamanoEquipos(props: FilaTamanoEquiposProps) {
-  return (
-    <div className={styles.fila}>
-      <div className={styles.texto}>
-        <h3 className={styles.titulo}>Tamaño de los equipos</h3>
-        <p className={styles.descripcion}>
-          Cuántas personas puede tener cada equipo. Vacío, sin límite.
-        </p>
-      </div>
-      <CamposTamanoEquipos {...props} />
     </div>
   )
 }
