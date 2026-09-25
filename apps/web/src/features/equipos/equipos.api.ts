@@ -133,3 +133,21 @@ export async function generarPropuesta(idActividad: string): Promise<PropuestaEq
   )
   return (await respuesta.json()) as PropuestaEquipos
 }
+
+// POST /api/actividades/{id}/equipos/intercambio: dos personas de equipos
+// distintos cambian de lugar de una vez (útil con equipos llenos y en
+// desarrollo, donde nadie puede quedar sin equipo).
+export async function intercambiarIntegrantes(
+  idActividad: string,
+  idMembresiaA: string,
+  idMembresiaB: string,
+): Promise<ListaEquipos> {
+  const respuesta = await exigirOk(
+    await pedir(`/api/actividades/${idActividadEnRuta(idActividad)}/equipos/intercambio`, 'POST', {
+      idMembresiaA,
+      idMembresiaB,
+    }),
+    'No pudimos intercambiar a estas personas. Intenta de nuevo.',
+  )
+  return (await respuesta.json()) as ListaEquipos
+}

@@ -7,6 +7,7 @@ import {
   editarEquipo,
   eliminarEquipo,
   generarPropuesta,
+  intercambiarIntegrantes,
   obtenerEquipos,
   retirarIntegrante,
   type CambiosEquipo,
@@ -96,6 +97,15 @@ export function useGenerarPropuestaMutation(idActividad: string) {
   const invalidar = useInvalidarActividad(idActividad)
   return useMutation({
     mutationFn: () => generarPropuesta(idActividad),
+    onSuccess: invalidar,
+  })
+}
+
+export function useIntercambiarIntegrantesMutation(idActividad: string) {
+  const invalidar = useInvalidarActividad(idActividad)
+  return useMutation({
+    mutationFn: ({ idMembresiaA, idMembresiaB }: { idMembresiaA: string; idMembresiaB: string }) =>
+      intercambiarIntegrantes(idActividad, idMembresiaA, idMembresiaB),
     onSuccess: invalidar,
   })
 }

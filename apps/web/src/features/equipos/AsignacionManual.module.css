@@ -46,3 +46,10 @@
   max-width: 100%;
   font-size: var(--font-size-sm);
 }
+
+.encabezado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}

@@ -22,6 +22,7 @@ import { useActividad, type Actividad } from '../actividades'
 import { AsignacionManual } from './AsignacionManual'
 import { PanelAjustesFormacion } from './PanelAjustesFormacion'
 import { PanelEditarEquipo } from './PanelEditarEquipo'
+import { PanelIntercambio } from './PanelIntercambio'
 import { ETIQUETA_FORMACION } from './etiquetas'
 import { TarjetaEquipo } from './TarjetaEquipo'
 import {
@@ -32,6 +33,7 @@ import {
   useEliminarEquipoMutation,
   useEquipos,
   useGenerarPropuestaMutation,
+  useIntercambiarIntegrantesMutation,
   useRetirarIntegranteMutation,
 } from './useEquipos'
 import styles from './PantallaEquipos.module.css'
@@ -294,6 +296,9 @@ export function PantallaEquipos() {
   const retirar = useRetirarIntegranteMutation(id)
   const editar = useEditarEquipoMutation(id)
   const eliminar = useEliminarEquipoMutation(id)
+  const intercambiar = useIntercambiarIntegrantesMutation(id)
+  const [intercambioAbierto, setIntercambioAbierto] = useState(false)
+  const [errorIntercambio, setErrorIntercambio] = useState<string | null>(null)
 
   if (actividadQuery.isPending || equiposQuery.isPending) {
     return (
@@ -440,6 +445,10 @@ export function PantallaEquipos() {
             sinEquipo={sinEquipo}
             enFormacion={enFormacion}
             ocupado={ocupado}
+            onIntercambiar={() => {
+              setErrorIntercambio(null)
+              setIntercambioAbierto(true)
+            }}
             onAsignar={(idEquipo, idMembresia) => {
               setError(null)
               asignar.mutate({ idEquipo, idMembresia }, { onError: alFallar })
@@ -499,6 +508,23 @@ export function PantallaEquipos() {
             onSuccess: () => setIdEquipoEnEdicion(null),
             onError: alFallarEnPanel,
           })
+        }}
+      />
+
+      <PanelIntercambio
+        abierto={intercambioAbierto}
+        equipos={equipos}
+        ocupado={intercambiar.isPending}
+        error={errorIntercambio}
+        onCerrar={() => setIntercambioAbierto(false)}
+        onIntercambiar={async (idMembresiaA, idMembresiaB) => {
+          setErrorIntercambio(null)
+          try {
+            await intercambiar.mutateAsync({ idMembresiaA, idMembresiaB })
+          } catch (e) {
+            setErrorIntercambio(mensajeDe(e))
+            throw e
+          }
         }}
       />
 

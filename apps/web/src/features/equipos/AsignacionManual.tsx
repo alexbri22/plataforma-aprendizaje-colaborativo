@@ -1,6 +1,6 @@
 import type { Equipo, IntegranteEquipo, ParticipanteSinEquipo } from '@plataforma/shared'
 import { useState } from 'react'
-import { Card, Paginacion, rebanar, Select } from '../../components/ui'
+import { Button, Card, Paginacion, rebanar, Select } from '../../components/ui'
 import styles from './AsignacionManual.module.css'
 
 interface AsignacionManualProps {
@@ -10,6 +10,7 @@ interface AsignacionManualProps {
   enFormacion: boolean
   ocupado: boolean
   onAsignar: (idEquipo: string, idMembresia: string) => void
+  onIntercambiar: () => void
   onRetirar: (idEquipo: string, idMembresia: string) => void
 }
 
@@ -34,6 +35,7 @@ export function AsignacionManual({
   enFormacion,
   ocupado,
   onAsignar,
+  onIntercambiar,
   onRetirar,
 }: AsignacionManualProps) {
   const filas: Fila[] = [
@@ -59,7 +61,15 @@ export function AsignacionManual({
 
   return (
     <Card className={styles.tarjeta}>
-      <h2 className={styles.titulo}>Asignación de personas</h2>
+      <div className={styles.encabezado}>
+        <h2 className={styles.titulo}>Asignación de personas</h2>
+        {/* Intercambiar necesita a dos personas en equipos distintos. */}
+        {equipos.filter((e) => e.integrantes.length > 0).length >= 2 ? (
+          <Button variant="secondary" size="sm" disabled={ocupado} onClick={onIntercambiar}>
+            Intercambiar
+          </Button>
+        ) : null}
+      </div>
       <ul className={styles.lista}>
         {visibles.map((fila) => (
           <li key={fila.idMembresia} className={styles.fila}>

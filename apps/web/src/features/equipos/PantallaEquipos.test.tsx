@@ -19,6 +19,7 @@ import {
   eliminarEquipo,
   ErrorEquipos,
   generarPropuesta,
+  intercambiarIntegrantes,
   obtenerEquipos,
   retirarIntegrante,
 } from './equipos.api'
@@ -65,6 +66,7 @@ vi.mock('./equipos.api', async () => {
     eliminarEquipo: vi.fn(),
     cerrarFormacion: vi.fn(),
     generarPropuesta: vi.fn(),
+    intercambiarIntegrantes: vi.fn(),
   }
 })
 
@@ -135,6 +137,7 @@ describe('PantallaEquipos', () => {
       eliminarEquipo,
       cerrarFormacion,
       generarPropuesta,
+      intercambiarIntegrantes,
     ]) {
       vi.mocked(mock).mockReset()
     }
@@ -782,6 +785,78 @@ describe('PantallaEquipos', () => {
     })
   })
 
+  describe('intercambiar personas', () => {
+    const capacidades: AccionActividad[] = ['formar_equipos', 'asignar_integrantes']
+    const dosEquipos = () =>
+      lista([
+        equipo('e1', 'Alfa', [persona('m1', 'Ana A'), persona('m2', 'Bea B')]),
+        equipo('e2', 'Beta', [persona('m3', 'Cai C'), persona('m4', 'Dan D')]),
+      ])
+
+    beforeEach(() => {
+      vi.mocked(obtenerActividad).mockResolvedValue(
+        actividad({
+          rol: 'organizador',
+          capacidades,
+          configuracion: { formacion_equipos: 'manual' },
+        }),
+      )
+    })
+
+    it('elige dos personas de equipos distintos y las intercambia', async () => {
+      vi.mocked(obtenerEquipos).mockResolvedValue(dosEquipos())
+      vi.mocked(intercambiarIntegrantes).mockResolvedValue(dosEquipos())
+      const usuario = userEvent.setup()
+      renderPantalla()
+
+      await usuario.click(await screen.findByRole('button', { name: 'Intercambiar' }))
+      const panel = await screen.findByRole('dialog')
+      const boton = within(panel).getByRole('button', { name: 'Intercambiar' })
+      expect(boton).toBeDisabled()
+      expect(within(panel).getByLabelText('Con')).toBeDisabled()
+
+      await usuario.selectOptions(within(panel).getByLabelText('Persona'), 'Ana A · Alfa')
+      // Solo se ofrecen personas de otros equipos.
+      const con = within(panel).getByLabelText('Con')
+      expect(within(con).queryByRole('option', { name: 'Bea B · Alfa' })).not.toBeInTheDocument()
+      await usuario.selectOptions(con, 'Cai C · Beta')
+      await usuario.click(boton)
+
+      await waitFor(() => expect(intercambiarIntegrantes).toHaveBeenCalledWith('act-1', 'm1', 'm3'))
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    })
+
+    it('si el servidor lo rechaza, muestra el error y deja el panel abierto', async () => {
+      vi.mocked(obtenerEquipos).mockResolvedValue(dosEquipos())
+      vi.mocked(intercambiarIntegrantes).mockRejectedValue(
+        new ErrorEquipos('Elige dos personas que estén en equipos distintos.'),
+      )
+      const usuario = userEvent.setup()
+      renderPantalla()
+
+      await usuario.click(await screen.findByRole('button', { name: 'Intercambiar' }))
+      const panel = await screen.findByRole('dialog')
+      await usuario.selectOptions(within(panel).getByLabelText('Persona'), 'Ana A · Alfa')
+      await usuario.selectOptions(within(panel).getByLabelText('Con'), 'Dan D · Beta')
+      await usuario.click(within(panel).getByRole('button', { name: 'Intercambiar' }))
+
+      expect(
+        await within(panel).findByText('Elige dos personas que estén en equipos distintos.'),
+      ).toBeInTheDocument()
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+    })
+
+    it('no se ofrece si solo un equipo tiene gente', async () => {
+      vi.mocked(obtenerEquipos).mockResolvedValue(
+        lista([equipo('e1', 'Alfa', [persona('m1', 'Ana A')]), equipo('e2', 'Beta')]),
+      )
+      renderPantalla()
+
+      await screen.findByText('Asignación de personas')
+      expect(screen.queryByRole('button', { name: 'Intercambiar' })).not.toBeInTheDocument()
+    })
+  })
+
   describe('listas largas de personas', () => {
     const muchas = Array.from({ length: 25 }, (_, n) => ({
       idMembresia: `m${n + 1}`,
@@ -800,9 +875,8 @@ describe('PantallaEquipos', () => {
       const usuario = userEvent.setup()
       renderPantalla()
 
-      const asignacion = (await screen.findByText('Asignación de personas')).closest(
-        'div',
-      ) as HTMLElement
+      const asignacion = (await screen.findByText('Asignación de personas')).closest('div')
+        ?.parentElement as HTMLElement
       expect(within(asignacion).getAllByRole('combobox')).toHaveLength(10)
       expect(within(asignacion).getByText('1–10 de 25')).toBeInTheDocument()
       expect(within(asignacion).getByLabelText('Equipo de Persona 10')).toBeInTheDocument()
