@@ -218,6 +218,17 @@ Soft-edged and calm is the default register — generous internal padding, comfo
 - **Status variants** (success / danger / warning): `-subtle` background with matching `-ink` text — quiet, informational, sit inline in tables and lists without competing for attention.
 - **Accent variant (recognition only):** Apothecary Amber `-subtle` background with `accent-ink` text. This is the _only_ place in the system Apothecary Amber appears at rest (a badge already earned, shown on a profile). The moment of _awarding_ a badge may use the solid Apothecary Amber fill with white text as a one-time celebratory treatment (see Do's and Don'ts) — the pill above is its permanent, quiet resting state afterward.
 
+### Avatar
+
+- **Shape:** circle (`radius-full`), `primary-subtle` background with `primary` initials in Caption weight semibold, uppercase. Two sizes: 28px (sidebar, lists) and 96px (profile header).
+- **With a photo,** the image fills the circle (`object-fit: cover`) and the initials disappear. The photo is the user's own, cropped square by the client before upload; the interface never adds a ring, badge, or status dot on top of it.
+- **Decorative:** `aria-hidden`, `alt=""`. The person's name is always written next to it, so the avatar never carries the accessible name.
+- **Only where a person is named:** next to a name in the sidebar, at the top of a profile. Not as a standalone identifier, not in a grid of faces.
+
+### Progress toward a level (features/insignias)
+
+The only progress bar in the system, and it compares a person against their own history — never against anyone else. Track in `surface` with a `border` outline; fill in Apothecary Amber (solid, because this _is_ recognition at rest, not a status). Always accompanied by the text it summarizes ("Faltan 5 pts para Plata"); the bar alone is not enough.
+
 ### Rank Insignia (features/insignias)
 
 The one place in the system where raster artwork appears. A rank insignia is **two layers**: a metallic frame PNG for the level (bronce / plata / oro / platino / diamante), and inside it an emblem PNG for the category at that level. A category not yet earned keeps the frame's dotted placeholder and a muted vector emblem. It is the visual payload of the recognition system, so it gets latitude nothing else in the interface gets — and correspondingly tight boundaries.

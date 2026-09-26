@@ -116,23 +116,14 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: 0 var(--space-3);
+  padding: var(--space-2) var(--space-3);
   min-width: 0;
+  border-radius: var(--radius-md);
+  text-decoration: none;
 }
 
-.iniciales {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-full);
-  background: var(--color-primary-subtle);
-  color: var(--color-primary);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  text-transform: uppercase;
+.cuentaInfo:hover {
+  background: var(--color-surface-hover);
 }
 
 .nombreUsuario {

@@ -31,3 +31,14 @@ export type {
   ProgresoNivel,
   RangoCategoria,
 } from './insignias.js'
+
+export {
+  ETIQUETAS_NIVEL_ESTUDIOS,
+  LADO_FOTO_PERFIL,
+  MAX_BYTES_FOTO_PERFIL,
+  NIVELES_ESTUDIOS,
+  TIPOS_FOTO_PERFIL,
+  esTipoFotoPerfil,
+} from './perfil.js'
+
+export type { NivelEstudios, TipoFotoPerfil } from './perfil.js'
