@@ -1,6 +1,7 @@
 export { PantallaMisActividades } from './PantallaMisActividades'
 export { PantallaCrearActividad } from './PantallaCrearActividad'
 export { PantallaResumenActividad } from './PantallaResumenActividad'
+export { PantallaConfiguracion } from './PantallaConfiguracion'
 export { PantallaUnirseConClave } from './PantallaUnirseConClave'
 export { useActividad, useParticipantes } from './useActividades'
 export type { Participante } from './actividades.api'

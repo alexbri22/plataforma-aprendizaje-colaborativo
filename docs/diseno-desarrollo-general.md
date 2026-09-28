@@ -493,17 +493,18 @@ Las fases avanzan siempre en el orden anterior. Cada transición se dispara por 
 
 Cada función del catálogo tiene su propio estado dentro de una actividad, fijado por quien la configura. Estos estados no son fases: no avanzan por sí solos ni siguen una secuencia.
 
-| Función                                      | Estados                                                                                                                           |
-| :------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------- |
-| Formación de equipos                         | Autogestionado por participantes / Propuesta del sistema editable por el organizador / Asignación manual por el organizador       |
-| Reporte de trabajo                           | Deshabilitado / Libre (sin fechas, formato abierto) / Fechas sugeridas, formato libre / Fechas obligatorias, campos estructurados |
-| Bitácora individual                          | Deshabilitada / Habilitada                                                                                                        |
-| Calificación                                 | Deshabilitada / Habilitada con asignación directa, sin rúbrica / Habilitada mediante rúbrica                                      |
-| Autoevaluación individual                    | Deshabilitada / Habilitada                                                                                                        |
-| Autoevaluación grupal                        | Deshabilitada / Habilitada                                                                                                        |
-| Evaluación por pares                         | Deshabilitada / Habilitada opcional / Habilitada obligatoria                                                                      |
-| Espacio de equipo (metas, avances, recursos) | Por elemento: Opcional / Obligatorio                                                                                              |
-| Insignias                                    | Deshabilitado / Habilitado, solo el organizador otorga / Habilitado, organizador y participantes otorgan entre sí                 |
+| Función                                      | Estados                                                                                                                     |
+| :------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------- |
+| Formación de equipos                         | Autogestionado por participantes / Propuesta del sistema editable por el organizador / Asignación manual por el organizador |
+| Bitácora individual                          | Deshabilitada / Habilitada                                                                                                  |
+| Calificación                                 | Deshabilitada / Habilitada con asignación directa, sin rúbrica / Habilitada mediante rúbrica                                |
+| Autoevaluación individual                    | Deshabilitada / Habilitada                                                                                                  |
+| Autoevaluación grupal                        | Deshabilitada / Habilitada                                                                                                  |
+| Evaluación por pares                         | Deshabilitada / Habilitada opcional / Habilitada obligatoria                                                                |
+| Espacio de equipo (metas, avances, recursos) | Por elemento: Deshabilitado / Opcional / Obligatorio                                                                        |
+| Insignias                                    | Deshabilitado / Habilitado, solo el organizador otorga / Habilitado, organizador y participantes otorgan entre sí           |
+
+**Decisión de producto — el reporte de trabajo es el elemento "avances".** Los avances del espacio de equipo y el reporte de trabajo periódico eran, en este diseño, dos cosas separadas; se decidió que son una sola. Por eso el catálogo tiene ocho funciones y no nueve: `reporte_trabajo` deja de ser una función, y `avances` conserva su estado propio (Deshabilitado / Opcional / Obligatorio) con la posibilidad de tener un calendario de periodos. Los tres elementos del espacio de equipo admiten ahora el estado Deshabilitado, que antes no existía. De los cuatro estados del reporte, "libre" equivale a un calendario vacío; la distinción entre "fechas sugeridas" y "fechas obligatorias" desaparece: lo obligatorio pasa a ser el estado de `avances`, y el calendario es solo eso. Detalle del calendario en 9.2 del documento de Núcleo. El documento de concepto (sección 5.1) conserva el catálogo original.
 
 **Regla de modificación.** Durante configuración, inscripción y formación de equipos, el estado de cualquier función puede cambiarse libremente. A partir del desarrollo, una función puede habilitarse pero no deshabilitarse ni cambiar de modo si ya existen datos asociados a ella: deshabilitar la bitácora cuando hay entradas escritas, o pasar la calificación de directa a rúbrica cuando hay calificaciones asignadas, dejaría datos huérfanos sin semántica definida. El sistema impide la transición y explica el motivo.
 

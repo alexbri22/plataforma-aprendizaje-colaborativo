@@ -1,0 +1,14 @@
+.indicador {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.indicadorError {
+  color: var(--color-danger-ink);
+  white-space: normal;
+}

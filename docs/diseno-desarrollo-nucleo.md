@@ -512,7 +512,7 @@ Es el módulo más denso del núcleo y el que marca el ritmo de todo lo demás: 
 
 Crear una actividad exige nombre y objetivo, y nada más. Todo lo demás, incluidas las fechas, es opcional y editable mientras la actividad no salga de la fase de configuración, conforme a 6.1 del general.
 
-**Configuración inicial de las funciones.** Al crearse la actividad se insertan las filas de configuración de las nueve funciones del catálogo de 6.2 del general. Una actividad con todas las funciones deshabilitadas es inutilizable, y obligar a configurar nueve funciones antes de empezar es una barrera desproporcionada para quien solo quiere organizar un trabajo en equipo. Se aplica por tanto una configuración por defecto: formación de equipos autogestionada, espacio de equipo con sus tres elementos como opcionales, y el resto deshabilitado. El conjunto concreto es P-25.
+**Configuración inicial de las funciones.** Al crearse la actividad se insertan las filas de configuración de las ocho funciones del catálogo de 6.2 del general. Una actividad con todas las funciones deshabilitadas es inutilizable, y obligar a configurar ocho funciones antes de empezar es una barrera desproporcionada para quien solo quiere organizar un trabajo en equipo. Se aplica por tanto una configuración por defecto: formación de equipos autogestionada, espacio de equipo con sus tres elementos como opcionales, y el resto deshabilitado. El conjunto concreto es P-25.
 
 ## **7.2 Clave de ingreso**
 
@@ -580,41 +580,41 @@ La modificación del conjunto de permisos de un co-organizador se registra en el
 
 ## **7.7 Endpoints**
 
-| Método y ruta                                            | Quién        | Qué hace                                                  |
-| :------------------------------------------------------- | :----------- | :-------------------------------------------------------- |
-| POST /api/actividades                                    | Usuario      | Crea la actividad y su membresía de organizador           |
-| GET /api/actividades                                     | Usuario      | Actividades donde tiene membresía, con su rol en cada una |
-| GET /api/actividades/{id}                                | Miembro      | Actividad, configuración y capacidades del actor (4.3)    |
-| PATCH /api/actividades/{id}                              | Organizador  | Edita objetivo, fechas y demás datos                      |
-| PUT /api/actividades/{id}/configuracion/{funcion}        | Organizador  | Fija el estado de una función                             |
-| POST /api/actividades/{id}/inscripcion                   | Organizador  | Abre la inscripción y genera la clave                     |
-| POST /api/actividades/{id}/inscripcion/cierre            | Organizador  | Cierra la inscripción y pasa a formación                  |
-| POST /api/actividades/{id}/formacion/cierre              | Organizador  | Cierra la formación, con reparto automático               |
-| POST /api/actividades/{id}/cierre                        | Organizador  | Inicia el periodo de cierre                               |
-| POST /api/actividades/{id}/archivo                       | Organizador  | Da la actividad por finalizada                            |
-| GET /api/claves/{clave}                                  | Usuario      | Vista previa mínima de la actividad (3.3)                 |
-| POST /api/claves/{clave}/union                           | Usuario      | Se une como participante                                  |
-| GET /api/actividades/{id}/participantes                  | Miembro      | Membresías con rol y estado                               |
-| POST /api/actividades/{id}/invitaciones                  | Organizador  | Emite una invitación                                      |
-| GET /api/invitaciones                                    | Usuario      | Invitaciones pendientes dirigidas al actor                |
-| POST /api/invitaciones/{id}/respuesta                    | Destinatario | Acepta o rechaza                                          |
-| PUT /api/actividades/{id}/coorganizadores/{idUsuario}    | Organizador  | Agrega o promueve, con sus permisos                       |
-| DELETE /api/actividades/{id}/coorganizadores/{idUsuario} | Organizador  | Retira el rol, con el destino elegido (7.6)               |
-| PATCH /api/actividades/{id}/participantes/{idMembresia}  | Organizador  | Desactiva o reactiva la membresía                         |
+| Método y ruta                                            | Quién        | Qué hace                                                                                                                                                                                      |
+| :------------------------------------------------------- | :----------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST /api/actividades                                    | Usuario      | Crea la actividad y su membresía de organizador                                                                                                                                               |
+| GET /api/actividades                                     | Usuario      | Actividades donde tiene membresía, con su rol en cada una                                                                                                                                     |
+| GET /api/actividades/{id}                                | Miembro      | Actividad, configuración y capacidades del actor (4.3)                                                                                                                                        |
+| PATCH /api/actividades/{id}                              | Organizador  | Edita objetivo, fechas y demás datos                                                                                                                                                          |
+| PUT /api/actividades/{id}/configuracion/{funcion}        | Organizador  | Fija el estado de una función                                                                                                                                                                 |
+| POST /api/actividades/{id}/inscripcion                   | Organizador  | Abre la inscripción y genera la clave                                                                                                                                                         |
+| POST /api/actividades/{id}/inscripcion/cierre            | Organizador  | Cierra la inscripción y pasa a formación                                                                                                                                                      |
+| POST /api/actividades/{id}/formacion/cierre              | Organizador  | Cierra la formación, con reparto automático                                                                                                                                                   |
+| POST /api/actividades/{id}/cierre                        | Organizador  | Inicia el periodo de cierre                                                                                                                                                                   |
+| POST /api/actividades/{id}/archivo                       | Organizador  | Da la actividad por finalizada                                                                                                                                                                |
+| GET /api/claves/{clave}                                  | Usuario      | Vista previa mínima de la actividad (3.3)                                                                                                                                                     |
+| POST /api/claves/{clave}/union                           | Usuario      | Se une como participante                                                                                                                                                                      |
+| GET /api/actividades/{id}/participantes                  | Miembro      | Participantes activos, con su membresía y fecha de unión. La lista completa con rol y estado (desactivados incluidos) queda para la pantalla de Participantes, cuando exista la desactivación |
+| POST /api/actividades/{id}/invitaciones                  | Organizador  | Emite una invitación                                                                                                                                                                          |
+| GET /api/invitaciones                                    | Usuario      | Invitaciones pendientes dirigidas al actor                                                                                                                                                    |
+| POST /api/invitaciones/{id}/respuesta                    | Destinatario | Acepta o rechaza                                                                                                                                                                              |
+| PUT /api/actividades/{id}/coorganizadores/{idUsuario}    | Organizador  | Agrega o promueve, con sus permisos                                                                                                                                                           |
+| DELETE /api/actividades/{id}/coorganizadores/{idUsuario} | Organizador  | Retira el rol, con el destino elegido (7.6)                                                                                                                                                   |
+| PATCH /api/actividades/{id}/participantes/{idMembresia}  | Organizador  | Desactiva o reactiva la membresía                                                                                                                                                             |
 
 La única excepción a la regla de anidamiento de 3.1 son las dos rutas de clave, que no cuelgan de la actividad porque quien las llama todavía no es miembro y no debe poder direccionarla por identificador (3.3).
 
 ## **7.8 Pantallas**
 
-| Pantalla                | Contenido                                                                                                              |
-| :---------------------- | :--------------------------------------------------------------------------------------------------------------------- |
-| Mis actividades         | Actividades del usuario agrupadas por rol y por fase, con las invitaciones pendientes arriba                           |
-| Crear actividad         | Nombre y objetivo, y el resto plegado como opcional                                                                    |
-| Resumen de la actividad | Objetivo, fase actual con la acción que la hace avanzar, y accesos a las secciones que la configuración habilita (4.3) |
-| Configuración           | Las nueve funciones con su estado. Las que ya tienen datos se muestran bloqueadas con el motivo (P-17)                 |
-| Inscripción             | Clave de ingreso para compartir, búsqueda para invitar e invitaciones emitidas con su estado                           |
-| Participantes           | Lista con rol, estado y equipo. Punto de entrada al historial por persona (5.5)                                        |
-| Unirse con clave        | Campo de clave, vista previa mínima y confirmación                                                                     |
+| Pantalla                | Contenido                                                                                                                                                                                                                                                                                                                       |
+| :---------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Mis actividades         | Actividades del usuario en dos pestañas por rol (Organizo, que incluye la co-organización, y Participo), cada una con su lista, búsqueda por nombre u objetivo y filtro por fase; cada tarjeta muestra su fase. Las invitaciones pendientes irán arriba cuando exista el módulo de invitaciones, que todavía no está construido |
+| Crear actividad         | Nombre y objetivo, y el resto plegado como opcional                                                                                                                                                                                                                                                                             |
+| Resumen de la actividad | Objetivo, fase actual con la acción que la hace avanzar, y accesos a las secciones que la configuración habilita (4.3)                                                                                                                                                                                                          |
+| Configuración           | Las ocho funciones con su estado, en dos secciones: General y Proyecto colaborativo (metas, avances y recursos, con el calendario de avances). Las que ya tienen datos se muestran bloqueadas con el motivo (P-17)                                                                                                              |
+| Inscripción             | Clave de ingreso para compartir, búsqueda para invitar e invitaciones emitidas con su estado                                                                                                                                                                                                                                    |
+| Participantes           | Lista con rol, estado y equipo. Punto de entrada al historial por persona (5.5)                                                                                                                                                                                                                                                 |
+| Unirse con clave        | Campo de clave, vista previa mínima y confirmación                                                                                                                                                                                                                                                                              |
 
 ## **7.9 Preguntas abiertas de este módulo**
 
@@ -722,7 +722,7 @@ Reúne las tres funciones con las que los participantes registran su trabajo: el
 
 ## **9.1 Espacio de equipo**
 
-Metas, avances y recursos comparten una sola relación con un atributo de tipo (4.4 del general). Cada uno de los tres tiene estado propio de configuración, opcional u obligatorio (6.2 del general).
+Metas, avances y recursos comparten una sola relación con un atributo de tipo (4.4 del general). Cada uno de los tres tiene estado propio de configuración: deshabilitado, opcional u obligatorio (6.2 del general).
 
 **Qué significa obligatorio.** No bloquea nada. Consistente con la regla de obligatoriedad sin bloqueo de 6.2 del general, un elemento obligatorio que falta se señala al equipo en su espacio y aparece como ausencia en la vista de seguimiento de quien organiza, pero no impide avanzar de fase ni cerrar la actividad. La alternativa, impedir el avance, pondría el calendario de la actividad en manos del equipo más retrasado.
 
@@ -731,6 +731,13 @@ Metas, avances y recursos comparten una sola relación con un atributo de tipo (
 **Eliminación.** El evento conserva el contenido íntegro de lo eliminado (5.1). Es el caso que el documento general cita como motivo del historial: que quien organiza pueda ver que alguien borró el trabajo del equipo y qué era lo borrado.
 
 ## **9.2 Reportes de trabajo y sus cuatro modos**
+
+**Decisión de producto vigente — los avances son el reporte, con calendario de periodos.** El reporte de trabajo dejó de ser una función con cuatro estados (6.2 del general): es el elemento `avances` del espacio de equipo, con estado Deshabilitado / Opcional / Obligatorio y, opcionalmente, un calendario. Lo que sigue de esta sección describe el diseño original de cuatro modos y queda superado en lo relativo al estado y al calendario; el formato (texto libre o instrumento estructurado) sigue por definir en el incremento de Seguimiento.
+
+- **Calendario.** Son los periodos explícitos de 4.4 del general. Quien organiza elige una periodicidad (semanal, quincenal o mensual) y el sistema genera los periodos consecutivos entre la fecha de inicio y la de término, el último recortado a esa fecha; elegir "sin calendario" los borra. Se admiten hasta 120 periodos por actividad. Es la resolución de P-28.
+- **Ajuste uno a uno.** Cada periodo puede moverse de fechas o cancelarse. Un periodo cancelado no se borra: conserva su orden, sigue visible y puede reactivarse. Dos periodos activos no pueden cubrir el mismo día; uno cancelado no cuenta para eso, y por lo mismo reactivarlo se rechaza si su rango ya lo ocupó otro.
+- **Quién y cuándo.** Regenerar el calendario descarta los ajustes, así que es configurar funciones y solo procede antes de desarrollo. Ajustar o cancelar un periodo es la acción `ajustar_periodos` (permiso `configurar_actividad` del co-organizador) y procede hasta desarrollo, porque su razón de ser es absorber lo que ocurre durante la actividad. Ambas se rechazan en cierre y archivada. Cuando existan reportes que apunten a un periodo (`id_periodo`), regenerar tendrá que rechazarse si alguno ya tiene reportes.
+- **Historial.** Generar el calendario registra `periodos_definidos` (periodicidad y número de periodos) y cada ajuste registra `periodo_modificado` con los valores anterior y nuevo, ambos de categoría estructura.
 
 La función tiene cuatro estados en 6.2 del general: deshabilitado, libre sin fechas, con fechas sugeridas y formato libre, y con fechas obligatorias y campos estructurados. Los tres modos activos se distinguen en dos dimensiones independientes, el calendario y el formato.
 
@@ -752,20 +759,21 @@ Su visibilidad es la de la propuesta por defecto de P-06: el autor, quien organi
 
 ## **9.4 Endpoints**
 
-| Método y ruta                       | Quién                    | Qué hace                                           |
-| :---------------------------------- | :----------------------- | :------------------------------------------------- |
-| GET /api/equipos/{id}/elementos     | Integrante u organizador | Espacio del equipo, filtrable por tipo             |
-| POST /api/equipos/{id}/elementos    | Integrante               | Crea una meta, un avance o un recurso              |
-| PATCH /api/elementos/{id}           | Integrante               | Edita el contenido                                 |
-| DELETE /api/elementos/{id}          | Integrante               | Elimina; el evento conserva el contenido           |
-| GET /api/equipos/{id}/reportes      | Integrante u organizador | Reportes del equipo con su periodo                 |
-| POST /api/equipos/{id}/reportes     | Integrante               | Crea el reporte del periodo                        |
-| PATCH /api/reportes/{id}            | Integrante               | Edita el reporte mientras la actividad lo admita   |
-| GET /api/actividades/{id}/periodos  | Miembro                  | Periodos de reporte configurados                   |
-| PUT /api/actividades/{id}/periodos  | Organizador              | Define o ajusta los periodos                       |
-| GET /api/actividades/{id}/bitacora  | Autor u organizador      | Entradas de bitácora, propias o de un participante |
-| POST /api/actividades/{id}/bitacora | Participante             | Crea una entrada                                   |
-| PATCH /api/bitacora/{id}            | Autor                    | Edita una entrada propia                           |
+| Método y ruta                                    | Quién                    | Qué hace                                                              |
+| :----------------------------------------------- | :----------------------- | :-------------------------------------------------------------------- |
+| GET /api/equipos/{id}/elementos                  | Integrante u organizador | Espacio del equipo, filtrable por tipo                                |
+| POST /api/equipos/{id}/elementos                 | Integrante               | Crea una meta, un avance o un recurso                                 |
+| PATCH /api/elementos/{id}                        | Integrante               | Edita el contenido                                                    |
+| DELETE /api/elementos/{id}                       | Integrante               | Elimina; el evento conserva el contenido                              |
+| GET /api/equipos/{id}/reportes                   | Integrante u organizador | Reportes del equipo con su periodo                                    |
+| POST /api/equipos/{id}/reportes                  | Integrante               | Crea el reporte del periodo                                           |
+| PATCH /api/reportes/{id}                         | Integrante               | Edita el reporte mientras la actividad lo admita                      |
+| GET /api/actividades/{id}/periodos               | Miembro                  | Periodos de reporte configurados                                      |
+| PUT /api/actividades/{id}/periodos               | Organizador              | Genera el calendario desde una periodicidad, o lo borra con `ninguna` |
+| PATCH /api/actividades/{id}/periodos/{idPeriodo} | Organizador              | Mueve las fechas de un periodo o lo cancela y reactiva                |
+| GET /api/actividades/{id}/bitacora               | Autor u organizador      | Entradas de bitácora, propias o de un participante                    |
+| POST /api/actividades/{id}/bitacora              | Participante             | Crea una entrada                                                      |
+| PATCH /api/bitacora/{id}                         | Autor                    | Edita una entrada propia                                              |
 
 ## **9.5 Pantallas**
 
@@ -783,6 +791,8 @@ Su visibilidad es la de la propuesta por defecto de P-06: el autor, quien organi
 **Afecta:** reportes de trabajo (9.2), modelo de datos.
 
 **Propuesta por defecto:** quien organiza indica una periodicidad al habilitar la función, el sistema genera los periodos entre la fecha de inicio y la de término, y después puede editarlos uno a uno.
+
+**Resolución:** adoptada tal cual, como calendario regular con ajuste individual, más la posibilidad de cancelar un periodo sin borrarlo (ver 9.2).
 
 **Qué necesitamos confirmar:** si las fechas de revisión de avances que menciona el documento de concepto se conciben como un calendario regular o como fechas sueltas que quien organiza fija según el trabajo.
 

@@ -1,24 +1,26 @@
 import { useMemo, useState } from 'react'
 import { AppShell } from '../../components/AppShell'
-import { Button, IconoCargando, Tabs } from '../../components/ui'
-import { grupoVisual, ORDEN_GRUPOS_VISUALES, TITULO_GRUPO_FASE, type GrupoFaseVisual } from './fase'
+import { Button, IconoCargando, Input, Select, Tabs } from '../../components/ui'
+import { infoFase, ORDEN_FASES } from './fase'
 import { TarjetaActividad } from './TarjetaActividad'
-import type { Actividad } from './tipos'
+import type { FaseActividad } from './tipos'
 import { useActividades } from './useActividades'
 import styles from './PantallaMisActividades.module.css'
 
 type RolTab = 'organizo' | 'participo'
+type FiltroEstado = FaseActividad | 'todas'
 
 const TABS = [
   { id: 'organizo', etiqueta: 'Organizo' },
   { id: 'participo', etiqueta: 'Participo' },
 ]
 
-function agruparPorFase(actividades: Actividad[]): Array<[GrupoFaseVisual, Actividad[]]> {
-  return ORDEN_GRUPOS_VISUALES.map((grupo): [GrupoFaseVisual, Actividad[]] => [
-    grupo,
-    actividades.filter((actividad) => grupoVisual(actividad.fase) === grupo),
-  ]).filter(([, lista]) => lista.length > 0)
+// Minúsculas y sin acentos, para que "genetica" encuentre "Debate de genética".
+function normalizarTexto(texto: string): string {
+  return texto
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLocaleLowerCase('es')
 }
 
 const ACCIONES_ACTIVIDAD = (
@@ -32,6 +34,8 @@ const ACCIONES_ACTIVIDAD = (
 
 export function PantallaMisActividades() {
   const [tab, setTab] = useState<RolTab>('organizo')
+  const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>('todas')
+  const [busqueda, setBusqueda] = useState('')
 
   const actividadesQuery = useActividades()
 
@@ -44,12 +48,6 @@ export function PantallaMisActividades() {
   const actividadesParticipo = useMemo(
     () => actividades.filter((a) => a.rol === 'participante'),
     [actividades],
-  )
-
-  const gruposOrganizo = useMemo(() => agruparPorFase(actividadesOrganizo), [actividadesOrganizo])
-  const gruposParticipo = useMemo(
-    () => agruparPorFase(actividadesParticipo),
-    [actividadesParticipo],
   )
 
   // Estados de pantalla (docs/diseno-desarrollo-nucleo.md §4.5): carga,
@@ -96,11 +94,26 @@ export function PantallaMisActividades() {
     )
   }
 
-  const grupoActivo = tab === 'organizo' ? gruposOrganizo : gruposParticipo
+  const actividadesTab = tab === 'organizo' ? actividadesOrganizo : actividadesParticipo
+  const termino = normalizarTexto(busqueda.trim())
+  const hayFiltros = termino !== '' || filtroEstado !== 'todas'
+  const actividadesVisibles = actividadesTab.filter(
+    (actividad) =>
+      (filtroEstado === 'todas' || actividad.fase === filtroEstado) &&
+      (termino === '' ||
+        normalizarTexto(`${actividad.nombre} ${actividad.objetivo}`).includes(termino)),
+  )
   const mensajeVacioTab =
-    tab === 'organizo'
-      ? 'Todavía no organizas ninguna actividad.'
-      : 'Todavía no participas en ninguna actividad.'
+    actividadesTab.length > 0
+      ? 'Ninguna actividad coincide con tu búsqueda o filtro.'
+      : tab === 'organizo'
+        ? 'Todavía no organizas ninguna actividad.'
+        : 'Todavía no participas en ninguna actividad.'
+
+  function limpiarFiltros() {
+    setBusqueda('')
+    setFiltroEstado('todas')
+  }
 
   return (
     <AppShell seccionActiva="actividades" titulo="Mis actividades" acciones={ACCIONES_ACTIVIDAD}>
@@ -119,19 +132,49 @@ export function PantallaMisActividades() {
           aria-labelledby={`tab-${tab}`}
           className={styles.panel}
         >
-          {grupoActivo.length === 0 ? (
-            <p className={styles.textoVacioTab}>{mensajeVacioTab}</p>
-          ) : (
-            grupoActivo.map(([grupo, actividadesGrupo]) => (
-              <section key={grupo} className={styles.grupoFase}>
-                <h2 className={styles.tituloSeccion}>{TITULO_GRUPO_FASE[grupo]}</h2>
-                <div className={styles.grid}>
-                  {actividadesGrupo.map((actividad) => (
-                    <TarjetaActividad key={actividad.id} actividad={actividad} />
+          {actividadesTab.length > 0 ? (
+            <div className={styles.barraFiltros}>
+              <div className={styles.busqueda}>
+                <Input
+                  label="Buscar actividades"
+                  type="search"
+                  placeholder="Nombre u objetivo"
+                  value={busqueda}
+                  onChange={(evento) => setBusqueda(evento.target.value)}
+                />
+              </div>
+              <div className={styles.filtro}>
+                <Select
+                  label="Ver actividades en"
+                  value={filtroEstado}
+                  onChange={(evento) => setFiltroEstado(evento.target.value as FiltroEstado)}
+                >
+                  <option value="todas">Todos los estados</option>
+                  {ORDEN_FASES.map((fase) => (
+                    <option key={fase} value={fase}>
+                      {infoFase(fase).etiqueta}
+                    </option>
                   ))}
-                </div>
-              </section>
-            ))
+                </Select>
+              </div>
+            </div>
+          ) : null}
+
+          {actividadesVisibles.length === 0 ? (
+            <div className={styles.sinResultados}>
+              <p className={styles.textoVacioTab}>{mensajeVacioTab}</p>
+              {actividadesTab.length > 0 && hayFiltros ? (
+                <Button variant="secondary" size="sm" onClick={limpiarFiltros}>
+                  Limpiar filtros
+                </Button>
+              ) : null}
+            </div>
+          ) : (
+            <div className={styles.grid}>
+              {actividadesVisibles.map((actividad) => (
+                <TarjetaActividad key={actividad.id} actividad={actividad} />
+              ))}
+            </div>
           )}
         </div>
       </div>

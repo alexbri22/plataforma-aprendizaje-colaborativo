@@ -5,6 +5,33 @@
 export const SHARED_PACKAGE_READY = true as const
 
 export {
+  ACCIONES_ACTIVIDAD,
+  CONFIGURACION_POR_DEFECTO,
+  ELEMENTOS_ESPACIO_EQUIPO,
+  ESTADOS_ELEMENTO_ESPACIO_EQUIPO,
+  ESTADOS_PERIODO,
+  ESTADOS_POR_FUNCION,
+  FUNCIONES_SEGUIMIENTO,
+  PERIODICIDADES,
+  PERMISOS_COORGANIZADOR,
+  PERMISOS_COORGANIZADOR_POR_DEFECTO,
+  parsearEstadoEspacioEquipo,
+  serializarEstadoEspacioEquipo,
+} from './actividades.js'
+
+export type {
+  AccionActividad,
+  ElementoEspacioEquipo,
+  EstadoElementoEspacioEquipo,
+  EstadoEspacioEquipo,
+  EstadoPeriodo,
+  FuncionSeguimiento,
+  Periodicidad,
+  PeriodoReporte,
+  PermisoCoorganizador,
+} from './actividades.js'
+
+export {
   CATALOGO_INSIGNIAS,
   CATEGORIAS_INSIGNIA,
   FRASES_SUGERIDAS,
@@ -42,3 +69,7 @@ export {
 } from './perfil.js'
 
 export type { NivelEstudios, TipoFotoPerfil } from './perfil.js'
+
+export { LIMITE_PERIODOS, generarPeriodos } from './periodos.js'
+
+export type { PeriodoGenerado } from './periodos.js'

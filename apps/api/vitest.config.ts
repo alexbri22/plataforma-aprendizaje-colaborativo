@@ -12,5 +12,6 @@ export default defineConfig({
     // incremento de "Desbloqueo" (§11.2, todavía no implementada), la
     // alternativa correcta es no paralelizar archivos.
     fileParallelism: false,
+    setupFiles: ['./vitest.setup.ts'],
   },
 })

@@ -11,8 +11,7 @@ interface InfoFase {
 // archivado es uno de los dos únicos usos sancionados de Apothecary Amber
 // fuera de insignias (ver DESIGN.md, "The One-Bottle Rule"). 'configuracion'
 // comparte variant con 'inscripcion': ambas son fases tempranas que esperan
-// una acción de quien organiza, y se agrupan en la misma sección visual
-// (ver GRUPO_VISUAL_POR_FASE).
+// una acción de quien organiza.
 const INFO_POR_FASE: Record<FaseActividad, InfoFase> = {
   configuracion: { etiqueta: 'Configuración', variant: 'primary' },
   inscripcion: { etiqueta: 'Inscripción', variant: 'primary' },
@@ -25,36 +24,10 @@ export function infoFase(fase: FaseActividad): InfoFase {
   return INFO_POR_FASE[fase]
 }
 
-// Agrupación visual del dashboard de "Mis actividades": 'configuracion' se
-// funde con 'inscripcion' para no fragmentar la lista en una sección más
-// (misma decisión ya tomada para la fase de formación de equipos, plegada
-// dentro de 'inscripcion' desde tipos.ts). La tarjeta de la actividad sigue
-// mostrando su fase exacta vía infoFase(); solo el encabezado de sección se
-// funde.
-export type GrupoFaseVisual = 'inscripcion' | 'desarrollo' | 'cierre' | 'archivada'
-
-const GRUPO_VISUAL_POR_FASE: Record<FaseActividad, GrupoFaseVisual> = {
-  configuracion: 'inscripcion',
-  inscripcion: 'inscripcion',
-  desarrollo: 'desarrollo',
-  cierre: 'cierre',
-  archivada: 'archivada',
-}
-
-export function grupoVisual(fase: FaseActividad): GrupoFaseVisual {
-  return GRUPO_VISUAL_POR_FASE[fase]
-}
-
-export const ORDEN_GRUPOS_VISUALES: GrupoFaseVisual[] = [
-  'inscripcion',
-  'desarrollo',
-  'cierre',
-  'archivada',
-]
-
-export const TITULO_GRUPO_FASE: Record<GrupoFaseVisual, string> = {
-  inscripcion: 'Inscripción',
-  desarrollo: 'En desarrollo',
-  cierre: 'Cierre',
-  archivada: 'Archivadas',
-}
+// Orden de las opciones del filtro por estado en "Mis actividades". Cada
+// opción usa la misma etiqueta que la píldora de la tarjeta (infoFase()),
+// así que lo que se filtra coincide con lo que se ve. Sin 'configuracion':
+// las actividades nacen en 'inscripcion' y ninguna pasa por ahí todavía
+// (docs/diseno-desarrollo-general.md §5.1); agregarla cuando exista la
+// transición manual.
+export const ORDEN_FASES: FaseActividad[] = ['inscripcion', 'desarrollo', 'cierre', 'archivada']

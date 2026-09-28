@@ -5,26 +5,116 @@
   background: var(--color-surface);
 }
 
+.skipLink {
+  position: absolute;
+  top: calc(var(--space-12) * -1);
+  left: var(--space-3);
+  z-index: 10;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  color: var(--color-text-on-accent);
+}
+
+.skipLink:focus-visible {
+  top: var(--space-3);
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
 .main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-10) var(--space-4);
+}
+
+.card {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  max-width: 880px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.cardAmplia {
+  max-width: 1000px;
+}
+
+.formLado {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-10) var(--space-8);
+}
+
+.marca {
+  display: block;
+  align-self: flex-start;
+  border-radius: var(--radius-sm);
+  padding: var(--space-1);
+  margin: calc(var(--space-1) * -1);
+}
+
+.marca:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.marcaImg {
+  display: block;
+  height: 32px;
+  width: auto;
+}
+
+.panel {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: var(--space-6);
-  padding: var(--space-10) var(--space-4);
+  padding: var(--space-10);
+  background: color-mix(in srgb, var(--color-primary) 92%, white);
 }
 
-.card {
+.panelVisual {
+  position: relative;
   display: flex;
-  flex-direction: column;
-  gap: var(--space-6);
-  width: 100%;
-  max-width: 440px;
+  align-items: center;
+  justify-content: center;
 }
 
-.cardAmplia {
-  max-width: 560px;
+.panelImg {
+  position: relative;
+  max-width: 260px;
+  width: 100%;
+  height: auto;
+}
+
+.panelTexto {
+  max-width: 30ch;
+  text-align: center;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  color: white;
+  margin: 0;
+  text-wrap: balance;
+}
+
+@media (max-width: 860px) {
+  .card {
+    max-width: 480px;
+  }
+
+  .panel {
+    display: none;
+  }
 }
 
 .encabezado {
@@ -54,7 +144,7 @@
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
   margin: 0;
-  text-align: center;
+  text-align: left;
 }
 
 .pie a {

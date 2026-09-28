@@ -124,6 +124,13 @@
 
   --color-focus-ring: var(--color-ink-600);
 
+  /* Fondo atenuado tras un panel o diálogo modal (DESIGN.md §4 Elevation).
+     Graphite-900 con alpha, no negro puro, igual que las sombras. */
+  --color-scrim: oklch(0.22 0.006 246 / 0.4);
+
+  /* Capas: solo lo que flota sobre la página (paneles y diálogos modales). */
+  --z-overlay: 100;
+
   /* Velo tras un modal Overlay (DESIGN.md §4): graphite a baja alpha, misma
      familia que las sombras. No es un color de superficie; solo atenúa la
      página suspendida detrás del diálogo. */

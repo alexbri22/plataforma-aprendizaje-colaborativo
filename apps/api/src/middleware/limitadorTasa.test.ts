@@ -9,6 +9,16 @@ function crearAppDePrueba(max: number) {
   return app
 }
 
+function crearAppDePruebaConClave(max: number) {
+  const app = express()
+  app.get(
+    '/ruta',
+    crearLimitador(15, max, (req) => req.headers['x-clave'] as string),
+    (_req, res) => res.status(200).json({ ok: true }),
+  )
+  return app
+}
+
 describe('crearLimitador', () => {
   it('permite peticiones dentro del límite', async () => {
     const app = crearAppDePrueba(2)
@@ -25,5 +35,15 @@ describe('crearLimitador', () => {
       codigo: 'limite_intentos',
       mensaje: 'Demasiados intentos. Intenta de nuevo más tarde.',
     })
+  })
+
+  it('lleva el conteo por la clave del keyGenerator, no por IP', async () => {
+    const app = crearAppDePruebaConClave(1)
+
+    await request(app).get('/ruta').set('x-clave', 'sesion-a').expect(200)
+    await request(app).get('/ruta').set('x-clave', 'sesion-a').expect(429)
+
+    // Misma IP (supertest), otra clave: no comparte el conteo anterior.
+    await request(app).get('/ruta').set('x-clave', 'sesion-b').expect(200)
   })
 })

@@ -28,6 +28,14 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL_TEST: postgresql://plataforma:plataforma@localhost:5432/plataforma_test
+      # En local estas viven en apps/api/.env (ver .env.example); el CI no
+      # tiene ese archivo. Sin la primera, las pruebas de integración, que
+      # registran una cuenta por caso, chocan con el límite de producción
+      # (20 por ventana) y reciben 429 sin cookie de sesión. Sin la segunda,
+      # el endpoint de la tarea programada rechaza toda petición. Ninguna es
+      # un secreto real: solo se usan bajo Vitest.
+      RATE_LIMIT_REGISTRO_MAX_TEST: '300'
+      CRON_SECRET: secreto-solo-para-ci
     steps:
       - uses: actions/checkout@v4
 
