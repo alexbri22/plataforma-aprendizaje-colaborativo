@@ -1,5 +1,5 @@
 import request, { type Response } from 'supertest'
-import { afterAll, beforeEach, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp } from '../app.js'
 import { prisma } from '../data/prisma.js'
 import { transicionarActividadesVencidas } from '../services/actividades/actividades.service.js'
@@ -41,11 +41,22 @@ async function registrarYObtenerCookie(correo = DATOS_REGISTRO.correo): Promise<
   return extraerCookie(respuesta)
 }
 
+// Reloj fijo antes de la fecha límite de inscripción de DATOS_ACTIVIDAD
+// (2026-09-15): la búsqueda por clave ya no admite uniones pasada esa fecha
+// (nucleo §7.5), así que sin esto las pruebas que unen participantes
+// dependerían del día en que se corran. Solo se falsea Date, no los
+// temporizadores; las pruebas de la tarea programada pasan su propio `ahora`.
 beforeEach(async () => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-09-12T18:00:00.000Z'))
   await prisma.membresia.deleteMany()
   await prisma.actividad.deleteMany()
   await prisma.sesion.deleteMany()
   await prisma.usuario.deleteMany()
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 afterAll(async () => {
@@ -571,17 +582,6 @@ describe('PUT /api/actividades/:id/coorganizadores/:idUsuario', () => {
     )
   })
 
-  it('promueve a un participante existente y respeta un conjunto de permisos explícito', async () => {
-    const cookieOrganizador = await registrarYObtenerCookie('ada@ejemplo.com')
-    const cookieObjetivo = await registrarYObtenerCookie('grace@ejemplo.com')
-    const { id, claveIngreso } = await crearActividad(cookieOrganizador)
-    await unirseComoParticipante(claveIngreso, cookieObjetivo)
-
-    const respuestaSesion = await request(app).get('/api/sesion').set('Cookie', cookieObjetivo)
-    const idUsuarioObjetivo = respuestaSesion.body.usuario.idUsuario
-
-    const respuesta = await request(app)
-      .put(`/api/actividades/${id}/coorganizadores/${idUsuarioObjetivo}`)
   it('trata un permiso repetido en la petición como un solo permiso', async () => {
     const cookieOrganizador = await registrarYObtenerCookie('ada@ejemplo.com')
     const cookieObjetivo = await registrarYObtenerCookie('grace@ejemplo.com')
@@ -605,6 +605,17 @@ describe('PUT /api/actividades/:id/coorganizadores/:idUsuario', () => {
     ])
   })
 
+  it('promueve a un participante existente y respeta un conjunto de permisos explícito', async () => {
+    const cookieOrganizador = await registrarYObtenerCookie('ada@ejemplo.com')
+    const cookieObjetivo = await registrarYObtenerCookie('grace@ejemplo.com')
+    const { id, claveIngreso } = await crearActividad(cookieOrganizador)
+    await unirseComoParticipante(claveIngreso, cookieObjetivo)
+
+    const respuestaSesion = await request(app).get('/api/sesion').set('Cookie', cookieObjetivo)
+    const idUsuarioObjetivo = respuestaSesion.body.usuario.idUsuario
+
+    const respuesta = await request(app)
+      .put(`/api/actividades/${id}/coorganizadores/${idUsuarioObjetivo}`)
       .set('Cookie', cookieOrganizador)
       .send({ permisos: ['gestionar_inscripcion'] })
 

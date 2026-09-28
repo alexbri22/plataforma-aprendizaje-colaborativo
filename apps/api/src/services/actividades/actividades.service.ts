@@ -321,13 +321,45 @@ function nombreCompleto(usuario: UsuarioNombre): string {
   return `${usuario.nombre} ${usuario.apellidoPaterno} ${usuario.apellidoMaterno}`
 }
 
+function tieneParticipantes(actividad: { membresias: { rol: RolMembresia }[] }): boolean {
+  return actividad.membresias.some((m) => m.rol === 'participante')
+}
+
+// La fecha límite de inscripción ya pasó (final del día en CDMX, nucleo §3.1).
+// Sola no basta para que la inscripción haya cerrado: además hace falta al
+// menos un participante (§7.4); ver inscripcionCerradaPorFecha.
+function fechaLimiteVencida(actividad: { fechaLimiteInscripcion: Date }, ahora: Date): boolean {
+  return finDeDiaEnCDMX(actividad.fechaLimiteInscripcion) <= ahora
+}
+
+// Una actividad que cumple las dos condiciones de la transición automática
+// Inscripción → Formación (fecha vencida y al menos un participante) ya no
+// admite uniones aunque la tarea programada todavía no la haya avanzado.
+// Es la salvaguarda de nucleo §7.5 ("la capa de servicios comprueba la fecha
+// antes de autorizar, de modo que un retraso de la tarea nunca autorice una
+// acción que la fase ya no permite"). Sin participantes la transición no
+// ocurre y la actividad sigue en inscripción (§7.4, caso límite), así que ahí
+// la clave sigue valiendo.
+function inscripcionCerradaPorFecha(
+  actividad: { fechaLimiteInscripcion: Date; membresias: { rol: RolMembresia }[] },
+  ahora: Date,
+): boolean {
+  return fechaLimiteVencida(actividad, ahora) && tieneParticipantes(actividad)
+}
+
 // Busca la actividad que admite unión con esta clave, en la fase de
 // inscripción únicamente: una clave cuya actividad ya avanzó de fase "deja de
 // funcionar... y no se reactiva" (docs/diseno-desarrollo-nucleo.md §7.2), así
 // que se trata igual que una clave que no corresponde a nada (§7.2, ver
-// ErrorClaveInvalida).
-async function actividadJoinablePorClave(clave: string) {
-  return prisma.actividad.findFirst({ where: { claveIngreso: clave, estado: 'inscripcion' } })
+// ErrorClaveInvalida). "Ya avanzó" incluye la que la fecha ya cerró aunque la
+// tarea programada no haya corrido todavía (inscripcionCerradaPorFecha).
+async function actividadJoinablePorClave(clave: string, ahora: Date = new Date()) {
+  const actividad = await prisma.actividad.findFirst({
+    where: { claveIngreso: clave, estado: 'inscripcion' },
+    include: { membresias: { select: { rol: true } } },
+  })
+  if (!actividad || inscripcionCerradaPorFecha(actividad, ahora)) return null
+  return actividad
 }
 
 // GET /api/claves/{clave} (docs/diseno-desarrollo-nucleo.md §7.7 y §3.3): la
@@ -496,9 +528,10 @@ export async function cerrarInscripcion(
 
 // Tarea programada de nucleo §7.5: recorre las actividades con la fecha
 // límite de inscripción vencida y las hace avanzar, con el sistema como
-// actor. Se conserva además la evaluación al leer (autorizar() vuelve a
-// comprobar la fase en cerrarInscripcion), como salvaguarda ante un
-// disparo atrasado o duplicado de esta tarea.
+// actor. Un disparo atrasado no deja abierta la inscripción: la búsqueda por
+// clave (actividadJoinablePorClave) aplica la misma condición al leer. Uno
+// duplicado no repite la transición: el UPDATE de escribirCierreInscripcion
+// solo actúa sobre una actividad aún en inscripción.
 export async function transicionarActividadesVencidas(
   ahora: Date = new Date(),
 ): Promise<{ procesadas: number; omitidasPorSinParticipantes: number }> {
@@ -507,20 +540,17 @@ export async function transicionarActividadesVencidas(
     include: { membresias: { select: { rol: true } } },
   })
 
-  const vencidas = candidatas.filter(
-    (actividad) => finDeDiaEnCDMX(actividad.fechaLimiteInscripcion) <= ahora,
-  )
+  const vencidas = candidatas.filter((actividad) => fechaLimiteVencida(actividad, ahora))
 
   let procesadas = 0
   let omitidasPorSinParticipantes = 0
 
   for (const actividad of vencidas) {
-    const numParticipantes = actividad.membresias.filter((m) => m.rol === 'participante').length
     // Caso límite de §7.4: la fecha vence sin ningún participante. La
     // transición no ocurre y la actividad permanece en inscripción; no hay
     // mecanismo de aviso al organizador en este incremento (el alcance de
     // correo de nucleo §6.1 no lo contempla).
-    if (numParticipantes === 0) {
+    if (!tieneParticipantes(actividad)) {
       omitidasPorSinParticipantes += 1
       continue
     }
