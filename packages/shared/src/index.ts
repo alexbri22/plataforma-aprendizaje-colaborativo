@@ -69,3 +69,7 @@ export {
 } from './perfil.js'
 
 export type { NivelEstudios, TipoFotoPerfil } from './perfil.js'
+
+export { LIMITE_PERIODOS, generarPeriodos } from './periodos.js'
+
+export type { PeriodoGenerado } from './periodos.js'
