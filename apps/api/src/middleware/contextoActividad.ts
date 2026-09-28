@@ -22,9 +22,11 @@ declare module 'express-serve-static-core' {
 // exigirSesion. No decide si la acción procede — eso es el servicio, con la
 // función de autorización de capacidades.ts — solo deja el contexto listo.
 //
-// Un actor sin membresía no llega al servicio: responde 404 idéntico a una
-// actividad inexistente (§3.3), para no revelar que la actividad existe a
-// quien no es miembro.
+// Un actor sin membresía activa no llega al servicio: responde 404 idéntico
+// a una actividad inexistente (§3.3), para no revelar que la actividad existe
+// a quien no es miembro. Una membresía desactivada cuenta como ausente
+// (mismo contrato que obtenerMembresiaActiva): las lecturas GET no vuelven a
+// autorizar, así que este es el único punto que las corta.
 //
 // Sin try/catch propio: Express 5 reenvía a next() el rechazo de un
 // middleware async (igual que el resto de rutas de este proyecto, ver
@@ -39,8 +41,8 @@ export async function cargarContextoActividad(req: Request, _res: Response, next
     return
   }
 
-  const membresia = await prisma.membresia.findUnique({
-    where: { idActividad_idUsuario: { idActividad, idUsuario: actor.idUsuario } },
+  const membresia = await prisma.membresia.findFirst({
+    where: { idActividad, idUsuario: actor.idUsuario, estado: 'activa' },
     include: { permisos: true },
   })
   if (!membresia) {

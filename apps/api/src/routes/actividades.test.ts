@@ -1,5 +1,5 @@
 import request, { type Response } from 'supertest'
-import { afterAll, beforeEach, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp } from '../app.js'
 import { prisma } from '../data/prisma.js'
 import { transicionarActividadesVencidas } from '../services/actividades/actividades.service.js'
@@ -41,11 +41,22 @@ async function registrarYObtenerCookie(correo = DATOS_REGISTRO.correo): Promise<
   return extraerCookie(respuesta)
 }
 
+// Reloj fijo antes de la fecha límite de inscripción de DATOS_ACTIVIDAD
+// (2026-09-15): la búsqueda por clave ya no admite uniones pasada esa fecha
+// (nucleo §7.5), así que sin esto las pruebas que unen participantes
+// dependerían del día en que se corran. Solo se falsea Date, no los
+// temporizadores; las pruebas de la tarea programada pasan su propio `ahora`.
 beforeEach(async () => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-09-12T18:00:00.000Z'))
   await prisma.membresia.deleteMany()
   await prisma.actividad.deleteMany()
   await prisma.sesion.deleteMany()
   await prisma.usuario.deleteMany()
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 afterAll(async () => {
@@ -217,6 +228,24 @@ describe('GET /api/actividades/:id', () => {
       .set('Cookie', cookieAjena)
     expect(respuestaInexistente.status).toBe(404)
     expect(respuestaInexistente.body.codigo).toBe('actividad_no_encontrada')
+  })
+
+  it('responde 404 a un participante cuya membresía fue desactivada', async () => {
+    const cookieOrganizador = await registrarYObtenerCookie('ada@ejemplo.com')
+    const cookieParticipante = await registrarYObtenerCookie('grace@ejemplo.com')
+    const { id, claveIngreso } = await crearActividad(cookieOrganizador)
+    await unirseComoParticipante(claveIngreso, cookieParticipante)
+    await prisma.membresia.updateMany({
+      where: { idActividad: id, rol: 'participante' },
+      data: { estado: 'desactivada' },
+    })
+
+    const respuesta = await request(app)
+      .get(`/api/actividades/${id}`)
+      .set('Cookie', cookieParticipante)
+
+    expect(respuesta.status).toBe(404)
+    expect(respuesta.body.codigo).toBe('actividad_no_encontrada')
   })
 
   it('un participante no obtiene ninguna capacidad de este catálogo', async () => {
@@ -457,6 +486,65 @@ describe('POST /api/actividades/:id/inscripcion/cierre', () => {
     expect(eventos).toHaveLength(1)
     expect(eventos[0]).toMatchObject({ tipoActor: 'usuario', categoria: 'estructura' })
   })
+
+  it('una unión que llega mientras se cierra la inscripción no crea una membresía tardía', async () => {
+    const cookieOrganizador = await registrarYObtenerCookie('ada@ejemplo.com')
+    const cookieParticipante = await registrarYObtenerCookie('grace@ejemplo.com')
+    const cookieTardio = await registrarYObtenerCookie('lovelace@ejemplo.com')
+    const { id, claveIngreso } = await crearActividad(cookieOrganizador)
+    await unirseComoParticipante(claveIngreso, cookieParticipante)
+
+    // Un cierre a medio commit: la actividad ya cambió de estado dentro de su
+    // transacción, pero otra conexión todavía la ve en inscripción.
+    let terminarCierre!: () => void
+    let cierreEscrito!: () => void
+    const escrito = new Promise<void>((resolver) => (cierreEscrito = resolver))
+    const cierre = prisma.$transaction(async (tx) => {
+      await tx.actividad.update({
+        where: { idActividad: id },
+        data: { estado: 'formacion_equipos' },
+      })
+      cierreEscrito()
+      await new Promise<void>((resolver) => (terminarCierre = resolver))
+    })
+    await escrito
+
+    const union = request(app)
+      .post(`/api/claves/${claveIngreso}/union`)
+      .set('Cookie', cookieTardio)
+      .then((respuesta) => respuesta)
+    await new Promise((resolver) => setTimeout(resolver, 200))
+    terminarCierre()
+    await cierre
+    const respuestaUnion = await union
+
+    expect(respuestaUnion.status).toBe(404)
+    const participantes = await prisma.membresia.count({
+      where: { idActividad: id, rol: 'participante' },
+    })
+    expect(participantes).toBe(1)
+  })
+
+  it('dos cierres simultáneos ejecutan la transición una sola vez', async () => {
+    const cookieOrganizador = await registrarYObtenerCookie('ada@ejemplo.com')
+    const cookieParticipante = await registrarYObtenerCookie('grace@ejemplo.com')
+    const { id, claveIngreso } = await crearActividad(cookieOrganizador)
+    await unirseComoParticipante(claveIngreso, cookieParticipante)
+
+    const respuestas = await Promise.all(
+      [1, 2].map(() =>
+        request(app)
+          .post(`/api/actividades/${id}/inscripcion/cierre`)
+          .set('Cookie', cookieOrganizador),
+      ),
+    )
+
+    expect(respuestas.map((r) => r.status).sort()).toEqual([200, 409])
+    const eventos = await prisma.historial.findMany({
+      where: { idActividad: id, tipoEvento: 'fase_avanzada' },
+    })
+    expect(eventos).toHaveLength(1)
+  })
 })
 
 describe('PUT /api/actividades/:id/coorganizadores/:idUsuario', () => {
@@ -492,6 +580,29 @@ describe('PUT /api/actividades/:id/coorganizadores/:idUsuario', () => {
         'consultar_historial_completo',
       ].sort(),
     )
+  })
+
+  it('trata un permiso repetido en la petición como un solo permiso', async () => {
+    const cookieOrganizador = await registrarYObtenerCookie('ada@ejemplo.com')
+    const cookieObjetivo = await registrarYObtenerCookie('grace@ejemplo.com')
+    const { id } = await crearActividad(cookieOrganizador)
+    const respuestaSesion = await request(app).get('/api/sesion').set('Cookie', cookieObjetivo)
+    const idUsuarioObjetivo = respuestaSesion.body.usuario.idUsuario
+
+    const respuesta = await request(app)
+      .put(`/api/actividades/${id}/coorganizadores/${idUsuarioObjetivo}`)
+      .set('Cookie', cookieOrganizador)
+      .send({ permisos: ['leer_bitacoras', 'leer_bitacoras', 'otorgar_insignias'] })
+
+    expect(respuesta.status).toBe(200)
+    const membresia = await prisma.membresia.findFirstOrThrow({
+      where: { idActividad: id, idUsuario: idUsuarioObjetivo },
+      include: { permisos: true },
+    })
+    expect(membresia.permisos.map((p) => p.permiso).sort()).toEqual([
+      'leer_bitacoras',
+      'otorgar_insignias',
+    ])
   })
 
   it('promueve a un participante existente y respeta un conjunto de permisos explícito', async () => {

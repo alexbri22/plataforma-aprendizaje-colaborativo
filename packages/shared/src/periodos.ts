@@ -1,4 +1,4 @@
-import type { Periodicidad } from '@plataforma/shared'
+import type { Periodicidad } from './actividades.js'
 
 // Genera el calendario de avances a partir de una periodicidad
 // (docs/diseno-desarrollo-nucleo.md §9.2, P-28): periodos consecutivos y sin
@@ -6,6 +6,11 @@ import type { Periodicidad } from '@plataforma/shared'
 // inclusivas. El último se recorta a la fecha de término. Las fechas son de
 // calendario, guardadas como medianoche UTC (ver aFechaCalendario en
 // actividades.service.ts), así que toda la aritmética es en UTC.
+//
+// Vive en shared porque lo usan el servidor, para crear los periodos, y el
+// cliente, para reconocer con qué periodicidad se generó un calendario ya
+// guardado (la API guarda periodos explícitos, no la periodicidad). Con una
+// copia en cada lado, la aritmética de meses podría discrepar en los bordes.
 
 // Tope para que una actividad con un rango absurdo (o una periodicidad
 // demasiado corta para su duración) no genere miles de filas. 120 cubre,

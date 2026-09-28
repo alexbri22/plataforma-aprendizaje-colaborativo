@@ -31,11 +31,37 @@ describe('inferirPeriodicidad', () => {
     ).toBe('quincenal')
     expect(
       inferirPeriodicidad([
+        periodo(1, '2026-09-10', '2026-10-09'),
+        periodo(2, '2026-10-10', '2026-11-09'),
+        periodo(3, '2026-11-10', '2026-11-30'),
+      ]),
+    ).toBe('mensual')
+  })
+
+  // Lo que el servidor genera al anclar en el día 31: cada inicio se calcula
+  // desde el primero (31 ene, 28 feb, 31 mar, 30 abr), no encadenando meses.
+  it('reconoce el mensual anclado en un día 31, con sus recortes', () => {
+    expect(
+      inferirPeriodicidad([
+        periodo(1, '2026-01-31', '2026-02-27'),
+        periodo(2, '2026-02-28', '2026-03-30'),
+        periodo(3, '2026-03-31', '2026-04-29'),
+        periodo(4, '2026-04-30', '2026-04-30'),
+      ]),
+    ).toBe('mensual')
+  })
+
+  it('no toma por mensual lo que solo tiene duraciones de un mes pero el servidor no generaría', () => {
+    // Cada periodo dura entre 28 y 31 días y no hay huecos, pero el tercero
+    // debería terminar el 29 de abril y dar paso a un cuarto: elegir
+    // "Mensual" produciría otro calendario, así que no es un mensual.
+    expect(
+      inferirPeriodicidad([
         periodo(1, '2026-01-31', '2026-02-27'),
         periodo(2, '2026-02-28', '2026-03-30'),
         periodo(3, '2026-03-31', '2026-04-30'),
       ]),
-    ).toBe('mensual')
+    ).toBe('personalizada')
   })
 
   it('un periodo cancelado no cambia la periodicidad: conserva sus fechas', () => {

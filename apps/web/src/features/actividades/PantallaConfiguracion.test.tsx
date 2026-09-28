@@ -246,6 +246,62 @@ describe('PantallaConfiguracion', () => {
       )
     })
 
+    // El PUT lleva los tres elementos, así que un guardado armado con datos
+    // viejos pisa el cambio anterior. obtenerActividad devuelve siempre el
+    // estado original: es la ventana en que la consulta aún no se refresca.
+    it('dos cambios seguidos se guardan en orden y el segundo incluye el primero', async () => {
+      const usuario = userEvent.setup()
+      vi.mocked(obtenerActividad).mockResolvedValue(ACTIVIDAD_BASE)
+      let terminarPrimero!: (actividad: Actividad) => void
+      vi.mocked(configurarFuncion)
+        .mockImplementationOnce(() => new Promise((resolver) => (terminarPrimero = resolver)))
+        .mockResolvedValueOnce(ACTIVIDAD_BASE)
+
+      renderPantalla(ACTIVIDAD_BASE.id)
+
+      await usuario.selectOptions(await screen.findByLabelText('Estado de Metas'), 'Obligatorio')
+      await usuario.selectOptions(screen.getByLabelText('Estado de Recursos'), 'Deshabilitado')
+
+      // El segundo espera a que el primero termine: en paralelo podrían
+      // llegar al servidor en cualquier orden.
+      await waitFor(() => expect(configurarFuncion).toHaveBeenCalledTimes(1))
+      terminarPrimero(ACTIVIDAD_BASE)
+
+      await waitFor(() => expect(configurarFuncion).toHaveBeenCalledTimes(2))
+      expect(configurarFuncion).toHaveBeenNthCalledWith(1, ACTIVIDAD_BASE.id, 'espacio_equipo', {
+        metas: 'obligatorio',
+        avances: 'opcional',
+        recursos: 'opcional',
+      })
+      expect(configurarFuncion).toHaveBeenNthCalledWith(2, ACTIVIDAD_BASE.id, 'espacio_equipo', {
+        metas: 'obligatorio',
+        avances: 'opcional',
+        recursos: 'deshabilitado',
+      })
+    })
+
+    it('un guardado que falla no se cuela en el siguiente', async () => {
+      const usuario = userEvent.setup()
+      vi.mocked(obtenerActividad).mockResolvedValue(ACTIVIDAD_BASE)
+      vi.mocked(configurarFuncion)
+        .mockRejectedValueOnce(new ErrorActividad('No pudimos guardar este cambio.'))
+        .mockResolvedValueOnce(ACTIVIDAD_BASE)
+
+      renderPantalla(ACTIVIDAD_BASE.id)
+
+      await usuario.selectOptions(await screen.findByLabelText('Estado de Metas'), 'Obligatorio')
+      await usuario.selectOptions(screen.getByLabelText('Estado de Recursos'), 'Deshabilitado')
+
+      await waitFor(() => expect(configurarFuncion).toHaveBeenCalledTimes(2))
+      // Metas sigue como estaba en el servidor: su indicador muestra el error,
+      // así que guardar Recursos no debe persistirlo a escondidas.
+      expect(configurarFuncion).toHaveBeenNthCalledWith(2, ACTIVIDAD_BASE.id, 'espacio_equipo', {
+        metas: 'opcional',
+        avances: 'opcional',
+        recursos: 'deshabilitado',
+      })
+    })
+
     it('solo Avances tiene periodicidad y calendario', async () => {
       vi.mocked(obtenerActividad).mockResolvedValueOnce(ACTIVIDAD_BASE)
 

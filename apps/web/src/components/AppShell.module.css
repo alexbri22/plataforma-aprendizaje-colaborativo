@@ -103,6 +103,107 @@
   color: var(--color-primary);
 }
 
+/* Grupo de administración: separado de la navegación de todos por una línea
+   y un encabezado de sección en versalitas, a la manera de Linear. Cromo
+   neutro (DESIGN.md: la navegación nunca compite con el color). */
+.grupo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.grupoEncabezado {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  border: none;
+  background: none;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.grupoEncabezado svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.grupoEncabezado:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.grupoEncabezado:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Con el grupo cerrado, el encabezado delata que la pantalla actual vive
+   dentro de él. */
+.grupoEncabezadoActivo[aria-expanded='false'] {
+  color: var(--color-primary);
+}
+
+.grupoEtiqueta {
+  flex: 1;
+}
+
+.grupoChevron {
+  transition: transform 0.2s ease;
+}
+
+.grupoEncabezado[aria-expanded='true'] .grupoChevron {
+  transform: rotate(90deg);
+}
+
+/* Plegado animable sin medir alturas: la fila de la rejilla pasa de 0fr a 1fr. */
+.grupoPanel {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.grupoPanelAbierto {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.grupoItems {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-height: 0;
+  overflow: hidden;
+  /* Deja sitio al anillo de foco de los ítems, que el overflow recortaría. */
+  padding: 2px;
+  margin: -2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grupoChevron,
+  .grupoPanel {
+    transition: none;
+  }
+}
+
 .cuenta {
   display: flex;
   flex-direction: column;
@@ -267,6 +368,28 @@
   .nav {
     flex-direction: row;
     flex-wrap: wrap;
+  }
+
+  .grupo {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+  }
+
+  .grupoEncabezado {
+    width: auto;
+  }
+
+  .grupoItems {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .grupoPanel:not(.grupoPanelAbierto) {
+    display: none;
   }
 
   .cuenta {

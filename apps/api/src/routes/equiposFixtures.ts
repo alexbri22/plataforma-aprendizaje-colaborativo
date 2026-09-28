@@ -10,13 +10,21 @@ import { prisma } from '../data/prisma.js'
 
 export const app = createApp()
 
+// Fechas respecto a hoy, no fijas: la búsqueda por clave deja de admitir
+// uniones pasada la fecha límite de inscripción (nucleo §7.5), así que con una
+// fecha fija estas pruebas dejarían de poder unir participantes el día que
+// esa fecha quedara atrás. Se calcula sin falsear el reloj: los eventos del
+// historial se ordenan por su instante de escritura y necesitan uno real.
+const UN_DIA_MS = 24 * 60 * 60 * 1000
+const enDias = (dias: number) => new Date(Date.now() + dias * UN_DIA_MS).toISOString().slice(0, 10)
+
 export const DATOS_ACTIVIDAD = {
   nombre: 'Proyecto de ecosistemas',
   objetivo: 'Investigar el impacto humano en un ecosistema local.',
   informacionGeneral: 'Reporte escrito más presentación de 10 minutos.',
-  fechaInicio: '2026-09-10',
-  fechaTermino: '2026-11-01',
-  fechaLimiteInscripcion: '2026-09-15',
+  fechaInicio: enDias(0),
+  fechaTermino: enDias(90),
+  fechaLimiteInscripcion: enDias(30),
   plazoCierreDias: 10,
   numeroEquiposEsperado: 3,
 }

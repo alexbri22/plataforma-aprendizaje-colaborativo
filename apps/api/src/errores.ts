@@ -8,6 +8,7 @@ export type CodigoError =
   | 'credenciales_invalidas'
   | 'cuenta_desactivada'
   | 'sin_sesion'
+  | 'no_autorizado'
   | 'clave_invalida'
   | 'ya_es_miembro'
   | 'actividad_no_encontrada'
@@ -82,6 +83,19 @@ export class ErrorSinSesion extends ErrorDominio {
   }
 }
 
+// Sesión válida pero sin el tipo de cuenta que la acción exige (plano de
+// cuenta, docs/diseno-desarrollo-general.md §7.1/§7.2). Se distingue de
+// sin_sesion porque el actor sí está autenticado: es autorización, no
+// autenticación.
+export class ErrorNoAutorizado extends ErrorDominio {
+  readonly codigo = 'no_autorizado' as const
+  readonly status = 403
+
+  constructor() {
+    super('No tienes permiso para realizar esta acción.')
+  }
+}
+
 // Misma respuesta tanto si la clave no corresponde a ninguna actividad como
 // si corresponde a una que ya salió de inscripción (docs/diseno-desarrollo-nucleo.md
 // §7.2: "deja de funcionar... y no se reactiva"). No distinguir ambos casos
@@ -150,15 +164,6 @@ export class ErrorSinParticipantes extends ErrorDominio {
   }
 }
 
-export class ErrorUsuarioNoEncontrado extends ErrorDominio {
-  readonly codigo = 'usuario_no_encontrado' as const
-  readonly status = 404
-
-  constructor() {
-    super('No encontramos a esta persona.')
-  }
-}
-
 // Toda actividad tiene exactamente una membresía con rol de organizador
 // (docs/diseno-desarrollo-general.md §4.6): promover al organizador mismo a
 // co-organizador dejaría a la actividad sin uno.
@@ -210,6 +215,15 @@ export class ErrorFueraDePlazo extends ErrorDominio {
 
   constructor(mensaje: string) {
     super(mensaje)
+  }
+}
+
+export class ErrorUsuarioNoEncontrado extends ErrorDominio {
+  readonly codigo = 'usuario_no_encontrado' as const
+  readonly status = 404
+
+  constructor() {
+    super('No encontramos a esta persona.')
   }
 }
 

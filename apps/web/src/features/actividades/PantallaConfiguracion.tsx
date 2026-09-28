@@ -40,11 +40,12 @@ export function PantallaConfiguracion() {
     clave: string,
     funcion: FuncionSeguimiento,
     cuerpo: Record<string, string>,
-  ) {
+  ): Promise<boolean> {
     setEstados((previo) => ({ ...previo, [clave]: { status: 'guardando' } }))
     try {
       await configurarMutacion.mutateAsync({ funcion, cuerpo })
       setEstados((previo) => ({ ...previo, [clave]: { status: 'guardado' } }))
+      return true
     } catch (error) {
       setEstados((previo) => ({
         ...previo,
@@ -53,6 +54,7 @@ export function PantallaConfiguracion() {
           mensaje: error instanceof ErrorActividad ? error.message : MENSAJE_ERROR_GUARDADO,
         },
       }))
+      return false
     }
   }
 

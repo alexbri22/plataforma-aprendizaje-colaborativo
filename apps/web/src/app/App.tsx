@@ -8,6 +8,7 @@ import {
   PantallaResumenActividad,
   PantallaUnirseConClave,
 } from '../features/actividades'
+import { PantallaCuentas, RutaAdmin } from '../features/administracion'
 import { PantallaInicio } from '../features/contenido-publico/PantallaInicio.tsx'
 import { PantallaIngresar, PantallaRegistrarse } from '../features/cuentas'
 import { PantallaEquipos } from '../features/equipos'
@@ -137,6 +138,16 @@ export function App() {
               <RutaProtegida>
                 <PantallaReconocimientosDeParticipante />
               </RutaProtegida>
+            }
+          />
+          {/* Solo administradores; RutaAdmin también redirige a /ingresar
+              a quien no tiene sesión. */}
+          <Route
+            path="/admin/cuentas"
+            element={
+              <RutaAdmin>
+                <PantallaCuentas />
+              </RutaAdmin>
             }
           />
           {/* Pública, sin RutaProtegida (docs/diseno-desarrollo-nucleo.md §4.1:

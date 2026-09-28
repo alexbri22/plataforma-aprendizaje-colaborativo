@@ -7,6 +7,17 @@ export { Switch, type SwitchProps } from './Switch'
 export { Card, type CardProps } from './Card'
 export { Badge, type BadgeProps } from './Badge'
 export { PanelLateral, type PanelLateralProps } from './PanelLateral'
+export {
+  Table,
+  TableRow,
+  TableHeaderCell,
+  TableCell,
+  type TableProps,
+  type TableRowProps,
+  type TableHeaderCellProps,
+  type TableCellProps,
+} from './Table'
+export { Modal, type ModalProps } from './Modal'
 export { Tabs, type TabsProps, type TabItem } from './Tabs'
 export { IconoCargando, type IconoCargandoProps } from './IconoCargando'
 export { AvisoError } from './AvisoError'

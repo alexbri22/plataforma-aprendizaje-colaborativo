@@ -1,5 +1,5 @@
 import request, { type Response } from 'supertest'
-import { afterAll, beforeEach, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp } from '../app.js'
 import { prisma } from '../data/prisma.js'
 
@@ -150,5 +150,74 @@ describe('POST /api/claves/:clave/union', () => {
 
     expect(respuesta.status).toBe(409)
     expect(respuesta.body.codigo).toBe('ya_es_miembro')
+  })
+})
+
+// nucleo §7.5: la tarea programada avanza la fase, pero un retraso suyo no
+// debe dejar entrar a nadie después de la fecha límite. Aquí la tarea nunca
+// corre; se fija solo Date para que la fecha límite de DATOS_ACTIVIDAD
+// (2026-09-15) no dependa del día en que se corran las pruebas.
+describe('clave con la fecha límite de inscripción vencida y la tarea sin correr', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  async function actividadConUnParticipanteAntesDelLimite(): Promise<string> {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-09-12T18:00:00.000Z'))
+    const cookieOrganizadora = await registrarYObtenerCookie(DATOS_ORGANIZADORA)
+    const clave = await crearActividadYObtenerClave(cookieOrganizadora)
+    const cookieParticipante = await registrarYObtenerCookie(DATOS_PARTICIPANTE)
+    const union = await request(app)
+      .post(`/api/claves/${clave}/union`)
+      .set('Cookie', cookieParticipante)
+    expect(union.status).toBe(201)
+    return clave
+  }
+
+  it('ya no admite ni muestra la actividad si tiene al menos un participante', async () => {
+    const clave = await actividadConUnParticipanteAntesDelLimite()
+    vi.setSystemTime(new Date('2026-09-17T18:00:00.000Z'))
+    const cookieTardia = await registrarYObtenerCookie({
+      ...DATOS_PARTICIPANTE,
+      nombre: 'Katherine',
+      correo: 'katherine@ejemplo.com',
+    })
+
+    const vista = await request(app).get(`/api/claves/${clave}`).set('Cookie', cookieTardia)
+    const union = await request(app).post(`/api/claves/${clave}/union`).set('Cookie', cookieTardia)
+
+    expect(vista.status).toBe(404)
+    expect(vista.body.codigo).toBe('clave_invalida')
+    expect(union.status).toBe(404)
+    expect(union.body.codigo).toBe('clave_invalida')
+    expect(await prisma.membresia.count({ where: { rol: 'participante' } })).toBe(1)
+  })
+
+  it('sigue admitiendo el mismo día del límite, hasta que termina en Ciudad de México', async () => {
+    const clave = await actividadConUnParticipanteAntesDelLimite()
+    // 2026-09-15 23:00 en CDMX (UTC-6) es 2026-09-16 05:00 UTC: aún es el día.
+    vi.setSystemTime(new Date('2026-09-16T05:00:00.000Z'))
+    const cookieTardia = await registrarYObtenerCookie({
+      ...DATOS_PARTICIPANTE,
+      nombre: 'Katherine',
+      correo: 'katherine@ejemplo.com',
+    })
+
+    const union = await request(app).post(`/api/claves/${clave}/union`).set('Cookie', cookieTardia)
+
+    expect(union.status).toBe(201)
+  })
+
+  it('sin participantes la actividad permanece en inscripción y la clave sigue funcionando (nucleo §7.4, caso límite)', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-09-17T18:00:00.000Z'))
+    const cookieOrganizadora = await registrarYObtenerCookie(DATOS_ORGANIZADORA)
+    const clave = await crearActividadYObtenerClave(cookieOrganizadora)
+    const cookieTardia = await registrarYObtenerCookie(DATOS_PARTICIPANTE)
+
+    const union = await request(app).post(`/api/claves/${clave}/union`).set('Cookie', cookieTardia)
+
+    expect(union.status).toBe(201)
   })
 })

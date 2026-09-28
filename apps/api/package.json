@@ -11,6 +11,7 @@
     "start": "node dist/index.js",
     "migrate:deploy": "prisma migrate deploy",
     "seed:dev": "tsx scripts/sembrar-desarrollo.ts",
+    "promover-admin": "node scripts/promover-admin.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "pretest": "node scripts/migrar-bd-pruebas.mjs",
