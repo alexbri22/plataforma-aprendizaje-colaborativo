@@ -211,38 +211,32 @@ describe('PantallaResumenActividad', () => {
       fechaUnion: '2026-08-02T12:00:00.000Z',
     }))
 
-    it('muestra solo los primeros 8 y permite ver todos', async () => {
+    it('pagina de 10 en 10 y el título cuenta a todos', async () => {
       vi.mocked(obtenerActividad).mockResolvedValueOnce(ACTIVIDAD_BASE)
       vi.mocked(obtenerParticipantes).mockResolvedValueOnce(muchos)
 
       renderPantalla(ACTIVIDAD_BASE.id)
 
-      expect(await screen.findByText('Persona 8')).toBeInTheDocument()
-      expect(screen.queryByText('Persona 9')).not.toBeInTheDocument()
-      // El total del título sigue contando a todos, no solo a los visibles.
+      expect(await screen.findByText('Persona 10')).toBeInTheDocument()
+      expect(screen.queryByText('Persona 11')).not.toBeInTheDocument()
       expect(screen.getByText('Participantes (12)')).toBeInTheDocument()
+      expect(screen.getByText('1–10 de 12')).toBeInTheDocument()
 
-      await userEvent.click(screen.getByRole('button', { name: 'Ver todos (12)' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
 
       expect(screen.getByText('Persona 12')).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Ver menos' })).toHaveAttribute(
-        'aria-expanded',
-        'true',
-      )
-
-      await userEvent.click(screen.getByRole('button', { name: 'Ver menos' }))
-
-      expect(screen.queryByText('Persona 9')).not.toBeInTheDocument()
+      expect(screen.queryByText('Persona 1')).not.toBeInTheDocument()
+      expect(screen.getByText('11–12 de 12')).toBeInTheDocument()
     })
 
-    it('no muestra el botón cuando caben todos', async () => {
+    it('no muestra la paginación cuando caben todos', async () => {
       vi.mocked(obtenerActividad).mockResolvedValueOnce(ACTIVIDAD_BASE)
-      vi.mocked(obtenerParticipantes).mockResolvedValueOnce(muchos.slice(0, 8))
+      vi.mocked(obtenerParticipantes).mockResolvedValueOnce(muchos.slice(0, 10))
 
       renderPantalla(ACTIVIDAD_BASE.id)
 
-      expect(await screen.findByText('Persona 8')).toBeInTheDocument()
-      expect(screen.queryByRole('button', { name: /Ver todos/ })).not.toBeInTheDocument()
+      expect(await screen.findByText('Persona 10')).toBeInTheDocument()
+      expect(screen.queryByRole('navigation', { name: 'Participantes' })).not.toBeInTheDocument()
     })
   })
 
@@ -256,5 +250,43 @@ describe('PantallaResumenActividad', () => {
     renderPantalla(ACTIVIDAD_BASE.id)
 
     expect(await screen.findByRole('link', { name: 'Configurar' })).toBeInTheDocument()
+  })
+
+  it('en formación de equipos no repite el acceso a Equipos en una tarjeta: ya está en el encabezado', async () => {
+    vi.mocked(obtenerActividad).mockResolvedValueOnce({
+      ...ACTIVIDAD_BASE,
+      fase: 'formacion_equipos',
+      capacidades: [],
+    })
+
+    renderPantalla(ACTIVIDAD_BASE.id)
+
+    await screen.findByText('Formación de equipos')
+    expect(screen.getByRole('link', { name: 'Equipos' })).toHaveAttribute(
+      'href',
+      `/actividades/${ACTIVIDAD_BASE.id}/equipos`,
+    )
+    expect(screen.queryByRole('link', { name: 'Ir a los equipos' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Formación de equipos' })).not.toBeInTheDocument()
+  })
+
+  it('tiene una flecha para volver a Mis actividades', async () => {
+    vi.mocked(obtenerActividad).mockResolvedValueOnce(ACTIVIDAD_BASE)
+
+    renderPantalla(ACTIVIDAD_BASE.id)
+
+    expect(await screen.findByRole('link', { name: 'Volver' })).toHaveAttribute(
+      'href',
+      '/actividades',
+    )
+  })
+
+  it('durante la inscripción ya ofrece el acceso a Equipos, para configurar cómo se forman', async () => {
+    vi.mocked(obtenerActividad).mockResolvedValueOnce(ACTIVIDAD_BASE)
+
+    renderPantalla(ACTIVIDAD_BASE.id)
+
+    await screen.findByRole('button', { name: 'Cerrar inscripción' })
+    expect(screen.getByRole('link', { name: 'Equipos' })).toBeInTheDocument()
   })
 })

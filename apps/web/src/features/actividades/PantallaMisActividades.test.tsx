@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -66,13 +66,14 @@ describe('PantallaMisActividades', () => {
     expect(screen.queryByRole('heading', { level: 2 })).not.toBeInTheDocument()
   })
 
-  it('rotula la píldora de cada tarjeta como el estado de la actividad', async () => {
+  it('pone el estado de la actividad sobre el título, a todo el ancho', async () => {
     renderPantalla()
 
-    await screen.findByText('Proyecto de ecosistemas')
-
-    // Una etiqueta "Estado" por tarjeta (4 que organizo o co-organizo).
-    expect(screen.getAllByText('Estado')).toHaveLength(4)
+    const titulo = await screen.findByRole('heading', { name: 'Proyecto de ecosistemas' })
+    const tarjeta = titulo.closest('a') as HTMLElement
+    expect(within(tarjeta).getByText('Inscripción')).toBeInTheDocument()
+    // Ya no hay una etiqueta "Estado" suelta: la propia píldora lo dice.
+    expect(screen.queryByText('Estado')).not.toBeInTheDocument()
   })
 
   it('filtra por estado y permite volver a ver todas', async () => {

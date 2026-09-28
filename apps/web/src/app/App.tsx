@@ -11,6 +11,7 @@ import {
 import { PantallaCuentas, RutaAdmin } from '../features/administracion'
 import { PantallaInicio } from '../features/contenido-publico/PantallaInicio.tsx'
 import { PantallaIngresar, PantallaRegistrarse } from '../features/cuentas'
+import { PantallaEquipos } from '../features/equipos'
 import {
   PantallaMisReconocimientos,
   PantallaMuestraInsignias,
@@ -59,6 +60,14 @@ export function App() {
             element={
               <RutaProtegida>
                 <PantallaConfiguracion />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="/actividades/:id/equipos"
+            element={
+              <RutaProtegida>
+                <PantallaEquipos />
               </RutaProtegida>
             }
           />

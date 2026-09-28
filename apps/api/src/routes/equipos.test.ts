@@ -1,0 +1,826 @@
+import request from 'supertest'
+import { afterAll, beforeEach, describe, expect, it } from 'vitest'
+import { prisma } from '../data/prisma.js'
+import {
+  app,
+  registrar,
+  idMembresiaDe,
+  actividadConParticipantes,
+  actividadEnFormacion,
+  fijarFormacion,
+  crear,
+  asignar,
+  listar,
+  cerrarFormacion,
+  estadoDe,
+  eventos,
+  idEquipoCreado,
+  limpiarBD,
+} from './equiposFixtures.js'
+
+// Integración contra Postgres real (docs/diseno-desarrollo-nucleo.md §12.2).
+// Cubre los endpoints de §8.6, sus reglas de integridad (general §4.6), la
+// transición Formación → Desarrollo de §7.4 y el evento del historial de cada
+// escritura. Las fases posteriores a desarrollo se fijan escribiendo el estado
+// directamente: aún no existen las transiciones que llevan a ellas.
+
+beforeEach(limpiarBD)
+
+afterAll(async () => {
+  await prisma.$disconnect()
+})
+
+describe('GET /api/actividades/:id/equipos', () => {
+  it('lista los equipos y a quienes quedan sin equipo; todo miembro lo ve', async () => {
+    const e = await actividadEnFormacion(3)
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    await asignar(idA, e.participantes[0].idMembresia, e.organizador.cookie)
+
+    for (const persona of [e.organizador, e.participantes[2]]) {
+      const respuesta = await listar(e.id, persona.cookie)
+      expect(respuesta.status).toBe(200)
+      expect(respuesta.body.idMiMembresia).toBe(persona.idMembresia)
+      expect(respuesta.body.equipos).toHaveLength(1)
+      expect(respuesta.body.equipos[0]).toMatchObject({
+        nombre: 'Alfa',
+        descripcionActividad: null,
+        formaDeTrabajo: null,
+        integrantes: [{ idMembresia: e.participantes[0].idMembresia, rol: 'participante' }],
+      })
+      expect(respuesta.body.sinEquipo.map((p: { nombre: string }) => p.nombre)).toEqual([
+        'Pablo2 Prueba',
+        'Pablo3 Prueba',
+      ])
+    }
+  })
+
+  it('responde 404 a quien no es miembro y 401 sin sesión', async () => {
+    const e = await actividadEnFormacion(1)
+    const ajena = await registrar('Ajena')
+    expect((await listar(e.id, ajena.cookie)).status).toBe(404)
+    expect((await request(app).get(`/api/actividades/${e.id}/equipos`)).status).toBe(401)
+  })
+
+  it('lista los equipos en orden de creación', async () => {
+    const e = await actividadEnFormacion(1)
+    for (const nombre of ['Zeta', 'Beta', 'Alfa']) {
+      await idEquipoCreado(e.id, e.organizador.cookie, nombre)
+    }
+    const respuesta = await listar(e.id, e.organizador.cookie)
+    expect(respuesta.body.equipos.map((x: { nombre: string }) => x.nombre)).toEqual([
+      'Zeta',
+      'Beta',
+      'Alfa',
+    ])
+  })
+})
+
+describe('POST /api/actividades/:id/equipos', () => {
+  it('quien organiza crea el equipo sin pertenecer a él, y se registra el evento', async () => {
+    const e = await actividadEnFormacion(2)
+    const respuesta = await crear(e.id, e.organizador.cookie, '  Alfa  ')
+
+    expect(respuesta.status).toBe(201)
+    expect(respuesta.body.equipo).toMatchObject({ nombre: 'Alfa', integrantes: [] })
+    expect(respuesta.headers.location).toBe(`/api/equipos/${respuesta.body.equipo.id}`)
+
+    const creados = await eventos(e.id, 'equipo_creado')
+    expect(creados).toHaveLength(1)
+    expect(creados[0]).toMatchObject({
+      tipoActor: 'usuario',
+      idUsuarioActor: e.organizador.idUsuario,
+      categoria: 'estructura',
+      tipoEntidad: 'equipo',
+      idEntidad: respuesta.body.equipo.id,
+      datos: { nombre: 'Alfa' },
+    })
+    expect(await eventos(e.id, 'integrante_asignado')).toHaveLength(0)
+  })
+
+  it('un participante con la formación autogestionada crea un equipo y queda dentro', async () => {
+    const e = await actividadEnFormacion(2)
+    const respuesta = await crear(e.id, e.participantes[0].cookie, 'Alfa')
+
+    expect(respuesta.status).toBe(201)
+    expect(respuesta.body.equipo.integrantes).toEqual([
+      { idMembresia: e.participantes[0].idMembresia, nombre: 'Pablo1 Prueba', rol: 'participante' },
+    ])
+    expect(await eventos(e.id, 'equipo_creado')).toHaveLength(1)
+    expect(await eventos(e.id, 'integrante_asignado')).toHaveLength(1)
+  })
+
+  it('un participante que ya estaba en un equipo se mueve al nuevo', async () => {
+    const e = await actividadEnFormacion(2)
+    const idA = await idEquipoCreado(e.id, e.participantes[0].cookie, 'Alfa')
+    await crear(e.id, e.participantes[0].cookie, 'Beta')
+
+    const lista = (await listar(e.id, e.organizador.cookie)).body
+    expect(lista.equipos.find((x: { id: string }) => x.id === idA).integrantes).toEqual([])
+    expect(lista.equipos[1].integrantes).toHaveLength(1)
+  })
+
+  it('un participante no puede crear equipos si la función es manual', async () => {
+    for (const estado of ['manual']) {
+      const e = await actividadEnFormacion(2)
+      await fijarFormacion(e, estado)
+      const respuesta = await crear(e.id, e.participantes[0].cookie, 'Alfa')
+      expect(respuesta.status, estado).toBe(409)
+      expect(respuesta.body.codigo).toBe('fase_no_permite_accion')
+      await prisma.actividad.deleteMany()
+    }
+  })
+
+  it('no permite crear equipos fuera de la formación', async () => {
+    const e = await actividadConParticipantes(1)
+    expect((await crear(e.id, e.organizador.cookie, 'Alfa')).status).toBe(409)
+    await prisma.actividad.update({ where: { idActividad: e.id }, data: { estado: 'desarrollo' } })
+    expect((await crear(e.id, e.organizador.cookie, 'Alfa')).status).toBe(409)
+  })
+
+  it('rechaza un nombre repetido sin distinguir mayúsculas, y no deja evento de más', async () => {
+    const e = await actividadEnFormacion(1)
+    await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    const respuesta = await crear(e.id, e.organizador.cookie, 'ALFA')
+
+    expect(respuesta.status).toBe(409)
+    expect(respuesta.body.codigo).toBe('nombre_equipo_duplicado')
+    expect(await eventos(e.id, 'equipo_creado')).toHaveLength(1)
+    expect(await prisma.equipo.count({ where: { idActividad: e.id } })).toBe(1)
+  })
+
+  it('el mismo nombre puede existir en otra actividad', async () => {
+    const a = await actividadEnFormacion(1)
+    const b = await actividadEnFormacion(1)
+    await idEquipoCreado(a.id, a.organizador.cookie, 'Alfa')
+    expect((await crear(b.id, b.organizador.cookie, 'Alfa')).status).toBe(201)
+  })
+
+  it('valida el nombre con 400 y detalle por campo', async () => {
+    const e = await actividadEnFormacion(1)
+    const respuesta = await crear(e.id, e.organizador.cookie, '   ')
+    expect(respuesta.status).toBe(400)
+    expect(respuesta.body.detallePorCampo.nombre).toBeDefined()
+  })
+
+  it('un co-organizador con el permiso gestionar_equipos crea; sin él, 403', async () => {
+    const e = await actividadEnFormacion(1)
+    await fijarFormacion(e, 'manual')
+    const con = await registrar('Con')
+    const sin = await registrar('Sin')
+    for (const [persona, permisos] of [
+      [con, ['gestionar_equipos']],
+      [sin, ['configurar_actividad']],
+    ] as const) {
+      const r = await request(app)
+        .put(`/api/actividades/${e.id}/coorganizadores/${persona.idUsuario}`)
+        .set('Cookie', e.organizador.cookie)
+        .send({ permisos })
+      expect(r.status).toBe(200)
+    }
+
+    expect((await crear(e.id, con.cookie, 'Alfa')).status).toBe(201)
+    const rechazo = await crear(e.id, sin.cookie, 'Beta')
+    expect(rechazo.status).toBe(403)
+    expect(rechazo.body.codigo).toBe('accion_no_permitida')
+  })
+
+  it('responde 404 a quien no es miembro', async () => {
+    const e = await actividadEnFormacion(1)
+    const ajena = await registrar('Ajena')
+    expect((await crear(e.id, ajena.cookie, 'Alfa')).status).toBe(404)
+  })
+})
+
+describe('PUT /api/equipos/:id/integrantes/:idMembresia', () => {
+  it('quien organiza asigna y mueve, y el evento guarda el equipo anterior', async () => {
+    const e = await actividadEnFormacion(2)
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    const idB = await idEquipoCreado(e.id, e.organizador.cookie, 'Beta')
+
+    const primera = await asignar(idA, e.participantes[0].idMembresia, e.organizador.cookie)
+    expect(primera.status).toBe(200)
+    const movida = await asignar(idB, e.participantes[0].idMembresia, e.organizador.cookie)
+    expect(movida.body.equipo.integrantes).toHaveLength(1)
+
+    const lista = (await listar(e.id, e.organizador.cookie)).body
+    expect(lista.equipos[0].integrantes).toEqual([])
+
+    const asignados = await eventos(e.id, 'integrante_asignado')
+    expect(asignados).toHaveLength(2)
+    expect(asignados[0].datos).toMatchObject({
+      equipoAnterior: null,
+      equipoNuevo: { id: idA, nombre: 'Alfa' },
+    })
+    expect(asignados[1].datos).toMatchObject({
+      equipoAnterior: { id: idA, nombre: 'Alfa' },
+      equipoNuevo: { id: idB, nombre: 'Beta' },
+    })
+  })
+
+  it('asignar a quien ya está en ese equipo no escribe nada ni registra evento', async () => {
+    const e = await actividadEnFormacion(2)
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    await asignar(idA, e.participantes[0].idMembresia, e.organizador.cookie)
+    const repetida = await asignar(idA, e.participantes[0].idMembresia, e.organizador.cookie)
+    expect(repetida.status).toBe(200)
+    expect(await eventos(e.id, 'integrante_asignado')).toHaveLength(1)
+  })
+
+  it('un participante se mueve a sí mismo con la formación autogestionada', async () => {
+    const e = await actividadEnFormacion(2)
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    const respuesta = await asignar(idA, e.participantes[0].idMembresia, e.participantes[0].cookie)
+    expect(respuesta.status).toBe(200)
+    expect(respuesta.body.equipo.integrantes).toHaveLength(1)
+  })
+
+  it('un participante no puede asignar a otra persona: 403', async () => {
+    const e = await actividadEnFormacion(2)
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    const respuesta = await asignar(idA, e.participantes[1].idMembresia, e.participantes[0].cookie)
+    expect(respuesta.status).toBe(403)
+    expect(await eventos(e.id, 'integrante_asignado')).toHaveLength(0)
+  })
+
+  it('un participante no puede elegir equipo si la función es manual: 409', async () => {
+    const e = await actividadEnFormacion(2)
+    await fijarFormacion(e, 'manual')
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    const respuesta = await asignar(idA, e.participantes[0].idMembresia, e.participantes[0].cookie)
+    expect(respuesta.status).toBe(409)
+  })
+
+  it('la asignación es de quien gestiona equipos también en desarrollo, y no en cierre', async () => {
+    const e = await actividadEnFormacion(2)
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    await prisma.actividad.update({ where: { idActividad: e.id }, data: { estado: 'desarrollo' } })
+    expect((await asignar(idA, e.participantes[0].idMembresia, e.organizador.cookie)).status).toBe(
+      200,
+    )
+    // En desarrollo el participante ya no elige: solo la gestión mueve.
+    expect(
+      (await asignar(idA, e.participantes[1].idMembresia, e.participantes[1].cookie)).status,
+    ).toBe(409)
+
+    await prisma.actividad.update({ where: { idActividad: e.id }, data: { estado: 'cierre' } })
+    expect((await asignar(idA, e.participantes[1].idMembresia, e.organizador.cookie)).status).toBe(
+      409,
+    )
+  })
+
+  it('rechaza una membresía de otra actividad, una inexistente y una desactivada: 422', async () => {
+    const e = await actividadEnFormacion(2)
+    const otra = await actividadEnFormacion(1)
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+
+    for (const idMembresia of [otra.participantes[0].idMembresia, crypto.randomUUID()]) {
+      const r = await asignar(idA, idMembresia, e.organizador.cookie)
+      expect(r.status).toBe(422)
+      expect(r.body.codigo).toBe('miembro_no_asignable')
+    }
+
+    await prisma.membresia.update({
+      where: { idMembresia: e.participantes[0].idMembresia },
+      data: { estado: 'desactivada' },
+    })
+    const desactivada = await asignar(idA, e.participantes[0].idMembresia, e.organizador.cookie)
+    expect(desactivada.status).toBe(422)
+    expect(await prisma.integranteEquipo.count()).toBe(0)
+  })
+
+  it('quien organiza puede integrar un equipo; no está obligado ni bloquea la formación', async () => {
+    const e = await actividadEnFormacion(1)
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    const respuesta = await asignar(idA, e.organizador.idMembresia, e.organizador.cookie)
+    expect(respuesta.body.equipo.integrantes).toEqual([
+      { idMembresia: e.organizador.idMembresia, nombre: 'Olga Prueba', rol: 'organizador' },
+    ])
+    // El organizador no cuenta como "sin equipo" y los participantes siguen pendientes.
+    const lista = (await listar(e.id, e.organizador.cookie)).body
+    expect(lista.sinEquipo).toHaveLength(1)
+    expect(await estadoDe(e.id)).toBe('formacion_equipos')
+  })
+
+  it('responde 404 a quien no es miembro de la actividad del equipo, igual que a un equipo inexistente', async () => {
+    const e = await actividadEnFormacion(1)
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    const ajena = await registrar('Ajena')
+
+    const ajeno = await asignar(idA, e.participantes[0].idMembresia, ajena.cookie)
+    const inexistente = await asignar(
+      crypto.randomUUID(),
+      e.participantes[0].idMembresia,
+      ajena.cookie,
+    )
+    expect(ajeno.status).toBe(404)
+    expect(inexistente.status).toBe(404)
+    expect(ajeno.body).toEqual(inexistente.body)
+  })
+})
+
+describe('DELETE /api/equipos/:id/integrantes/:idMembresia', () => {
+  it('quien organiza sale de un equipo, y es idempotente', async () => {
+    const e = await actividadEnFormacion(2)
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    await asignar(idA, e.organizador.idMembresia, e.organizador.cookie)
+
+    const salir = () =>
+      request(app)
+        .delete(`/api/equipos/${idA}/integrantes/${e.organizador.idMembresia}`)
+        .set('Cookie', e.organizador.cookie)
+    const respuesta = await salir()
+    expect(respuesta.status).toBe(200)
+    expect(respuesta.body.equipo.integrantes).toHaveLength(0)
+    const retirados = await eventos(e.id, 'integrante_retirado')
+    expect(retirados).toHaveLength(1)
+    expect(retirados[0].datos).toMatchObject({ nombre: 'Olga Prueba' })
+
+    await salir()
+    expect(await eventos(e.id, 'integrante_retirado')).toHaveLength(1)
+  })
+
+  it('durante la formación también se puede quitar a un participante: queda sin equipo', async () => {
+    const e = await actividadEnFormacion(3)
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    await asignar(idA, e.participantes[0].idMembresia, e.organizador.cookie)
+
+    const respuesta = await request(app)
+      .delete(`/api/equipos/${idA}/integrantes/${e.participantes[0].idMembresia}`)
+      .set('Cookie', e.organizador.cookie)
+    expect(respuesta.status).toBe(200)
+    expect((await listar(e.id, e.organizador.cookie)).body.sinEquipo).toHaveLength(3)
+  })
+
+  it('en desarrollo un participante ya no se retira, solo se mueve: 422', async () => {
+    const e = await actividadEnFormacion(2)
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    await asignar(idA, e.participantes[0].idMembresia, e.organizador.cookie)
+    await prisma.actividad.update({ where: { idActividad: e.id }, data: { estado: 'desarrollo' } })
+
+    const respuesta = await request(app)
+      .delete(`/api/equipos/${idA}/integrantes/${e.participantes[0].idMembresia}`)
+      .set('Cookie', e.organizador.cookie)
+    expect(respuesta.status).toBe(422)
+    expect(respuesta.body.codigo).toBe('participante_requiere_equipo')
+  })
+
+  it('un participante no puede quitar a otros: 403', async () => {
+    const e = await actividadEnFormacion(3)
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    await asignar(idA, e.participantes[1].idMembresia, e.organizador.cookie)
+    const respuesta = await request(app)
+      .delete(`/api/equipos/${idA}/integrantes/${e.participantes[1].idMembresia}`)
+      .set('Cookie', e.participantes[0].cookie)
+    expect(respuesta.status).toBe(403)
+  })
+})
+
+describe('PATCH /api/equipos/:id', () => {
+  it('un integrante edita su equipo y el evento guarda valor anterior y nuevo', async () => {
+    const e = await actividadEnFormacion(2)
+    const idA = await idEquipoCreado(e.id, e.participantes[0].cookie, 'Alfa')
+
+    const respuesta = await request(app)
+      .patch(`/api/equipos/${idA}`)
+      .set('Cookie', e.participantes[0].cookie)
+      .send({ nombre: 'Alfa 2', formaDeTrabajo: 'Reunión semanal' })
+
+    expect(respuesta.status).toBe(200)
+    expect(respuesta.body.equipo).toMatchObject({
+      nombre: 'Alfa 2',
+      formaDeTrabajo: 'Reunión semanal',
+    })
+    const modificados = await eventos(e.id, 'equipo_modificado')
+    expect(modificados).toHaveLength(1)
+    expect(modificados[0].datos).toMatchObject({
+      antes: { nombre: 'Alfa', formaDeTrabajo: null },
+      despues: { nombre: 'Alfa 2', formaDeTrabajo: 'Reunión semanal' },
+    })
+  })
+
+  it('un participante no edita el equipo de otros: 403; quien organiza edita cualquiera', async () => {
+    const e = await actividadEnFormacion(2)
+    const idA = await idEquipoCreado(e.id, e.participantes[0].cookie, 'Alfa')
+
+    const ajeno = await request(app)
+      .patch(`/api/equipos/${idA}`)
+      .set('Cookie', e.participantes[1].cookie)
+      .send({ nombre: 'Robado' })
+    expect(ajeno.status).toBe(403)
+
+    const organizador = await request(app)
+      .patch(`/api/equipos/${idA}`)
+      .set('Cookie', e.organizador.cookie)
+      .send({ descripcionActividad: 'Mapear el humedal' })
+    expect(organizador.status).toBe(200)
+  })
+
+  it('un cambio que no cambia nada no registra evento; un nombre repetido da 409', async () => {
+    const e = await actividadEnFormacion(1)
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    await idEquipoCreado(e.id, e.organizador.cookie, 'Beta')
+
+    const igual = await request(app)
+      .patch(`/api/equipos/${idA}`)
+      .set('Cookie', e.organizador.cookie)
+      .send({ nombre: 'Alfa' })
+    expect(igual.status).toBe(200)
+    expect(await eventos(e.id, 'equipo_modificado')).toHaveLength(0)
+
+    const repetido = await request(app)
+      .patch(`/api/equipos/${idA}`)
+      .set('Cookie', e.organizador.cookie)
+      .send({ nombre: 'beta' })
+    expect(repetido.status).toBe(409)
+  })
+
+  it('el equipo puede editarse hasta el cierre, no en una actividad archivada', async () => {
+    const e = await actividadEnFormacion(1)
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    const editar = () =>
+      request(app)
+        .patch(`/api/equipos/${idA}`)
+        .set('Cookie', e.organizador.cookie)
+        .send({ formaDeTrabajo: crypto.randomUUID() })
+
+    await prisma.actividad.update({ where: { idActividad: e.id }, data: { estado: 'cierre' } })
+    expect((await editar()).status).toBe(200)
+    await prisma.actividad.update({ where: { idActividad: e.id }, data: { estado: 'archivada' } })
+    expect((await editar()).status).toBe(409)
+  })
+})
+
+describe('DELETE /api/equipos/:id', () => {
+  it('elimina un equipo vacío y el evento conserva lo eliminado', async () => {
+    const e = await actividadEnFormacion(1)
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    await request(app)
+      .patch(`/api/equipos/${idA}`)
+      .set('Cookie', e.organizador.cookie)
+      .send({ descripcionActividad: 'Mapear el humedal' })
+
+    const respuesta = await request(app)
+      .delete(`/api/equipos/${idA}`)
+      .set('Cookie', e.organizador.cookie)
+    expect(respuesta.status).toBe(204)
+
+    const eliminados = await eventos(e.id, 'equipo_eliminado')
+    expect(eliminados).toHaveLength(1)
+    expect(eliminados[0].datos).toMatchObject({
+      nombre: 'Alfa',
+      descripcionActividad: 'Mapear el humedal',
+    })
+    expect((await listar(e.id, e.organizador.cookie)).body.equipos).toEqual([])
+  })
+
+  it('elimina un equipo con integrantes: quedan sin equipo y el evento los conserva', async () => {
+    const e = await actividadEnFormacion(3)
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    await asignar(idA, e.participantes[0].idMembresia, e.organizador.cookie)
+    await asignar(idA, e.participantes[1].idMembresia, e.organizador.cookie)
+
+    const respuesta = await request(app)
+      .delete(`/api/equipos/${idA}`)
+      .set('Cookie', e.organizador.cookie)
+    expect(respuesta.status).toBe(204)
+
+    const lista = (await listar(e.id, e.organizador.cookie)).body
+    expect(lista.equipos).toEqual([])
+    expect(lista.sinEquipo).toHaveLength(3)
+    expect(await prisma.integranteEquipo.count()).toBe(0)
+
+    const [eliminado] = await eventos(e.id, 'equipo_eliminado')
+    expect(eliminado.datos).toMatchObject({
+      nombre: 'Alfa',
+      integrantes: [
+        { idMembresia: e.participantes[0].idMembresia, nombre: 'Pablo1 Prueba' },
+        { idMembresia: e.participantes[1].idMembresia, nombre: 'Pablo2 Prueba' },
+      ],
+    })
+  })
+
+  it('solo durante la formación: en desarrollo no se elimina, 409', async () => {
+    const e = await actividadEnFormacion(2)
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    await prisma.actividad.update({ where: { idActividad: e.id }, data: { estado: 'desarrollo' } })
+    const respuesta = await request(app)
+      .delete(`/api/equipos/${idA}`)
+      .set('Cookie', e.organizador.cookie)
+    expect(respuesta.status).toBe(409)
+  })
+
+  it('un participante no elimina equipos: 403', async () => {
+    const e = await actividadEnFormacion(2)
+    const idA = await idEquipoCreado(e.id, e.participantes[0].cookie, 'Alfa')
+    await asignar(idA, e.participantes[0].idMembresia, e.organizador.cookie)
+    const respuesta = await request(app)
+      .delete(`/api/equipos/${idA}`)
+      .set('Cookie', e.participantes[0].cookie)
+    expect(respuesta.status).toBe(403)
+  })
+})
+
+describe('membresía desactivada con equipo', () => {
+  it('conserva su fila pero no aparece ni cuenta; al reactivarla vuelve a su equipo', async () => {
+    const e = await actividadEnFormacion(2)
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    await asignar(idA, e.participantes[0].idMembresia, e.organizador.cookie)
+
+    await prisma.membresia.update({
+      where: { idMembresia: e.participantes[0].idMembresia },
+      data: { estado: 'desactivada' },
+    })
+    let lista = (await listar(e.id, e.organizador.cookie)).body
+    expect(lista.equipos[0].integrantes).toEqual([])
+    expect(lista.sinEquipo.map((p: { idMembresia: string }) => p.idMembresia)).toEqual([
+      e.participantes[1].idMembresia,
+    ])
+    expect(await prisma.integranteEquipo.count()).toBe(1)
+
+    await prisma.membresia.update({
+      where: { idMembresia: e.participantes[0].idMembresia },
+      data: { estado: 'activa' },
+    })
+    lista = (await listar(e.id, e.organizador.cookie)).body
+    expect(lista.equipos[0].integrantes).toHaveLength(1)
+  })
+
+  it('no impide la transición automática ni recibe reparto', async () => {
+    const e = await actividadEnFormacion(2)
+    await prisma.membresia.update({
+      where: { idMembresia: e.participantes[1].idMembresia },
+      data: { estado: 'desactivada' },
+    })
+    await crear(e.id, e.participantes[0].cookie, 'Alfa')
+    expect(await estadoDe(e.id)).toBe('desarrollo')
+    expect(await prisma.integranteEquipo.count()).toBe(1)
+  })
+})
+
+describe('promoción a co-organizador', () => {
+  it('quien ya estaba en un equipo conserva su lugar como co-organizador', async () => {
+    const e = await actividadEnFormacion(2)
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    await asignar(idA, e.participantes[0].idMembresia, e.organizador.cookie)
+
+    const promocion = await request(app)
+      .put(`/api/actividades/${e.id}/coorganizadores/${e.participantes[0].idUsuario}`)
+      .set('Cookie', e.organizador.cookie)
+      .send({})
+    expect(promocion.status).toBe(200)
+
+    const lista = (await listar(e.id, e.organizador.cookie)).body
+    expect(lista.equipos[0].integrantes).toEqual([
+      expect.objectContaining({
+        idMembresia: e.participantes[0].idMembresia,
+        rol: 'co-organizador',
+      }),
+    ])
+    expect(lista.sinEquipo.map((p: { idMembresia: string }) => p.idMembresia)).toEqual([
+      e.participantes[1].idMembresia,
+    ])
+  })
+})
+
+describe('POST /api/actividades/:id/formacion/cierre', () => {
+  it('sin ningún equipo se impide, con explicación: 422', async () => {
+    const e = await actividadEnFormacion(2)
+    const respuesta = await cerrarFormacion(e.id, e.organizador.cookie)
+    expect(respuesta.status).toBe(422)
+    expect(respuesta.body.codigo).toBe('sin_equipos')
+    expect(await estadoDe(e.id)).toBe('formacion_equipos')
+  })
+
+  it('reparte a quienes quedaron sin equipo, con un solo evento del sistema, y pasa a desarrollo', async () => {
+    const e = await actividadEnFormacion(5)
+    await fijarFormacion(e, 'manual')
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    await idEquipoCreado(e.id, e.organizador.cookie, 'Beta')
+    await asignar(idA, e.participantes[0].idMembresia, e.organizador.cookie)
+
+    const respuesta = await cerrarFormacion(e.id, e.organizador.cookie)
+    expect(respuesta.status).toBe(200)
+    expect(respuesta.body.actividad.fase).toBe('desarrollo')
+
+    // Alfa tenía 1, Beta 0: Pablo2→Beta, Pablo3→Beta (1=1: empate, gana Alfa), ...
+    const lista = (await listar(e.id, e.organizador.cookie)).body
+    const tamanos = lista.equipos.map((x: { integrantes: unknown[] }) => x.integrantes.length)
+    expect(tamanos).toEqual([3, 2])
+    expect(lista.sinEquipo).toEqual([])
+
+    const repartos = await eventos(e.id, 'reparto_automatico')
+    expect(repartos).toHaveLength(1)
+    expect(repartos[0]).toMatchObject({ tipoActor: 'sistema', idUsuarioActor: null })
+    expect(
+      (
+        repartos[0].datos as { asignaciones: { idMembresia: string; nombreEquipo: string }[] }
+      ).asignaciones.map((a) => [a.idMembresia, a.nombreEquipo]),
+    ).toEqual([
+      [e.participantes[1].idMembresia, 'Beta'],
+      [e.participantes[2].idMembresia, 'Alfa'],
+      [e.participantes[3].idMembresia, 'Beta'],
+      [e.participantes[4].idMembresia, 'Alfa'],
+    ])
+
+    const fases = await eventos(e.id, 'fase_avanzada')
+    expect(fases.at(-1)).toMatchObject({
+      tipoActor: 'usuario',
+      idUsuarioActor: e.organizador.idUsuario,
+    })
+    expect(fases.at(-1)?.datos).toMatchObject({
+      faseOrigen: 'formacion_equipos',
+      faseDestino: 'desarrollo',
+      disparadoPor: 'usuario',
+    })
+  })
+
+  it('sin nadie sin equipo no hay evento de reparto; con la función en manual también cierra', async () => {
+    const e = await actividadEnFormacion(1)
+    await fijarFormacion(e, 'manual')
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    await asignar(idA, e.participantes[0].idMembresia, e.organizador.cookie)
+
+    expect((await cerrarFormacion(e.id, e.organizador.cookie)).status).toBe(200)
+    expect(await eventos(e.id, 'reparto_automatico')).toHaveLength(0)
+    expect(await estadoDe(e.id)).toBe('desarrollo')
+  })
+
+  it('con la función autogestionada, quien organiza puede cerrar antes de que todos elijan', async () => {
+    const e = await actividadEnFormacion(3)
+    await crear(e.id, e.participantes[0].cookie, 'Alfa')
+    expect(await estadoDe(e.id)).toBe('formacion_equipos')
+
+    expect((await cerrarFormacion(e.id, e.organizador.cookie)).status).toBe(200)
+    expect((await listar(e.id, e.organizador.cookie)).body.sinEquipo).toEqual([])
+    expect(await prisma.integranteEquipo.count()).toBe(3)
+  })
+
+  it('un participante no puede cerrar la formación: 403', async () => {
+    const e = await actividadEnFormacion(1)
+    await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    const respuesta = await cerrarFormacion(e.id, e.participantes[0].cookie)
+    expect(respuesta.status).toBe(403)
+    expect(await estadoDe(e.id)).toBe('formacion_equipos')
+  })
+
+  it('una transición no se ejecuta dos veces ni desde otra fase: 409', async () => {
+    const e = await actividadEnFormacion(1)
+    await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    expect((await cerrarFormacion(e.id, e.organizador.cookie)).status).toBe(200)
+    expect((await cerrarFormacion(e.id, e.organizador.cookie)).status).toBe(409)
+
+    const enInscripcion = await actividadConParticipantes(1)
+    expect((await cerrarFormacion(enInscripcion.id, enInscripcion.organizador.cookie)).status).toBe(
+      409,
+    )
+  })
+
+  it('un co-organizador necesita gestionar_equipos', async () => {
+    const e = await actividadEnFormacion(1)
+    await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    const sin = await registrar('Sin')
+    await request(app)
+      .put(`/api/actividades/${e.id}/coorganizadores/${sin.idUsuario}`)
+      .set('Cookie', e.organizador.cookie)
+      .send({ permisos: ['configurar_actividad'] })
+    expect((await cerrarFormacion(e.id, sin.cookie)).status).toBe(403)
+  })
+})
+
+describe('transición automática con la formación autogestionada', () => {
+  it('pasa a desarrollo en cuanto nadie queda sin equipo, con el sistema como actor', async () => {
+    const e = await actividadEnFormacion(2)
+    const idA = await idEquipoCreado(e.id, e.participantes[0].cookie, 'Alfa')
+    expect(await estadoDe(e.id)).toBe('formacion_equipos')
+
+    const ultima = await asignar(idA, e.participantes[1].idMembresia, e.participantes[1].cookie)
+    expect(ultima.status).toBe(200)
+    expect(await estadoDe(e.id)).toBe('desarrollo')
+
+    const fases = await eventos(e.id, 'fase_avanzada')
+    expect(fases.at(-1)).toMatchObject({ tipoActor: 'sistema', idUsuarioActor: null })
+    expect(fases.at(-1)?.datos).toMatchObject({
+      faseDestino: 'desarrollo',
+      disparadoPor: 'sistema',
+      motivo: 'sin_rezagados',
+    })
+    expect(await eventos(e.id, 'reparto_automatico')).toHaveLength(0)
+  })
+
+  it('con un solo participante, crear su equipo lo pasa a desarrollo', async () => {
+    const e = await actividadEnFormacion(1)
+    await crear(e.id, e.participantes[0].cookie, 'Solo')
+    expect(await estadoDe(e.id)).toBe('desarrollo')
+  })
+
+  it('también cuenta cuando quien organiza es quien completa las asignaciones', async () => {
+    const e = await actividadEnFormacion(2)
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    await asignar(idA, e.participantes[0].idMembresia, e.organizador.cookie)
+    await asignar(idA, e.participantes[1].idMembresia, e.organizador.cookie)
+    expect(await estadoDe(e.id)).toBe('desarrollo')
+  })
+
+  it('no ocurre con la función en manual: el cierre es siempre una acción', async () => {
+    for (const estado of ['manual']) {
+      const e = await actividadEnFormacion(1)
+      await fijarFormacion(e, estado)
+      const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+      await asignar(idA, e.participantes[0].idMembresia, e.organizador.cookie)
+      expect(await estadoDe(e.id), estado).toBe('formacion_equipos')
+      await prisma.actividad.deleteMany()
+    }
+  })
+
+  it('cambiar la función a autogestionada no dispara la transición por sí solo', async () => {
+    const e = await actividadEnFormacion(1)
+    await fijarFormacion(e, 'manual')
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    await asignar(idA, e.participantes[0].idMembresia, e.organizador.cookie)
+    await fijarFormacion(e, 'autogestionado')
+    expect(await estadoDe(e.id)).toBe('formacion_equipos')
+  })
+
+  it('dos participantes que completan a la vez producen una sola transición', async () => {
+    const e = await actividadEnFormacion(2)
+    const [a, b] = await Promise.all([
+      crear(e.id, e.participantes[0].cookie, 'Alfa'),
+      crear(e.id, e.participantes[1].cookie, 'Beta'),
+    ])
+    expect([a.status, b.status]).toEqual([201, 201])
+    expect(await estadoDe(e.id)).toBe('desarrollo')
+
+    const automaticas = (await eventos(e.id, 'fase_avanzada')).filter(
+      (ev) => (ev.datos as { faseDestino?: string }).faseDestino === 'desarrollo',
+    )
+    expect(automaticas).toHaveLength(1)
+  })
+
+  it('en desarrollo el participante ya no elige equipo: 409', async () => {
+    const e = await actividadEnFormacion(1)
+    await crear(e.id, e.participantes[0].cookie, 'Solo')
+    const otra = await crear(e.id, e.participantes[0].cookie, 'Otro')
+    expect(otra.status).toBe(409)
+  })
+})
+
+describe('una actividad creada por un estudiante con el profesor como co-organizador', () => {
+  it('funciona con las mismas reglas, sin ningún código ni bandera especial', async () => {
+    // "Autogestionada" no es un tipo: quien crea es el organizador, agrega a
+    // quien quiera como co-organizador y las funciones quedan como se
+    // configuren. Aquí, la configuración por defecto (formación autogestionada).
+    const e = await actividadEnFormacion(2)
+    const profesor = await registrar('Profe')
+    const alta = await request(app)
+      .put(`/api/actividades/${e.id}/coorganizadores/${profesor.idUsuario}`)
+      .set('Cookie', e.organizador.cookie)
+      .send({})
+    expect(alta.status).toBe(200)
+    const idProfe = await idMembresiaDe(e.id, profesor.idUsuario)
+
+    // El estudiante que organiza forma un equipo y se integra en él…
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    await asignar(idA, e.organizador.idMembresia, e.organizador.cookie)
+    // …el profesor (permisos por defecto) reasigna a un participante…
+    expect((await asignar(idA, e.participantes[0].idMembresia, profesor.cookie)).status).toBe(200)
+    // …y el otro participante elige por su cuenta.
+    expect(
+      (await asignar(idA, e.participantes[1].idMembresia, e.participantes[1].cookie)).status,
+    ).toBe(200)
+
+    expect(await estadoDe(e.id)).toBe('desarrollo')
+    const integrantes = (await listar(e.id, profesor.cookie)).body.equipos[0].integrantes
+    expect(integrantes.map((i: { idMembresia: string }) => i.idMembresia).sort()).toEqual(
+      [
+        e.organizador.idMembresia,
+        e.participantes[0].idMembresia,
+        e.participantes[1].idMembresia,
+      ].sort(),
+    )
+    expect(idProfe).toBeDefined()
+  })
+})
+
+describe('capacidades en GET /api/actividades/:id', () => {
+  it('siguen el estado de la función y la fase, para cada rol', async () => {
+    const e = await actividadEnFormacion(1)
+    const capacidades = async (cookie: string) =>
+      (await request(app).get(`/api/actividades/${e.id}`).set('Cookie', cookie)).body.actividad
+        .capacidades as string[]
+
+    expect(await capacidades(e.participantes[0].cookie)).toEqual(['elegir_equipo', 'editar_equipo'])
+    expect(await capacidades(e.organizador.cookie)).toEqual(
+      expect.arrayContaining([
+        'formar_equipos',
+        'asignar_integrantes',
+        'cerrar_formacion',
+        'elegir_equipo',
+        'editar_equipo',
+      ]),
+    )
+    expect(await capacidades(e.organizador.cookie)).not.toContain('generar_propuesta_equipos')
+
+    await fijarFormacion(e, 'manual')
+    expect(await capacidades(e.participantes[0].cookie)).toEqual(['editar_equipo'])
+  })
+})

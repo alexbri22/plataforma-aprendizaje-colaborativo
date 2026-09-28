@@ -21,7 +21,15 @@ export type CodigoError =
   | 'periodo_traslapado'
   | 'sin_permiso'
   | 'fuera_de_plazo'
-  | 'usuario_no_encontrado'
+  | 'equipo_no_encontrado'
+  | 'nombre_equipo_duplicado'
+  | 'sin_equipos'
+  | 'miembro_no_asignable'
+  | 'participante_requiere_equipo'
+  | 'propuesta_sin_participantes'
+  | 'funcion_con_datos'
+  | 'equipo_lleno'
+  | 'intercambio_invalido'
   | 'foto_invalida'
 
 export abstract class ErrorDominio extends Error {
@@ -216,6 +224,111 @@ export class ErrorUsuarioNoEncontrado extends ErrorDominio {
 
   constructor() {
     super('No encontramos a esta persona.')
+  }
+}
+
+// Mismo criterio que ErrorActividadNoEncontrada: quien no es miembro de la
+// actividad del equipo no puede distinguir entre que el equipo no existe y que
+// no es suyo (docs/diseno-desarrollo-nucleo.md §3.3).
+export class ErrorEquipoNoEncontrado extends ErrorDominio {
+  readonly codigo = 'equipo_no_encontrado' as const
+  readonly status = 404
+
+  constructor() {
+    super('No encontramos este equipo, o no formas parte de su actividad.')
+  }
+}
+
+// El nombre del equipo es único dentro de la actividad, sin distinguir
+// mayúsculas (docs/diseno-desarrollo-general.md §4.4).
+export class ErrorNombreEquipoDuplicado extends ErrorDominio {
+  readonly codigo = 'nombre_equipo_duplicado' as const
+  readonly status = 409
+
+  constructor() {
+    super('Ya existe un equipo con ese nombre en esta actividad.')
+  }
+}
+
+// Precondición de la transición Formación → Desarrollo
+// (docs/diseno-desarrollo-nucleo.md §7.4): sin equipos, el reparto automático
+// no tiene destino.
+export class ErrorSinEquipos extends ErrorDominio {
+  readonly codigo = 'sin_equipos' as const
+  readonly status = 422
+
+  constructor() {
+    super('No puedes cerrar la formación sin al menos un equipo.')
+  }
+}
+
+// La membresía que se quiere asignar no existe en la actividad, o está
+// desactivada (una membresía desactivada pierde toda capacidad de acción,
+// docs/diseno-desarrollo-general.md §6.3).
+export class ErrorMiembroNoAsignable extends ErrorDominio {
+  readonly codigo = 'miembro_no_asignable' as const
+  readonly status = 422
+
+  constructor() {
+    super('Esa persona no es un miembro activo de la actividad.')
+  }
+}
+
+// Todo participante pertenece a exactamente un equipo (general §4.6): se
+// mueve a otro, no se deja sin ninguno.
+export class ErrorParticipanteRequiereEquipo extends ErrorDominio {
+  readonly codigo = 'participante_requiere_equipo' as const
+  readonly status = 422
+
+  constructor() {
+    super('Un participante siempre pertenece a un equipo: muévelo a otro en lugar de retirarlo.')
+  }
+}
+
+// La propuesta reparte a todos los participantes activos: sin ninguno no hay
+// nada que proponer.
+export class ErrorPropuestaSinParticipantes extends ErrorDominio {
+  readonly codigo = 'propuesta_sin_participantes' as const
+  readonly status = 422
+
+  constructor() {
+    super('No hay participantes activos entre quienes repartir una propuesta de equipos.')
+  }
+}
+
+// A partir del desarrollo una función puede habilitarse, pero no deshabilitarse
+// ni cambiar de modo si ya tiene datos (docs/diseno-desarrollo-general.md
+// §6.2, P-17). El mensaje explica cuáles datos lo impiden.
+export class ErrorFuncionConDatos extends ErrorDominio {
+  readonly codigo = 'funcion_con_datos' as const
+  readonly status = 422
+
+  constructor(mensaje: string) {
+    super(mensaje)
+  }
+}
+
+// El máximo de integrantes por equipo se aplica a todos, también a quien
+// organiza (docs/diseno-desarrollo-nucleo.md §8.8, P-27).
+export class ErrorEquipoLleno extends ErrorDominio {
+  readonly codigo = 'equipo_lleno' as const
+  readonly status = 422
+
+  constructor(maximo: number) {
+    super(
+      `Este equipo ya tiene el máximo de ${maximo} ${maximo === 1 ? 'integrante' : 'integrantes'}.`,
+    )
+  }
+}
+
+// Un intercambio necesita dos personas distintas, ambas con equipo y en
+// equipos distintos: si no, no hay nada que intercambiar.
+export class ErrorIntercambioInvalido extends ErrorDominio {
+  readonly codigo = 'intercambio_invalido' as const
+  readonly status = 422
+
+  constructor() {
+    super('Elige dos personas que estén en equipos distintos.')
   }
 }
 

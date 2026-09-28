@@ -17,11 +17,10 @@ export function TarjetaActividad({ actividad }: TarjetaActividadProps) {
     <Link to={`/actividades/${actividad.id}`} className={styles.enlace}>
       <Card className={styles.tarjeta}>
         <div className={styles.encabezado}>
+          <Badge variant={fase.variant} className={styles.estado}>
+            {fase.etiqueta}
+          </Badge>
           <h3 className={styles.nombre}>{actividad.nombre}</h3>
-          <div className={styles.estado}>
-            <span className={styles.estadoEtiqueta}>Estado</span>
-            <Badge variant={fase.variant}>{fase.etiqueta}</Badge>
-          </div>
         </div>
 
         <p className={styles.objetivo}>{actividad.objetivo}</p>

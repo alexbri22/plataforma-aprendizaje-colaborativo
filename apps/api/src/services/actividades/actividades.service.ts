@@ -7,7 +7,9 @@ import {
 import {
   CONFIGURACION_POR_DEFECTO,
   PERMISOS_COORGANIZADOR_POR_DEFECTO,
+  esEstadoFormacionEquipos,
   type AccionActividad,
+  type EstadoFormacionEquipos,
   type FuncionSeguimiento,
   type PermisoCoorganizador,
 } from '@plataforma/shared'
@@ -17,8 +19,10 @@ import {
   ErrorActividadNoEncontrada,
   ErrorClaveInvalida,
   ErrorFaseNoPermiteAccion,
+  ErrorFuncionConDatos,
   ErrorOrganizadorUnico,
   ErrorSinParticipantes,
+  ErrorValidacion,
   ErrorUsuarioNoEncontrado,
   ErrorYaEsMiembro,
 } from '../../errores.js'
@@ -28,18 +32,20 @@ import {
   capacidadesDe,
   type ContextoActorActividad,
   type MotivoRechazo,
+  type ResultadoAutorizacion,
 } from './capacidades.js'
+import { COMPROBADORES_DE_DATOS, evaluarCambioEnCurso } from './cambiosDeFuncion.js'
 import { generarClaveIngreso } from './claveIngreso.js'
-import type { DatosCrearActividadValidados } from './validacion.js'
+import type { CambiosLimitesEquipo, DatosCrearActividadValidados } from './validacion.js'
 import { aFechaCalendario, finDeDiaEnCDMX } from '../../utilidades/fechas.js'
 
 // Fase que expone la API, calcada de
-// apps/web/src/features/actividades/tipos.ts (FaseActividad): cinco valores,
-// sin formacion_equipos. Ese tipo ya lo pliega dentro de 'inscripcion' por
-// ser transicional y breve (mismo criterio documentado ahí); el enum de la
-// base de datos conserva las seis fases completas del ciclo de vida
-// (docs/diseno-desarrollo-general.md §6.1).
-export type FaseActividad = 'configuracion' | 'inscripcion' | 'desarrollo' | 'cierre' | 'archivada'
+// apps/web/src/features/actividades/tipos.ts (FaseActividad): las seis fases
+// del ciclo de vida (docs/diseno-desarrollo-general.md §6.1). Formación de
+// equipos ya no se pliega en inscripción: con Equipos deja de ser transicional
+// y las pantallas necesitan distinguirla.
+export type FaseActividad =
+  'configuracion' | 'inscripcion' | 'formacion_equipos' | 'desarrollo' | 'cierre' | 'archivada'
 
 export type RolActividad = 'organizador' | 'co-organizador' | 'participante'
 
@@ -58,6 +64,9 @@ export interface ActividadRespuesta {
   fechaLimiteInscripcion: string
   plazoCierreDias: number
   numeroEquiposEsperado: number
+  // Ajuste de la formación de equipos (P-27); nulo = sin límite.
+  tamanoMinimoEquipo: number | null
+  tamanoMaximoEquipo: number | null
 }
 
 // GET /api/actividades/{id} agrega el conjunto de capacidades del actor y la
@@ -93,6 +102,11 @@ function contextoDe(membresia: MembresiaConPermisos): ContextoActorActividad {
 // la acción, 403 si es el rol.
 function lanzarErrorDeAutorizacion(motivo: MotivoRechazo, mensajeFase: string): never {
   if (motivo === 'fase') throw new ErrorFaseNoPermiteAccion(mensajeFase)
+  if (motivo === 'funcion') {
+    throw new ErrorFaseNoPermiteAccion(
+      'La configuración actual de la formación de equipos no permite esta acción.',
+    )
+  }
   throw new ErrorAccionNoPermitida()
 }
 
@@ -105,15 +119,34 @@ export function exigirAccion(
   accion: AccionActividad,
   estado: EstadoActividad,
   mensajeFase: string,
+  formacionEquipos?: EstadoFormacionEquipos,
 ): void {
-  const resultado = autorizar(contextoDe(membresia), accion, { estado })
+  const resultado = autorizar(contextoDe(membresia), accion, { estado, formacionEquipos })
+  if (!resultado.concedido) lanzarErrorDeAutorizacion(resultado.motivo, mensajeFase)
+}
+
+// Variante de exigirAccion que no lanza: para quien decide entre dos caminos
+// según lo que el actor pueda hacer (por ejemplo, un participante que crea un
+// equipo por elegir_equipo y quien organiza por formar_equipos). La decisión
+// sigue siendo de autorizar(): esto solo la expone.
+export function autorizarAccion(
+  membresia: MembresiaConPermisos,
+  accion: AccionActividad,
+  estado: EstadoActividad,
+  formacionEquipos?: EstadoFormacionEquipos,
+): ResultadoAutorizacion {
+  return autorizar(contextoDe(membresia), accion, { estado, formacionEquipos })
+}
+
+// Lanza el error de dominio que corresponde a un rechazo ya calculado.
+export function lanzarSiRechazada(resultado: ResultadoAutorizacion, mensajeFase: string): void {
   if (!resultado.concedido) lanzarErrorDeAutorizacion(resultado.motivo, mensajeFase)
 }
 
 const FASE_POR_ESTADO: Record<EstadoActividad, FaseActividad> = {
   configuracion: 'configuracion',
   inscripcion: 'inscripcion',
-  formacion_equipos: 'inscripcion',
+  formacion_equipos: 'formacion_equipos',
   desarrollo: 'desarrollo',
   cierre: 'cierre',
   archivada: 'archivada',
@@ -135,6 +168,8 @@ interface ActividadConMembresiasYConteo {
   fechaLimiteInscripcion: Date
   plazoCierreDias: number
   numeroEquiposEsperado: number
+  tamanoMinimoEquipo: number | null
+  tamanoMaximoEquipo: number | null
   estado: EstadoActividad
   claveIngreso: string | null
   membresias: { rol: RolMembresia }[]
@@ -176,6 +211,8 @@ function aRespuesta(
     fechaLimiteInscripcion: aFechaCalendario(actividad.fechaLimiteInscripcion),
     plazoCierreDias: actividad.plazoCierreDias,
     numeroEquiposEsperado: actividad.numeroEquiposEsperado,
+    tamanoMinimoEquipo: actividad.tamanoMinimoEquipo,
+    tamanoMaximoEquipo: actividad.tamanoMaximoEquipo,
   }
 }
 
@@ -187,13 +224,26 @@ function aMapaConfiguracion(
   return mapa
 }
 
+// Estado de la función `formacion_equipos` a partir de las filas de
+// configuración de la actividad. Un valor que no esté en el catálogo (dato
+// corrupto) se trata como ausente: las acciones que dependen de él se cierran.
+export function estadoFormacionEquipos(
+  filas: { funcion: FuncionSeguimiento; estado: string }[],
+): EstadoFormacionEquipos | undefined {
+  const estado = filas.find((fila) => fila.funcion === 'formacion_equipos')?.estado
+  return esEstadoFormacionEquipos(estado) ? estado : undefined
+}
+
 function aRespuestaConCapacidades(
   actividad: ActividadConMembresiasYConfiguracion,
   membresiaActor: MembresiaConPermisos,
 ): ActividadConCapacidades {
   return {
     ...aRespuesta(actividad, membresiaActor.rol),
-    capacidades: capacidadesDe(contextoDe(membresiaActor), { estado: actividad.estado }),
+    capacidades: capacidadesDe(contextoDe(membresiaActor), {
+      estado: actividad.estado,
+      formacionEquipos: estadoFormacionEquipos(actividad.configuracion),
+    }),
     configuracion: aMapaConfiguracion(actividad.configuracion),
   }
 }
@@ -448,7 +498,7 @@ export async function obtenerActividadPorId(
   return aRespuestaConCapacidades(actividad, membresiaActor)
 }
 
-type ActorTransicion = { tipo: 'usuario'; idUsuario: string } | { tipo: 'sistema' }
+export type ActorTransicion = { tipo: 'usuario'; idUsuario: string } | { tipo: 'sistema' }
 
 // Escritura y evento de la transición Inscripción → Formación, compartidos
 // entre el disparo manual (cerrarInscripcion) y el automático por
@@ -569,6 +619,9 @@ export async function transicionarActividadesVencidas(
 // PUT /api/actividades/{id}/configuracion/{funcion} (docs/diseno-desarrollo-nucleo.md
 // §7.7 y general §6.2): fija el estado de una función. `estadoNuevo` ya
 // llegó validado contra el catálogo de la función (validarDatosConfigurarFuncion).
+// Antes del desarrollo el cambio es libre (configurar_funciones); desde el
+// desarrollo y hasta el cierre se puede habilitar y, si la función no tiene
+// datos, también deshabilitar o cambiar de modo (ajustar_funciones, P-17).
 export async function configurarFuncion(
   idActividad: string,
   funcion: FuncionSeguimiento,
@@ -577,10 +630,13 @@ export async function configurarFuncion(
   membresiaActor: MembresiaConPermisos,
 ): Promise<ActividadConCapacidades> {
   const actividad = await cargarActividadConMembresiasYConfiguracion(idActividad)
+  const enCurso = actividad.estado === 'desarrollo' || actividad.estado === 'cierre'
 
-  const resultado = autorizar(contextoDe(membresiaActor), 'configurar_funciones', {
-    estado: actividad.estado,
-  })
+  const resultado = autorizar(
+    contextoDe(membresiaActor),
+    enCurso ? 'ajustar_funciones' : 'configurar_funciones',
+    { estado: actividad.estado },
+  )
   if (!resultado.concedido) {
     lanzarErrorDeAutorizacion(
       resultado.motivo,
@@ -588,9 +644,20 @@ export async function configurarFuncion(
     )
   }
 
-  const estadoAnterior = actividad.configuracion.find((c) => c.funcion === funcion)?.estado ?? null
-
   await prisma.$transaction(async (tx) => {
+    // Se relee dentro de la transacción: el estado anterior que se registra y
+    // contra el que se evalúa el cambio es el que realmente hay.
+    const actual = await tx.configuracionFuncion.findUnique({
+      where: { idActividad_funcion: { idActividad, funcion } },
+    })
+    const estadoAnterior = actual?.estado ?? null
+
+    if (enCurso) {
+      const motivoDatos = await COMPROBADORES_DE_DATOS[funcion](tx, idActividad)
+      const evaluacion = evaluarCambioEnCurso(funcion, estadoAnterior, estadoNuevo, motivoDatos)
+      if (!evaluacion.permitido) throw new ErrorFuncionConDatos(evaluacion.motivo)
+    }
+
     await tx.configuracionFuncion.upsert({
       where: { idActividad_funcion: { idActividad, funcion } },
       update: { estado: estadoNuevo },
@@ -612,10 +679,59 @@ export async function configurarFuncion(
   return obtenerActividadPorId(idActividad, membresiaActor)
 }
 
+// PUT /api/actividades/{id}/formacion/limites (nucleo §8.8, P-27): tamaño mínimo
+// y máximo de un equipo, ajuste de la función formacion_equipos. Es un cambio
+// de configuración, así que sigue la regla de configurar_funciones (antes del
+// desarrollo). El máximo lo aplica Equipos a todos; el mínimo solo advierte.
+export async function fijarLimitesEquipo(
+  idActividad: string,
+  cambios: CambiosLimitesEquipo,
+  idUsuarioActor: string,
+  membresiaActor: MembresiaConPermisos,
+): Promise<ActividadConCapacidades> {
+  const actividad = await cargarActividadConMembresiasYConfiguracion(idActividad)
+  exigirAccion(
+    membresiaActor,
+    'configurar_funciones',
+    actividad.estado,
+    'Los límites de los equipos no pueden modificarse en esta fase.',
+  )
+
+  const antes = { minimo: actividad.tamanoMinimoEquipo, maximo: actividad.tamanoMaximoEquipo }
+  const despues = {
+    minimo: cambios.minimo === undefined ? antes.minimo : cambios.minimo,
+    maximo: cambios.maximo === undefined ? antes.maximo : cambios.maximo,
+  }
+  if (despues.minimo !== null && despues.maximo !== null && despues.minimo > despues.maximo) {
+    throw new ErrorValidacion({ minimo: 'El mínimo no puede ser mayor que el máximo.' })
+  }
+
+  if (despues.minimo !== antes.minimo || despues.maximo !== antes.maximo) {
+    await prisma.$transaction(async (tx) => {
+      await tx.actividad.update({
+        where: { idActividad },
+        data: { tamanoMinimoEquipo: despues.minimo, tamanoMaximoEquipo: despues.maximo },
+      })
+      await registrarEvento(tx, {
+        idActividad,
+        tipoActor: 'usuario',
+        idUsuarioActor,
+        tipoEvento: 'configuracion_modificada',
+        tipoEntidad: 'configuracion_funcion',
+        idEntidad: 'formacion_equipos',
+        datos: { funcion: 'formacion_equipos', campo: 'limites_de_tamano', antes, despues },
+        categoria: 'estructura',
+      })
+    })
+  }
+
+  return obtenerActividadPorId(idActividad, membresiaActor)
+}
+
 // PUT /api/actividades/{id}/coorganizadores/{idUsuario} (docs/diseno-desarrollo-nucleo.md
-// §7.6 y §7.7): agrega o promueve. Retirar el rol (DELETE) queda fuera de
-// este incremento porque su regla obliga a elegir entre desactivar la
-// membresía o reasignar a un equipo, y Equipos todavía no existe.
+// §7.6 y §7.7): agrega o promueve. Un participante promovido conserva su
+// lugar en un equipo (general §7.3, quien organiza puede integrar uno). Retirar
+// el rol (DELETE) queda fuera del incremento de Equipos.
 export async function agregarOPromoverCoorganizador(
   idActividad: string,
   idUsuarioObjetivo: string,
@@ -735,8 +851,11 @@ export interface ParticipanteDeActividad {
 // a quienes se reconoce. Organizador y co-organizadores no entran: no
 // pertenecen a un equipo (docs/diseno-desarrollo-general.md §7.3, "El
 // organizador no integra un equipo").
-export async function listarParticipantes(idActividad: string): Promise<ParticipanteDeActividad[]> {
-  const membresias = await prisma.membresia.findMany({
+export async function listarParticipantes(
+  idActividad: string,
+  cliente: Prisma.TransactionClient = prisma,
+): Promise<ParticipanteDeActividad[]> {
+  const membresias = await cliente.membresia.findMany({
     where: { idActividad, estado: 'activa', rol: 'participante' },
     include: { usuario: { select: { nombre: true, apellidoPaterno: true } } },
     orderBy: { fechaUnion: 'asc' },
@@ -748,4 +867,127 @@ export async function listarParticipantes(idActividad: string): Promise<Particip
     rol: ROL_POR_ROL_MEMBRESIA[m.rol],
     fechaUnion: m.fechaUnion.toISOString(),
   }))
+}
+
+// ---------------------------------------------------------------------------
+// Lo que Equipos necesita de Actividades (docs/diseno-desarrollo-nucleo.md
+// §8): sus tablas son de este módulo y Equipos no las consulta.
+// ---------------------------------------------------------------------------
+
+export type MembresiaActor = MembresiaConPermisos & { idMembresia: string }
+
+/** Membresía del usuario en la actividad, activa o no, con sus permisos, o
+ * null si no es miembro. Sirve a las rutas que no cuelgan de la actividad
+ * (/equipos/{id}), donde no corre cargarContextoActividad; el llamador decide
+ * qué responder a un no miembro. */
+export async function buscarMembresiaConPermisos(
+  idUsuario: string,
+  idActividad: string,
+): Promise<MembresiaActor | null> {
+  return prisma.membresia.findUnique({
+    where: { idActividad_idUsuario: { idActividad, idUsuario } },
+    include: { permisos: true },
+  })
+}
+
+export interface MiembroDeActividad {
+  idMembresia: string
+  nombre: string
+  rol: RolActividad
+  activa: boolean
+}
+
+/** Todas las membresías de la actividad, de cualquier rol y estado, en orden
+ * de incorporación. Quien integra un equipo puede ser organizador,
+ * co-organizador o participante (general §7.3). */
+export async function listarMiembros(
+  idActividad: string,
+  cliente: Prisma.TransactionClient = prisma,
+): Promise<MiembroDeActividad[]> {
+  const membresias = await cliente.membresia.findMany({
+    where: { idActividad },
+    include: { usuario: { select: { nombre: true, apellidoPaterno: true } } },
+    orderBy: { fechaUnion: 'asc' },
+  })
+  return membresias.map((m) => ({
+    idMembresia: m.idMembresia,
+    nombre: `${m.usuario.nombre} ${m.usuario.apellidoPaterno}`.trim(),
+    rol: ROL_POR_ROL_MEMBRESIA[m.rol],
+    activa: m.estado === 'activa',
+  }))
+}
+
+export interface ActividadParaEquipos {
+  idActividad: string
+  estado: EstadoActividad
+  formacionEquipos: EstadoFormacionEquipos | undefined
+  numeroEquiposEsperado: number
+  limites: { minimo: number | null; maximo: number | null }
+}
+
+/** Tamaño mínimo y máximo de un equipo (P-27); nulo, sin límite. */
+export async function obtenerLimitesEquipo(
+  idActividad: string,
+  cliente: Prisma.TransactionClient = prisma,
+): Promise<{ minimo: number | null; maximo: number | null }> {
+  const actividad = await cliente.actividad.findUniqueOrThrow({
+    where: { idActividad },
+    select: { tamanoMinimoEquipo: true, tamanoMaximoEquipo: true },
+  })
+  return { minimo: actividad.tamanoMinimoEquipo, maximo: actividad.tamanoMaximoEquipo }
+}
+
+/** Lee la actividad y toma su fila con FOR UPDATE. Toda escritura de Equipos
+ * empieza aquí: serializa las escrituras de una misma actividad, de modo que
+ * "nadie queda sin equipo" y la transición automática se evalúan sobre un
+ * estado que ninguna otra petición está cambiando a la vez. */
+export async function bloquearActividadParaEquipos(
+  tx: Prisma.TransactionClient,
+  idActividad: string,
+): Promise<ActividadParaEquipos> {
+  await tx.$queryRaw`SELECT 1 FROM actividades WHERE id_actividad = ${idActividad} FOR UPDATE`
+  const actividad = await tx.actividad.findUniqueOrThrow({
+    where: { idActividad },
+    include: { configuracion: true },
+  })
+  return {
+    idActividad,
+    estado: actividad.estado,
+    formacionEquipos: estadoFormacionEquipos(actividad.configuracion),
+    numeroEquiposEsperado: actividad.numeroEquiposEsperado,
+    limites: { minimo: actividad.tamanoMinimoEquipo, maximo: actividad.tamanoMaximoEquipo },
+  }
+}
+
+/** Formación → Desarrollo (nucleo §7.4). Devuelve false, sin escribir nada,
+ * si la actividad ya no estaba en formación: una transición no se ejecuta dos
+ * veces ni se ejecuta desde otra fase. `motivo` distingue las automáticas. */
+export async function avanzarAFaseDesarrollo(
+  tx: Prisma.TransactionClient,
+  idActividad: string,
+  actor: ActorTransicion,
+  motivo?: string,
+): Promise<boolean> {
+  const { count } = await tx.actividad.updateMany({
+    where: { idActividad, estado: 'formacion_equipos' },
+    data: { estado: 'desarrollo' },
+  })
+  if (count === 0) return false
+
+  await registrarEvento(tx, {
+    idActividad,
+    tipoActor: actor.tipo,
+    idUsuarioActor: actor.tipo === 'usuario' ? actor.idUsuario : null,
+    tipoEvento: 'fase_avanzada',
+    tipoEntidad: 'actividad',
+    idEntidad: idActividad,
+    datos: {
+      faseOrigen: 'formacion_equipos',
+      faseDestino: 'desarrollo',
+      disparadoPor: actor.tipo,
+      ...(motivo ? { motivo } : {}),
+    },
+    categoria: 'estructura',
+  })
+  return true
 }

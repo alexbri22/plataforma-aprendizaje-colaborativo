@@ -128,7 +128,7 @@ export function PantallaCrearActividad() {
   }
 
   return (
-    <AppShell seccionActiva="actividades" titulo="Crear actividad">
+    <AppShell seccionActiva="actividades" titulo="Crear actividad" volverA={'/actividades'}>
       <Card className={styles.card}>
         <form className={styles.formulario} onSubmit={manejarEnvio} noValidate>
           {errorEnvio ? <AvisoError mensaje={errorEnvio} /> : null}

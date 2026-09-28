@@ -89,6 +89,21 @@ function IconoRecursos() {
   )
 }
 
+function IconoVolver() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <path
+        d="M16 10H4.5M9.5 4.5 4 10l5.5 5.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 function IconoCuentas() {
   return (
     <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
@@ -253,6 +268,9 @@ function GrupoAdministracion({ seccionActiva }: { seccionActiva: SeccionApp }) {
 export interface AppShellProps {
   seccionActiva: SeccionApp
   titulo: string
+  /** Pantalla a la que regresa la flecha de la izquierda del título. Sin ella
+   * (las pantallas raíz) no hay flecha. */
+  volverA?: string
   acciones?: ReactNode
   children: ReactNode
 }
@@ -262,7 +280,7 @@ export interface AppShellProps {
 // Linear: compacto, orientado a etiqueta, activo con fondo primary-subtle;
 // cromo de navegación en Paper/Shelf, nunca un bloque de color). Las
 // pantallas públicas (Inicio, Ingresar, Registrarse) siguen usando Encabezado.
-export function AppShell({ seccionActiva, titulo, acciones, children }: AppShellProps) {
+export function AppShell({ seccionActiva, titulo, volverA, acciones, children }: AppShellProps) {
   const navigate = useNavigate()
   const { usuario } = useSesion()
   const cerrarSesionMutacion = useCerrarSesionMutation()
@@ -321,7 +339,14 @@ export function AppShell({ seccionActiva, titulo, acciones, children }: AppShell
 
       <div className={styles.columna}>
         <header className={styles.topbar}>
-          <h1 className={styles.titulo}>{titulo}</h1>
+          <div className={styles.encabezadoTitulo}>
+            {volverA ? (
+              <Link to={volverA} className={styles.volver} aria-label="Volver">
+                <IconoVolver />
+              </Link>
+            ) : null}
+            <h1 className={styles.titulo}>{titulo}</h1>
+          </div>
           {acciones ? <div className={styles.acciones}>{acciones}</div> : null}
         </header>
 

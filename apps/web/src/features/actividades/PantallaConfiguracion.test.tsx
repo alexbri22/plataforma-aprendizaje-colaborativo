@@ -128,7 +128,7 @@ describe('PantallaConfiguracion', () => {
     expect(
       await screen.findByText('No tienes permiso para configurar esta actividad.'),
     ).toBeInTheDocument()
-    expect(screen.queryByLabelText('Formación de equipos')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Bitácora individual')).not.toBeInTheDocument()
   })
 
   it('separa la configuración en General y Proyecto colaborativo', async () => {
@@ -138,7 +138,9 @@ describe('PantallaConfiguracion', () => {
 
     const general = await screen.findByRole('region', { name: 'General' })
     const proyecto = screen.getByRole('region', { name: 'Proyecto colaborativo' })
-    expect(within(general).getByLabelText('Formación de equipos')).toBeInTheDocument()
+    // La formación de equipos se configura en Equipos, no aquí.
+    expect(within(general).queryByLabelText('Formación de equipos')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Máximo de integrantes')).not.toBeInTheDocument()
     expect(within(general).getByLabelText('Bitácora individual')).toBeInTheDocument()
     expect(within(general).queryByLabelText('Estado de Metas')).not.toBeInTheDocument()
     expect(within(proyecto).getByLabelText('Estado de Metas')).toBeInTheDocument()
@@ -160,8 +162,8 @@ describe('PantallaConfiguracion', () => {
 
     renderPantalla(ACTIVIDAD_BASE.id)
 
-    const select = (await screen.findByLabelText('Formación de equipos')) as HTMLSelectElement
-    expect(select.value).toBe('autogestionado')
+    const select = (await screen.findByLabelText('Evaluación por pares')) as HTMLSelectElement
+    expect(select.value).toBe('deshabilitada')
   })
 
   it('guarda un cambio simple y no deja ninguna etiqueta de éxito', async () => {
@@ -577,8 +579,7 @@ describe('PantallaConfiguracion', () => {
 
       renderPantalla(ACTIVIDAD_BASE.id)
 
-      expect(await screen.findByLabelText('Formación de equipos')).toBeDisabled()
-      expect(screen.getByLabelText('Bitácora individual')).toBeDisabled()
+      expect(await screen.findByLabelText('Bitácora individual')).toBeDisabled()
       expect(screen.getByLabelText('Estado de Metas')).toBeDisabled()
       expect(await screen.findByLabelText('Periodicidad de Avances')).toBeDisabled()
       expect(
@@ -605,5 +606,30 @@ describe('PantallaConfiguracion', () => {
         }),
       )
     })
+  })
+
+  it('en desarrollo permite cambiar funciones, avisa de la condición y no deja regenerar el calendario', async () => {
+    vi.mocked(obtenerActividad).mockResolvedValueOnce({
+      ...ACTIVIDAD_BASE,
+      fase: 'desarrollo',
+      capacidades: ['ajustar_funciones', 'ajustar_periodos', 'agregar_coorganizador'],
+    })
+
+    renderPantalla(ACTIVIDAD_BASE.id)
+
+    expect(await screen.findByText(/La actividad ya está en marcha/)).toBeInTheDocument()
+    expect(screen.queryByText(/Las funciones ya no pueden cambiarse/)).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Bitácora individual')).toBeEnabled()
+    expect(await screen.findByLabelText('Periodicidad de Avances')).toBeDisabled()
+  })
+
+  it('tiene una flecha para volver al resumen', async () => {
+    vi.mocked(obtenerActividad).mockResolvedValueOnce(ACTIVIDAD_BASE)
+    renderPantalla(ACTIVIDAD_BASE.id)
+
+    expect(await screen.findByRole('link', { name: 'Volver' })).toHaveAttribute(
+      'href',
+      `/actividades/${ACTIVIDAD_BASE.id}`,
+    )
   })
 })

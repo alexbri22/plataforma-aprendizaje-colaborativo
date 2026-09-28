@@ -6,7 +6,7 @@ import {
 import { useState, type ChangeEvent } from 'react'
 import { useParams } from 'react-router-dom'
 import { AppShell } from '../../components/AppShell'
-import { Button, Card, IconoCargando, Select, Switch } from '../../components/ui'
+import { Card, IconoCargando, Select, Switch } from '../../components/ui'
 import { ErrorActividad } from './actividades.api'
 import { FUNCIONES_SIMPLES } from './configuracionFunciones'
 import { IndicadorCampo, MENSAJE_ERROR_GUARDADO, type EstadoCampo } from './IndicadorCampo'
@@ -14,11 +14,15 @@ import { SeccionProyectoColaborativo } from './SeccionProyectoColaborativo'
 import { useActividad, useConfigurarFuncionMutation } from './useActividades'
 import styles from './PantallaConfiguracion.module.css'
 
-// Todas las de interruptor primero y luego las de picklist, para que el
-// patrón visual de cada fila no se interrumpa a media lista.
+// La formación de equipos no está aquí: se configura en la pantalla de Equipos,
+// donde se usa. Todas las de interruptor primero y luego las de picklist, para
+// que el patrón visual de cada fila no se interrumpa a media lista.
+const FUNCIONES_CONFIGURABLES_AQUI = FUNCIONES_SIMPLES.filter(
+  (definicion) => definicion.funcion !== 'formacion_equipos',
+)
 const FUNCIONES_ORDENADAS = [
-  ...FUNCIONES_SIMPLES.filter((definicion) => definicion.opciones.length === 2),
-  ...FUNCIONES_SIMPLES.filter((definicion) => definicion.opciones.length !== 2),
+  ...FUNCIONES_CONFIGURABLES_AQUI.filter((definicion) => definicion.opciones.length === 2),
+  ...FUNCIONES_CONFIGURABLES_AQUI.filter((definicion) => definicion.opciones.length !== 2),
 ]
 const ESPACIO_EQUIPO_POR_DEFECTO: EstadoEspacioEquipo = {
   metas: 'opcional',
@@ -56,7 +60,7 @@ export function PantallaConfiguracion() {
 
   if (actividadQuery.isPending) {
     return (
-      <AppShell seccionActiva="actividades" titulo="Configuración">
+      <AppShell seccionActiva="actividades" titulo="Configuración" volverA={`/actividades/${id}`}>
         <div className={styles.cargando} role="status" aria-label="Cargando la configuración">
           <IconoCargando size={24} />
         </div>
@@ -66,7 +70,11 @@ export function PantallaConfiguracion() {
 
   if (actividadQuery.isError || !actividadQuery.data) {
     return (
-      <AppShell seccionActiva="actividades" titulo="Actividad no encontrada">
+      <AppShell
+        seccionActiva="actividades"
+        titulo="Actividad no encontrada"
+        volverA={`/actividades/${id}`}
+      >
         <p className={styles.texto}>No encontramos esta actividad, o ya no formas parte de ella.</p>
       </AppShell>
     )
@@ -77,23 +85,22 @@ export function PantallaConfiguracion() {
     parsearEstadoEspacioEquipo(actividad.configuracion?.espacio_equipo ?? '') ??
     ESPACIO_EQUIPO_POR_DEFECTO
 
-  // Dos capacidades distintas porque las fases donde cada una aplica también
-  // lo son: las funciones dejan de poder cambiarse al entrar a desarrollo,
-  // pero ajustar el calendario de avances (mover una fecha, cancelar una
-  // entrega) sigue siendo posible mientras la actividad se desarrolla
-  // (capacidades.ts, ajustar_periodos).
-  const puedeConfigurar = actividad.capacidades?.includes('configurar_funciones') ?? false
+  // Tres capacidades porque las fases donde cada una aplica también lo son
+  // (capacidades.ts): configurar_funciones es el cambio libre previo al
+  // desarrollo; ajustar_funciones, en desarrollo y cierre, permite habilitar y
+  // deshabilitar solo lo que aún no tiene datos (P-17), y el servidor explica
+  // el rechazo junto al control; ajustar_periodos mueve o cancela un avance.
+  // Regenerar el calendario entero sigue siendo solo configurar_funciones.
+  const puedeConfigurarLibre = actividad.capacidades?.includes('configurar_funciones') ?? false
+  const puedeAjustarFunciones = actividad.capacidades?.includes('ajustar_funciones') ?? false
+  const puedeConfigurar = puedeConfigurarLibre || puedeAjustarFunciones
   const puedeAjustarPeriodos = actividad.capacidades?.includes('ajustar_periodos') ?? false
 
   return (
     <AppShell
       seccionActiva="actividades"
       titulo={`Configuración — ${actividad.nombre}`}
-      acciones={
-        <Button variant="secondary" to={`/actividades/${id}`}>
-          Volver al resumen
-        </Button>
-      }
+      volverA={`/actividades/${id}`}
     >
       {!puedeConfigurar && !puedeAjustarPeriodos ? (
         <Card className={styles.seccionCard}>
@@ -102,14 +109,19 @@ export function PantallaConfiguracion() {
       ) : (
         <div className={styles.contenido}>
           <p className={styles.introduccion}>
-            Define cómo se organizan los equipos, qué seguimiento y evaluación tendrá la actividad y
-            con qué frecuencia se revisa el trabajo.
+            Qué seguimiento y evaluación tendrá la actividad y con qué frecuencia se revisa el
+            trabajo. La formación de equipos se configura en Equipos.
           </p>
 
           {!puedeConfigurar ? (
             <p className={styles.aviso}>
               Las funciones ya no pueden cambiarse en esta fase. Aún puedes ajustar el calendario de
               avances.
+            </p>
+          ) : puedeAjustarFunciones ? (
+            <p className={styles.aviso}>
+              La actividad ya está en marcha: puedes habilitar funciones, y deshabilitarlas o
+              cambiar su modo mientras aún no tengan datos.
             </p>
           ) : null}
 
@@ -175,6 +187,7 @@ export function PantallaConfiguracion() {
             idActividad={id}
             estadoEspacioEquipo={estadoEspacioEquipo}
             puedeConfigurar={puedeConfigurar}
+            puedeRegenerarCalendario={puedeConfigurarLibre}
             puedeAjustarPeriodos={puedeAjustarPeriodos}
             estados={estados}
             guardar={guardar}

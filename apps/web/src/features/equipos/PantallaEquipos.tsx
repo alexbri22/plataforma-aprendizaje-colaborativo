@@ -1,0 +1,334 @@
+import {
+  LONGITUD_MAXIMA_NOMBRE_EQUIPO,
+  type AccionActividad,
+  type Equipo,
+  type RolIntegrante,
+} from '@plataforma/shared'
+import { useState, type FormEvent } from 'react'
+import { useParams } from 'react-router-dom'
+import { AppShell } from '../../components/AppShell'
+import {
+  AvisoError,
+  Button,
+  Card,
+  IconoCargando,
+  Input,
+  Paginacion,
+  rebanar,
+} from '../../components/ui'
+import { useActividad, type Actividad } from '../actividades'
+import { AsignacionManual } from './AsignacionManual'
+import { BarraFormacion } from './BarraFormacion'
+import { PanelAjustesFormacion } from './PanelAjustesFormacion'
+import { PanelEditarEquipo } from './PanelEditarEquipo'
+import { PanelIntercambio } from './PanelIntercambio'
+import { ETIQUETA_FORMACION } from './etiquetas'
+import { TarjetaEquipo } from './TarjetaEquipo'
+import {
+  useAsignarIntegranteMutation,
+  useCrearEquipoMutation,
+  useEditarEquipoMutation,
+  useEliminarEquipoMutation,
+  useEquipos,
+  useIntercambiarIntegrantesMutation,
+  useRetirarIntegranteMutation,
+} from './useEquipos'
+import styles from './PantallaEquipos.module.css'
+
+// Personas por página en las listas largas.
+const TAMANO_PAGINA = 10
+
+function mensajeDe(error: unknown): string {
+  return error instanceof Error
+    ? error.message
+    : 'No pudimos completar la acción. Intenta de nuevo.'
+}
+
+function rolIntegrante(rol: Actividad['rol']): RolIntegrante {
+  return rol
+}
+
+// Quien puede cerrar la formación (acción 'cerrar_formacion'): avisa qué pasa
+// con quienes no tienen equipo. Con la formación autogestionada la fase se
+// cierra sola al completarse; esto cubre cerrarla antes.
+function FormularioCrearEquipo({
+  idActividad,
+  seUne,
+  onError,
+}: {
+  idActividad: string
+  seUne: boolean
+  onError: (mensaje: string | null) => void
+}) {
+  const [nombre, setNombre] = useState('')
+  const crear = useCrearEquipoMutation(idActividad)
+
+  function enviar(evento: FormEvent) {
+    evento.preventDefault()
+    if (nombre.trim() === '') return
+    onError(null)
+    crear.mutate(nombre.trim(), {
+      onSuccess: () => setNombre(''),
+      onError: (e) => onError(mensajeDe(e)),
+    })
+  }
+
+  return (
+    <Card>
+      <form className={styles.formularioCrear} onSubmit={enviar} noValidate>
+        <Input
+          label="Nombre del equipo"
+          value={nombre}
+          maxLength={LONGITUD_MAXIMA_NOMBRE_EQUIPO}
+          onChange={(e) => setNombre(e.target.value)}
+        />
+        <Button type="submit" disabled={crear.isPending || nombre.trim() === ''}>
+          {seUne ? 'Crear equipo y unirme' : 'Crear equipo'}
+        </Button>
+      </form>
+    </Card>
+  )
+}
+
+function textoSinEquipos(actividad: Actividad): string {
+  if (actividad.fase === 'configuracion' || actividad.fase === 'inscripcion') {
+    return 'La formación empieza al cerrar la inscripción.'
+  }
+  return actividad.fase === 'formacion_equipos' ? 'Aún no hay equipos.' : 'Sin equipos.'
+}
+
+export function PantallaEquipos() {
+  const { id = '' } = useParams<{ id: string }>()
+  const actividadQuery = useActividad(id)
+  const equiposQuery = useEquipos(id)
+
+  const [error, setError] = useState<string | null>(null)
+  const [idEquipoEnEdicion, setIdEquipoEnEdicion] = useState<string | null>(null)
+  const [errorPanel, setErrorPanel] = useState<string | null>(null)
+  const [ajustesAbiertos, setAjustesAbiertos] = useState(false)
+  const [paginaSinEquipo, setPaginaSinEquipo] = useState(0)
+
+  const asignar = useAsignarIntegranteMutation(id)
+  const retirar = useRetirarIntegranteMutation(id)
+  const editar = useEditarEquipoMutation(id)
+  const eliminar = useEliminarEquipoMutation(id)
+  const intercambiar = useIntercambiarIntegrantesMutation(id)
+  const [intercambioAbierto, setIntercambioAbierto] = useState(false)
+  const [errorIntercambio, setErrorIntercambio] = useState<string | null>(null)
+
+  if (actividadQuery.isPending || equiposQuery.isPending) {
+    return (
+      <AppShell seccionActiva="actividades" titulo="Equipos" volverA={`/actividades/${id}`}>
+        <div className={styles.cargando} role="status" aria-label="Cargando los equipos">
+          <IconoCargando size={24} />
+        </div>
+      </AppShell>
+    )
+  }
+
+  if (actividadQuery.isError || !actividadQuery.data) {
+    return (
+      <AppShell
+        seccionActiva="actividades"
+        titulo="Actividad no encontrada"
+        volverA={`/actividades/${id}`}
+      >
+        <p className={styles.texto}>No encontramos esta actividad, o ya no formas parte de ella.</p>
+      </AppShell>
+    )
+  }
+
+  const actividad = actividadQuery.data
+  const capacidades: readonly AccionActividad[] = actividad.capacidades ?? []
+  const puede = (accion: AccionActividad) => capacidades.includes(accion)
+
+  if (equiposQuery.isError || !equiposQuery.data) {
+    return (
+      <AppShell seccionActiva="actividades" titulo={`Equipos de ${actividad.nombre}`}>
+        <AvisoError mensaje="No pudimos cargar los equipos." />
+      </AppShell>
+    )
+  }
+
+  const { equipos, sinEquipo, idMiMembresia, limites } = equiposQuery.data
+  const puedeCrear = puede('formar_equipos') || puede('elegir_equipo')
+  const sinEquipoPagina = rebanar(sinEquipo, paginaSinEquipo, TAMANO_PAGINA)
+  const ocupado = asignar.isPending || retirar.isPending || editar.isPending || eliminar.isPending
+  const equipoEnEdicion = equipos.find((e) => e.id === idEquipoEnEdicion) ?? null
+  const enFormacion = actividad.fase === 'formacion_equipos'
+  // Cómo se forman los equipos se configura desde aquí, antes del desarrollo.
+  const fasePrevia =
+    enFormacion || actividad.fase === 'inscripcion' || actividad.fase === 'configuracion'
+
+  const alFallar = (e: unknown) => setError(mensajeDe(e))
+  const unirme = (idEquipo: string) => {
+    setError(null)
+    asignar.mutate({ idEquipo, idMembresia: idMiMembresia }, { onError: alFallar })
+  }
+  const salir = (idEquipo: string) => {
+    setError(null)
+    retirar.mutate({ idEquipo, idMembresia: idMiMembresia }, { onError: alFallar })
+  }
+  // Las acciones del panel de edición muestran su error dentro del panel.
+  const alFallarEnPanel = (e: unknown) => setErrorPanel(mensajeDe(e))
+  const abrirPanel = (equipo: Equipo) => {
+    setErrorPanel(null)
+    setIdEquipoEnEdicion(equipo.id)
+  }
+
+  return (
+    <AppShell
+      seccionActiva="actividades"
+      titulo={`Equipos de ${actividad.nombre}`}
+      volverA={`/actividades/${actividad.id}`}
+    >
+      <div className={styles.contenido}>
+        {fasePrevia ? (
+          <BarraFormacion
+            idActividad={id}
+            etiqueta={ETIQUETA_FORMACION[actividad.configuracion?.formacion_equipos ?? '']}
+            limites={limites}
+            equipos={equipos}
+            numSinEquipo={sinEquipo.length}
+            puedeConfigurar={puede('configurar_funciones')}
+            puedePropuesta={puede('generar_propuesta_equipos')}
+            puedeCerrar={puede('cerrar_formacion')}
+            onConfigurar={() => setAjustesAbiertos(true)}
+            onError={setError}
+          />
+        ) : actividad.fase === 'archivada' ? (
+          <p className={styles.texto}>Actividad archivada: solo lectura.</p>
+        ) : actividad.fase === 'cierre' ? (
+          <p className={styles.texto}>En cierre: los equipos ya no cambian.</p>
+        ) : null}
+
+        {error ? <AvisoError mensaje={error} /> : null}
+
+        {puedeCrear ? (
+          <FormularioCrearEquipo
+            idActividad={id}
+            seUne={!puede('formar_equipos')}
+            onError={setError}
+          />
+        ) : null}
+
+        {equipos.length === 0 ? (
+          <Card>
+            <p className={styles.texto}>{textoSinEquipos(actividad)}</p>
+          </Card>
+        ) : (
+          <div className={styles.rejilla}>
+            {equipos.map((equipo) => (
+              <TarjetaEquipo
+                key={equipo.id}
+                equipo={equipo}
+                idMiMembresia={idMiMembresia}
+                miRol={rolIntegrante(actividad.rol)}
+                capacidades={capacidades}
+                limites={limites}
+                ocupado={ocupado}
+                onUnirme={unirme}
+                onSalir={salir}
+                onEditar={abrirPanel}
+              />
+            ))}
+          </div>
+        )}
+
+        {puede('asignar_integrantes') && equipos.length > 0 ? (
+          <AsignacionManual
+            equipos={equipos}
+            sinEquipo={sinEquipo}
+            enFormacion={enFormacion}
+            ocupado={ocupado}
+            onIntercambiar={() => {
+              setErrorIntercambio(null)
+              setIntercambioAbierto(true)
+            }}
+            onAsignar={(idEquipo, idMembresia) => {
+              setError(null)
+              asignar.mutate({ idEquipo, idMembresia }, { onError: alFallar })
+            }}
+            onRetirar={(idEquipo, idMembresia) => {
+              setError(null)
+              retirar.mutate({ idEquipo, idMembresia }, { onError: alFallar })
+            }}
+          />
+        ) : sinEquipo.length > 0 ? (
+          <Card className={styles.seccion}>
+            <h2 className={styles.tituloSeccion}>Sin equipo ({sinEquipo.length})</h2>
+            <ul className={styles.lista}>
+              {sinEquipoPagina.visibles.map((persona) => (
+                <li key={persona.idMembresia} className={styles.persona}>
+                  {persona.nombre}
+                  {persona.idMembresia === idMiMembresia ? ' (tú)' : ''}
+                </li>
+              ))}
+            </ul>
+            <Paginacion
+              etiqueta="Personas sin equipo"
+              total={sinEquipo.length}
+              tamano={TAMANO_PAGINA}
+              pagina={sinEquipoPagina.pagina}
+              onCambiar={setPaginaSinEquipo}
+            />
+          </Card>
+        ) : null}
+      </div>
+
+      <PanelEditarEquipo
+        equipo={equipoEnEdicion}
+        sinEquipo={sinEquipo}
+        puedeEditar={puede('editar_equipo')}
+        puedeAsignar={puede('asignar_integrantes')}
+        puedeEliminar={puede('formar_equipos')}
+        enFormacion={enFormacion}
+        ocupado={ocupado}
+        error={errorPanel}
+        onCerrar={() => setIdEquipoEnEdicion(null)}
+        onGuardar={async (idEquipo, cambios) => {
+          setErrorPanel(null)
+          await editar.mutateAsync({ idEquipo, cambios })
+        }}
+        onAsignar={(idEquipo, idMembresia) => {
+          setErrorPanel(null)
+          asignar.mutate({ idEquipo, idMembresia }, { onError: alFallarEnPanel })
+        }}
+        onRetirar={(idEquipo, idMembresia) => {
+          setErrorPanel(null)
+          retirar.mutate({ idEquipo, idMembresia }, { onError: alFallarEnPanel })
+        }}
+        onEliminar={(idEquipo) => {
+          setErrorPanel(null)
+          eliminar.mutate(idEquipo, {
+            onSuccess: () => setIdEquipoEnEdicion(null),
+            onError: alFallarEnPanel,
+          })
+        }}
+      />
+
+      <PanelIntercambio
+        abierto={intercambioAbierto}
+        equipos={equipos}
+        ocupado={intercambiar.isPending}
+        error={errorIntercambio}
+        onCerrar={() => setIntercambioAbierto(false)}
+        onIntercambiar={async (idMembresiaA, idMembresiaB) => {
+          setErrorIntercambio(null)
+          try {
+            await intercambiar.mutateAsync({ idMembresiaA, idMembresiaB })
+          } catch (e) {
+            setErrorIntercambio(mensajeDe(e))
+            throw e
+          }
+        }}
+      />
+
+      <PanelAjustesFormacion
+        abierto={ajustesAbiertos}
+        actividad={actividad}
+        onCerrar={() => setAjustesAbiertos(false)}
+      />
+    </AppShell>
+  )
+}

@@ -7,6 +7,7 @@ import {
   cerrarInscripcion,
   configurarFuncion,
   crearActividad,
+  fijarLimitesEquipo,
   listarActividadesDeUsuario,
   listarParticipantes,
   obtenerActividadPorId,
@@ -16,6 +17,7 @@ import {
   validarDatosAgregarCoorganizador,
   validarDatosConfigurarFuncion,
   validarDatosCrearActividad,
+  validarDatosLimitesEquipo,
   validarFuncion,
 } from '../services/actividades/validacion.js'
 
@@ -85,6 +87,26 @@ actividadesRouter.post(
     const { membresia } = req.contextoActividad!
     const actor = req.actor as UsuarioPublico
     const actividad = await cerrarInscripcion(req.params.id as string, actor.idUsuario, membresia)
+    res.status(200).json({ actividad })
+  },
+)
+
+// PUT /api/actividades/{id}/formacion/limites: tamaño mínimo y máximo de un
+// equipo (nucleo §8.8, P-27).
+actividadesRouter.put(
+  '/actividades/:id/formacion/limites',
+  exigirSesion,
+  cargarContextoActividad,
+  async (req, res) => {
+    const { membresia } = req.contextoActividad!
+    const actor = req.actor as UsuarioPublico
+    const cambios = validarDatosLimitesEquipo(req.body)
+    const actividad = await fijarLimitesEquipo(
+      req.params.id as string,
+      cambios,
+      actor.idUsuario,
+      membresia,
+    )
     res.status(200).json({ actividad })
   },
 )

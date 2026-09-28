@@ -294,6 +294,41 @@
   border-bottom: 1px solid var(--color-border);
 }
 
+.encabezadoTitulo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+/* Flecha de regreso: icono sin caja, con fondo al pasar el cursor, igual que los
+   botones ghost. */
+.volver {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  transition: background-color 0.15s ease;
+}
+
+.volver:hover {
+  background: var(--color-surface-hover);
+}
+
+.volver:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.volver svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
 .titulo {
   font-size: var(--font-size-3xl);
   font-weight: var(--font-weight-semibold);

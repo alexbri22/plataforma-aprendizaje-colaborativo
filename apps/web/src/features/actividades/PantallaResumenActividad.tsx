@@ -1,7 +1,15 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { AppShell } from '../../components/AppShell'
-import { AvisoError, Badge, Button, Card, IconoCargando } from '../../components/ui'
+import {
+  AvisoError,
+  Badge,
+  Button,
+  Card,
+  IconoCargando,
+  Paginacion,
+  rebanar,
+} from '../../components/ui'
 import { infoFase } from './fase'
 import { formatearFecha, formatearFechaHora } from './formato'
 import { ErrorActividad } from './actividades.api'
@@ -9,10 +17,10 @@ import { useActividad, useCerrarInscripcionMutation, useParticipantes } from './
 import type { Actividad } from './tipos'
 import styles from './PantallaResumenActividad.module.css'
 
-// Cuántos participantes se muestran antes de pedir "Ver todos". La API
-// devuelve la lista completa (todavía sin paginar, ver nucleo §3.1); esto
-// solo evita que una actividad numerosa alargue la pantalla.
-const PARTICIPANTES_VISIBLES = 8
+// Personas por página. La API devuelve la lista completa (todavía sin paginar,
+// ver nucleo §3.1); la paginación evita que una actividad numerosa alargue la
+// pantalla.
+const PARTICIPANTES_POR_PAGINA = 10
 
 const MENSAJE_ERROR_CIERRE_GENERICO = 'No pudimos cerrar la inscripción. Intenta de nuevo.'
 
@@ -96,7 +104,7 @@ function AccionDeAvance({ actividad }: { actividad: Actividad }) {
 // organizador ni co-organizadores: ellos no son a quienes se está esperando.
 function SeccionParticipantes({ id }: { id: string }) {
   const participantesQuery = useParticipantes(id)
-  const [verTodos, setVerTodos] = useState(false)
+  const [pagina, setPagina] = useState(0)
 
   return (
     <Card className={styles.seccionCard}>
@@ -121,9 +129,11 @@ function SeccionParticipantes({ id }: { id: string }) {
               </p>
             )
           }
-          const hayMas = participantes.length > PARTICIPANTES_VISIBLES
-          const visibles =
-            verTodos || !hayMas ? participantes : participantes.slice(0, PARTICIPANTES_VISIBLES)
+          const { visibles, pagina: paginaActual } = rebanar(
+            participantes,
+            pagina,
+            PARTICIPANTES_POR_PAGINA,
+          )
           return (
             <>
               <ul className={styles.listaParticipantes}>
@@ -136,17 +146,13 @@ function SeccionParticipantes({ id }: { id: string }) {
                   </li>
                 ))}
               </ul>
-              {hayMas ? (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className={styles.verTodos}
-                  aria-expanded={verTodos}
-                  onClick={() => setVerTodos((valor) => !valor)}
-                >
-                  {verTodos ? 'Ver menos' : `Ver todos (${participantes.length})`}
-                </Button>
-              ) : null}
+              <Paginacion
+                etiqueta="Participantes"
+                total={participantes.length}
+                tamano={PARTICIPANTES_POR_PAGINA}
+                pagina={paginaActual}
+                onCambiar={setPagina}
+              />
             </>
           )
         })()
@@ -161,7 +167,7 @@ export function PantallaResumenActividad() {
 
   if (actividadQuery.isPending) {
     return (
-      <AppShell seccionActiva="actividades" titulo="Actividad">
+      <AppShell seccionActiva="actividades" titulo="Actividad" volverA={'/actividades'}>
         <div className={styles.cargando} role="status" aria-label="Cargando la actividad">
           <IconoCargando size={24} />
         </div>
@@ -171,7 +177,11 @@ export function PantallaResumenActividad() {
 
   if (actividadQuery.isError || !actividadQuery.data) {
     return (
-      <AppShell seccionActiva="actividades" titulo="Actividad no encontrada">
+      <AppShell
+        seccionActiva="actividades"
+        titulo="Actividad no encontrada"
+        volverA={'/actividades'}
+      >
         <p className={styles.texto}>No encontramos esta actividad, o ya no formas parte de ella.</p>
       </AppShell>
     )
@@ -186,14 +196,14 @@ export function PantallaResumenActividad() {
   // explica. Ocultarlos por fase aquí duplicaría esa regla en el cliente.
   const accionesInsignias = (
     <>
-      <Button variant="secondary" size="sm" to={`/actividades/${actividad.id}/reconocer`}>
+      <Button variant="ghost" size="sm" to={`/actividades/${actividad.id}/reconocer`}>
         Reconocer al equipo
       </Button>
-      <Button variant="secondary" size="sm" to={`/actividades/${actividad.id}/insignias`}>
+      <Button variant="ghost" size="sm" to={`/actividades/${actividad.id}/insignias`}>
         Mis reconocimientos
       </Button>
       {organiza ? (
-        <Button variant="secondary" size="sm" to={`/actividades/${actividad.id}/participantes`}>
+        <Button variant="ghost" size="sm" to={`/actividades/${actividad.id}/participantes`}>
           Participantes
         </Button>
       ) : null}
@@ -213,15 +223,14 @@ export function PantallaResumenActividad() {
               (capacidad) =>
                 capacidad === 'configurar_funciones' || capacidad === 'ajustar_periodos',
             ) ? (
-              <Button
-                variant="secondary"
-                size="sm"
-                to={`/actividades/${actividad.id}/configuracion`}
-              >
+              <Button variant="ghost" size="sm" to={`/actividades/${actividad.id}/configuracion`}>
                 Configurar
               </Button>
             ) : null
           }
+          <Button variant="ghost" size="sm" to={`/actividades/${actividad.id}/equipos`}>
+            Equipos
+          </Button>
           {accionesInsignias}
         </>
       }
