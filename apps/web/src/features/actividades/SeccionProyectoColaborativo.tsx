@@ -4,7 +4,7 @@ import type {
   FuncionSeguimiento,
   Periodicidad,
 } from '@plataforma/shared'
-import { Fragment, useState, type ChangeEvent } from 'react'
+import { Fragment, useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { Button, Card, IconoCargando, Select } from '../../components/ui'
 import { ErrorActividad } from './actividades.api'
 import { inferirPeriodicidad, resumirCalendario } from './calendario'
@@ -38,11 +38,12 @@ export interface SeccionProyectoColaborativoProps {
   /** ajustar_periodos: mover fechas de un avance o cancelarlo. */
   puedeAjustarPeriodos: boolean
   estados: Record<string, EstadoCampo>
+  /** Resuelve a true si el servidor aceptó el cambio; los errores ya los muestra su indicador. */
   guardar: (
     clave: string,
     funcion: FuncionSeguimiento,
     cuerpo: Record<string, string>,
-  ) => Promise<void>
+  ) => Promise<boolean>
 }
 
 // Metas, Avances y Recursos: el espacio de equipo que la actividad pone a
@@ -92,11 +93,38 @@ export function SeccionProyectoColaborativo({
     else void aplicarPeriodicidad(nueva)
   }
 
+  // El PUT de espacio_equipo lleva los tres elementos a la vez. Si cada cambio
+  // se armara con lo último que devolvió la consulta, dos cambios seguidos
+  // (antes de que la consulta se refresque) partirían del mismo estado viejo y
+  // el que llegara al servidor al final pisaría al otro. Por eso los guardados
+  // se hacen de uno en uno, y cada uno se arma en el momento de enviarse sobre
+  // el último estado que el servidor confirmó. Uno que falla no lo cambia: su
+  // indicador muestra el error y no se guarda a escondidas con el siguiente.
+  const confirmado = useRef(estadoEspacioEquipo)
+  const cola = useRef<Promise<unknown>>(Promise.resolve())
+  const guardadosPendientes = useRef(0)
+
+  // Lo que llega del servidor manda cuando no hay guardados en curso (otra
+  // persona pudo cambiar algo). Se compara el contenido y no el objeto: la
+  // pantalla se vuelve a pintar con el estado viejo justo después de guardar,
+  // y eso no debe reemplazar lo que ya se confirmó.
+  const contenidoDelServidor = JSON.stringify(estadoEspacioEquipo)
+  useEffect(() => {
+    if (guardadosPendientes.current === 0) confirmado.current = JSON.parse(contenidoDelServidor)
+  }, [contenidoDelServidor])
+
   function elegirEstado(elemento: ElementoEspacioEquipo, valor: string) {
-    void guardar(`espacio_equipo:${elemento}`, 'espacio_equipo', {
-      ...estadoEspacioEquipo,
-      [elemento]: valor,
-    })
+    guardadosPendientes.current += 1
+    cola.current = cola.current
+      .catch(() => undefined) // un rechazo no debe dejar sin ejecutar los guardados que siguen
+      .then(async () => {
+        const cuerpo = { ...confirmado.current, [elemento]: valor }
+        const guardado = await guardar(`espacio_equipo:${elemento}`, 'espacio_equipo', cuerpo)
+        if (guardado) confirmado.current = cuerpo
+      })
+      .finally(() => {
+        guardadosPendientes.current -= 1
+      })
   }
 
   const etiquetaPendiente = OPCIONES_PERIODICIDAD.find((o) => o.valor === pendiente)?.etiqueta
