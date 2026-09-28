@@ -6,6 +6,7 @@ import {
   nivelParaPuntos,
 } from '@plataforma/shared'
 import { emblemaDeInsignia } from './arteInsignias'
+import { descripcionDeInsignia } from './descripcionDeInsignia'
 import { IconoCategoria } from './IconoCategoria'
 import { MarcoRango, type TamanoMarco } from './MarcoRango'
 import styles from './InsigniaCategoria.module.css'
@@ -38,10 +39,7 @@ export function InsigniaCategoria({
   const definicion = definicionCategoria(categoria)
   const nivel = nivelParaPuntos(puntos)
   const nombreNivel = nivel ? definicionNivel(nivel).nombre : null
-
-  const descripcion = nombreNivel
-    ? `${definicion.nombre}, nivel ${nombreNivel}`
-    : `${definicion.nombre}, sin nivel todavía`
+  const descripcion = descripcionDeInsignia(categoria, puntos)
 
   // El emblema es el disco de la categoría; el marco lo pone MarcoRango. Van
   // siempre juntos, de modo que todas las insignias comparten silueta y tamaño

@@ -4,20 +4,29 @@ Catálogo, otorgamiento, acumulados, niveles y rangos (ver sección 3.4 de
 `docs/diseno-desarrollo-general.md`). El modelo del sistema de recompensas está
 en la sección 6 de `docs/concepto-producto.md`.
 
-**Estado:** implementada la capa de presentación. El otorgamiento y el acumulado
-real están pendientes: dependen de actividades y membresías, que son Fase A del
-núcleo y todavía no existen. Hoy los componentes reciben los puntos por props.
+**Estado:** otorgamiento, consulta y acumulado contra la API real
+(`apps/api/src/services/insignias/`). Dos deviaciones documentadas en
+`docs/diseno-desarrollo-general.md` §4.4: mientras no exista `equipos`, los
+compañeros son toda la actividad; y la ventana del ritual se calcula con fechas
+porque la transición a `cierre` no existe todavía.
 
 ## Qué hay aquí
 
-| Pieza                      | Para qué                                                                                    |
-| -------------------------- | ------------------------------------------------------------------------------------------- |
-| `arteInsignias`            | Resuelve el emblema PNG de una categoría y nivel. Tolera los que aún no se han subido.      |
-| `MarcoRango`               | El marco del nivel. Envuelve cualquier contenido; agnóstico de qué enmarca.                 |
-| `IconoCategoria`           | Emblema vectorial de una categoría. Suplente del PNG, y titular del estado sin rango.       |
-| `InsigniaCategoria`        | Marco más emblema. Es la unidad reusable del sistema.                                       |
-| `VitrinaInsignias`         | Las seis insignias de un usuario, para el perfil.                                           |
-| `PantallaMuestraInsignias` | Ruta `/insignias`. Muestra para revisión, no producto — se elimina cuando el perfil exista. |
+| Pieza                                   | Para qué                                                                                     |
+| --------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `arteInsignias`                         | Resuelve el emblema PNG de una categoría y nivel. Tolera los que aún no se han subido.       |
+| `MarcoRango`                            | El marco del nivel. Envuelve cualquier contenido; agnóstico de qué enmarca.                  |
+| `IconoCategoria`                        | Emblema vectorial de una categoría. Suplente del PNG, y titular del estado sin rango.        |
+| `InsigniaCategoria`                     | Marco más emblema. Es la unidad reusable del sistema.                                        |
+| `VitrinaInsignias`                      | Las seis insignias de un usuario, para el perfil. Con `onSeleccionar`, cada una es un botón. |
+| `DetalleInsignia`                       | Lo que se abre al elegir una en el perfil propio: nivel, avance y frases con su actividad.   |
+| `RitualReconocimiento`                  | El reparto de reconocimientos del cierre. Recibe los compañeros y devuelve los borradores.   |
+| `insignias.api` / `useReconocimientos`  | Cliente HTTP y queries de TanStack, con claves bajo `['actividades', id]` e `['insignias']`. |
+| `PantallaReconocer`                     | `/actividades/:id/reconocer`. El ritual conectado; sirve a participantes y a quien organiza. |
+| `PantallaMisReconocimientos`            | `/actividades/:id/insignias`. Lo recibido en la actividad (tras el cierre) y el acumulado.   |
+| `PantallaParticipantes`                 | `/actividades/:id/participantes`. Lista; quien organiza enlaza al detalle de cada uno.       |
+| `PantallaReconocimientosDeParticipante` | `/actividades/:id/participantes/:idMembresia`. Lo recibido con autoría, solo organiza.       |
+| `PantallaMuestraInsignias`              | Ruta `/insignias`. Muestra del arte para revisión, no producto.                              |
 
 Se importa desde `index.ts`, nunca de un archivo suelto:
 
@@ -74,11 +83,50 @@ con el centroide del área. Es lo que dimensiona y coloca al emblema, y por eso 
 emblema no debe traer margen propio — si lo trae, se ve más chico que sus
 hermanos.
 
+## El ritual de cierre
+
+`RitualReconocimiento` reparte el presupuesto entre los compañeros del propio
+equipo. Tres reglas que vale la pena no perder:
+
+- **El presupuesto lo dicta el servidor**, que conoce el equipo y el rol. El
+  cliente no lo recalcula: la regla cambiará al existir equipos y dos fuentes
+  para un mismo hecho terminan contradiciéndose. `null` es sin límite —quien
+  organiza— y su reconocimiento vale doble.
+- **Cuenta personas, no insignias.** Con presupuesto 2 eliges a dos compañeros, y
+  a cada uno puedes darle de una a seis insignias, cada una con su frase; lo
+  único que no se puede es repetir la misma categoría en la misma persona. A
+  quien ya reconociste puedes seguir sumándole insignias aunque el presupuesto se
+  haya agotado: no gasta turno nuevo.
+- **La frase es guiada con salida a texto libre.** `FRASES_SUGERIDAS` ofrece tres
+  por categoría y siempre se puede escribir la propia. Escribir desde cero seis
+  veces produce frases de relleno, que valen menos para quien las recibe que una
+  prellenada que sí describe lo que hizo.
+
+El anonimato se anuncia antes de empezar, no al terminar: cambia lo que la gente
+se atreve a escribir.
+
+`fechaLimite` es obligatoria y no opcional. El botón dice **Guardar**, no
+Enviar, porque los reconocimientos se aplican al cerrar la actividad y hasta
+entonces se pueden cambiar; sin la fecha, "Guardar" no diría hasta cuándo se
+puede volver, que es justo lo que hace útil el cambio. Cuando exista el módulo
+de Actividades, sale del cierre de la actividad.
+
+## Quién ve qué
+
+- **Quien lo recibe** ve sus insignias y frases solo cuando el cierre termina,
+  y nunca quién se las dio. Revelarlo durante la ventana invita a responder en
+  especie, que es justo lo que el anonimato evita.
+- **Quien organiza** ve lo de cada participante con autoría y en cualquier
+  momento: moderar es parte del cierre, no viene después.
+- **Los demás participantes** no ven nada de nadie. La API responde 403; el
+  cliente solo oculta el enlace.
+
 ## Lo que falta
 
-- Otorgamiento: el ritual de cierre con su presupuesto por participante (33 %
-  del equipo, techo de 5) y la frase de justificación, cuyo formato sigue sin
-  decidirse (concepto, sección 6).
-- Acumulado real contra la API, con TanStack Query. Hoy no hay endpoints ni
-  cliente de datos en el proyecto.
-- Vista de progreso del perfil y vista de grupo del organizador.
+- Acotar los compañeros al equipo cuando exista `equipos`, y leer la fase de la
+  actividad en vez de calcular la ventana con fechas.
+- La validación ligera del organizador (alertas de reciprocidad y frases
+  vacías) y el descarte de reconocimientos.
+- `PantallaMuestraInsignias` (`/insignias`) era la muestra del arte mientras no
+  existía el perfil; ahora que existe (`features/perfil`), puede retirarse junto
+  con el enlace de la portada.

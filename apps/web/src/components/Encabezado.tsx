@@ -1,11 +1,10 @@
-import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { obtenerSesion } from '../features/cuentas/api'
+import { useSesion } from '../features/cuentas'
 import styles from './Encabezado.module.css'
 
 export function Encabezado() {
-  const { data: actor } = useQuery({ queryKey: ['sesion'], queryFn: obtenerSesion, retry: false })
-  const esAdministrador = actor?.tipoCuenta === 'administrador'
+  const { usuario } = useSesion()
+  const esAdministrador = usuario?.tipoCuenta === 'administrador'
 
   return (
     <>

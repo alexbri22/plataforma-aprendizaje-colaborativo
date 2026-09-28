@@ -3,11 +3,14 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   test: {
     exclude: ['**/node_modules/**', '**/dist/**'],
-    // Los archivos que tocan la base comparten una única DATABASE_URL_TEST y
-    // limpian sus tablas en beforeEach (ver cuentas.test.ts / admin.test.ts).
-    // Ese diseño supone ejecución secuencial: en paralelo, el beforeEach de un
-    // archivo borra las filas que otro está usando. Sin aislamiento por
-    // esquema/base por worker, serializar los archivos es la garantía correcta.
+    // Las pruebas de integración de rutas comparten un único PostgreSQL real
+    // (docs/diseno-desarrollo-nucleo.md §12.2) y cada archivo limpia sus
+    // propias tablas en beforeEach; en paralelo, dos archivos que tocan las
+    // mismas tablas (p. ej. usuarios/sesiones desde cuentas.test.ts,
+    // admin.test.ts y actividades.test.ts) se pisan entre sí. Sin la
+    // transacción por prueba que ese mismo párrafo describe como pieza del
+    // incremento de "Desbloqueo" (§11.2, todavía no implementada), la
+    // alternativa correcta es no paralelizar archivos.
     fileParallelism: false,
   },
 })

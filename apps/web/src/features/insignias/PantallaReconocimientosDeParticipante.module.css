@@ -1,0 +1,78 @@
+.cargando {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-12);
+}
+
+.texto,
+.resumen {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.resumen {
+  margin-bottom: var(--space-4);
+}
+
+.nota {
+  margin: var(--space-4) 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.volver {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.volver:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.categorias {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.cabecera {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.emblema {
+  width: 1.75rem;
+  height: 1.75rem;
+  color: var(--color-accent-ink);
+}
+
+.nombre {
+  font-weight: var(--font-weight-medium);
+}
+
+.frases {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0 0 0 calc(1.75rem + var(--space-2));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.frase {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.autor {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}

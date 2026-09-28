@@ -4,7 +4,10 @@ import express, { type Express } from 'express'
 import { config } from './config.js'
 import { manejadorErrores } from './middleware/manejadorErrores.js'
 import { resolverSesion } from './middleware/sesion.js'
+import { actividadesRouter } from './routes/actividades.js'
 import { adminRouter } from './routes/admin.js'
+import { clavesRouter } from './routes/claves.js'
+import { insigniasRouter } from './routes/insignias.js'
 import { cuentasRouter } from './routes/cuentas.js'
 import { healthRouter } from './routes/health.js'
 
@@ -50,11 +53,14 @@ export function createApp(): Express {
 
   app.use('/health', healthRouter)
   // También bajo /api: en Vercel la función solo está mapeada a ese
-  // prefijo (ver api/[...path].ts en la raíz del repo), así que /health a
-  // secas no es alcanzable ahí.
+  // prefijo (ver api/servidor.ts y el rewrite en vercel.json), así que
+  // /health a secas no es alcanzable ahí.
   app.use('/api/health', healthRouter)
   app.use('/api', cuentasRouter)
   app.use('/api/admin', adminRouter)
+  app.use('/api', actividadesRouter)
+  app.use('/api', clavesRouter)
+  app.use('/api', insigniasRouter)
 
   app.use(manejadorErrores)
 

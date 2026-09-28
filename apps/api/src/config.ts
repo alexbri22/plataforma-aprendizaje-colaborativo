@@ -21,10 +21,10 @@ export const config = {
   puerto: numero('PORT', 3001),
   databaseUrl: requerida(nombreVariableBaseDeDatos),
   // Lista separada por comas: en Vercel, apps/web y esta API se sirven
-  // desde el mismo despliegue (api/[...path].ts en la raíz), así que el
-  // navegador nunca hace una petición cruzada ahí. Esto solo importa para
-  // acceso directo al API sin pasar por ese despliegue — depuración local,
-  // curl, o un cliente futuro.
+  // desde el mismo despliegue (api/servidor.ts, enrutada por el rewrite de
+  // vercel.json), así que el navegador nunca hace una petición cruzada ahí.
+  // Esto solo importa para acceso directo al API sin pasar por ese
+  // despliegue — depuración local, curl, o un cliente futuro.
   webOrigins: (process.env.WEB_ORIGIN ?? 'http://localhost:5173')
     .split(',')
     .map((origen) => origen.trim())
@@ -51,6 +51,13 @@ export const config = {
     sesion: {
       ventanaMin: numero('RATE_LIMIT_SESION_VENTANA_MIN', 15),
       max: numero('RATE_LIMIT_SESION_MAX', 10),
+    },
+    // Consulta por clave de ingreso (docs/diseno-desarrollo-nucleo.md §3.2 y
+    // §3.3): el espacio de claves es grande, pero sin límite de intentos
+    // seguiría siendo posible recorrerlo por fuerza bruta.
+    clave: {
+      ventanaMin: numero('RATE_LIMIT_CLAVE_VENTANA_MIN', 15),
+      max: numero('RATE_LIMIT_CLAVE_MAX', 20),
     },
   },
 }

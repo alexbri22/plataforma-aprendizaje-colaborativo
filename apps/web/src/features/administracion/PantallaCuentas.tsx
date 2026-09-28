@@ -1,8 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Encabezado } from '../../components/Encabezado'
-import { Badge, Button, Table, TableCell, TableHeaderCell, TableRow } from '../../components/ui'
-import { AvisoError } from '../cuentas/AvisoError'
+import { AppShell } from '../../components/AppShell'
+import {
+  AvisoError,
+  Badge,
+  Button,
+  Table,
+  TableCell,
+  TableHeaderCell,
+  TableRow,
+} from '../../components/ui'
 import { ModalRestablecerContrasena } from './ModalRestablecerContrasena'
 import { listarCuentas, type CuentaAdmin } from './api'
 import styles from './PantallaCuentas.module.css'
@@ -27,16 +34,11 @@ export function PantallaCuentas() {
   })
 
   return (
-    <div className={styles.page}>
-      <Encabezado />
-
-      <main id="contenido" className={styles.main}>
-        <header className={styles.encabezado}>
-          <h1 className={styles.titulo}>Cuentas</h1>
-          <p className={styles.subtitulo}>
-            Todas las cuentas registradas en la plataforma y su estado.
-          </p>
-        </header>
+    <AppShell seccionActiva="cuentas" titulo="Cuentas">
+      <div className={styles.contenido}>
+        <p className={styles.subtitulo}>
+          Todas las cuentas registradas en la plataforma y su estado.
+        </p>
 
         {isPending ? (
           <p role="status" className={styles.estadoTexto}>
@@ -88,7 +90,7 @@ export function PantallaCuentas() {
             </tbody>
           </Table>
         )}
-      </main>
+      </div>
 
       {/* key por cuenta: al abrir el modal para otra persona (o reabrirlo tras
           un restablecimiento) remonta con estado y mutación frescos. */}
@@ -97,6 +99,6 @@ export function PantallaCuentas() {
         cuenta={cuentaEnReset}
         onCerrar={() => setCuentaEnReset(null)}
       />
-    </div>
+    </AppShell>
   )
 }

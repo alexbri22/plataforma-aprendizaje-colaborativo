@@ -4,11 +4,11 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { PantallaRegistrarse } from './PantallaRegistrarse'
-import { ErrorCuenta, registrarUsuario } from './api'
+import { ErrorCuenta, registrarUsuario, type Usuario } from './api'
 
 vi.mock('./api', async () => {
   const real = await vi.importActual<typeof import('./api')>('./api')
-  return { ...real, registrarUsuario: vi.fn(), obtenerSesion: vi.fn(() => Promise.resolve(null)) }
+  return { ...real, registrarUsuario: vi.fn() }
 })
 
 const navigateMock = vi.fn()
@@ -17,8 +17,20 @@ vi.mock('react-router-dom', async () => {
   return { ...real, useNavigate: () => navigateMock }
 })
 
+const USUARIO_PRUEBA: Usuario = {
+  idUsuario: 'u1',
+  nombre: 'Ana',
+  apellidoPaterno: 'García',
+  apellidoMaterno: 'López',
+  correo: 'ana@example.com',
+  tipoCuenta: 'usuario',
+  fotoUrl: null,
+}
+
 function renderPantalla() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
@@ -87,7 +99,7 @@ describe('PantallaRegistrarse', () => {
   })
 
   it('envía los datos de registro (sin la confirmación) y navega al inicio', async () => {
-    vi.mocked(registrarUsuario).mockResolvedValueOnce(undefined)
+    vi.mocked(registrarUsuario).mockResolvedValueOnce(USUARIO_PRUEBA)
     renderPantalla()
 
     await llenarFormularioValido()

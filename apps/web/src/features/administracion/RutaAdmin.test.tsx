@@ -3,11 +3,11 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { RutaAdmin } from './RutaAdmin'
-import { obtenerSesion } from '../cuentas/api'
+import { obtenerSesionActual } from '../cuentas/api'
 
 vi.mock('../cuentas/api', async () => {
   const real = await vi.importActual<typeof import('../cuentas/api')>('../cuentas/api')
-  return { ...real, obtenerSesion: vi.fn() }
+  return { ...real, obtenerSesionActual: vi.fn() }
 })
 
 const ADMIN = {
@@ -17,6 +17,7 @@ const ADMIN = {
   apellidoMaterno: 'Murray',
   correo: 'grace@ejemplo.com',
   tipoCuenta: 'administrador' as const,
+  fotoUrl: null,
 }
 
 const USUARIO = { ...ADMIN, idUsuario: 'u1', tipoCuenta: 'usuario' as const }
@@ -45,24 +46,24 @@ function renderRuta() {
 
 describe('RutaAdmin', () => {
   beforeEach(() => {
-    vi.mocked(obtenerSesion).mockReset()
+    vi.mocked(obtenerSesionActual).mockReset()
   })
 
   it('muestra el panel a un administrador', async () => {
-    vi.mocked(obtenerSesion).mockResolvedValue(ADMIN)
+    vi.mocked(obtenerSesionActual).mockResolvedValue(ADMIN)
     renderRuta()
     expect(await screen.findByText('Panel de administración')).toBeInTheDocument()
   })
 
   it('redirige al inicio a una cuenta de usuario', async () => {
-    vi.mocked(obtenerSesion).mockResolvedValue(USUARIO)
+    vi.mocked(obtenerSesionActual).mockResolvedValue(USUARIO)
     renderRuta()
     expect(await screen.findByText('Inicio público')).toBeInTheDocument()
     expect(screen.queryByText('Panel de administración')).not.toBeInTheDocument()
   })
 
   it('redirige al ingreso cuando no hay sesión', async () => {
-    vi.mocked(obtenerSesion).mockResolvedValue(null)
+    vi.mocked(obtenerSesionActual).mockResolvedValue(null)
     renderRuta()
     expect(await screen.findByText('Pantalla de ingreso')).toBeInTheDocument()
   })

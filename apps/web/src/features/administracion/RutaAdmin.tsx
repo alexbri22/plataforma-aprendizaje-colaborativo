@@ -1,32 +1,22 @@
-import { useQuery } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { Navigate } from 'react-router-dom'
-import { Encabezado } from '../../components/Encabezado'
-import { obtenerSesion } from '../cuentas/api'
+import { IconoCargando } from '../../components/ui'
+import { useSesion } from '../cuentas'
 import styles from './PantallaCuentas.module.css'
 
 export function RutaAdmin({ children }: { children: ReactNode }) {
-  const { data, isPending, isError } = useQuery({
-    queryKey: ['sesion'],
-    queryFn: obtenerSesion,
-    retry: false,
-  })
+  const { usuario, cargando } = useSesion()
 
-  if (isPending) {
+  if (cargando) {
     return (
-      <div className={styles.page}>
-        <Encabezado />
-        <main id="contenido" className={styles.mainCentrado}>
-          <p role="status" className={styles.estadoTexto}>
-            Verificando tu sesión…
-          </p>
-        </main>
+      <div className={styles.cargando} role="status" aria-label="Verificando sesión">
+        <IconoCargando size={24} />
       </div>
     )
   }
 
-  if (isError || !data) return <Navigate to="/ingresar" replace />
-  if (data.tipoCuenta !== 'administrador') return <Navigate to="/" replace />
+  if (!usuario) return <Navigate to="/ingresar" replace />
+  if (usuario.tipoCuenta !== 'administrador') return <Navigate to="/" replace />
 
   return <>{children}</>
 }

@@ -1,0 +1,80 @@
+.cargando {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16) 0;
+  color: var(--color-text-muted);
+}
+
+.card {
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.badge {
+  align-self: flex-start;
+}
+
+.objetivo {
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+  color: var(--color-text);
+  margin: 0;
+}
+
+.texto {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.seccion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.tituloSeccion {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  margin: 0;
+}
+
+.detalles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+}
+
+.detalle {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.detalleEtiqueta {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+}
+
+.detalleValor {
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  margin: 0;
+}
+
+/* La clave es un dato más de la lista, no un bloque aparte — el monoespaciado
+   basta para señalar que es un código, sin subir tamaño, color ni fondo. */
+.clave {
+  font-family: var(--font-family-mono);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.02em;
+}

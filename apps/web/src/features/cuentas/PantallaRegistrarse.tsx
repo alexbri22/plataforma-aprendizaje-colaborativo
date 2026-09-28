@@ -1,11 +1,10 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Button, Input, Select } from '../../components/ui'
-import { AvisoError } from './AvisoError'
+import { AvisoError, Button, IconoCargando, Input, Select } from '../../components/ui'
 import { CampoContrasena } from './CampoContrasena'
-import { IconoCargando } from './IconoCargando'
 import { PantallaAutenticacion } from './PantallaAutenticacion'
-import { ErrorCuenta, registrarUsuario } from './api'
+import { ErrorCuenta } from './api'
+import { useRegistrarUsuarioMutation } from './useSesion'
 import {
   validarCampoRequerido,
   validarConfirmacionContrasena,
@@ -64,10 +63,10 @@ function obtenerError(campo: keyof Valores, valores: Valores): string | undefine
 
 export function PantallaRegistrarse() {
   const navigate = useNavigate()
+  const mutacion = useRegistrarUsuarioMutation()
   const [valores, setValores] = useState<Valores>(VALORES_INICIALES)
   const [errores, setErrores] = useState<Errores>({})
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null)
-  const [enviando, setEnviando] = useState(false)
 
   function actualizarCampo(campo: keyof Valores, valor: string) {
     setValores((actuales) => ({ ...actuales, [campo]: valor }))
@@ -105,9 +104,8 @@ export function PantallaRegistrarse() {
     }
 
     setErrorEnvio(null)
-    setEnviando(true)
     try {
-      await registrarUsuario({
+      await mutacion.mutateAsync({
         nombre: valores.nombre,
         apellidoPaterno: valores.apellidoPaterno,
         apellidoMaterno: valores.apellidoMaterno,
@@ -119,8 +117,6 @@ export function PantallaRegistrarse() {
       navigate('/actividades')
     } catch (error) {
       setErrorEnvio(error instanceof ErrorCuenta ? error.message : MENSAJE_ERROR_GENERICO)
-    } finally {
-      setEnviando(false)
     }
   }
 
@@ -151,7 +147,7 @@ export function PantallaRegistrarse() {
           onChange={manejarCambioTexto('nombre')}
           onBlur={() => validarCampo('nombre')}
           error={errores.nombre}
-          disabled={enviando}
+          disabled={mutacion.isPending}
           required
         />
         <div className={styles.filaDos}>
@@ -163,7 +159,7 @@ export function PantallaRegistrarse() {
             onChange={manejarCambioTexto('apellidoPaterno')}
             onBlur={() => validarCampo('apellidoPaterno')}
             error={errores.apellidoPaterno}
-            disabled={enviando}
+            disabled={mutacion.isPending}
             required
           />
           <Input
@@ -174,7 +170,7 @@ export function PantallaRegistrarse() {
             onChange={manejarCambioTexto('apellidoMaterno')}
             onBlur={() => validarCampo('apellidoMaterno')}
             error={errores.apellidoMaterno}
-            disabled={enviando}
+            disabled={mutacion.isPending}
             required
           />
         </div>
@@ -186,7 +182,7 @@ export function PantallaRegistrarse() {
             onChange={manejarCambioTexto('nivelEstudios')}
             onBlur={() => validarCampo('nivelEstudios')}
             error={errores.nivelEstudios}
-            disabled={enviando}
+            disabled={mutacion.isPending}
             required
           >
             <option value="" disabled>
@@ -206,7 +202,7 @@ export function PantallaRegistrarse() {
             onChange={manejarCambioTexto('institucionEducativa')}
             onBlur={() => validarCampo('institucionEducativa')}
             error={errores.institucionEducativa}
-            disabled={enviando}
+            disabled={mutacion.isPending}
             required
           />
         </div>
@@ -219,7 +215,7 @@ export function PantallaRegistrarse() {
           onChange={manejarCambioTexto('correo')}
           onBlur={() => validarCampo('correo')}
           error={errores.correo}
-          disabled={enviando}
+          disabled={mutacion.isPending}
           required
         />
         <div className={styles.filaDos}>
@@ -231,7 +227,7 @@ export function PantallaRegistrarse() {
             onBlur={() => validarCampo('contrasena')}
             error={errores.contrasena}
             autoComplete="new-password"
-            disabled={enviando}
+            disabled={mutacion.isPending}
           />
           <CampoContrasena
             id="confirmarContrasena"
@@ -241,12 +237,12 @@ export function PantallaRegistrarse() {
             onBlur={() => validarCampo('confirmarContrasena')}
             error={errores.confirmarContrasena}
             autoComplete="new-password"
-            disabled={enviando}
+            disabled={mutacion.isPending}
           />
         </div>
 
-        <Button type="submit" disabled={enviando} className={styles.enviar}>
-          {enviando ? (
+        <Button type="submit" disabled={mutacion.isPending} className={styles.enviar}>
+          {mutacion.isPending ? (
             <>
               <IconoCargando />
               Creando cuenta…

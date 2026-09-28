@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import { Button, Input, Modal } from '../../components/ui'
-import { AvisoError } from '../cuentas/AvisoError'
+import { AvisoError } from '../../components/ui'
 import { ErrorAdmin, restablecerContrasena, type CuentaAdmin } from './api'
 import styles from './ModalRestablecerContrasena.module.css'
 

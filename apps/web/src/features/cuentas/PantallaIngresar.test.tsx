@@ -4,11 +4,11 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { PantallaIngresar } from './PantallaIngresar'
-import { ErrorCuenta, iniciarSesion } from './api'
+import { ErrorCuenta, iniciarSesion, type Usuario } from './api'
 
 vi.mock('./api', async () => {
   const real = await vi.importActual<typeof import('./api')>('./api')
-  return { ...real, iniciarSesion: vi.fn(), obtenerSesion: vi.fn(() => Promise.resolve(null)) }
+  return { ...real, iniciarSesion: vi.fn() }
 })
 
 const navigateMock = vi.fn()
@@ -17,11 +17,25 @@ vi.mock('react-router-dom', async () => {
   return { ...real, useNavigate: () => navigateMock }
 })
 
-function renderPantalla() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+const USUARIO_PRUEBA: Usuario = {
+  idUsuario: 'u1',
+  nombre: 'Ana',
+  apellidoPaterno: 'García',
+  apellidoMaterno: 'López',
+  correo: 'ana@example.com',
+  tipoCuenta: 'usuario',
+  fotoUrl: null,
+}
+
+type EntradaInicial = string | { pathname: string; state?: unknown }
+
+function renderPantalla(entradaInicial: EntradaInicial[] = ['/ingresar']) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={entradaInicial}>
         <PantallaIngresar />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -67,7 +81,7 @@ describe('PantallaIngresar', () => {
   })
 
   it('envía las credenciales y navega al inicio tras un ingreso exitoso', async () => {
-    vi.mocked(iniciarSesion).mockResolvedValueOnce(undefined)
+    vi.mocked(iniciarSesion).mockResolvedValueOnce(USUARIO_PRUEBA)
     renderPantalla()
 
     await userEvent.type(screen.getByLabelText('Correo'), 'ana@example.com')
@@ -80,7 +94,22 @@ describe('PantallaIngresar', () => {
         contrasena: 'clave1234',
       }),
     )
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/actividades'))
+    await waitFor(() =>
+      expect(navigateMock).toHaveBeenCalledWith('/actividades', { replace: true }),
+    )
+  })
+
+  it('retoma el destino original cuando RutaProtegida lo dejó en el estado de navegación', async () => {
+    vi.mocked(iniciarSesion).mockResolvedValueOnce(USUARIO_PRUEBA)
+    renderPantalla([{ pathname: '/ingresar', state: { desde: '/actividades/nueva' } }])
+
+    await userEvent.type(screen.getByLabelText('Correo'), 'ana@example.com')
+    await userEvent.type(screen.getByLabelText('Contraseña'), 'clave1234')
+    await userEvent.click(screen.getByRole('button', { name: 'Ingresar' }))
+
+    await waitFor(() =>
+      expect(navigateMock).toHaveBeenCalledWith('/actividades/nueva', { replace: true }),
+    )
   })
 
   it('muestra un aviso cuando el servidor rechaza las credenciales', async () => {

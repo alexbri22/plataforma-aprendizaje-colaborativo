@@ -13,7 +13,7 @@ vi.mock('./api', async () => {
 
 vi.mock('../cuentas/api', async () => {
   const real = await vi.importActual<typeof import('../cuentas/api')>('../cuentas/api')
-  return { ...real, obtenerSesion: vi.fn(() => Promise.resolve(null)) }
+  return { ...real, obtenerSesionActual: vi.fn(() => Promise.resolve(null)) }
 })
 
 const CUENTA_ACTIVA: CuentaAdmin = {

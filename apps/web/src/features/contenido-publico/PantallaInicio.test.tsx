@@ -6,7 +6,7 @@ import { PantallaInicio } from './PantallaInicio'
 
 vi.mock('../cuentas/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../cuentas/api')>()),
-  obtenerSesion: vi.fn(() => Promise.resolve(null)),
+  obtenerSesionActual: vi.fn(() => Promise.resolve(null)),
 }))
 
 function renderPantallaInicio() {

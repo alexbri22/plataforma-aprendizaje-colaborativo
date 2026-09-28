@@ -9,7 +9,13 @@ export type CodigoError =
   | 'cuenta_desactivada'
   | 'sin_sesion'
   | 'no_autorizado'
+  | 'clave_invalida'
+  | 'ya_es_miembro'
+  | 'actividad_no_encontrada'
+  | 'sin_permiso'
+  | 'fuera_de_plazo'
   | 'usuario_no_encontrado'
+  | 'foto_invalida'
 
 export abstract class ErrorDominio extends Error {
   abstract readonly codigo: CodigoError
@@ -75,11 +81,76 @@ export class ErrorNoAutorizado extends ErrorDominio {
   }
 }
 
+// Misma respuesta tanto si la clave no corresponde a ninguna actividad como
+// si corresponde a una que ya salió de inscripción (docs/diseno-desarrollo-nucleo.md
+// §7.2: "deja de funcionar... y no se reactiva"). No distinguir ambos casos
+// sigue el mismo criterio de 3.3 para no revelar de más.
+export class ErrorClaveInvalida extends ErrorDominio {
+  readonly codigo = 'clave_invalida' as const
+  readonly status = 404
+
+  constructor() {
+    super('Esta clave no corresponde a ninguna actividad que admita unirse.')
+  }
+}
+
+export class ErrorYaEsMiembro extends ErrorDominio {
+  readonly codigo = 'ya_es_miembro' as const
+  readonly status = 409
+
+  constructor() {
+    super('Ya formas parte de esta actividad.')
+  }
+}
+
+// Misma respuesta si la actividad no existe que si existe pero el actor no es
+// miembro: distinguirlas revelaría que hay una actividad con ese id a quien
+// no tiene nada que ver con ella (mismo criterio que ErrorClaveInvalida).
+export class ErrorActividadNoEncontrada extends ErrorDominio {
+  readonly codigo = 'actividad_no_encontrada' as const
+  readonly status = 404
+
+  constructor() {
+    super('No encontramos esta actividad.')
+  }
+}
+
+export class ErrorSinPermiso extends ErrorDominio {
+  readonly codigo = 'sin_permiso' as const
+  readonly status = 403
+
+  constructor(mensaje = 'No tienes permiso para hacer esto en esta actividad.') {
+    super(mensaje)
+  }
+}
+
+export class ErrorFueraDePlazo extends ErrorDominio {
+  readonly codigo = 'fuera_de_plazo' as const
+  readonly status = 409
+
+  constructor(mensaje: string) {
+    super(mensaje)
+  }
+}
+
 export class ErrorUsuarioNoEncontrado extends ErrorDominio {
   readonly codigo = 'usuario_no_encontrado' as const
   readonly status = 404
 
   constructor() {
-    super('No existe una cuenta con ese identificador.')
+    super('No encontramos a esta persona.')
+  }
+}
+
+// La foto no cumple el contrato (docs/diseno-desarrollo-nucleo.md §6.3):
+// tipo no admitido, contenido que no corresponde al tipo declarado o tamaño
+// fuera de límite. Es 400 y no 415 porque el cliente propio ya la reduce y
+// convierte antes de subirla; llegar aquí es un cliente que no lo hizo.
+export class ErrorFotoInvalida extends ErrorDominio {
+  readonly codigo = 'foto_invalida' as const
+  readonly status = 400
+
+  constructor(mensaje: string) {
+    super(mensaje)
   }
 }

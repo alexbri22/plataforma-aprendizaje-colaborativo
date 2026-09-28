@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { ErrorValidacion } from '../../errores.js'
-import { validarCredenciales, validarDatosRegistro } from './validacion.js'
+import {
+  validarActualizacionPerfil,
+  validarCredenciales,
+  validarDatosRegistro,
+} from './validacion.js'
 
 const DATOS_VALIDOS = {
   nombre: 'Ada',
@@ -96,6 +100,57 @@ describe('validarCredenciales', () => {
       const detalle = (error as ErrorValidacion).detallePorCampo
       expect(detalle.correo).toBeDefined()
       expect(detalle.contrasena).toBeDefined()
+    }
+  })
+})
+
+describe('validarActualizacionPerfil', () => {
+  it('sin campos de contraseña, es una edición de nombre y apellidos', () => {
+    const resultado = validarActualizacionPerfil({
+      nombre: ' Ada ',
+      apellidoPaterno: 'Lovelace',
+      apellidoMaterno: 'Byron',
+    })
+    expect(resultado).toEqual({
+      tipo: 'datos',
+      datos: { nombre: 'Ada', apellidoPaterno: 'Lovelace', apellidoMaterno: 'Byron' },
+    })
+  })
+
+  it('con contrasenaNueva, es un cambio de contraseña', () => {
+    const resultado = validarActualizacionPerfil({
+      contrasenaActual: 'contrasena-larga',
+      contrasenaNueva: 'otra-contrasena-larga',
+    })
+    expect(resultado.tipo).toBe('contrasena')
+  })
+
+  it('rechaza un cuerpo que mezcla datos y contraseña, en vez de aplicar una parte', () => {
+    expect(() =>
+      validarActualizacionPerfil({
+        nombre: 'Otro',
+        contrasenaActual: 'contrasena-larga',
+        contrasenaNueva: 'otra-contrasena-larga',
+      }),
+    ).toThrow(ErrorValidacion)
+  })
+
+  it('exige la actual, ocho caracteres y que la nueva sea distinta', () => {
+    for (const [cuerpo, campo] of [
+      [{ contrasenaNueva: 'otra-contrasena-larga' }, 'contrasenaActual'],
+      [{ contrasenaActual: 'x', contrasenaNueva: 'corta' }, 'contrasenaNueva'],
+      [
+        { contrasenaActual: 'contrasena-larga', contrasenaNueva: 'contrasena-larga' },
+        'contrasenaNueva',
+      ],
+    ] as const) {
+      try {
+        validarActualizacionPerfil(cuerpo)
+        expect.fail('debía lanzar ErrorValidacion')
+      } catch (error) {
+        expect(error).toBeInstanceOf(ErrorValidacion)
+        expect((error as ErrorValidacion).detallePorCampo[campo]).toBeDefined()
+      }
     }
   })
 })
