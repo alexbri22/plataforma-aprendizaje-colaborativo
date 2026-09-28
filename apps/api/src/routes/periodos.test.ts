@@ -136,6 +136,22 @@ describe('GET /api/actividades/:id/periodos', () => {
 
     expect(respuesta.status).toBe(404)
   })
+
+  it('responde 404 a un participante cuya membresía fue desactivada', async () => {
+    const { id, claveIngreso } = await actividadConCalendario()
+    const cookieParticipante = await registrarYObtenerCookie('grace@ejemplo.com')
+    await unirseComoParticipante(claveIngreso, cookieParticipante)
+    await prisma.membresia.updateMany({
+      where: { idActividad: id, rol: 'participante' },
+      data: { estado: 'desactivada' },
+    })
+
+    const respuesta = await request(app)
+      .get(`/api/actividades/${id}/periodos`)
+      .set('Cookie', cookieParticipante)
+
+    expect(respuesta.status).toBe(404)
+  })
 })
 
 describe('PUT /api/actividades/:id/periodos', () => {

@@ -219,6 +219,24 @@ describe('GET /api/actividades/:id', () => {
     expect(respuestaInexistente.body.codigo).toBe('actividad_no_encontrada')
   })
 
+  it('responde 404 a un participante cuya membresía fue desactivada', async () => {
+    const cookieOrganizador = await registrarYObtenerCookie('ada@ejemplo.com')
+    const cookieParticipante = await registrarYObtenerCookie('grace@ejemplo.com')
+    const { id, claveIngreso } = await crearActividad(cookieOrganizador)
+    await unirseComoParticipante(claveIngreso, cookieParticipante)
+    await prisma.membresia.updateMany({
+      where: { idActividad: id, rol: 'participante' },
+      data: { estado: 'desactivada' },
+    })
+
+    const respuesta = await request(app)
+      .get(`/api/actividades/${id}`)
+      .set('Cookie', cookieParticipante)
+
+    expect(respuesta.status).toBe(404)
+    expect(respuesta.body.codigo).toBe('actividad_no_encontrada')
+  })
+
   it('un participante no obtiene ninguna capacidad de este catálogo', async () => {
     const cookieOrganizador = await registrarYObtenerCookie('ada@ejemplo.com')
     const cookieParticipante = await registrarYObtenerCookie('grace@ejemplo.com')
