@@ -315,6 +315,46 @@ describe('PATCH /api/actividades/:id/periodos/:idPeriodo', () => {
     expect(reactivado.body.codigo).toBe('periodo_traslapado')
   })
 
+  // La carrera: dos ajustes a rangos que se traslapan entre sí, cada uno libre
+  // de conflicto según lo confirmado en ese momento. Aquí uno queda a medias
+  // (movido dentro de su transacción, sin commit) mientras llega el otro.
+  // Toma el mismo candado que el servicio (la fila de la actividad) porque es
+  // quien serializa a los escritores de periodos: sin él, el segundo ajuste no
+  // ve al primero y los dos confirman.
+  it('un ajuste que llega con otro a medias espera y no deja periodos activos traslapados', async () => {
+    const { cookie, id, periodos } = await actividadConCalendario()
+    const libre = periodos[periodos.length - 1]
+    await ajustar(id, libre.id, cookie, { estado: 'cancelado' })
+    const rango = { fechaInicio: new Date(libre.fechaInicio), fechaFin: new Date(libre.fechaFin) }
+
+    let confirmarPrimero!: () => void
+    let primeroEscrito!: () => void
+    const escrito = new Promise<void>((resolver) => (primeroEscrito = resolver))
+    const primero = prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id_actividad FROM actividades WHERE id_actividad = ${id} FOR UPDATE`
+      await tx.periodoReporte.update({ where: { idPeriodo: periodos[0].id }, data: rango })
+      primeroEscrito()
+      await new Promise<void>((resolver) => (confirmarPrimero = resolver))
+    })
+    await escrito
+
+    const segundo = ajustar(id, periodos[1].id, cookie, {
+      fechaInicio: libre.fechaInicio,
+      fechaFin: libre.fechaFin,
+    }).then((respuesta) => respuesta)
+    await new Promise((resolver) => setTimeout(resolver, 300))
+    confirmarPrimero()
+    await primero
+    const respuestaSegundo = await segundo
+
+    expect(respuestaSegundo.status).toBe(422)
+    expect(respuestaSegundo.body.codigo).toBe('periodo_traslapado')
+    const activosEnElRango = await prisma.periodoReporte.count({
+      where: { idActividad: id, estado: 'activo', fechaInicio: rango.fechaInicio },
+    })
+    expect(activosEnElRango).toBe(1)
+  })
+
   it('rechaza una fecha de fin anterior a la de inicio', async () => {
     const { cookie, id, periodos } = await actividadConCalendario()
 

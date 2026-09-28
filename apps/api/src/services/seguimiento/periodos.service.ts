@@ -1,4 +1,4 @@
-import type { EstadoActividad, PeriodoReporte as FilaPeriodo } from '@prisma/client'
+import type { EstadoActividad, Prisma, PeriodoReporte as FilaPeriodo } from '@prisma/client'
 import type { PeriodoReporte } from '@plataforma/shared'
 import { prisma } from '../../data/prisma.js'
 import { ErrorPeriodoNoEncontrado, ErrorPeriodoTraslapado, ErrorValidacion } from '../../errores.js'
@@ -29,6 +29,23 @@ function aRespuesta(fila: FilaPeriodo): PeriodoReporte {
     fechaFin: aFechaCalendario(fila.fechaFin),
     estado: fila.estado,
   }
+}
+
+// Los periodos activos de una actividad no se traslapan, y la base no lo
+// impone: lo comprueba el servicio antes de escribir. Esa comprobación y la
+// escritura tienen que ser una sola pieza, porque dos ajustes simultáneos que
+// mueven periodos distintos al mismo rango libre pasarían cada uno la
+// comprobación sin ver al otro, y los dos confirmarían. Todo escritor de
+// periodos toma primero este candado sobre la fila de la actividad, así que
+// los de una misma actividad van de uno en uno y el segundo ya ve lo que
+// confirmó el primero. NO KEY UPDATE y no UPDATE: basta para excluirse entre
+// sí y no estorba a los inserts con llave foránea hacia la actividad (unirse,
+// registrar eventos).
+async function bloquearPeriodosDeActividad(
+  tx: Prisma.TransactionClient,
+  idActividad: string,
+): Promise<void> {
+  await tx.$queryRaw`SELECT id_actividad FROM actividades WHERE id_actividad = ${idActividad} FOR NO KEY UPDATE`
 }
 
 // GET /api/actividades/{id}/periodos: cualquier miembro puede consultarlos
@@ -74,6 +91,7 @@ export async function definirPeriodos(
 
   const { idActividad } = actividad
   await prisma.$transaction(async (tx) => {
+    await bloquearPeriodosDeActividad(tx, idActividad)
     await tx.periodoReporte.deleteMany({ where: { idActividad } })
     await tx.periodoReporte.createMany({
       data: periodos.map((periodo) => ({ idActividad, ...periodo })),
@@ -111,37 +129,42 @@ export async function actualizarPeriodo(
   )
 
   const { idActividad } = actividad
-  const actual = await prisma.periodoReporte.findFirst({ where: { idPeriodo, idActividad } })
-  if (!actual) throw new ErrorPeriodoNoEncontrado()
-
-  const siguiente = {
-    fechaInicio: cambios.fechaInicio ?? actual.fechaInicio,
-    fechaFin: cambios.fechaFin ?? actual.fechaFin,
-    estado: cambios.estado ?? actual.estado,
-  }
-
-  if (siguiente.fechaFin < siguiente.fechaInicio) {
-    throw new ErrorValidacion({
-      fechaFin: 'Debe ser igual o posterior a la fecha de inicio.',
-    })
-  }
-
-  // Solo un periodo activo ocupa días: uno cancelado puede quedar traslapado
-  // sin efecto, y esta comprobación se repite al reactivarlo.
-  if (siguiente.estado === 'activo') {
-    const traslapado = await prisma.periodoReporte.findFirst({
-      where: {
-        idActividad,
-        idPeriodo: { not: idPeriodo },
-        estado: 'activo',
-        fechaInicio: { lte: siguiente.fechaFin },
-        fechaFin: { gte: siguiente.fechaInicio },
-      },
-    })
-    if (traslapado) throw new ErrorPeriodoTraslapado(traslapado.orden)
-  }
 
   const actualizado = await prisma.$transaction(async (tx) => {
+    await bloquearPeriodosDeActividad(tx, idActividad)
+
+    // Se lee con el candado ya tomado: lo que otro ajuste confirmó mientras
+    // esperábamos es lo que cuenta, no lo que había al llegar la petición.
+    const actual = await tx.periodoReporte.findFirst({ where: { idPeriodo, idActividad } })
+    if (!actual) throw new ErrorPeriodoNoEncontrado()
+
+    const siguiente = {
+      fechaInicio: cambios.fechaInicio ?? actual.fechaInicio,
+      fechaFin: cambios.fechaFin ?? actual.fechaFin,
+      estado: cambios.estado ?? actual.estado,
+    }
+
+    if (siguiente.fechaFin < siguiente.fechaInicio) {
+      throw new ErrorValidacion({
+        fechaFin: 'Debe ser igual o posterior a la fecha de inicio.',
+      })
+    }
+
+    // Solo un periodo activo ocupa días: uno cancelado puede quedar traslapado
+    // sin efecto, y esta comprobación se repite al reactivarlo.
+    if (siguiente.estado === 'activo') {
+      const traslapado = await tx.periodoReporte.findFirst({
+        where: {
+          idActividad,
+          idPeriodo: { not: idPeriodo },
+          estado: 'activo',
+          fechaInicio: { lte: siguiente.fechaFin },
+          fechaFin: { gte: siguiente.fechaInicio },
+        },
+      })
+      if (traslapado) throw new ErrorPeriodoTraslapado(traslapado.orden)
+    }
+
     const fila = await tx.periodoReporte.update({ where: { idPeriodo }, data: siguiente })
 
     await registrarEvento(tx, {
