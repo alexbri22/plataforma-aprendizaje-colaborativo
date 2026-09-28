@@ -27,7 +27,7 @@ export function PantallaMisReconocimientos() {
   if (recibidos.isPending || acumulado.isPending) {
     return (
       <AppShell
-        seccionActiva="insignias"
+        seccionActiva="actividades"
         titulo="Mis reconocimientos"
         volverA={`/actividades/${id}`}
       >
@@ -41,7 +41,7 @@ export function PantallaMisReconocimientos() {
   if (recibidos.isError || acumulado.isError || !recibidos.data || !acumulado.data) {
     return (
       <AppShell
-        seccionActiva="insignias"
+        seccionActiva="actividades"
         titulo="Mis reconocimientos"
         volverA={`/actividades/${id}`}
       >
@@ -60,7 +60,11 @@ export function PantallaMisReconocimientos() {
   })).filter((c) => c.recibidos.length > 0)
 
   return (
-    <AppShell seccionActiva="insignias" titulo="Mis reconocimientos" volverA={`/actividades/${id}`}>
+    <AppShell
+      seccionActiva="actividades"
+      titulo="Mis reconocimientos"
+      volverA={`/actividades/${id}`}
+    >
       <section className={styles.seccion}>
         <h2 className={styles.tituloSeccion}>En esta actividad</h2>
         <Card>

@@ -4,6 +4,7 @@ import {
   obtenerAcumulado,
   obtenerRecibidos,
   obtenerRecibidosDeParticipante,
+  obtenerRecibidosEnPerfil,
   obtenerRitual,
   type ReconocimientoPropio,
 } from './insignias.api'
@@ -16,6 +17,7 @@ const claveRecibidos = (id: string) => ['actividades', id, 'reconocimientos', 'r
 const claveDeParticipante = (id: string, idMembresia: string) =>
   ['actividades', id, 'participantes', idMembresia, 'reconocimientos'] as const
 const CLAVE_ACUMULADO = ['insignias', 'acumulado'] as const
+const CLAVE_RECIBIDOS_EN_PERFIL = ['insignias', 'recibidos'] as const
 
 export function useRitual(idActividad: string) {
   return useQuery({ queryKey: claveRitual(idActividad), queryFn: () => obtenerRitual(idActividad) })
@@ -28,10 +30,10 @@ export function useGuardarReconocimientos(idActividad: string) {
       guardarReconocimientos(idActividad, reconocimientos),
     onSuccess: () => {
       // Lo guardado cambia el ritual (borrador) y lo que verán los demás
-      // (recibidos de participante, acumulado): se invalida todo lo de la
-      // actividad más el acumulado.
+      // (recibidos de participante, acumulado, frases del perfil): se
+      // invalida todo lo de la actividad más lo global de insignias.
       void queryClient.invalidateQueries({ queryKey: ['actividades', idActividad] })
-      void queryClient.invalidateQueries({ queryKey: CLAVE_ACUMULADO })
+      void queryClient.invalidateQueries({ queryKey: ['insignias'] })
     },
   })
 }
@@ -52,4 +54,8 @@ export function useRecibidosDeParticipante(idActividad: string, idMembresia: str
 
 export function useAcumulado() {
   return useQuery({ queryKey: CLAVE_ACUMULADO, queryFn: obtenerAcumulado })
+}
+
+export function useRecibidosEnPerfil() {
+  return useQuery({ queryKey: CLAVE_RECIBIDOS_EN_PERFIL, queryFn: obtenerRecibidosEnPerfil })
 }

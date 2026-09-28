@@ -413,3 +413,46 @@ describe('GET /api/insignias/acumulado', () => {
     expect(r.body.acumulado).toEqual({ ideas: 2 })
   })
 })
+
+describe('GET /api/insignias/recibidos', () => {
+  it('trae las frases ya aplicadas con su actividad, sin autor', async () => {
+    const abierta = await montarActividad(2)
+    const cerrada = await montarActividad(2, 30)
+    const receptor = abierta.participantes[1]
+    await prisma.insigniaOtorgada.createMany({
+      data: [
+        {
+          categoria: 'ideas',
+          idMembresiaOtorgante: abierta.participantes[0].idMembresia,
+          idMembresiaReceptor: receptor.idMembresia,
+          fuente: 'par',
+          puntos: 1,
+          frase: 'todavía no se aplica',
+        },
+        {
+          categoria: 'ideas',
+          idMembresiaOtorgante: cerrada.participantes[0].idMembresia,
+          idMembresiaReceptor: cerrada.participantes[1].idMembresia,
+          fuente: 'par',
+          puntos: 1,
+          frase: 'Trajo una idea en la que nadie había pensado',
+        },
+      ],
+    })
+
+    const r = await request(app).get('/api/insignias/recibidos').set('Cookie', receptor.cookie)
+
+    expect(r.status).toBe(200)
+    expect(r.body.reconocimientos).toHaveLength(1)
+    const [recibido] = r.body.reconocimientos
+    expect(recibido).toMatchObject({
+      categoria: 'ideas',
+      frase: 'Trajo una idea en la que nadie había pensado',
+      fuente: 'par',
+      actividad: { id: cerrada.id, nombre: 'Proyecto de ecosistemas' },
+    })
+    expect(typeof recibido.fecha).toBe('string')
+    expect(recibido.otorgadoPor).toBeUndefined()
+    expect(recibido.idMembresiaOtorgante).toBeUndefined()
+  })
+})

@@ -1,3 +1,7 @@
+import type { CategoriaInsignia, NivelEstudios } from '@plataforma/shared'
+
+type PuntosPorCategoria = Partial<Record<CategoriaInsignia, number>>
+
 const BASE_URL = import.meta.env.VITE_API_URL ?? ''
 
 export interface CredencialesIngreso {
@@ -22,6 +26,43 @@ export interface Usuario {
   apellidoMaterno: string
   correo: string
   tipoCuenta: 'usuario' | 'administrador'
+  /** URL absoluta de la foto de perfil, o null si no ha subido ninguna. */
+  fotoUrl: string | null
+}
+
+export interface PerfilPropio extends Usuario {
+  nivelEstudios: NivelEstudios
+  institucionEducativa: string
+  acumulado: PuntosPorCategoria
+}
+
+/** Lo que se ve de otra persona: nombre, foto y rangos. Nunca su correo
+ * (docs/diseno-desarrollo-nucleo.md §6.3). */
+export interface PerfilBasico {
+  idUsuario: string
+  nombre: string
+  apellidoPaterno: string
+  apellidoMaterno: string
+  fotoUrl: string | null
+  acumulado: PuntosPorCategoria
+}
+
+export interface DatosPerfil {
+  nombre: string
+  apellidoPaterno: string
+  apellidoMaterno: string
+}
+
+export interface CambioContrasena {
+  contrasenaActual: string
+  contrasenaNueva: string
+}
+
+// El API devuelve la foto como ruta relativa a sí mismo; aquí se vuelve
+// absoluta una sola vez para que ningún componente tenga que saber dónde
+// vive el API.
+function conFotoAbsoluta<T extends { fotoUrl: string | null }>(usuario: T): T {
+  return usuario.fotoUrl ? { ...usuario, fotoUrl: `${BASE_URL}${usuario.fotoUrl}` } : usuario
 }
 
 export class ErrorCuenta extends Error {}
@@ -77,7 +118,7 @@ export async function iniciarSesion(credenciales: CredencialesIngreso): Promise<
   }
 
   const { usuario } = (await respuesta.json()) as { usuario: Usuario }
-  return usuario
+  return conFotoAbsoluta(usuario)
 }
 
 export async function registrarUsuario(datos: DatosRegistro): Promise<Usuario> {
@@ -93,7 +134,7 @@ export async function registrarUsuario(datos: DatosRegistro): Promise<Usuario> {
   }
 
   const { usuario } = (await respuesta.json()) as { usuario: Usuario }
-  return usuario
+  return conFotoAbsoluta(usuario)
 }
 
 // Sin cookie de sesión válida, GET /api/sesion responde 401: no es un error
@@ -109,7 +150,7 @@ export async function obtenerSesionActual(): Promise<Usuario | null> {
   }
 
   const { usuario } = (await respuesta.json()) as { usuario: Usuario }
-  return usuario
+  return conFotoAbsoluta(usuario)
 }
 
 export async function cerrarSesion(): Promise<void> {
@@ -120,4 +161,82 @@ export async function cerrarSesion(): Promise<void> {
   if (!respuesta.ok && respuesta.status !== 401) {
     throw new ErrorCuenta(await leerMensajeError(respuesta, 'No pudimos cerrar tu sesión.'))
   }
+}
+
+export class ErrorPerfil extends ErrorCuenta {
+  readonly detallePorCampo?: Record<string, string>
+
+  constructor(mensaje: string, detallePorCampo?: Record<string, string>) {
+    super(mensaje)
+    this.detallePorCampo = detallePorCampo
+  }
+}
+
+async function errorDePerfil(respuesta: Response, porDefecto: string): Promise<ErrorPerfil> {
+  try {
+    const cuerpo = (await respuesta.json()) as { mensaje?: unknown; detallePorCampo?: unknown }
+    const mensaje =
+      typeof cuerpo.mensaje === 'string' && cuerpo.mensaje.trim() ? cuerpo.mensaje : porDefecto
+    const detalle =
+      cuerpo.detallePorCampo && typeof cuerpo.detallePorCampo === 'object'
+        ? (cuerpo.detallePorCampo as Record<string, string>)
+        : undefined
+    return new ErrorPerfil(mensaje, detalle)
+  } catch {
+    return new ErrorPerfil(porDefecto)
+  }
+}
+
+export async function obtenerPerfilPropio(): Promise<PerfilPropio> {
+  const respuesta = await pedir('/api/usuarios/yo')
+  if (!respuesta.ok) throw await errorDePerfil(respuesta, 'No pudimos cargar tu perfil.')
+  const { usuario } = (await respuesta.json()) as { usuario: PerfilPropio }
+  return conFotoAbsoluta(usuario)
+}
+
+export async function obtenerPerfilDeUsuario(idUsuario: string): Promise<PerfilBasico> {
+  const respuesta = await pedir(`/api/usuarios/${idUsuario}`)
+  if (!respuesta.ok) throw await errorDePerfil(respuesta, 'No encontramos a esta persona.')
+  const { usuario } = (await respuesta.json()) as { usuario: PerfilBasico }
+  return conFotoAbsoluta(usuario)
+}
+
+export async function actualizarDatosPerfil(datos: DatosPerfil): Promise<Usuario> {
+  const respuesta = await pedir('/api/usuarios/yo', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(datos),
+  })
+  if (!respuesta.ok) throw await errorDePerfil(respuesta, 'No pudimos guardar tus datos.')
+  const { usuario } = (await respuesta.json()) as { usuario: Usuario }
+  return conFotoAbsoluta(usuario)
+}
+
+export async function cambiarContrasena(cambio: CambioContrasena): Promise<void> {
+  const respuesta = await pedir('/api/usuarios/yo', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(cambio),
+  })
+  if (!respuesta.ok) throw await errorDePerfil(respuesta, 'No pudimos cambiar tu contraseña.')
+}
+
+// La imagen viaja tal cual en el cuerpo, con su tipo en Content-Type; ya
+// viene reducida por prepararFoto (foto.ts).
+export async function subirFoto(foto: Blob): Promise<Usuario> {
+  const respuesta = await pedir('/api/usuarios/yo/foto', {
+    method: 'PUT',
+    headers: { 'Content-Type': foto.type },
+    body: foto,
+  })
+  if (!respuesta.ok) throw await errorDePerfil(respuesta, 'No pudimos subir tu foto.')
+  const { usuario } = (await respuesta.json()) as { usuario: Usuario }
+  return conFotoAbsoluta(usuario)
+}
+
+export async function quitarFoto(): Promise<Usuario> {
+  const respuesta = await pedir('/api/usuarios/yo/foto', { method: 'DELETE' })
+  if (!respuesta.ok) throw await errorDePerfil(respuesta, 'No pudimos quitar tu foto.')
+  const { usuario } = (await respuesta.json()) as { usuario: Usuario }
+  return conFotoAbsoluta(usuario)
 }

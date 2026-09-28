@@ -21,6 +21,7 @@ const USUARIO_PRUEBA: Usuario = {
   apellidoMaterno: 'López',
   correo: 'ana@example.com',
   tipoCuenta: 'usuario',
+  fotoUrl: null,
 }
 
 function renderPantalla(publica: boolean) {

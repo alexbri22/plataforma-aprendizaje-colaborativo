@@ -18,6 +18,7 @@ import {
   PantallaReconocer,
   PantallaReconocimientosDeParticipante,
 } from '../features/insignias'
+import { PantallaPerfil, PantallaPerfilDeUsuario } from '../features/perfil'
 import { queryClient } from './queryClient'
 import { RutaProtegida } from './RutaProtegida'
 
@@ -74,6 +75,24 @@ export function App() {
             element={
               <RutaProtegida>
                 <PantallaUnirseConClave />
+              </RutaProtegida>
+            }
+          />
+          {/* El perfil propio y el básico de otra persona
+              (docs/diseno-desarrollo-nucleo.md §6.6). */}
+          <Route
+            path="/perfil"
+            element={
+              <RutaProtegida>
+                <PantallaPerfil />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="/usuarios/:id"
+            element={
+              <RutaProtegida>
+                <PantallaPerfilDeUsuario />
               </RutaProtegida>
             }
           />

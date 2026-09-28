@@ -29,6 +29,7 @@ export type CodigoError =
   | 'funcion_con_datos'
   | 'equipo_lleno'
   | 'intercambio_invalido'
+  | 'foto_invalida'
 
 export abstract class ErrorDominio extends Error {
   abstract readonly codigo: CodigoError
@@ -154,7 +155,7 @@ export class ErrorUsuarioNoEncontrado extends ErrorDominio {
   readonly status = 404
 
   constructor() {
-    super('No encontramos ese usuario.')
+    super('No encontramos a esta persona.')
   }
 }
 
@@ -314,5 +315,18 @@ export class ErrorIntercambioInvalido extends ErrorDominio {
 
   constructor() {
     super('Elige dos personas que estén en equipos distintos.')
+  }
+}
+
+// La foto no cumple el contrato (docs/diseno-desarrollo-nucleo.md §6.3):
+// tipo no admitido, contenido que no corresponde al tipo declarado o tamaño
+// fuera de límite. Es 400 y no 415 porque el cliente propio ya la reduce y
+// convierte antes de subirla; llegar aquí es un cliente que no lo hizo.
+export class ErrorFotoInvalida extends ErrorDominio {
+  readonly codigo = 'foto_invalida' as const
+  readonly status = 400
+
+  constructor(mensaje: string) {
+    super(mensaje)
   }
 }
