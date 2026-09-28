@@ -614,7 +614,10 @@ export async function agregarOPromoverCoorganizador(
   // §4.6): promover al organizador mismo la dejaría sin ninguna.
   if (membresiaObjetivoExistente?.rol === 'organizador') throw new ErrorOrganizadorUnico()
 
-  const permisos = permisosSolicitados ?? [...PERMISOS_COORGANIZADOR_POR_DEFECTO]
+  // Un conjunto, no una lista: la llave de permisos_coorganizador es
+  // (membresía, permiso), así que un permiso repetido en la petición haría
+  // fallar el insert con un 500 en vez de significar lo mismo que uno solo.
+  const permisos = [...new Set(permisosSolicitados ?? PERMISOS_COORGANIZADOR_POR_DEFECTO)]
 
   await prisma.$transaction(async (tx) => {
     const membresiaFinal = await tx.membresia.upsert({

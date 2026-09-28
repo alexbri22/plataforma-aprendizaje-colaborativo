@@ -582,6 +582,29 @@ describe('PUT /api/actividades/:id/coorganizadores/:idUsuario', () => {
 
     const respuesta = await request(app)
       .put(`/api/actividades/${id}/coorganizadores/${idUsuarioObjetivo}`)
+  it('trata un permiso repetido en la petición como un solo permiso', async () => {
+    const cookieOrganizador = await registrarYObtenerCookie('ada@ejemplo.com')
+    const cookieObjetivo = await registrarYObtenerCookie('grace@ejemplo.com')
+    const { id } = await crearActividad(cookieOrganizador)
+    const respuestaSesion = await request(app).get('/api/sesion').set('Cookie', cookieObjetivo)
+    const idUsuarioObjetivo = respuestaSesion.body.usuario.idUsuario
+
+    const respuesta = await request(app)
+      .put(`/api/actividades/${id}/coorganizadores/${idUsuarioObjetivo}`)
+      .set('Cookie', cookieOrganizador)
+      .send({ permisos: ['leer_bitacoras', 'leer_bitacoras', 'otorgar_insignias'] })
+
+    expect(respuesta.status).toBe(200)
+    const membresia = await prisma.membresia.findFirstOrThrow({
+      where: { idActividad: id, idUsuario: idUsuarioObjetivo },
+      include: { permisos: true },
+    })
+    expect(membresia.permisos.map((p) => p.permiso).sort()).toEqual([
+      'leer_bitacoras',
+      'otorgar_insignias',
+    ])
+  })
+
       .set('Cookie', cookieOrganizador)
       .send({ permisos: ['gestionar_inscripcion'] })
 
