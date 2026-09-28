@@ -368,13 +368,27 @@ export async function unirseConClave(
   if (!actividad) throw new ErrorClaveInvalida()
 
   try {
-    await prisma.membresia.create({
-      data: {
-        idActividad: actividad.idActividad,
-        idUsuario,
-        rol: 'participante',
-        estado: 'activa',
-      },
+    await prisma.$transaction(async (tx) => {
+      // La fase se leyó arriba, fuera de esta transacción: un cierre de
+      // inscripción que esté ejecutándose ahora mismo aún no es visible y la
+      // clave parecería vigente. FOR SHARE bloquea la fila contra ese UPDATE
+      // (escribirCierreInscripcion) y, si el cierre ya confirmó, la
+      // vuelve a evaluar y no la encuentra: o entra antes del cierre, o se
+      // trata como clave inválida, nunca como membresía posterior a él.
+      const abierta = await tx.$queryRaw<{ id_actividad: string }[]>`
+        SELECT id_actividad FROM actividades
+        WHERE id_actividad = ${actividad.idActividad} AND estado = 'inscripcion'
+        FOR SHARE`
+      if (abierta.length === 0) throw new ErrorClaveInvalida()
+
+      await tx.membresia.create({
+        data: {
+          idActividad: actividad.idActividad,
+          idUsuario,
+          rol: 'participante',
+          estado: 'activa',
+        },
+      })
     })
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
@@ -410,12 +424,24 @@ type ActorTransicion = { tipo: 'usuario'; idUsuario: string } | { tipo: 'sistema
 // escriben el mismo cambio; lo único que varía es el actor del evento
 // (docs/diseno-desarrollo-general.md §6.1, "las transiciones automáticas
 // por fecha son eventos del sistema").
+//
+// El cambio es condicional a que la actividad siga en inscripción: quien
+// llama decidió la transición con una lectura previa, fuera de esta
+// transacción, y dos disparos simultáneos (un cierre manual y la tarea, o dos
+// cierres) la verían abierta a la vez. El UPDATE condicional serializa a los
+// dos sobre la fila; solo el que gana escribe el evento, y devuelve false el
+// que llegó tarde para que decida qué responder.
 async function escribirCierreInscripcion(
   tx: Prisma.TransactionClient,
   idActividad: string,
   actor: ActorTransicion,
-): Promise<void> {
-  await tx.actividad.update({ where: { idActividad }, data: { estado: 'formacion_equipos' } })
+): Promise<boolean> {
+  const { count } = await tx.actividad.updateMany({
+    where: { idActividad, estado: 'inscripcion' },
+    data: { estado: 'formacion_equipos' },
+  })
+  if (count === 0) return false
+
   await registrarEvento(tx, {
     idActividad,
     tipoActor: actor.tipo,
@@ -430,6 +456,7 @@ async function escribirCierreInscripcion(
     },
     categoria: 'estructura',
   })
+  return true
 }
 
 // POST /api/actividades/{id}/inscripcion/cierre (docs/diseno-desarrollo-nucleo.md
@@ -456,9 +483,13 @@ export async function cerrarInscripcion(
   const numParticipantes = actividad.membresias.filter((m) => m.rol === 'participante').length
   if (numParticipantes === 0) throw new ErrorSinParticipantes()
 
-  await prisma.$transaction((tx) =>
+  const cerrada = await prisma.$transaction((tx) =>
     escribirCierreInscripcion(tx, idActividad, { tipo: 'usuario', idUsuario: idUsuarioActor }),
   )
+  // Otro cierre ganó entre la lectura de arriba y la escritura: para este
+  // actor la fase ya no lo permite, igual que si hubiera llegado después.
+  if (!cerrada)
+    throw new ErrorFaseNoPermiteAccion('La inscripción no está abierta en esta actividad.')
 
   return obtenerActividadPorId(idActividad, membresiaActor)
 }
@@ -494,10 +525,12 @@ export async function transicionarActividadesVencidas(
       continue
     }
 
-    await prisma.$transaction((tx) =>
+    const cerrada = await prisma.$transaction((tx) =>
       escribirCierreInscripcion(tx, actividad.idActividad, { tipo: 'sistema' }),
     )
-    procesadas += 1
+    // Si un cierre manual se adelantó, la actividad ya avanzó: no cuenta como
+    // procesada por esta tarea.
+    if (cerrada) procesadas += 1
   }
 
   return { procesadas, omitidasPorSinParticipantes }

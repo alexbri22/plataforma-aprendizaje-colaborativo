@@ -475,6 +475,65 @@ describe('POST /api/actividades/:id/inscripcion/cierre', () => {
     expect(eventos).toHaveLength(1)
     expect(eventos[0]).toMatchObject({ tipoActor: 'usuario', categoria: 'estructura' })
   })
+
+  it('una unión que llega mientras se cierra la inscripción no crea una membresía tardía', async () => {
+    const cookieOrganizador = await registrarYObtenerCookie('ada@ejemplo.com')
+    const cookieParticipante = await registrarYObtenerCookie('grace@ejemplo.com')
+    const cookieTardio = await registrarYObtenerCookie('lovelace@ejemplo.com')
+    const { id, claveIngreso } = await crearActividad(cookieOrganizador)
+    await unirseComoParticipante(claveIngreso, cookieParticipante)
+
+    // Un cierre a medio commit: la actividad ya cambió de estado dentro de su
+    // transacción, pero otra conexión todavía la ve en inscripción.
+    let terminarCierre!: () => void
+    let cierreEscrito!: () => void
+    const escrito = new Promise<void>((resolver) => (cierreEscrito = resolver))
+    const cierre = prisma.$transaction(async (tx) => {
+      await tx.actividad.update({
+        where: { idActividad: id },
+        data: { estado: 'formacion_equipos' },
+      })
+      cierreEscrito()
+      await new Promise<void>((resolver) => (terminarCierre = resolver))
+    })
+    await escrito
+
+    const union = request(app)
+      .post(`/api/claves/${claveIngreso}/union`)
+      .set('Cookie', cookieTardio)
+      .then((respuesta) => respuesta)
+    await new Promise((resolver) => setTimeout(resolver, 200))
+    terminarCierre()
+    await cierre
+    const respuestaUnion = await union
+
+    expect(respuestaUnion.status).toBe(404)
+    const participantes = await prisma.membresia.count({
+      where: { idActividad: id, rol: 'participante' },
+    })
+    expect(participantes).toBe(1)
+  })
+
+  it('dos cierres simultáneos ejecutan la transición una sola vez', async () => {
+    const cookieOrganizador = await registrarYObtenerCookie('ada@ejemplo.com')
+    const cookieParticipante = await registrarYObtenerCookie('grace@ejemplo.com')
+    const { id, claveIngreso } = await crearActividad(cookieOrganizador)
+    await unirseComoParticipante(claveIngreso, cookieParticipante)
+
+    const respuestas = await Promise.all(
+      [1, 2].map(() =>
+        request(app)
+          .post(`/api/actividades/${id}/inscripcion/cierre`)
+          .set('Cookie', cookieOrganizador),
+      ),
+    )
+
+    expect(respuestas.map((r) => r.status).sort()).toEqual([200, 409])
+    const eventos = await prisma.historial.findMany({
+      where: { idActividad: id, tipoEvento: 'fase_avanzada' },
+    })
+    expect(eventos).toHaveLength(1)
+  })
 })
 
 describe('PUT /api/actividades/:id/coorganizadores/:idUsuario', () => {
