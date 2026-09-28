@@ -5,6 +5,7 @@ import { config } from './config.js'
 import { manejadorErrores } from './middleware/manejadorErrores.js'
 import { resolverSesion } from './middleware/sesion.js'
 import { actividadesRouter } from './routes/actividades.js'
+import { adminRouter } from './routes/admin.js'
 import { clavesRouter } from './routes/claves.js'
 import { insigniasRouter } from './routes/insignias.js'
 import { cuentasRouter } from './routes/cuentas.js'
@@ -56,6 +57,7 @@ export function createApp(): Express {
   // /health a secas no es alcanzable ahí.
   app.use('/api/health', healthRouter)
   app.use('/api', cuentasRouter)
+  app.use('/api/admin', adminRouter)
   app.use('/api', actividadesRouter)
   app.use('/api', clavesRouter)
   app.use('/api', insigniasRouter)

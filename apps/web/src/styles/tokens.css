@@ -123,4 +123,9 @@
   --color-warning-ink: var(--color-gold-800);
 
   --color-focus-ring: var(--color-ink-600);
+
+  /* Velo tras un modal Overlay (DESIGN.md §4): graphite a baja alpha, misma
+     familia que las sombras. No es un color de superficie; solo atenúa la
+     página suspendida detrás del diálogo. */
+  --color-overlay-backdrop: oklch(0.22 0.006 246 / 0.32);
 }

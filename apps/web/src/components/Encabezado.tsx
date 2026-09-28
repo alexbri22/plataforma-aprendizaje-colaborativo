@@ -1,7 +1,11 @@
 import { Link } from 'react-router-dom'
+import { useSesion } from '../features/cuentas'
 import styles from './Encabezado.module.css'
 
 export function Encabezado() {
+  const { usuario } = useSesion()
+  const esAdministrador = usuario?.tipoCuenta === 'administrador'
+
   return (
     <>
       <a className={styles.skipLink} href="#contenido">
@@ -25,6 +29,11 @@ export function Encabezado() {
             <Link to="/insignias" className={styles.navLink}>
               Insignias
             </Link>
+            {esAdministrador ? (
+              <Link to="/admin/cuentas" className={styles.navLink}>
+                Cuentas
+              </Link>
+            ) : null}
             {/* Sin destino todavía: el contenido formativo público no está
                 construido. Se queda como botón inerte hasta que exista, porque
                 un enlace que no lleva a ningún lado es peor que uno ausente. */}

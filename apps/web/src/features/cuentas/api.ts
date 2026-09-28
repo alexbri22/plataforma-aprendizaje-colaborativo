@@ -19,13 +19,15 @@ export interface DatosRegistro {
   contrasena: string
 }
 
+export type TipoCuenta = 'usuario' | 'administrador'
+
 export interface Usuario {
   idUsuario: string
   nombre: string
   apellidoPaterno: string
   apellidoMaterno: string
   correo: string
-  tipoCuenta: 'usuario' | 'administrador'
+  tipoCuenta: TipoCuenta
   /** URL absoluta de la foto de perfil, o null si no ha subido ninguna. */
   fotoUrl: string | null
 }
