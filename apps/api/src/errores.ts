@@ -8,6 +8,7 @@ export type CodigoError =
   | 'credenciales_invalidas'
   | 'cuenta_desactivada'
   | 'sin_sesion'
+  | 'no_autorizado'
   | 'clave_invalida'
   | 'ya_es_miembro'
   | 'actividad_no_encontrada'
@@ -20,6 +21,8 @@ export type CodigoError =
   | 'periodo_traslapado'
   | 'sin_permiso'
   | 'fuera_de_plazo'
+  | 'usuario_no_encontrado'
+  | 'foto_invalida'
 
 export abstract class ErrorDominio extends Error {
   abstract readonly codigo: CodigoError
@@ -69,6 +72,19 @@ export class ErrorSinSesion extends ErrorDominio {
 
   constructor() {
     super('No hay una sesión activa.')
+  }
+}
+
+// Sesión válida pero sin el tipo de cuenta que la acción exige (plano de
+// cuenta, docs/diseno-desarrollo-general.md §7.1/§7.2). Se distingue de
+// sin_sesion porque el actor sí está autenticado: es autorización, no
+// autenticación.
+export class ErrorNoAutorizado extends ErrorDominio {
+  readonly codigo = 'no_autorizado' as const
+  readonly status = 403
+
+  constructor() {
+    super('No tienes permiso para realizar esta acción.')
   }
 }
 
@@ -140,15 +156,6 @@ export class ErrorSinParticipantes extends ErrorDominio {
   }
 }
 
-export class ErrorUsuarioNoEncontrado extends ErrorDominio {
-  readonly codigo = 'usuario_no_encontrado' as const
-  readonly status = 404
-
-  constructor() {
-    super('No encontramos ese usuario.')
-  }
-}
-
 // Toda actividad tiene exactamente una membresía con rol de organizador
 // (docs/diseno-desarrollo-general.md §4.6): promover al organizador mismo a
 // co-organizador dejaría a la actividad sin uno.
@@ -197,6 +204,28 @@ export class ErrorSinPermiso extends ErrorDominio {
 export class ErrorFueraDePlazo extends ErrorDominio {
   readonly codigo = 'fuera_de_plazo' as const
   readonly status = 409
+
+  constructor(mensaje: string) {
+    super(mensaje)
+  }
+}
+
+export class ErrorUsuarioNoEncontrado extends ErrorDominio {
+  readonly codigo = 'usuario_no_encontrado' as const
+  readonly status = 404
+
+  constructor() {
+    super('No encontramos a esta persona.')
+  }
+}
+
+// La foto no cumple el contrato (docs/diseno-desarrollo-nucleo.md §6.3):
+// tipo no admitido, contenido que no corresponde al tipo declarado o tamaño
+// fuera de límite. Es 400 y no 415 porque el cliente propio ya la reduce y
+// convierte antes de subirla; llegar aquí es un cliente que no lo hizo.
+export class ErrorFotoInvalida extends ErrorDominio {
+  readonly codigo = 'foto_invalida' as const
+  readonly status = 400
 
   constructor(mensaje: string) {
     super(mensaje)

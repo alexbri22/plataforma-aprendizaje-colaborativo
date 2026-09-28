@@ -22,6 +22,7 @@ colors:
   bg: 'oklch(1 0 0)'
   surface: 'oklch(0.97 0.004 246)'
   surface-hover: 'oklch(0.91 0.004 246)'
+  overlay-backdrop: 'oklch(0.22 0.006 246 / 0.32)'
   border: 'oklch(0.91 0.004 246)'
   border-strong: 'oklch(0.85 0.005 246)'
   text: 'oklch(0.22 0.006 246)'
@@ -182,6 +183,8 @@ Flat by default, in the spirit of both Linear and Notion: surfaces at rest — c
 
 All three shadows are tinted with Graphite (`oklch(0.22 0.006 246)`) at low alpha rather than pure black, so depth reads as part of the same quiet, cool-neutral system instead of a generic drop-shadow.
 
+**Overlay scrim.** A modal (the only element carrying the Overlay shadow) sits over a **scrim** — `overlay-backdrop` (`oklch(0.22 0.006 246 / 0.32)`), Graphite at low alpha, same tint as the shadows — that dims the suspended page behind it. It's the one place a full-viewport wash of the neutral appears; it is not a surface color and never fills a resting element.
+
 ### Named Rules
 
 **The Resting-Flat Rule.** If an element isn't floating above other content right now, it doesn't get more than the Ambient shadow. Raised and Overlay are earned by actual stacking, not by a component's perceived importance.
@@ -225,6 +228,17 @@ Soft-edged and calm is the default register — generous internal padding, comfo
 - **Scrim:** `--color-scrim` (Graphite at 40% alpha) covers the page behind it; clicking it closes the panel.
 - **Behavior:** focus moves into the panel on open and returns to the trigger on close; `Esc` closes; `Tab` stays inside; the page behind does not scroll.
 - **Header:** title at Heading size, optional one-line description in Muted, a `Cerrar` button. No decorative color.
+
+### Avatar
+
+- **Shape:** circle (`radius-full`), `primary-subtle` background with `primary` initials in Caption weight semibold, uppercase. Two sizes: 28px (sidebar, lists) and 96px (profile header).
+- **With a photo,** the image fills the circle (`object-fit: cover`) and the initials disappear. The photo is the user's own, cropped square by the client before upload; the interface never adds a ring, badge, or status dot on top of it.
+- **Decorative:** `aria-hidden`, `alt=""`. The person's name is always written next to it, so the avatar never carries the accessible name.
+- **Only where a person is named:** next to a name in the sidebar, at the top of a profile. Not as a standalone identifier, not in a grid of faces.
+
+### Progress toward a level (features/insignias)
+
+The only progress bar in the system, and it compares a person against their own history — never against anyone else. Track in `surface` with a `border` outline; fill in Apothecary Amber (solid, because this _is_ recognition at rest, not a status). Always accompanied by the text it summarizes ("Faltan 5 pts para Plata"); the bar alone is not enough.
 
 ### Rank Insignia (features/insignias)
 

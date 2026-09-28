@@ -1,0 +1,36 @@
+.contenido {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.cargando {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+.subtitulo {
+  margin: 0;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-muted);
+  text-wrap: pretty;
+}
+
+.estadoTexto {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.encabezadoAccion,
+.celdaAccion {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.celdaAccion {
+  white-space: nowrap;
+}

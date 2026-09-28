@@ -32,6 +32,12 @@
 
 .nombre {
   font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.nombre:hover {
+  text-decoration: underline;
 }
 
 .enlace {

@@ -5,8 +5,8 @@ import { useActividad, useParticipantes } from '../actividades'
 import styles from './PantallaParticipantes.module.css'
 
 /**
- * Para quien organiza: los participantes de la actividad, cada uno enlazando a
- * lo que recibió. La API ya rechaza a un participante que intente abrir el
+ * Los participantes de la actividad. Cada nombre lleva a su perfil básico;
+ * para quien organiza, además, a lo que recibió. La API ya rechaza a un participante que intente abrir el
  * detalle de otro; aquí solo se oculta el enlace por conveniencia de interfaz,
  * nunca como barrera (docs/diseno-desarrollo-general.md §7.4).
  */
@@ -44,7 +44,9 @@ export function PantallaParticipantes() {
           <ul className={styles.lista}>
             {participantes.data.map((p) => (
               <li key={p.idMembresia} className={styles.participante}>
-                <span className={styles.nombre}>{p.nombre}</span>
+                <Link to={`/usuarios/${p.idUsuario}`} className={styles.nombre}>
+                  {p.nombre}
+                </Link>
                 {organiza ? (
                   <Link
                     to={`/actividades/${id}/participantes/${p.idMembresia}`}

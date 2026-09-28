@@ -8,6 +8,7 @@ import {
   PantallaResumenActividad,
   PantallaUnirseConClave,
 } from '../features/actividades'
+import { PantallaCuentas, RutaAdmin } from '../features/administracion'
 import { PantallaInicio } from '../features/contenido-publico/PantallaInicio.tsx'
 import { PantallaIngresar, PantallaRegistrarse } from '../features/cuentas'
 import {
@@ -17,6 +18,7 @@ import {
   PantallaReconocer,
   PantallaReconocimientosDeParticipante,
 } from '../features/insignias'
+import { PantallaPerfil, PantallaPerfilDeUsuario } from '../features/perfil'
 import { queryClient } from './queryClient'
 import { RutaProtegida } from './RutaProtegida'
 
@@ -68,6 +70,24 @@ export function App() {
               </RutaProtegida>
             }
           />
+          {/* El perfil propio y el básico de otra persona
+              (docs/diseno-desarrollo-nucleo.md §6.6). */}
+          <Route
+            path="/perfil"
+            element={
+              <RutaProtegida>
+                <PantallaPerfil />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="/usuarios/:id"
+            element={
+              <RutaProtegida>
+                <PantallaPerfilDeUsuario />
+              </RutaProtegida>
+            }
+          />
           <Route
             path="/insignias"
             element={
@@ -109,6 +129,16 @@ export function App() {
               <RutaProtegida>
                 <PantallaReconocimientosDeParticipante />
               </RutaProtegida>
+            }
+          />
+          {/* Solo administradores; RutaAdmin también redirige a /ingresar
+              a quien no tiene sesión. */}
+          <Route
+            path="/admin/cuentas"
+            element={
+              <RutaAdmin>
+                <PantallaCuentas />
+              </RutaAdmin>
             }
           />
           {/* Pública, sin RutaProtegida (docs/diseno-desarrollo-nucleo.md §4.1:
