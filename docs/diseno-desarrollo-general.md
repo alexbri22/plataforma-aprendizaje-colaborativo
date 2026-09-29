@@ -26,7 +26,7 @@ Punto de entrada a toda la documentación del proyecto. Se mantiene actualizado 
 | Dev design — General (este documento) | [dev\_design\_app\_colaborativa](https://docs.google.com/document/d/1EJrssXcQSLluGz2Gn9__hiq0YeLfOkC6cCGc0qNotxk/edit?usp=sharing) | Integración y decisiones transversales                             |
 | Dev design — Alejandro Briceño        | [dev\_design\_nucleo\_alejandro](https://docs.google.com/document/d/1BeP1RgpIzme7NpHek6eXW0gCF1FkeCKc3I3rxUlx7NM/edit?usp=sharing) | Cuentas, actividades, equipos, seguimiento, evaluación e historial |
 | Dev design — Carlos de la Rosa        | (pendiente)                                                                                                                        | Contenido formativo público y administración                       |
-| Dev design — Ui Chul                  | (pendiente)                                                                                                                        | Sistema de recompensas e insignias                                 |
+| Dev design — Ui Chul                  | [diseno-desarrollo-insignias.md](diseno-desarrollo-insignias.md)                                                                   | Sistema de recompensas e insignias                                 |
 
 ## **0.3 Recursos técnicos**
 
