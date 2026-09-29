@@ -349,7 +349,7 @@ Las tablas siguientes describen las relaciones a nivel de atributos y restriccio
 
 **Por qué el acumulado se guarda en puntos y no se cuenta por filas.** Un reconocimiento de un par vale 1 punto, uno del organizador vale 2, y las señales automáticas aportan fracciones: el acumulado deja de ser un conteo de filas y pasa a ser una suma. `puntos` se materializa en cada otorgamiento en lugar de derivarse de `fuente` en cada consulta, para que un cambio futuro de calibración no reescriba el valor histórico de reconocimientos ya emitidos.
 
-**Por qué desaparece la restricción de unicidad por categoría.** La versión anterior del concepto limitaba a una insignia de cada categoría por otorgante y receptor dentro de una actividad, y eso se expresaba como un índice único de tres columnas. El límite ahora es un presupuesto por persona —el 33 % del equipo, con techo de 5— que no es expresable como restricción de unicidad: se verifica en la capa de servicios contra los otorgamientos ya emitidos por ese otorgante en esa actividad, y forma parte de las reglas de integridad de 4.6.
+**La unicidad por categoría se conserva junto con el presupuesto.** Un mismo otorgante no puede dar dos veces la misma categoría al mismo receptor en una actividad, y eso se expresa como el índice único de tres columnas de la tabla anterior. Encima de esa restricción, el concepto (§6) añade un presupuesto por persona —a cuántos compañeros puede reconocer cada participante: el 33 % del equipo, con piso de 1 y techo de 5— que no es expresable como restricción de unicidad: se verifica en la capa de servicios contra lo que ese otorgante guarda en esa actividad, y forma parte de las reglas de integridad de 4.6. El índice deja pasar varias filas con otorgante nulo (fuente `sistema`) a propósito: cada señal automática aporta su propia fracción.
 
 ### **Transversales y contenido formativo**
 
@@ -673,7 +673,7 @@ Aplica únicamente a los miembros de la actividad en cuestión. Un usuario que n
 | Otorgar insignia (estado: solo el organizador otorga)          | ✓           | ✓              | —            |
 | Otorgar insignia (estado: organizador y participantes otorgan) | ✓           | ✓              | ✓            |
 | Ver las insignias propias recibidas                            | ✓           | ✓              | ✓            |
-| Ver quién otorgó una insignia                                  | ✓           | ✓              | (P-09)       |
+| Ver quién otorgó una insignia                                  | ✓           | ✓              | —            |
 | Ver el rango acumulado de otro usuario                         | ✓           | ✓              | ✓            |
 
 **Presupuesto de reconocimientos.** Independientemente del rol, cada persona reconoce como máximo al 33 % de su equipo, sin contarse, con piso de 1 y techo de 5, y solo entre compañeros de su propio equipo. El presupuesto cuenta receptores distintos: a cada uno se le pueden dar varias categorías. Es una regla de negocio (4.6) y no un permiso, y se verifica en el servidor contra los receptores ya reconocidos por esa persona en esa actividad.
@@ -703,7 +703,7 @@ Las siguientes reglas condicionan toda la matriz anterior y se implementan una s
 
 ## **7.5 Preguntas abiertas derivadas de esta sección**
 
-El ejercicio de construir la matriz reveló nueve decisiones que el documento de concepto no determina. Cada una incluye la propuesta con la que se procede si no hay cambio de dirección.
+El ejercicio de construir la matriz reveló nueve decisiones que el documento de concepto no determina. Las que siguen abiertas se enumeran a continuación; P-09 (atribución del otorgamiento de insignias) la resolvió el concepto (§6): el reconocimiento entre pares es anónimo para quien lo recibe y atribuido para quien organiza. Cada una incluye la propuesta con la que se procede si no hay cambio de dirección.
 
 **P-03 — Baja de un participante de una actividad**
 
@@ -753,14 +753,6 @@ El ejercicio de construir la matriz reveló nueve decisiones que el documento de
 
 **Qué necesitamos confirmar:** Dos decisiones: ¿la evaluación por pares se limita al propio equipo o abarca a toda la actividad? ¿Y el evaluado debe recibir retroalimentación de lo que sus pares dijeron de él, o los resultados son exclusivamente para quien organiza?
 
-**P-09 — Atribución del otorgamiento de insignias**
-
-**Afecta:** Módulo de Insignias, historial (sección 8).
-
-**Propuesta por defecto:** El receptor ve qué insignias recibió y en qué actividad, pero no quién se las otorgó cuando el otorgamiento provino de otro participante. El organizador y el historial conservan la atribución completa.
-
-**Qué necesitamos confirmar:** ¿Conviene que el reconocimiento entre pares sea visible y atribuido, o anónimo? La atribución visible refuerza el valor del reconocimiento, pero también facilita la presión por reciprocidad que las restricciones de la sección 6 del concepto buscan contener.
-
 **P-10 — Alcance del historial visible para los participantes**
 
 **Afecta:** Historial (8.5), plano de actividad (7.3).
@@ -809,12 +801,12 @@ La relación que soporta el registro está definida en 4.4 y descrita atributo p
 
 Es la única dependencia del historial con otro subsistema, y el motivo por el que su contrato se fija en este documento.
 
-| Aspecto    | Contrato                                                                                                                                                                                                                                               |
-| :--------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Evento     | El otorgamiento de una insignia produce un evento, emitido por el servicio de insignias conforme a las reglas de 8.2                                                                                                                                   |
-| Categoría  | Evaluación. En consecuencia, el evento es visible para quien organiza y para el receptor, y no para el resto de los participantes                                                                                                                      |
-| Atribución | El receptor ve que recibió una insignia pero no quién se la otorgó, conforme a la propuesta de P-09. La atribución se conserva en el registro y es visible para quien organiza. Es el único evento del sistema cuyo actor se oculta a su propio sujeto |
-| Alcance    | El ajuste de los umbrales del sistema de insignias no forma parte de este registro: ocurre fuera de toda actividad (8.4). El catálogo de categorías es semilla y no se administra, así que no genera eventos                                           |
+| Aspecto    | Contrato                                                                                                                                                                                                                                                                                                                 |
+| :--------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Evento     | El otorgamiento de una insignia produce un evento, emitido por el servicio de insignias conforme a las reglas de 8.2. Se emite al aplicarse, al terminar el periodo de cierre, y no al guardarse: lo guardado se puede rehacer hasta entonces, y un evento por borrador registraría reconocimientos que nunca existieron |
+| Categoría  | Evaluación. En consecuencia, el evento es visible para quien organiza y para el receptor, y no para el resto de los participantes                                                                                                                                                                                        |
+| Atribución | El receptor ve que recibió una insignia pero no quién se la otorgó cuando provino de otro participante (concepto §6). La atribución se conserva en el registro y es visible para quien organiza. Es el único evento del sistema cuyo actor se oculta a su propio sujeto                                                  |
+| Alcance    | El ajuste de los umbrales del sistema de insignias no forma parte de este registro: ocurre fuera de toda actividad (8.4). El catálogo de categorías es semilla y no se administra, así que no genera eventos                                                                                                             |
 
 **Sin registros paralelos.** El sistema de recompensas no implementa su propio registro de otorgamientos con fines de trazabilidad. Si requiere trazabilidad adicional, el tipo de evento se incorpora al catálogo del historial, con su categoría definida.
 
@@ -939,7 +931,6 @@ Registro vivo de las decisiones que no dependen de las asesoras y se resuelven i
 | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :-------------------- | :------------------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Revisión y acuerdo del contrato con el equipo (secciones 4, 6 y 7\)                                                                                                         | Prerrequisito interno | Antes del arranque de los documentos individuales | Los subsistemas avanzan sobre un contrato no acordado y quedan expuestos a rediseño de esquema                                                                             |
 | Alcance de la sección formativa más allá del mínimo: lecciones con cuestionarios que otorgan insignias, y propuesta de recursos por usuarios con revisión del administrador | Decisión de alcance   | Antes del inicio de la fase B                     | Si se aprueba después, compite por el calendario sin plan de recorte. El atributo de estatus reservado (4.4) evita la migración de esquema, pero no el costo de calendario |
-| Nombres del catálogo de niveles de insignia                                                                                                                                 | Decisión de contenido | Durante la fase B                                 | No bloquea el modelo de datos; puede resolverse en implementación                                                                                                          |
 
 **Riesgo de acoplamiento.** La propuesta de lecciones con cuestionarios que otorgan insignias crea una dependencia entre dos subsistemas que hoy están aislados. Si se aprueba, el contrato entre ambos (qué evento dispara el otorgamiento y quién lo escribe) debe fijarse en este documento antes de que cualquiera de los dos responsables comience a implementarlo, para no convertir una dependencia de diseño en un bloqueo mutuo de calendario.
 

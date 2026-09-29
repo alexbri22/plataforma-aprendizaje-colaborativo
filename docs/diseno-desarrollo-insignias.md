@@ -51,14 +51,16 @@ La regla de frontera del general (3.4) se cumple por servicio: Insignias nunca l
 
 ## **1.4 Desviaciones vigentes respecto al contrato**
 
-Cuatro partes del contrato dependen de piezas del núcleo que todavía no existen o no estaban listas cuando se construyó el otorgamiento. En lugar de esperar, se implementó una aproximación cuyo contrato de API no cambia al llegar la pieza real. Se declaran aquí para que ninguna se tome por definitiva.
+Seis partes del contrato todavía no se cumplen. Cuatro dependen de piezas del núcleo que no existían o no estaban listas cuando se construyó el otorgamiento; dos son reglas del propio subsistema que están pendientes (10.2). En lugar de esperar, se implementó una aproximación cuyo contrato de API no cambia al llegar la pieza real. Se declaran aquí para que ninguna se tome por definitiva.
 
-| Contrato                                                                 | Hoy                                                                                        | Al llegar la pieza                                                           |
-| :----------------------------------------------------------------------- | :----------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------- |
-| Se reconoce solo dentro del propio equipo (concepto §6, 4.6 del general) | Los compañeros son todos los participantes activos de la actividad                         | `listarCompaneros` se acota al equipo del actor; ni esquema ni API cambian   |
-| El otorgamiento ocurre en el periodo de cierre (6.1)                     | La ventana se calcula con fechas: de `fecha_termino` a `fecha_termino + plazo_cierre_dias` | La verificación lee el estado `cierre`; el intervalo deja de calcularse aquí |
-| El otorgamiento emite un evento de evaluación (8.3)                      | No se emite                                                                                | Se emite al aplicarse, no al guardar (3.6)                                   |
-| Validación ligera del organizador (concepto §6)                          | El organizador ve todo con autoría, pero no hay alerta de reciprocidad ni descarte         | Incremento propio (10.2)                                                     |
+| Contrato                                                                                                                                                    | Hoy                                                                                                        | Al llegar la pieza                                                                                            |
+| :---------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------ |
+| Se reconoce solo dentro del propio equipo (concepto §6, 4.6 del general)                                                                                    | Los compañeros son todos los participantes activos de la actividad                                         | `listarCompaneros` se acota al equipo del actor; ni esquema ni API cambian                                    |
+| El otorgamiento ocurre en el periodo de cierre (6.1)                                                                                                        | La ventana se calcula con fechas: de `fecha_termino` a `fecha_termino + plazo_cierre_dias`                 | La verificación lee el estado `cierre`; el intervalo deja de calcularse aquí                                  |
+| El otorgamiento emite un evento de evaluación (8.3)                                                                                                         | No se emite                                                                                                | Se emite al aplicarse, no al guardar (3.6)                                                                    |
+| Validación ligera del organizador (concepto §6)                                                                                                             | El organizador ve todo con autoría, pero no hay alerta de reciprocidad ni descarte                         | Incremento propio (10.2)                                                                                      |
+| Solo se otorga si la función `insignias` está habilitada y según su modo (6.2 del general); el co-organizador necesita el permiso `otorgar_insignias` (7.3) | El servicio no lee la configuración ni los permisos: basta ser miembro activo y estar dentro de la ventana | Se verifica con la función de autorización del núcleo (2.2 del núcleo), como especifica 6.1 de este documento |
+| Requisitos mínimos de la actividad: 4 participantes y 4 semanas (concepto §6)                                                                               | No se validan                                                                                              | Se evalúan al abrir el ritual (P-33)                                                                          |
 
 # **2\. Modelo del dominio**
 
@@ -151,7 +153,7 @@ Las fechas de la actividad son de calendario; el término cuenta desde el inicio
 
 `PUT /actividades/{id}/reconocimientos` recibe todos los reconocimientos del actor en esa actividad y reemplaza los que había, en una transacción. Una lista vacía es válida y borra lo guardado.
 
-**Registro de decisión — reemplazo frente a alta por reconocimiento.** El núcleo evita PUT porque sus recursos no se reemplazan íntegros (3.1 del núcleo). Este es la excepción: el borrador del ritual es una unidad que se edita hasta el cierre, y el presupuesto se valida sobre el conjunto, no sobre cada alta. Con altas y bajas individuales, un cambio de "reconozco a A" por "reconozco a B" pasaría por un estado intermedio inválido o por uno que excede el presupuesto. El cliente habilita "Guardar" cuando hay cambios respecto a lo guardado, no cuando la lista tiene elementos, para que quitar el último también se pueda guardar.
+**Registro de decisión — reemplazo frente a alta por reconocimiento.** El núcleo evita PUT porque sus recursos no se reemplazan íntegros (3.1 del núcleo). Esta es la excepción: el borrador del ritual es una unidad que se edita hasta el cierre, y el presupuesto se valida sobre el conjunto, no sobre cada alta. Con altas y bajas individuales, un cambio de "reconozco a A" por "reconozco a B" pasaría por un estado intermedio inválido o por uno que excede el presupuesto. El cliente habilita "Guardar" cuando hay cambios respecto a lo guardado, no cuando la lista tiene elementos, para que quitar el último también se pueda guardar.
 
 **Consecuencia para el historial.** Como lo guardado se puede rehacer hasta el cierre, el evento de otorgamiento de 8.3 del general no se emite al guardar sino al aplicarse: un evento por cada borrador intermedio llenaría el historial de reconocimientos que nunca existieron.
 
@@ -187,6 +189,20 @@ Resuelve P-09 del general en el sentido de su propuesta por defecto: anónimo ha
 # **6\. Contrato de la API**
 
 Todas las rutas exigen sesión. Las anidadas bajo una actividad responden 404 a quien no es miembro, igual que el resto del núcleo (3.3 del núcleo).
+
+## **6.1 Quién puede otorgar según la configuración**
+
+Es el contrato; hoy no se cumple (1.4). La verificación sigue el orden de la función de autorización del núcleo: primero la fase, después el estado de la función, después el rol y, para el co-organizador, su permiso.
+
+| Estado de la función `insignias` | Organizador | Co-organizador            | Participante |
+| :------------------------------- | :---------- | :------------------------ | :----------- |
+| `deshabilitado`                  | —           | —                         | —            |
+| `solo_organizador`               | ✓           | ✓ con `otorgar_insignias` | —            |
+| `organizador_y_participantes`    | ✓           | ✓ con `otorgar_insignias` | ✓            |
+
+Fuera de la ventana nadie otorga (409). Con la función deshabilitada, o sin el permiso, el ritual responde 403 y la interfaz no lo ofrece. Lo ya otorgado se conserva si después se intenta deshabilitar la función: la regla de modificación de 6.2 del general lo impide cuando ya tiene datos.
+
+## **6.2 Endpoints**
 
 | Método y ruta                                                         | Quién                        | Qué hace                                                                                          |
 | :-------------------------------------------------------------------- | :--------------------------- | :------------------------------------------------------------------------------------------------ |
@@ -291,14 +307,15 @@ La fila de 10.1 del general que corresponde a este subsistema es la del presupue
 
 En el orden en que conviene hacerlo, que es el de lo que desbloquea:
 
-1. **Acotar los compañeros al equipo**, en cuanto exista la relación `equipos`. Un cambio en el servicio y sus pruebas (1.4).
-2. **Leer el estado `cierre`** en lugar de calcular la ventana, en cuanto la transición exista (1.4).
-3. **Emitir el evento de otorgamiento** al aplicarse, con la envoltura de historial del núcleo (3.6).
-4. **Requisitos mínimos de la actividad**: 4 participantes y 4 semanas entre creación y cierre, ajustables por el administrador (P-33).
-5. **Validación ligera y vista de grupo de quien organiza**: alerta de reciprocidad, frases vacías, descarte, y quién no recibió nada (P-35).
-6. **Señales automáticas de Compromiso**, con fuente `sistema` (P-34).
-7. **Filtro por rango en la búsqueda al invitar**, que depende del incremento de invitaciones del núcleo.
-8. **Retirar la muestra de arte** `/insignias`, que ya no está en la navegación.
+1. **Verificar la configuración de la función y el permiso del co-organizador** con la función de autorización del núcleo (6.1). Va primero porque hoy el ritual está disponible aunque la actividad tenga las insignias deshabilitadas, que es su valor por defecto.
+2. **Acotar los compañeros al equipo**, en cuanto exista la relación `equipos`. Un cambio en el servicio y sus pruebas (1.4).
+3. **Leer el estado `cierre`** en lugar de calcular la ventana, en cuanto la transición exista (1.4).
+4. **Emitir el evento de otorgamiento** al aplicarse, con la envoltura de historial del núcleo (3.6).
+5. **Requisitos mínimos de la actividad**: 4 participantes y 4 semanas entre creación y cierre, ajustables por el administrador (P-33).
+6. **Validación ligera y vista de grupo de quien organiza**: alerta de reciprocidad, frases vacías, descarte, y quién no recibió nada (P-35).
+7. **Señales automáticas de Compromiso**, con fuente `sistema` (P-34).
+8. **Filtro por rango en la búsqueda al invitar**, que depende del incremento de invitaciones del núcleo.
+9. **Retirar la muestra de arte** `/insignias`, que ya no está en la navegación.
 
 ## **10.3 Orden de recorte propio**
 
@@ -352,15 +369,16 @@ Complementa 9.6 del general, que ya pone primero el filtro por rango y después 
 
 **Qué necesitamos confirmar:** si descartar es una acción que el autor debe conocer, y si el co-organizador puede descartar o solo el organizador.
 
-# **12\. Correcciones que este documento lleva al general**
+# **12\. Correcciones aplicadas al general**
 
-Por la regla de remisión (1.1 del núcleo), estas imprecisiones se resuelven aquí y se proponen para la siguiente revisión del general.
+Por la regla de remisión (1.1 del núcleo), estas imprecisiones se resolvieron aquí y se aplicaron al general en el mismo cambio, para no dejar dos fuentes de verdad contradictorias.
 
-| Sección del general | Qué dice                                                       | Qué debería decir                                                                                                   |
-| :------------------ | :------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------ |
-| 0.2                 | Dev design — Ui Chul (pendiente)                               | Enlace a este documento                                                                                             |
-| 4.4                 | "Por qué desaparece la restricción de unicidad por categoría"  | La unicidad por categoría y persona se conserva junto con el presupuesto (concepto §6, 2.2 y 3.3 de este documento) |
-| 4.6                 | Otorgante y receptor pertenecen al mismo equipo                | Correcto como regla; hoy se aplica a la actividad hasta que existan equipos (1.4)                                   |
-| 7.3, P-09           | "Ver quién otorgó una insignia" pendiente para el participante | Resuelta: el participante no ve al autor par; sí ve si vino de quien organiza (4)                                   |
-| 8.3                 | El evento se emite al otorgar                                  | Se emite al aplicarse, porque lo guardado se puede rehacer hasta el cierre (3.6)                                    |
-| 11                  | Nombres del catálogo de niveles pendientes                     | Resuelta: Bronce, Plata, Oro, Platino y Diamante (5)                                                                |
+| Sección del general | Qué decía                                                     | Qué dice ahora                                                                               |
+| :------------------ | :------------------------------------------------------------ | :------------------------------------------------------------------------------------------- |
+| 0.2                 | Dev design — Ui Chul (pendiente)                              | Enlace a este documento                                                                      |
+| 4.4                 | "Por qué desaparece la restricción de unicidad por categoría" | La unicidad por categoría se conserva junto con el presupuesto (2.2 y 3.3 de este documento) |
+| 7.3 y 7.5           | "Ver quién otorgó una insignia" pendiente de P-09             | Resuelta por el concepto §6: el participante no ve al autor par. P-09 sale de la lista       |
+| 8.3                 | El evento se emite al otorgar                                 | Se emite al aplicarse, porque lo guardado se puede rehacer hasta el cierre (3.6)             |
+| 11                  | Nombres del catálogo de niveles pendientes                    | Resuelta: Bronce, Plata, Oro, Platino y Diamante (5); la fila sale del registro              |
+
+**4.6 no cambia.** Que otorgante y receptor pertenezcan al mismo equipo es la regla correcta; hoy se aplica a la actividad hasta que existan equipos (1.4).
