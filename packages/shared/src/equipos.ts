@@ -35,11 +35,19 @@ export interface ParticipanteSinEquipo {
 }
 
 /** Ajuste de la función `formacion_equipos` (nucleo §8.8, P-27). Nulo, sin
- * límite. El máximo lo aplica el servidor a todos; el mínimo solo advierte. */
+ * límite. El máximo lo aplica el servidor a todos; el mínimo que fija quien
+ * organiza (por encima de TAMANO_MINIMO_EQUIPO) solo advierte. */
 export interface LimitesEquipo {
   minimo: number | null
   maximo: number | null
 }
+
+/** Ningún equipo puede cerrar la formación con menos integrantes que esto
+ * (nucleo §8.8, P-27 resuelta): un equipo de una sola persona contradice el
+ * objeto de la plataforma. No es configurable — a diferencia de
+ * `LimitesEquipo.minimo`, que es opcional y solo advierte, este piso rige
+ * siempre y el servidor lo hace cumplir al cerrar la formación. */
+export const TAMANO_MINIMO_EQUIPO = 2
 
 export const LIMITE_MAXIMO_TAMANO_EQUIPO = 100
 

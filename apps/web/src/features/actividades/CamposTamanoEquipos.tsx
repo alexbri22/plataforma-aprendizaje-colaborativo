@@ -1,4 +1,4 @@
-import { LIMITE_MAXIMO_TAMANO_EQUIPO } from '@plataforma/shared'
+import { LIMITE_MAXIMO_TAMANO_EQUIPO, TAMANO_MINIMO_EQUIPO } from '@plataforma/shared'
 import { useState } from 'react'
 import { Input } from '../../components/ui'
 import { ErrorActividad } from './actividades.api'
@@ -20,8 +20,11 @@ const texto = (valor: number | null | undefined) => (valor == null ? '' : String
 
 // Ajuste de la formación de equipos (nucleo §8.8, P-27): cuántas personas
 // puede tener un equipo. Vacío es sin límite. El máximo lo aplica el servidor
-// a todos, también a quien organiza; el mínimo solo advierte. Autoguardado al
-// salir del campo, como el resto de la configuración.
+// a todos, también a quien organiza. El mínimo que se escribe aquí es
+// opcional y solo advierte por encima de TAMANO_MINIMO_EQUIPO — ese piso rige
+// siempre y no se puede bajar. Autoguardado al salir del campo, como el resto
+// de la configuración.
+const PISO_POR_CAMPO: Record<Campo, number> = { minimo: TAMANO_MINIMO_EQUIPO, maximo: 1 }
 export function CamposTamanoEquipos({
   idActividad,
   minimo,
@@ -45,9 +48,10 @@ export function CamposTamanoEquipos({
     let valor: number | null = null
     if (escrito !== '') {
       valor = Number(escrito)
-      if (!Number.isInteger(valor) || valor < 1 || valor > LIMITE_MAXIMO_TAMANO_EQUIPO) {
+      const piso = PISO_POR_CAMPO[campo]
+      if (!Number.isInteger(valor) || valor < piso || valor > LIMITE_MAXIMO_TAMANO_EQUIPO) {
         setErrores({
-          [campo]: `Escribe un entero de 1 a ${LIMITE_MAXIMO_TAMANO_EQUIPO}, o déjalo vacío.`,
+          [campo]: `Escribe un entero de ${piso} a ${LIMITE_MAXIMO_TAMANO_EQUIPO}, o déjalo vacío.`,
         })
         return
       }
@@ -76,7 +80,7 @@ export function CamposTamanoEquipos({
             label={campo === 'minimo' ? 'Mínimo de integrantes' : 'Máximo de integrantes'}
             type="number"
             inputMode="numeric"
-            min={1}
+            min={PISO_POR_CAMPO[campo]}
             max={LIMITE_MAXIMO_TAMANO_EQUIPO}
             placeholder="Sin límite"
             value={valores[campo]}

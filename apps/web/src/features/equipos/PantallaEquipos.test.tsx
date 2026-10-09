@@ -97,6 +97,7 @@ function actividad(
     rol: 'participante',
     numParticipantes: 3,
     fechaClave: 'Clave: ROBOT2XY',
+    nombreOrganizador: 'Ana García López',
     configuracion: { formacion_equipos: 'autogestionado' },
     ...sobrescribir,
   }
@@ -724,24 +725,28 @@ describe('PantallaEquipos', () => {
       vi.mocked(obtenerActividad).mockResolvedValue(
         actividad({ capacidades: ['elegir_equipo', 'editar_equipo'] }),
       )
-      vi.mocked(obtenerEquipos).mockResolvedValue(
-        conLimites(
+      // Mínimo de 3, por encima del piso obligatorio de 2 (P-27 resuelta):
+      // "Pareja" tiene 2, que ya cumple ese piso, así que lo que se avisa
+      // aquí es el mínimo que fijó quien organiza, no el piso.
+      vi.mocked(obtenerEquipos).mockResolvedValue({
+        ...conLimites(
           [
             equipo('e1', 'Lleno', [
               persona('m1', 'Ana A'),
               persona('m2', 'Bea B'),
               persona('m3', 'Cai C'),
             ]),
-            equipo('e2', 'Solo', [persona('m4', 'Dan D')]),
+            equipo('e2', 'Pareja', [persona('m4', 'Dan D'), persona('m5', 'Eli E')]),
           ],
           [{ idMembresia: YO, nombre: 'Yo Mismo' }],
         ),
-      )
+        limites: { minimo: 3, maximo: 3 },
+      })
       renderPantalla()
 
       expect(await screen.findByText('3 de 3 integrantes')).toBeInTheDocument()
-      expect(screen.getByText('1 de 3 integrantes')).toBeInTheDocument()
-      expect(screen.getByText('Menos del mínimo de 2')).toBeInTheDocument()
+      expect(screen.getByText('2 de 3 integrantes')).toBeInTheDocument()
+      expect(screen.getByText('Menos del mínimo de 3')).toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'Equipo lleno' })).toBeDisabled()
       expect(screen.getByRole('button', { name: 'Unirme' })).toBeEnabled()
     })
@@ -805,9 +810,12 @@ describe('PantallaEquipos', () => {
       )
       renderPantalla()
 
-      // Caben 2 más en Beta; la tercera persona abre un equipo nuevo.
+      // Caben 2 más en Beta; la tercera persona abre un equipo nuevo. Beta
+      // tiene un solo integrante: por debajo del piso obligatorio de P-27
+      // (no solo del mínimo de 2 que configuró quien organiza, que aquí
+      // coincide), así que el aviso es el rojo y no el ámbar.
       expect(await screen.findByText('+1 equipo nuevo')).toBeInTheDocument()
-      expect(screen.getByText('1 equipo bajo el mínimo')).toBeInTheDocument()
+      expect(screen.getByText('1 equipo con menos de 2')).toBeInTheDocument()
     })
   })
 

@@ -67,6 +67,7 @@ export {
   LONGITUD_MAXIMA_NOMBRE_EQUIPO,
   LONGITUD_MAXIMA_TEXTO_EQUIPO,
   SEMILLA_MAXIMA,
+  TAMANO_MINIMO_EQUIPO,
 } from './equipos.js'
 
 export type {

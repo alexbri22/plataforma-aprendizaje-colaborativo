@@ -24,6 +24,7 @@ export type CodigoError =
   | 'equipo_no_encontrado'
   | 'nombre_equipo_duplicado'
   | 'sin_equipos'
+  | 'equipo_bajo_minimo'
   | 'miembro_no_asignable'
   | 'participante_requiere_equipo'
   | 'propuesta_sin_participantes'
@@ -259,6 +260,19 @@ export class ErrorSinEquipos extends ErrorDominio {
 
   constructor() {
     super('No puedes cerrar la formación sin al menos un equipo.')
+  }
+}
+
+// Piso fijo de TAMANO_MINIMO_EQUIPO (P-27 resuelta): a diferencia del mínimo
+// que fija quien organiza (LimitesEquipo.minimo, opcional y solo
+// advertencia), este nunca se puede saltar — ni dejando un equipo así desde
+// antes, ni con el reparto automático de quienes quedan sin equipo.
+export class ErrorEquipoBajoMinimo extends ErrorDominio {
+  readonly codigo = 'equipo_bajo_minimo' as const
+  readonly status = 422
+
+  constructor() {
+    super('No puedes cerrar la formación: todo equipo debe tener al menos 2 integrantes.')
   }
 }
 

@@ -1,4 +1,10 @@
-import type { AccionActividad, Equipo, LimitesEquipo, RolIntegrante } from '@plataforma/shared'
+import {
+  TAMANO_MINIMO_EQUIPO,
+  type AccionActividad,
+  type Equipo,
+  type LimitesEquipo,
+  type RolIntegrante,
+} from '@plataforma/shared'
 import { Badge, Button, Card } from '../../components/ui'
 import styles from './TarjetaEquipo.module.css'
 
@@ -44,12 +50,17 @@ export function TarjetaEquipo({
   const cantidad = equipo.integrantes.length
   // El máximo lo impone el servidor a todos; aquí solo se explica por qué no se
   // puede unir nadie más. Un equipo que ya lo excede (se bajó el máximo después
-  // de formarse) cuenta como lleno y no se desarma.
+  // de formarse) cuenta como lleno y no se desarma. Es una violación real del
+  // límite (bloqueo: nadie más entra), no un aviso — por eso se distingue en
+  // rojo y no en ámbar.
   const lleno = limites.maximo !== null && cantidad >= limites.maximo
   const excede = limites.maximo !== null && cantidad > limites.maximo
-  // El mínimo solo avisa. Sin mínimo, se sigue avisando de un equipo de una sola
-  // persona (P-27).
-  const bajoMinimo = limites.minimo !== null ? cantidad < limites.minimo : cantidad === 1
+  // Por debajo de TAMANO_MINIMO_EQUIPO (P-27 resuelta), cerrar la formación
+  // está bloqueado — mismo rojo que excede. El mínimo que fija quien organiza,
+  // si pone uno más alto, solo advierte (ámbar): no impide cerrar.
+  const bajoMinimoObligatorio = cantidad < TAMANO_MINIMO_EQUIPO
+  const bajoMinimoConfigurado =
+    !bajoMinimoObligatorio && limites.minimo !== null && cantidad < limites.minimo
 
   // Un participante siempre pertenece a un equipo: solo se mueve, no sale.
   const mostrarUnirme = !soyIntegrante && puedeMoverme
@@ -69,15 +80,18 @@ export function TarjetaEquipo({
         </Badge>
       </div>
 
-      {excede || bajoMinimo ? (
+      {excede || bajoMinimoObligatorio || bajoMinimoConfigurado ? (
         <div className={styles.avisos}>
-          {excede ? <Badge variant="warning">Por encima del máximo</Badge> : null}
-          {bajoMinimo ? (
-            <Badge variant="warning">
-              {limites.minimo !== null
-                ? `Menos del mínimo de ${limites.minimo}`
-                : 'Un solo integrante'}
+          {excede ? <Badge variant="danger">Por encima del máximo</Badge> : null}
+          {bajoMinimoObligatorio ? (
+            <Badge variant="danger">
+              {cantidad === 1
+                ? 'Un solo integrante'
+                : `Menos de ${TAMANO_MINIMO_EQUIPO} integrantes`}
             </Badge>
+          ) : null}
+          {bajoMinimoConfigurado ? (
+            <Badge variant="warning">Menos del mínimo de {limites.minimo}</Badge>
           ) : null}
         </div>
       ) : null}

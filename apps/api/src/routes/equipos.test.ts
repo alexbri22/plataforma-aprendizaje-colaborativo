@@ -546,14 +546,18 @@ describe('membresía desactivada con equipo', () => {
   })
 
   it('no impide la transición automática ni recibe reparto', async () => {
-    const e = await actividadEnFormacion(2)
+    // Tres participantes y uno desactivado: con solo el inactivo fuera, los
+    // otros dos (el mínimo de P-27) quedan en el mismo equipo y la
+    // transición ocurre igual, sin contar al desactivado para nada.
+    const e = await actividadEnFormacion(3)
     await prisma.membresia.update({
-      where: { idMembresia: e.participantes[1].idMembresia },
+      where: { idMembresia: e.participantes[2].idMembresia },
       data: { estado: 'desactivada' },
     })
-    await crear(e.id, e.participantes[0].cookie, 'Alfa')
+    const idA = await idEquipoCreado(e.id, e.participantes[0].cookie, 'Alfa')
+    await asignar(idA, e.participantes[1].idMembresia, e.participantes[1].cookie)
     expect(await estadoDe(e.id)).toBe('desarrollo')
-    expect(await prisma.integranteEquipo.count()).toBe(1)
+    expect(await prisma.integranteEquipo.count()).toBe(2)
   })
 })
 
@@ -635,10 +639,11 @@ describe('POST /api/actividades/:id/formacion/cierre', () => {
   })
 
   it('sin nadie sin equipo no hay evento de reparto; con la función en manual también cierra', async () => {
-    const e = await actividadEnFormacion(1)
+    const e = await actividadEnFormacion(2)
     await fijarFormacion(e, 'manual')
     const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
     await asignar(idA, e.participantes[0].idMembresia, e.organizador.cookie)
+    await asignar(idA, e.participantes[1].idMembresia, e.organizador.cookie)
 
     expect((await cerrarFormacion(e.id, e.organizador.cookie)).status).toBe(200)
     expect(await eventos(e.id, 'reparto_automatico')).toHaveLength(0)
@@ -664,7 +669,7 @@ describe('POST /api/actividades/:id/formacion/cierre', () => {
   })
 
   it('una transición no se ejecuta dos veces ni desde otra fase: 409', async () => {
-    const e = await actividadEnFormacion(1)
+    const e = await actividadEnFormacion(2)
     await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
     expect((await cerrarFormacion(e.id, e.organizador.cookie)).status).toBe(200)
     expect((await cerrarFormacion(e.id, e.organizador.cookie)).status).toBe(409)
@@ -707,10 +712,10 @@ describe('transición automática con la formación autogestionada', () => {
     expect(await eventos(e.id, 'reparto_automatico')).toHaveLength(0)
   })
 
-  it('con un solo participante, crear su equipo lo pasa a desarrollo', async () => {
+  it('con un solo participante, crear su equipo no lo pasa a desarrollo: quedaría con uno (P-27)', async () => {
     const e = await actividadEnFormacion(1)
     await crear(e.id, e.participantes[0].cookie, 'Solo')
-    expect(await estadoDe(e.id)).toBe('desarrollo')
+    expect(await estadoDe(e.id)).toBe('formacion_equipos')
   })
 
   it('también cuenta cuando quien organiza es quien completa las asignaciones', async () => {
@@ -733,21 +738,33 @@ describe('transición automática con la formación autogestionada', () => {
   })
 
   it('cambiar la función a autogestionada no dispara la transición por sí solo', async () => {
-    const e = await actividadEnFormacion(1)
+    // Dos participantes y no uno: con uno solo, el equipo nunca llegaría al
+    // mínimo de P-27 y la prueba pasaría por esa razón en vez de por la que
+    // quiere comprobar (que el cambio de función no reevalúa nada por sí solo).
+    const e = await actividadEnFormacion(2)
     await fijarFormacion(e, 'manual')
     const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
     await asignar(idA, e.participantes[0].idMembresia, e.organizador.cookie)
+    await asignar(idA, e.participantes[1].idMembresia, e.organizador.cookie)
     await fijarFormacion(e, 'autogestionado')
     expect(await estadoDe(e.id)).toBe('formacion_equipos')
   })
 
   it('dos participantes que completan a la vez producen una sola transición', async () => {
-    const e = await actividadEnFormacion(2)
+    // Dos equipos que ya tienen un integrante cada uno: los dos que faltan
+    // se unen a la vez, cada uno lleva a su equipo al mínimo de P-27 (nunca
+    // se queda en uno) y ambos cumplen "nadie sin equipo" en el mismo instante.
+    const e = await actividadEnFormacion(4)
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    const idB = await idEquipoCreado(e.id, e.organizador.cookie, 'Beta')
+    await asignar(idA, e.participantes[0].idMembresia, e.organizador.cookie)
+    await asignar(idB, e.participantes[1].idMembresia, e.organizador.cookie)
+
     const [a, b] = await Promise.all([
-      crear(e.id, e.participantes[0].cookie, 'Alfa'),
-      crear(e.id, e.participantes[1].cookie, 'Beta'),
+      asignar(idA, e.participantes[2].idMembresia, e.participantes[2].cookie),
+      asignar(idB, e.participantes[3].idMembresia, e.participantes[3].cookie),
     ])
-    expect([a.status, b.status]).toEqual([201, 201])
+    expect([a.status, b.status]).toEqual([200, 200])
     expect(await estadoDe(e.id)).toBe('desarrollo')
 
     const automaticas = (await eventos(e.id, 'fase_avanzada')).filter(
@@ -757,8 +774,11 @@ describe('transición automática con la formación autogestionada', () => {
   })
 
   it('en desarrollo el participante ya no elige equipo: 409', async () => {
-    const e = await actividadEnFormacion(1)
-    await crear(e.id, e.participantes[0].cookie, 'Solo')
+    const e = await actividadEnFormacion(2)
+    const idA = await idEquipoCreado(e.id, e.participantes[0].cookie, 'Solo')
+    await asignar(idA, e.participantes[1].idMembresia, e.participantes[1].cookie)
+    expect(await estadoDe(e.id)).toBe('desarrollo')
+
     const otra = await crear(e.id, e.participantes[0].cookie, 'Otro')
     expect(otra.status).toBe(409)
   })

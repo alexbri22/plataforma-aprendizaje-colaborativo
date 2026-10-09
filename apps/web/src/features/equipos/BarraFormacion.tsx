@@ -1,4 +1,4 @@
-import type { Equipo, LimitesEquipo } from '@plataforma/shared'
+import { TAMANO_MINIMO_EQUIPO, type Equipo, type LimitesEquipo } from '@plataforma/shared'
 import { useState } from 'react'
 import { Badge, Button, IconoCargando } from '../../components/ui'
 import { useCerrarFormacionMutation, useGenerarPropuestaMutation } from './useEquipos'
@@ -61,8 +61,21 @@ export function BarraFormacion({
 
   const nuevos = equiposNuevosNecesarios(equipos, numSinEquipo, limites.maximo)
   const minimo = limites.minimo
-  const bajoMinimo =
-    minimo === null ? 0 : equipos.filter((e) => e.integrantes.length < minimo).length
+  // Por debajo de TAMANO_MINIMO_EQUIPO (P-27 resuelta) el servidor rechaza
+  // cerrar — de ahí el rojo en vez del ámbar del mínimo configurado. No se
+  // deshabilita el botón por esto: un equipo chico puede completarse con el
+  // reparto de quienes están sin equipo al cerrar (el mismo cálculo que hace
+  // el servidor, no uno propio de este resumen), así que lo que hoy se ve
+  // bajo el mínimo no siempre lo sigue estando después de cerrar.
+  const bajoMinimoObligatorio = equipos.filter(
+    (e) => e.integrantes.length < TAMANO_MINIMO_EQUIPO,
+  ).length
+  const bajoMinimoConfigurado =
+    minimo === null
+      ? 0
+      : equipos.filter(
+          (e) => e.integrantes.length < minimo && e.integrantes.length >= TAMANO_MINIMO_EQUIPO,
+        ).length
 
   function generarPropuesta() {
     onError(null)
@@ -100,9 +113,16 @@ export function BarraFormacion({
           {nuevos === 1 ? '+1 equipo nuevo' : `+${nuevos} equipos nuevos`}
         </Badge>
       ) : null}
-      {bajoMinimo > 0 ? (
+      {bajoMinimoObligatorio > 0 ? (
+        <Badge variant="danger">
+          {bajoMinimoObligatorio === 1 ? '1 equipo' : `${bajoMinimoObligatorio} equipos`} con menos
+          de {TAMANO_MINIMO_EQUIPO}
+        </Badge>
+      ) : null}
+      {bajoMinimoConfigurado > 0 ? (
         <Badge variant="warning">
-          {bajoMinimo === 1 ? '1 equipo' : `${bajoMinimo} equipos`} bajo el mínimo
+          {bajoMinimoConfigurado === 1 ? '1 equipo' : `${bajoMinimoConfigurado} equipos`} bajo el
+          mínimo
         </Badge>
       ) : null}
     </>

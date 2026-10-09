@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client'
 import { randomInt } from 'node:crypto'
 import {
   SEMILLA_MAXIMA,
+  TAMANO_MINIMO_EQUIPO,
   type Equipo,
   type ListaEquipos,
   type PropuestaEquipos,
@@ -9,6 +10,7 @@ import {
 import { prisma } from '../../data/prisma.js'
 import {
   ErrorAccionNoPermitida,
+  ErrorEquipoBajoMinimo,
   ErrorEquipoLleno,
   ErrorEquipoNoEncontrado,
   ErrorIntercambioInvalido,
@@ -22,6 +24,7 @@ import {
   numeroEquiposDePropuesta,
   proponerEquipos,
   repartirConMaximo,
+  type AsignacionReparto,
 } from '../../utilidades/reparto.js'
 import {
   autorizarAccion,
@@ -266,11 +269,34 @@ async function leerEstadoDeEquipos(tx: ClienteBD, idActividad: string): Promise<
   }
 }
 
+// Simula, sin escribir nada, el conteo final de cada equipo (los que ya
+// existían más lo que decida el reparto, equipos nuevos incluidos) para
+// decidir si cerrar la formación dejaría a alguno por debajo de
+// TAMANO_MINIMO_EQUIPO (P-27 resuelta). Cuenta también a los equipos que ya
+// estaban así desde antes, aunque el reparto no los toque: el piso rige al
+// cerrar, no solo para lo que el reparto acaba de mover.
+function algunEquipoQuedaBajoMinimo(
+  equipos: { id: string; integrantes: number }[],
+  asignaciones: readonly AsignacionReparto[],
+  equiposNuevos: readonly string[],
+): boolean {
+  const conteos = new Map(equipos.map((e) => [e.id, e.integrantes]))
+  for (const id of equiposNuevos) conteos.set(id, 0)
+  for (const asignacion of asignaciones) {
+    conteos.set(asignacion.idEquipo, (conteos.get(asignacion.idEquipo) ?? 0) + 1)
+  }
+  return [...conteos.values()].some((cantidad) => cantidad < TAMANO_MINIMO_EQUIPO)
+}
+
 // Formación → Desarrollo de forma automática (nucleo §7.4): con la función en
 // autogestionado, en cuanto nadie queda sin equipo. Se evalúa al final de toda
 // escritura que pueda dejar a alguien con equipo. Requiere al menos un equipo
 // y un participante: sin ellos "nadie sin equipo" es vacuo y no hay a quién
-// pasar a desarrollo. El actor del evento es el sistema.
+// pasar a desarrollo. El actor del evento es el sistema. Tampoco pasa a
+// desarrollo con algún equipo por debajo de TAMANO_MINIMO_EQUIPO (P-27
+// resuelta): a diferencia de cerrarFormacion, aquí no hay nada que rechazar
+// con un error — la actividad simplemente se queda en formación hasta que
+// quien organiza lo resuelva a mano.
 async function cerrarSiNadieQuedaSinEquipo(
   tx: ClienteBD,
   actividad: ActividadParaEquipos,
@@ -280,6 +306,7 @@ async function cerrarSiNadieQuedaSinEquipo(
   }
   const { equipos, participantesSinEquipo } = await leerEstadoDeEquipos(tx, actividad.idActividad)
   if (equipos.length === 0 || participantesSinEquipo.length > 0) return false
+  if (algunEquipoQuedaBajoMinimo(equipos, [], [])) return false
 
   const miembros = await listarMiembros(actividad.idActividad, tx)
   if (!miembros.some((m) => m.activa && m.rol === 'participante')) return false
@@ -668,16 +695,22 @@ export async function cerrarFormacion(
     const { equipos, participantesSinEquipo } = await leerEstadoDeEquipos(tx, idActividad)
     if (equipos.length === 0) throw new ErrorSinEquipos()
 
-    if (participantesSinEquipo.length > 0) {
-      // Con un máximo de integrantes, si todos los equipos están llenos se crean
-      // los equipos nuevos que hagan falta (P-27). Los provisionales del
-      // reparto se sustituyen por los reales, con el primer "Equipo N" libre.
-      const { asignaciones, equiposNuevos } = repartirConMaximo(
-        equipos.map((e) => ({ id: e.id, integrantes: e.integrantes })),
-        participantesSinEquipo.map((p) => p.idMembresia),
-        actividad.limites.maximo,
-      )
+    // Con un máximo de integrantes, si todos los equipos están llenos se crean
+    // los equipos nuevos que hagan falta (P-27); vacío si nadie quedó sin
+    // equipo. Se calcula antes de rechazar o escribir nada: el piso de
+    // TAMANO_MINIMO_EQUIPO (P-27 resuelta) se revisa sobre el resultado final
+    // —equipos que ya existían incluidos, no solo lo que el reparto mueve—
+    // y si lo viola no se crea ningún equipo ni se asigna a nadie.
+    const { asignaciones, equiposNuevos } = repartirConMaximo(
+      equipos.map((e) => ({ id: e.id, integrantes: e.integrantes })),
+      participantesSinEquipo.map((p) => p.idMembresia),
+      actividad.limites.maximo,
+    )
+    if (algunEquipoQuedaBajoMinimo(equipos, asignaciones, equiposNuevos)) {
+      throw new ErrorEquipoBajoMinimo()
+    }
 
+    if (participantesSinEquipo.length > 0) {
       const nombreEquipo = new Map(equipos.map((e) => [e.id, e.nombre]))
       const idReal = new Map<string, string>()
       const usados = new Set(equipos.map((e) => e.nombre.toLowerCase()))

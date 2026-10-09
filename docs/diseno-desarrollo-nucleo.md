@@ -552,7 +552,7 @@ El general fija la secuencia de fases y las reglas que ningún subsistema puede 
 | Desarrollo → Cierre         | Acción, o llegada de la fecha de término                                                       | Ninguna                     | Cierra las aportaciones; abre calificación, evaluaciones e insignias; caducan las invitaciones pendientes |
 | Cierre → Archivada          | Acción, o vencimiento del plazo de cierre                                                      | Ninguna                     | Solo lectura para todos, sin excepción de rol                                                             |
 
-**Cómo se dispara la transición automática de Formación → Desarrollo.** Con la función en autogestionado se evalúa al final de toda escritura de integrantes durante la formación (crear un equipo y unirse, asignar, mover), dentro de la misma transacción, que toma la fila de la actividad para que dos escrituras simultáneas produzcan una sola transición. Exige al menos un equipo y un participante activo. Cambiar la función a autogestionado no la dispara por sí solo. El evento de fase lleva al sistema como actor y `motivo: sin_rezagados`. La API expone la fase `formacion_equipos` tal cual: ya no se pliega dentro de inscripción.
+**Cómo se dispara la transición automática de Formación → Desarrollo.** Con la función en autogestionado se evalúa al final de toda escritura de integrantes durante la formación (crear un equipo y unirse, asignar, mover), dentro de la misma transacción, que toma la fila de la actividad para que dos escrituras simultáneas produzcan una sola transición. Exige al menos un equipo, un participante activo, y que ningún equipo quede con menos de dos integrantes activos (P-27, resuelta en 8.3); si algo de esto no se cumple la transición simplemente no ocurre, sin error, hasta que quien organiza lo resuelva a mano. Cambiar la función a autogestionado no la dispara por sí solo. El evento de fase lleva al sistema como actor y `motivo: sin_rezagados`. La API expone la fase `formacion_equipos` tal cual: ya no se pliega dentro de inscripción.
 
 Los casos límite son los que deciden si la máquina de estados se comporta de forma previsible cuando la configuración y el uso no coinciden. Ninguno de los siguientes está resuelto por el general y todos ocurren con facilidad.
 
@@ -593,7 +593,7 @@ La modificación del conjunto de permisos de un co-organizador se registra en el
 | POST /api/actividades/{id}/inscripcion                   | Organizador  | Abre la inscripción y genera la clave                                                                                                                                                         |
 | POST /api/actividades/{id}/inscripcion/cierre            | Organizador  | Cierra la inscripción y pasa a formación                                                                                                                                                      |
 | POST /api/actividades/{id}/formacion/cierre              | Organizador  | Cierra la formación, con reparto automático                                                                                                                                                   |
-| PUT /api/actividades/{id}/formacion/limites              | Organizador  | Fija el tamaño mínimo y máximo de un equipo, o los quita con null (8.8)                                                                                                                       |
+| PUT /api/actividades/{id}/formacion/limites              | Organizador  | Fija el tamaño mínimo y máximo de un equipo, o los quita con null (8.3)                                                                                                                       |
 | POST /api/actividades/{id}/cierre                        | Organizador  | Inicia el periodo de cierre                                                                                                                                                                   |
 | POST /api/actividades/{id}/archivo                       | Organizador  | Da la actividad por finalizada                                                                                                                                                                |
 | GET /api/claves/{clave}                                  | Usuario      | Vista previa mínima de la actividad (3.3)                                                                                                                                                     |
@@ -677,6 +677,10 @@ Con un máximo de integrantes (P-27), si el equipo más chico ya lo alcanzó, to
 
 El reparto completo emite un solo evento del historial, con el sistema como actor y la lista de asignaciones en su campo de datos (5.2). Emitir uno por persona haría ilegible la consulta justo en el momento de mayor actividad.
 
+**Tamaño mínimo y máximo de un equipo (P-27, resuelta).** El tamaño de los equipos es un ajuste de la función de formación de equipos, con un mínimo y un máximo de integrantes, ambos opcionales (nulos: sin límite), que fija quien organiza mientras la actividad no salga de la formación (`PUT /actividades/{id}/formacion/limites`, con evento de configuración; se edita desde la pantalla de Equipos y no desde Configuración, porque es un ajuste que solo importa ahí). El **máximo se aplica a todos**, también a quien organiza y en cualquiera de los estados de la función: nadie puede entrar a un equipo lleno (unirse, asignar o integrarse). Un equipo que ya lo excede porque se bajó después no se desarma: cuenta como lleno. El **mínimo que fija quien organiza, por encima de dos, solo advierte** (el equipo se marca) y nunca impide cerrar.
+
+Ningún equipo, sin embargo, puede tener menos de **dos** integrantes activos al cerrar la formación: un equipo de una persona contradice el objeto de la plataforma y deja sin destinatarios la evaluación por pares (10.3). A diferencia del mínimo configurable, este piso no es opcional y el servidor lo hace cumplir, no solo lo advierte. Rige en los dos caminos que llevan a desarrollo: `POST /formacion/cierre` lo rechaza (`422 equipo_bajo_minimo`) sin escribir nada si el resultado —equipos que ya existían incluidos, no solo los que este reparto mueve— dejaría alguno por debajo; y la transición automática descrita en 7.4 simplemente no ocurre, sin error, hasta que quien organiza lo resuelva a mano. El mínimo configurable tampoco acepta ya un valor por debajo de dos: fijarlo más bajo no tendría efecto, porque el piso rige de todas formas. El máximo configurable no cambia: sigue aceptando cualquier valor desde uno, porque bajarlo por debajo del tamaño de un equipo ya formado es un caso legítimo y distinto (no lo desarma, lo deja lleno) que el piso de cierre atrapa igual si alguna vez hiciera el resultado imposible. Cuentan los integrantes activos.
+
 ## **8.4 Reasignación durante el desarrollo**
 
 Quien organiza puede mover a un participante de un equipo a otro mientras la actividad está en desarrollo (7.3 del general). Lo que la operación arrastra y lo que deja atrás no es evidente y conviene fijarlo:
@@ -719,18 +723,6 @@ El nombre es único dentro de la actividad (4.4 del general). La descripción de
 | Espacio del equipo      | Descripción, forma de trabajo y las secciones de metas, avances y recursos que la configuración habilite (capítulo 9\)                                                                                                                                                           |
 
 **Decisión de producto — la formación se configura en Equipos.** El estado de la función de formación y el tamaño mínimo y máximo de los equipos se editan desde la pantalla de Equipos, en un panel lateral, y no aparecen en la pantalla de Configuración: son ajustes que solo importan ahí y no tiene caso mantenerlos en dos lugares. El botón está disponible mientras `configurar_funciones` lo esté (configuración, inscripción y formación), de modo que también se puede fijar antes de cerrar la inscripción.
-
-## **8.8 Pregunta abierta de este módulo**
-
-**P-27 — Tamaño mínimo y máximo de un equipo**
-
-**Afecta:** formación (8.1), reparto automático (8.3), evaluación por pares (10.3).
-
-**Propuesta por defecto:** no se imponen límites. El número de equipos esperado es una referencia y un equipo puede tener un solo integrante.
-
-**Resolución — decisión de producto:** el tamaño de los equipos es un ajuste de la función de formación de equipos, con un mínimo y un máximo de integrantes, ambos opcionales (nulos: sin límite), que fija quien organiza mientras la actividad no salga de la formación (`PUT /actividades/{id}/formacion/limites`, con evento de configuración). El **máximo se aplica a todos**, también a quien organiza y en cualquiera de los estados de la función: nadie puede entrar a un equipo lleno (unirse, asignar o integrarse), y el reparto de quienes quedan sin equipo (8.3) y la propuesta del sistema (8.2) crean los equipos nuevos que hagan falta para que todos quepan. Un equipo que ya excede el máximo porque se bajó después no se desarma: cuenta como lleno. El **mínimo solo advierte** (el equipo se marca y el cierre lo menciona) y nunca impide cerrar. Sin mínimo se sigue avisando de un equipo de una sola persona. Cuentan los integrantes activos. Sigue vigente que el número de equipos esperado es una referencia y no un límite.
-
-**Qué necesitamos confirmar:** un equipo de una persona contradice el objeto de la plataforma y deja sin destinatarios la evaluación por pares (7.4). La pregunta es si el sistema debe impedirlo, advertirlo sin impedirlo, o permitirlo sin más porque el caso lo resuelve quien organiza.
 
 # **9\. Seguimiento**
 
@@ -983,7 +975,6 @@ Consolida las preguntas propias de este documento y señala cuáles del general 
 | P-30     | Alcance de la cuenta sin verificar                | El incremento de Cuentas                                        |
 | P-25     | Configuración por defecto de una actividad nueva  | El incremento de Actividades I                                  |
 | P-26     | Transferencia de la organización de una actividad | El incremento de Actividades II                                 |
-| P-27     | Tamaño mínimo y máximo de un equipo               | El incremento de Equipos                                        |
 | P-28     | Definición de los periodos de reporte             | El incremento de Seguimiento                                    |
 | P-29     | Escala de la calificación                         | El incremento de Calificación                                   |
 | P-22     | Vencimiento de la sesión                          | El incremento de Cuentas                                        |

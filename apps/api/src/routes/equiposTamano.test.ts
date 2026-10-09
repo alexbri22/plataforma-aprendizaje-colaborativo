@@ -150,7 +150,11 @@ describe('tamaño de los equipos: el máximo se aplica a todos', () => {
   })
 
   it('al cerrar la formación, si no cabe nadie más se crean los equipos nuevos necesarios', async () => {
-    const e = await actividadEnFormacion(7)
+    // 8 participantes: 2 asignados a mano a Alfa, 6 sin equipo. Con un
+    // máximo de 3, Alfa y Equipo 3 llegan a 3 cada uno (6 lugares) y los 2
+    // que sobran abren un equipo nuevo — nunca se queda en 1, que P-27
+    // (resuelta) no permite cerrar así (ver el siguiente caso).
+    const e = await actividadEnFormacion(8)
     await fijarFormacion(e, 'manual')
     await fijar(e.id, e.organizador.cookie, { maximo: 3 })
     const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
@@ -166,7 +170,7 @@ describe('tamaño de los equipos: el máximo se aplica a todos', () => {
     expect(lista.sinEquipo).toEqual([])
     const tamanos = lista.equipos.map((x: { integrantes: unknown[] }) => x.integrantes.length)
     expect(Math.max(...tamanos)).toBeLessThanOrEqual(3)
-    // Caben 4 de las 5 personas restantes (Alfa 1 + Equipo 3: 3); la que sobra abre un equipo nuevo.
+    expect(Math.min(...tamanos)).toBeGreaterThanOrEqual(2)
     expect(lista.equipos).toHaveLength(3)
     expect(lista.equipos.map((x: { nombre: string }) => x.nombre)).toEqual([
       'Alfa',
@@ -176,6 +180,29 @@ describe('tamaño de los equipos: el máximo se aplica a todos', () => {
 
     const [reparto] = await eventos(e.id, 'reparto_automatico')
     expect(reparto.datos).toMatchObject({ maximo: 3, equiposCreados: [{ nombre: 'Equipo 4' }] })
+  })
+
+  it('no cierra si el equipo nuevo que haría falta se quedaría con una sola persona (P-27)', async () => {
+    // Mismo escenario que arriba, pero con un participante menos: el equipo
+    // nuevo que el reparto tendría que abrir para la última persona se
+    // quedaría solo con ella.
+    const e = await actividadEnFormacion(7)
+    await fijarFormacion(e, 'manual')
+    await fijar(e.id, e.organizador.cookie, { maximo: 3 })
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    await idEquipoCreado(e.id, e.organizador.cookie, 'Equipo 3')
+    for (const p of e.participantes.slice(0, 2)) {
+      await asignar(idA, p.idMembresia, e.organizador.cookie)
+    }
+
+    const cierre = await cerrarFormacion(e.id, e.organizador.cookie)
+    expect(cierre.status).toBe(422)
+    expect(cierre.body.codigo).toBe('equipo_bajo_minimo')
+
+    // No escribe nada a medias: ni crea el equipo nuevo ni mueve a nadie.
+    const lista = (await listar(e.id, e.organizador.cookie)).body
+    expect(lista.equipos).toHaveLength(2)
+    expect(lista.sinEquipo).toHaveLength(5)
   })
 
   it('sin máximo, el cierre no crea equipos nuevos', async () => {

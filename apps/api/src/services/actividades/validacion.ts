@@ -1,5 +1,6 @@
 import {
   LIMITE_MAXIMO_TAMANO_EQUIPO,
+  TAMANO_MINIMO_EQUIPO,
   ELEMENTOS_ESPACIO_EQUIPO,
   ESTADOS_ELEMENTO_ESPACIO_EQUIPO,
   ESTADOS_POR_FUNCION,
@@ -188,9 +189,13 @@ export function validarDatosAgregarCoorganizador(cuerpo: unknown): DatosAgregarC
   return { permisos: datos.permisos as PermisoCoorganizador[] }
 }
 
-// PUT /formacion/limites: tamaño mínimo y máximo de un equipo. Cada campo es
-// un entero de 1 a LIMITE_MAXIMO_TAMANO_EQUIPO, o null para quitar el límite;
-// el que no llega se conserva. Debe llegar al menos uno.
+// PUT /formacion/limites: tamaño mínimo y máximo de un equipo, o null para
+// quitar el límite; el que no llega se conserva. Debe llegar al menos uno.
+// El máximo sigue aceptando cualquier entero desde 1 (bajarlo por debajo de
+// un equipo ya formado es válido: lo deja lleno sin desarmarlo, nucleo §8.8).
+// El mínimo no: por debajo de TAMANO_MINIMO_EQUIPO no tiene efecto, porque
+// ese piso rige siempre (P-27 resuelta), así que configurarlo más bajo solo
+// confundiría sin cambiar nada.
 export interface CambiosLimitesEquipo {
   minimo?: number | null
   maximo?: number | null
@@ -200,6 +205,7 @@ export function validarDatosLimitesEquipo(cuerpo: unknown): CambiosLimitesEquipo
   const datos = (cuerpo && typeof cuerpo === 'object' ? cuerpo : {}) as Record<string, unknown>
   const detallePorCampo: Record<string, string> = {}
   const cambios: CambiosLimitesEquipo = {}
+  const piso: Record<'minimo' | 'maximo', number> = { minimo: TAMANO_MINIMO_EQUIPO, maximo: 1 }
 
   for (const campo of ['minimo', 'maximo'] as const) {
     const valor = datos[campo]
@@ -209,13 +215,13 @@ export function validarDatosLimitesEquipo(cuerpo: unknown): CambiosLimitesEquipo
     } else if (
       typeof valor === 'number' &&
       Number.isInteger(valor) &&
-      valor >= 1 &&
+      valor >= piso[campo] &&
       valor <= LIMITE_MAXIMO_TAMANO_EQUIPO
     ) {
       cambios[campo] = valor
     } else {
       detallePorCampo[campo] =
-        `Debe ser un entero de 1 a ${LIMITE_MAXIMO_TAMANO_EQUIPO}, o vacío para no limitar.`
+        `Debe ser un entero de ${piso[campo]} a ${LIMITE_MAXIMO_TAMANO_EQUIPO}, o vacío para no limitar.`
     }
   }
 

@@ -239,7 +239,10 @@ describe('POST /api/actividades/:id/equipos/propuesta', () => {
   })
 
   it('se ajusta con la asignación manual y confirmarla es cerrar la formación, sin más reparto', async () => {
-    const e = await conPropuesta(4)
+    // 7 participantes y 3 equipos esperados: la propuesta reparte 3/2/2, así
+    // que mover a una persona del de 3 al de 2 deja ambos en 2 — nunca por
+    // debajo del mínimo de P-27 — y cerrar no necesita más reparto.
+    const e = await conPropuesta(7)
     const propuesta = await proponer(e.id, e.organizador.cookie, { semilla: 11 })
     const [equipo1, equipo2] = propuesta.body.equipos
 
