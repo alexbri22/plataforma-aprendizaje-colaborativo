@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Badge, Card } from '../../components/ui'
-import { infoFase } from './fase'
+import { Card } from '../../components/ui'
 import type { Actividad } from './tipos'
 import styles from './TarjetaActividad.module.css'
 
@@ -10,20 +9,13 @@ export interface TarjetaActividadProps {
   actividad: Actividad
 }
 
+// El estado (antes una píldora sobre el título) se quitó de la tarjeta a
+// pedido de producto; vuelve en otra forma, todavía por definir.
 export function TarjetaActividad({ actividad }: TarjetaActividadProps) {
-  const fase = infoFase(actividad.fase)
-
   return (
     <Link to={`/actividades/${actividad.id}`} className={styles.enlace}>
       <Card className={styles.tarjeta}>
-        <div className={styles.encabezado}>
-          <h3 className={styles.nombre}>{actividad.nombre}</h3>
-          <div className={styles.estado}>
-            <span className={styles.estadoEtiqueta}>Estado</span>
-            <Badge variant={fase.variant}>{fase.etiqueta}</Badge>
-          </div>
-        </div>
-
+        <h3 className={styles.nombre}>{actividad.nombre}</h3>
         <p className={styles.objetivo}>{actividad.objetivo}</p>
 
         <div className={styles.pie}>

@@ -1,5 +1,5 @@
 import request, { type Response } from 'supertest'
-import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { createApp } from '../app.js'
 import { prisma } from '../data/prisma.js'
 import { transicionarActividadesVencidas } from '../services/actividades/actividades.service.js'
@@ -16,13 +16,22 @@ const DATOS_REGISTRO = {
   contrasena: 'contrasena-larga',
 }
 
+// Fechas respecto a hoy, no fijas: la búsqueda por clave deja de admitir
+// uniones pasada la fecha límite de inscripción (nucleo §7.5), así que con una
+// fecha fija estas pruebas dejarían de poder unir participantes el día que esa
+// fecha quedara atrás. Se calcula sin falsear el reloj: los eventos del
+// historial se ordenan por su instante de escritura y necesitan uno real.
+const UN_DIA_MS = 24 * 60 * 60 * 1000
+const enDias = (dias: number) => new Date(Date.now() + dias * UN_DIA_MS)
+const comoFecha = (fecha: Date) => fecha.toISOString().slice(0, 10)
+
 const DATOS_ACTIVIDAD = {
   nombre: 'Proyecto de ecosistemas',
   objetivo: 'Investigar el impacto humano en un ecosistema local.',
   informacionGeneral: 'Reporte escrito más presentación de 10 minutos.',
-  fechaInicio: '2026-09-10',
-  fechaTermino: '2026-11-01',
-  fechaLimiteInscripcion: '2026-09-15',
+  fechaInicio: comoFecha(enDias(0)),
+  fechaTermino: comoFecha(enDias(90)),
+  fechaLimiteInscripcion: comoFecha(enDias(30)),
   plazoCierreDias: 10,
   numeroEquiposEsperado: 4,
 }
@@ -41,22 +50,11 @@ async function registrarYObtenerCookie(correo = DATOS_REGISTRO.correo): Promise<
   return extraerCookie(respuesta)
 }
 
-// Reloj fijo antes de la fecha límite de inscripción de DATOS_ACTIVIDAD
-// (2026-09-15): la búsqueda por clave ya no admite uniones pasada esa fecha
-// (nucleo §7.5), así que sin esto las pruebas que unen participantes
-// dependerían del día en que se corran. Solo se falsea Date, no los
-// temporizadores; las pruebas de la tarea programada pasan su propio `ahora`.
 beforeEach(async () => {
-  vi.useFakeTimers({ toFake: ['Date'] })
-  vi.setSystemTime(new Date('2026-09-12T18:00:00.000Z'))
   await prisma.membresia.deleteMany()
   await prisma.actividad.deleteMany()
   await prisma.sesion.deleteMany()
   await prisma.usuario.deleteMany()
-})
-
-afterEach(() => {
-  vi.useRealTimers()
 })
 
 afterAll(async () => {
@@ -80,6 +78,7 @@ describe('POST /api/actividades', () => {
     expect(actividad.numParticipantes).toBe(0)
     expect(actividad.claveIngreso).toMatch(/^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{8}$/)
     expect(actividad.fechaClave).toBe(`Clave: ${actividad.claveIngreso}`)
+    expect(actividad.nombreOrganizador).toBe('Ada Lovelace Byron')
     // Fechas de calendario, no el datetime completo de Date#toISOString():
     // apps/web/.../formato.ts las parsea como año-mes-día y truena con hora
     // incluida (docs/diseno-desarrollo-general.md §3.1 no exige una u otra
@@ -163,10 +162,42 @@ describe('GET /api/actividades', () => {
     expect(respuestaOrganizadora.status).toBe(200)
     expect(respuestaOrganizadora.body.actividades).toHaveLength(1)
     expect(respuestaOrganizadora.body.actividades[0].rol).toBe('organizador')
+    expect(respuestaOrganizadora.body.actividades[0].nombreOrganizador).toBe('Ada Lovelace Byron')
 
     const respuestaAjena = await request(app).get('/api/actividades').set('Cookie', cookieAjena)
     expect(respuestaAjena.status).toBe(200)
     expect(respuestaAjena.body.actividades).toHaveLength(0)
+  })
+
+  it('con varias actividades de distintos organizadores, cada una trae el nombre correcto', async () => {
+    const cookieOrganizadora1 = await registrarYObtenerCookie('ada@ejemplo.com')
+    const respuestaOrganizadora2 = await request(app)
+      .post('/api/usuarios')
+      .send({ ...DATOS_REGISTRO, nombre: 'Grace', correo: 'grace@ejemplo.com' })
+    const cookieOrganizadora2 = extraerCookie(respuestaOrganizadora2)
+    const cookieParticipante = await registrarYObtenerCookie('rosalind@ejemplo.com')
+
+    const { claveIngreso: clave1 } = (
+      await request(app)
+        .post('/api/actividades')
+        .set('Cookie', cookieOrganizadora1)
+        .send(DATOS_ACTIVIDAD)
+    ).body.actividad
+    await request(app)
+      .post('/api/actividades')
+      .set('Cookie', cookieOrganizadora2)
+      .send({ ...DATOS_ACTIVIDAD, nombre: 'Taller de retroalimentación' })
+    await request(app).post(`/api/claves/${clave1}/union`).set('Cookie', cookieParticipante)
+
+    // El actor solo es miembro de la primera actividad (el listado nunca
+    // incluye la ajena), y en esa el nombre es el de la organizadora, no el
+    // suyo propio: en una sola consulta por lote (nombresDeOrganizadores),
+    // no una por fila.
+    const respuesta = await request(app).get('/api/actividades').set('Cookie', cookieParticipante)
+
+    expect(respuesta.status).toBe(200)
+    expect(respuesta.body.actividades).toHaveLength(1)
+    expect(respuesta.body.actividades[0].nombreOrganizador).toBe('Ada Lovelace Byron')
   })
 })
 
@@ -198,6 +229,7 @@ describe('GET /api/actividades/:id', () => {
 
     expect(respuesta.status).toBe(200)
     expect(respuesta.body.actividad.id).toBe(id)
+    expect(respuesta.body.actividad.nombreOrganizador).toBe('Ada Lovelace Byron')
     expect(new Set(respuesta.body.actividad.capacidades)).toEqual(
       new Set([
         'configurar_funciones',
@@ -414,7 +446,7 @@ describe('POST /api/actividades/:id/inscripcion/cierre', () => {
       .set('Cookie', cookieOrganizador)
 
     expect(respuesta.status).toBe(200)
-    expect(respuesta.body.actividad.fase).toBe('inscripcion') // formacion_equipos se pliega en 'inscripcion' (ver FASE_POR_ESTADO)
+    expect(respuesta.body.actividad.fase).toBe('formacion_equipos')
     const actividadEnBD = await prisma.actividad.findUniqueOrThrow({ where: { idActividad: id } })
     expect(actividadEnBD.estado).toBe('formacion_equipos')
 
@@ -659,6 +691,14 @@ describe('PUT /api/actividades/:id/coorganizadores/:idUsuario', () => {
   })
 })
 
+// Dos días después del límite de inscripción de DATOS_ACTIVIDAD, en el pasado
+// de la tarea programada y con margen de sobra sobre el final del día en CDMX.
+function despuesDelLimite(): Date {
+  return new Date(
+    new Date(`${DATOS_ACTIVIDAD.fechaLimiteInscripcion}T00:00:00.000Z`).getTime() + 2 * UN_DIA_MS,
+  )
+}
+
 describe('transicionarActividadesVencidas (tarea programada, nucleo §7.5)', () => {
   it('transiciona una actividad con la fecha de inscripción vencida y al menos un participante', async () => {
     const cookieOrganizador = await registrarYObtenerCookie('ada@ejemplo.com')
@@ -666,9 +706,9 @@ describe('transicionarActividadesVencidas (tarea programada, nucleo §7.5)', () 
     const { id, claveIngreso } = await crearActividad(cookieOrganizador)
     await unirseComoParticipante(claveIngreso, cookieParticipante)
 
-    // fechaLimiteInscripcion de DATOS_ACTIVIDAD es 2026-09-15; un instante
-    // bien entrado el día siguiente en CDMX ya venció.
-    const resultado = await transicionarActividadesVencidas(new Date('2026-09-17T00:00:00.000Z'))
+    // Un instante bien entrado el día siguiente a fechaLimiteInscripcion en
+    // CDMX ya venció.
+    const resultado = await transicionarActividadesVencidas(despuesDelLimite())
 
     expect(resultado.procesadas).toBe(1)
     expect(resultado.omitidasPorSinParticipantes).toBe(0)
@@ -688,7 +728,7 @@ describe('transicionarActividadesVencidas (tarea programada, nucleo §7.5)', () 
     const { id, claveIngreso } = await crearActividad(cookieOrganizador)
     await unirseComoParticipante(claveIngreso, cookieParticipante)
 
-    const resultado = await transicionarActividadesVencidas(new Date('2026-09-10T00:00:00.000Z'))
+    const resultado = await transicionarActividadesVencidas(new Date())
 
     expect(resultado.procesadas).toBe(0)
     const actividadEnBD = await prisma.actividad.findUniqueOrThrow({ where: { idActividad: id } })
@@ -699,11 +739,131 @@ describe('transicionarActividadesVencidas (tarea programada, nucleo §7.5)', () 
     const cookieOrganizador = await registrarYObtenerCookie('ada@ejemplo.com')
     const { id } = await crearActividad(cookieOrganizador)
 
-    const resultado = await transicionarActividadesVencidas(new Date('2026-09-17T00:00:00.000Z'))
+    const resultado = await transicionarActividadesVencidas(despuesDelLimite())
 
     expect(resultado.procesadas).toBe(0)
     expect(resultado.omitidasPorSinParticipantes).toBe(1)
     const actividadEnBD = await prisma.actividad.findUniqueOrThrow({ where: { idActividad: id } })
     expect(actividadEnBD.estado).toBe('inscripcion')
+  })
+})
+
+describe('PUT /api/actividades/:id/configuracion/:funcion durante el desarrollo y el cierre', () => {
+  async function actividadEn(
+    estado: 'desarrollo' | 'cierre' | 'archivada',
+    correo = 'ada@ejemplo.com',
+  ) {
+    const cookie = await registrarYObtenerCookie(correo)
+    const { id } = await crearActividad(cookie)
+    await prisma.actividad.update({ where: { idActividad: id }, data: { estado } })
+    return { cookie, id }
+  }
+
+  const configurar = (id: string, cookie: string, funcion: string, cuerpo: object) =>
+    request(app)
+      .put(`/api/actividades/${id}/configuracion/${funcion}`)
+      .set('Cookie', cookie)
+      .send(cuerpo)
+
+  it('se puede habilitar una función y volver a deshabilitarla si no tiene datos', async () => {
+    for (const estado of ['desarrollo', 'cierre'] as const) {
+      const { cookie, id } = await actividadEn(estado, `${estado}@ejemplo.com`)
+
+      const habilitar = await configurar(id, cookie, 'bitacora_individual', {
+        estado: 'habilitada',
+      })
+      expect(habilitar.status, estado).toBe(200)
+      expect(habilitar.body.actividad.configuracion.bitacora_individual).toBe('habilitada')
+
+      const deshabilitar = await configurar(id, cookie, 'bitacora_individual', {
+        estado: 'deshabilitada',
+      })
+      expect(deshabilitar.status, estado).toBe(200)
+
+      const cambios = await prisma.historial.findMany({
+        where: { idActividad: id, tipoEvento: 'configuracion_modificada' },
+        orderBy: { fecha: 'asc' },
+      })
+      expect(cambios.map((c) => c.datos)).toEqual([
+        {
+          funcion: 'bitacora_individual',
+          estadoAnterior: 'deshabilitada',
+          estadoNuevo: 'habilitada',
+        },
+        {
+          funcion: 'bitacora_individual',
+          estadoAnterior: 'habilitada',
+          estadoNuevo: 'deshabilitada',
+        },
+      ])
+    }
+  })
+
+  it('el espacio de equipo también cambia por elemento sin datos', async () => {
+    const { cookie, id } = await actividadEn('desarrollo')
+    const respuesta = await configurar(id, cookie, 'espacio_equipo', {
+      metas: 'obligatorio',
+      avances: 'deshabilitado',
+      recursos: 'opcional',
+    })
+    expect(respuesta.status).toBe(200)
+  })
+
+  it('la formación de equipos ya cerrada no cambia, con explicación: 422', async () => {
+    const { cookie, id } = await actividadEn('desarrollo')
+    const respuesta = await configurar(id, cookie, 'formacion_equipos', { estado: 'manual' })
+    expect(respuesta.status).toBe(422)
+    expect(respuesta.body.codigo).toBe('funcion_con_datos')
+    expect(respuesta.body.mensaje).toMatch(/formación de equipos ya se cerró/)
+    const actividad = await request(app).get(`/api/actividades/${id}`).set('Cookie', cookie)
+    expect(actividad.body.actividad.configuracion.formacion_equipos).toBe('autogestionado')
+  })
+
+  it('las insignias pueden habilitarse, pero no deshabilitarse mientras no se pueda comprobar que no hay otorgamientos', async () => {
+    const { cookie, id } = await actividadEn('cierre')
+    expect((await configurar(id, cookie, 'insignias', { estado: 'solo_organizador' })).status).toBe(
+      200,
+    )
+    const deshabilitar = await configurar(id, cookie, 'insignias', { estado: 'deshabilitado' })
+    expect(deshabilitar.status).toBe(422)
+    expect(deshabilitar.body.codigo).toBe('funcion_con_datos')
+  })
+
+  it('un cambio rechazado no escribe ni registra evento', async () => {
+    const { cookie, id } = await actividadEn('desarrollo')
+    await configurar(id, cookie, 'formacion_equipos', { estado: 'manual' })
+    expect(
+      await prisma.historial.count({
+        where: { idActividad: id, tipoEvento: 'configuracion_modificada' },
+      }),
+    ).toBe(0)
+  })
+
+  it('en una actividad archivada sigue siendo de solo lectura: 409', async () => {
+    const { cookie, id } = await actividadEn('archivada')
+    expect(
+      (await configurar(id, cookie, 'bitacora_individual', { estado: 'habilitada' })).status,
+    ).toBe(409)
+  })
+
+  it('un participante no puede: 403; y las capacidades incluyen ajustar_funciones para quien organiza', async () => {
+    const { cookie, id } = await actividadEn('desarrollo')
+    const cookieParticipante = await registrarYObtenerCookie('grace@ejemplo.com')
+    await prisma.membresia.create({
+      data: {
+        idActividad: id,
+        idUsuario: (await request(app).get('/api/sesion').set('Cookie', cookieParticipante)).body
+          .usuario.idUsuario,
+        rol: 'participante',
+      },
+    })
+
+    expect(
+      (await configurar(id, cookieParticipante, 'bitacora_individual', { estado: 'habilitada' }))
+        .status,
+    ).toBe(403)
+    const detalle = await request(app).get(`/api/actividades/${id}`).set('Cookie', cookie)
+    expect(detalle.body.actividad.capacidades).toContain('ajustar_funciones')
+    expect(detalle.body.actividad.capacidades).not.toContain('configurar_funciones')
   })
 })

@@ -45,6 +45,13 @@
   --button-border: var(--color-border-strong);
 }
 
+.ghost {
+  --button-bg: transparent;
+  --button-bg-hover: var(--color-surface-hover);
+  --button-fg: var(--color-text);
+  --button-border: transparent;
+}
+
 .danger {
   --button-bg: var(--color-danger);
   --button-bg-hover: var(--color-danger-hover);

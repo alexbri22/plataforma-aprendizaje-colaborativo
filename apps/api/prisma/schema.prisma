@@ -211,6 +211,11 @@ model Actividad {
   fechaLimiteInscripcion DateTime        @map("fecha_limite_inscripcion")
   plazoCierreDias        Int             @map("plazo_cierre_dias")
   numeroEquiposEsperado  Int             @map("numero_equipos_esperado")
+  // Ajuste de la función formacion_equipos (nucleo §8.8, P-27): tamaño que
+  // puede tener un equipo. Nulo = sin límite. Ninguno es restricción de esquema:
+  // los aplica la capa de servicios de Equipos.
+  tamanoMinimoEquipo     Int?            @map("tamano_minimo_equipo")
+  tamanoMaximoEquipo     Int?            @map("tamano_maximo_equipo")
   estado                 EstadoActividad @default(inscripcion)
   claveIngreso           String?         @unique @map("clave_ingreso")
   fechaCreacion          DateTime        @default(now()) @map("fecha_creacion")
@@ -218,6 +223,7 @@ model Actividad {
   membresias       Membresia[]
   configuracion    ConfiguracionFuncion[]
   periodos         PeriodoReporte[]
+  equipos          Equipo[]
   eventosHistorial Historial[]
 
   @@map("actividades")
@@ -240,6 +246,7 @@ model Membresia {
 
   insigniasOtorgadas InsigniaOtorgada[] @relation("otorgante")
   insigniasRecibidas InsigniaOtorgada[] @relation("receptor")
+  integranteEquipo   IntegranteEquipo?
 
   @@unique([idActividad, idUsuario])
   @@map("membresias")
@@ -295,6 +302,51 @@ model PeriodoReporte {
 
   @@unique([idActividad, orden])
   @@map("periodos_reporte")
+}
+
+// docs/diseno-desarrollo-general.md §4.4 y §5.2. La propiedad es del módulo de
+// Equipos, que es el único que lee y escribe estas dos tablas; las
+// membresías y la actividad se consultan por la capa de servicios de
+// Actividades. Las reglas que el esquema no expresa (la membresía es de la
+// misma actividad que el equipo, no está desactivada al asignarla, un
+// participante de una actividad en desarrollo tiene exactamente un equipo,
+// §4.6) se verifican en services/equipos.
+//
+// `orden` es una secuencia de creación y no una columna del diccionario: la
+// fecha no sirve de desempate porque los equipos de una propuesta se crean
+// en una sola transacción y comparten `now()`, y el reparto equilibrado
+// (nucleo §8.3) resuelve empates "por orden de creación del equipo".
+// El nombre es único dentro de la actividad sin distinguir mayúsculas
+// (citext, igual que el correo).
+model Equipo {
+  idEquipo             String   @id @default(uuid()) @map("id_equipo")
+  idActividad          String   @map("id_actividad")
+  nombre               String   @db.Citext
+  descripcionActividad String?  @map("descripcion_actividad")
+  formaDeTrabajo       String?  @map("forma_de_trabajo")
+  fechaCreacion        DateTime @default(now()) @map("fecha_creacion")
+  orden                Int      @default(autoincrement())
+
+  actividad   Actividad          @relation(fields: [idActividad], references: [idActividad], onDelete: Cascade)
+  integrantes IntegranteEquipo[]
+
+  @@unique([idActividad, nombre])
+  @@map("equipos")
+}
+
+// Único: id_membresia. Una membresía pertenece a un único equipo por
+// actividad (general §4.4), y como la membresía ya es de una sola
+// actividad, basta la unicidad sobre ella.
+model IntegranteEquipo {
+  idEquipo    String @map("id_equipo")
+  idMembresia String @map("id_membresia")
+
+  equipo    Equipo    @relation(fields: [idEquipo], references: [idEquipo], onDelete: Cascade)
+  membresia Membresia @relation(fields: [idMembresia], references: [idMembresia], onDelete: Cascade)
+
+  @@id([idEquipo, idMembresia])
+  @@unique([idMembresia])
+  @@map("integrantes_equipo")
 }
 
 // docs/diseno-desarrollo-general.md §4.4: referencia polimórfica hacia la
