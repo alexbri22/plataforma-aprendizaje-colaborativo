@@ -10,6 +10,7 @@ import { Card, IconoCargando, Select, Switch } from '../../components/ui'
 import { ErrorActividad } from './actividades.api'
 import { FUNCIONES_SIMPLES } from './configuracionFunciones'
 import { IndicadorCampo, MENSAJE_ERROR_GUARDADO, type EstadoCampo } from './IndicadorCampo'
+import { SeccionProcesoColaborativo } from './SeccionProcesoColaborativo'
 import { SeccionProyectoColaborativo } from './SeccionProyectoColaborativo'
 import { useActividad, useConfigurarFuncionMutation } from './useActividades'
 import styles from './PantallaConfiguracion.module.css'
@@ -84,6 +85,11 @@ export function PantallaConfiguracion() {
   const estadoEspacioEquipo =
     parsearEstadoEspacioEquipo(actividad.configuracion?.espacio_equipo ?? '') ??
     ESPACIO_EQUIPO_POR_DEFECTO
+  // El calendario de Proceso colaborativo se genera entre el inicio y el
+  // término de la actividad, igual que el de Avances; ambos campos siempre
+  // llegan del servidor, el resguardo es solo para el tipo.
+  const fechaInicioActividad = actividad.fechaInicio ?? new Date().toISOString().slice(0, 10)
+  const fechaTerminoActividad = actividad.fechaTermino ?? fechaInicioActividad
 
   // Tres capacidades porque las fases donde cada una aplica también lo son
   // (capacidades.ts): configurar_funciones es el cambio libre previo al
@@ -191,6 +197,11 @@ export function PantallaConfiguracion() {
             puedeAjustarPeriodos={puedeAjustarPeriodos}
             estados={estados}
             guardar={guardar}
+          />
+
+          <SeccionProcesoColaborativo
+            fechaInicioActividad={fechaInicioActividad}
+            fechaTerminoActividad={fechaTerminoActividad}
           />
         </div>
       )}

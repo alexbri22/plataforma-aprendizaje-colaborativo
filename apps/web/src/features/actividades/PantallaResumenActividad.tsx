@@ -241,10 +241,16 @@ export function PantallaResumenActividad() {
             {fase.etiqueta}
           </Badge>
 
-          <p className={styles.objetivo}>{actividad.objetivo}</p>
+          <div className={styles.detalle}>
+            <span className={styles.detalleEtiqueta}>Objetivo</span>
+            <p className={styles.objetivo}>{actividad.objetivo}</p>
+          </div>
 
           {actividad.informacionGeneral ? (
-            <p className={styles.texto}>{actividad.informacionGeneral}</p>
+            <div className={styles.detalle}>
+              <span className={styles.detalleEtiqueta}>Información general</span>
+              <p className={styles.texto}>{actividad.informacionGeneral}</p>
+            </div>
           ) : null}
         </Card>
 

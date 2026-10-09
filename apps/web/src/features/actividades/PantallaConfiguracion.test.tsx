@@ -71,6 +71,7 @@ const ACTIVIDAD_BASE: Actividad = {
   numParticipantes: 1,
   fechaClave: 'Clave: ROBOT2XY',
   claveIngreso: 'ROBOT2XY',
+  nombreOrganizador: 'Ana García López',
   capacidades: [
     'configurar_funciones',
     'ajustar_periodos',
@@ -308,8 +309,12 @@ describe('PantallaConfiguracion', () => {
       renderPantalla(ACTIVIDAD_BASE.id)
 
       await screen.findByLabelText('Periodicidad de Avances')
-      expect(screen.getAllByRole('combobox', { name: /^Periodicidad/ })).toHaveLength(1)
-      expect(screen.getAllByRole('button', { name: 'Editar calendario' })).toHaveLength(1)
+      // Acotado a Proyecto colaborativo: Proceso colaborativo (vista previa,
+      // sin guardar) también trae un selector "Periodicidad de ..." por cada
+      // una de sus tareas.
+      const proyecto = screen.getByRole('region', { name: 'Proyecto colaborativo' })
+      expect(within(proyecto).getAllByRole('combobox', { name: /^Periodicidad/ })).toHaveLength(1)
+      expect(within(proyecto).getAllByRole('button', { name: 'Editar calendario' })).toHaveLength(1)
     })
 
     it('con Avances deshabilitado no ofrece calendario y explica por qué', async () => {
