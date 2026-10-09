@@ -78,6 +78,7 @@ describe('POST /api/actividades', () => {
     expect(actividad.numParticipantes).toBe(0)
     expect(actividad.claveIngreso).toMatch(/^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{8}$/)
     expect(actividad.fechaClave).toBe(`Clave: ${actividad.claveIngreso}`)
+    expect(actividad.nombreOrganizador).toBe('Ada Lovelace Byron')
     // Fechas de calendario, no el datetime completo de Date#toISOString():
     // apps/web/.../formato.ts las parsea como año-mes-día y truena con hora
     // incluida (docs/diseno-desarrollo-general.md §3.1 no exige una u otra
@@ -161,10 +162,42 @@ describe('GET /api/actividades', () => {
     expect(respuestaOrganizadora.status).toBe(200)
     expect(respuestaOrganizadora.body.actividades).toHaveLength(1)
     expect(respuestaOrganizadora.body.actividades[0].rol).toBe('organizador')
+    expect(respuestaOrganizadora.body.actividades[0].nombreOrganizador).toBe('Ada Lovelace Byron')
 
     const respuestaAjena = await request(app).get('/api/actividades').set('Cookie', cookieAjena)
     expect(respuestaAjena.status).toBe(200)
     expect(respuestaAjena.body.actividades).toHaveLength(0)
+  })
+
+  it('con varias actividades de distintos organizadores, cada una trae el nombre correcto', async () => {
+    const cookieOrganizadora1 = await registrarYObtenerCookie('ada@ejemplo.com')
+    const respuestaOrganizadora2 = await request(app)
+      .post('/api/usuarios')
+      .send({ ...DATOS_REGISTRO, nombre: 'Grace', correo: 'grace@ejemplo.com' })
+    const cookieOrganizadora2 = extraerCookie(respuestaOrganizadora2)
+    const cookieParticipante = await registrarYObtenerCookie('rosalind@ejemplo.com')
+
+    const { claveIngreso: clave1 } = (
+      await request(app)
+        .post('/api/actividades')
+        .set('Cookie', cookieOrganizadora1)
+        .send(DATOS_ACTIVIDAD)
+    ).body.actividad
+    await request(app)
+      .post('/api/actividades')
+      .set('Cookie', cookieOrganizadora2)
+      .send({ ...DATOS_ACTIVIDAD, nombre: 'Taller de retroalimentación' })
+    await request(app).post(`/api/claves/${clave1}/union`).set('Cookie', cookieParticipante)
+
+    // El actor solo es miembro de la primera actividad (el listado nunca
+    // incluye la ajena), y en esa el nombre es el de la organizadora, no el
+    // suyo propio: en una sola consulta por lote (nombresDeOrganizadores),
+    // no una por fila.
+    const respuesta = await request(app).get('/api/actividades').set('Cookie', cookieParticipante)
+
+    expect(respuesta.status).toBe(200)
+    expect(respuesta.body.actividades).toHaveLength(1)
+    expect(respuesta.body.actividades[0].nombreOrganizador).toBe('Ada Lovelace Byron')
   })
 })
 
@@ -196,6 +229,7 @@ describe('GET /api/actividades/:id', () => {
 
     expect(respuesta.status).toBe(200)
     expect(respuesta.body.actividad.id).toBe(id)
+    expect(respuesta.body.actividad.nombreOrganizador).toBe('Ada Lovelace Byron')
     expect(new Set(respuesta.body.actividad.capacidades)).toEqual(
       new Set([
         'configurar_funciones',

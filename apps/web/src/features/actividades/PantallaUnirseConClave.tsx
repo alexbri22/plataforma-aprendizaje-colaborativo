@@ -58,7 +58,11 @@ export function PantallaUnirseConClave() {
   }
 
   return (
-    <AppShell seccionActiva="actividades" titulo="Unirse con clave" volverA={'/actividades'}>
+    <AppShell
+      seccionActiva="actividades-participo"
+      titulo="Unirse con clave"
+      volverA={'/actividades/participo'}
+    >
       <Card className={styles.card}>
         {claveConsultada === null || vistaPreviaQuery.isError ? (
           <form className={styles.formulario} onSubmit={manejarBuscar} noValidate>

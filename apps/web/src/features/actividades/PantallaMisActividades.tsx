@@ -1,19 +1,38 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { AppShell } from '../../components/AppShell'
-import { Button, IconoCargando, Input, Select, Tabs } from '../../components/ui'
-import { infoFase, ORDEN_FASES } from './fase'
+import { Button, IconoCargando, Input } from '../../components/ui'
+import { SelectorFase } from './SelectorFase'
 import { TarjetaActividad } from './TarjetaActividad'
 import type { FaseActividad } from './tipos'
 import { useActividades } from './useActividades'
 import styles from './PantallaMisActividades.module.css'
 
-type RolTab = 'organizo' | 'participo'
+export type RolListaActividades = 'organizo' | 'participo'
 type FiltroEstado = FaseActividad | 'todas'
 
-const TABS = [
-  { id: 'organizo', etiqueta: 'Organizo' },
-  { id: 'participo', etiqueta: 'Participo' },
-]
+export interface PantallaMisActividadesProps {
+  rol: RolListaActividades
+}
+
+// Organizo y Participo son ramificaciones propias del mapa del sitio (barra
+// lateral), no pestañas de una misma pantalla: cada una tiene su única
+// acción posible, para que no compitan entre ellas en la barra superior.
+const CONFIG_ROL: Record<
+  RolListaActividades,
+  { titulo: string; accion: ReactNode; textoVacio: string }
+> = {
+  organizo: {
+    titulo: 'Organizo',
+    accion: <Button to="/actividades/nueva">Crear actividad</Button>,
+    textoVacio: 'Todavía no organizas ninguna actividad. Crea la primera para empezar.',
+  },
+  participo: {
+    titulo: 'Participo',
+    accion: <Button to="/actividades/unirse">Unirse con clave</Button>,
+    textoVacio:
+      'Todavía no participas en ninguna actividad. Únete con la clave que te compartieron.',
+  },
+}
 
 // Minúsculas y sin acentos, para que "genetica" encuentre "Debate de genética".
 function normalizarTexto(texto: string): string {
@@ -23,31 +42,24 @@ function normalizarTexto(texto: string): string {
     .toLocaleLowerCase('es')
 }
 
-const ACCIONES_ACTIVIDAD = (
-  <>
-    <Button to="/actividades/nueva">Crear actividad</Button>
-    <Button to="/actividades/unirse" variant="secondary">
-      Unirse con clave
-    </Button>
-  </>
-)
-
-export function PantallaMisActividades() {
-  const [tab, setTab] = useState<RolTab>('organizo')
+export function PantallaMisActividades({ rol }: PantallaMisActividadesProps) {
   const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>('todas')
   const [busqueda, setBusqueda] = useState('')
 
-  const actividadesQuery = useActividades()
+  const config = CONFIG_ROL[rol]
+  const seccionActiva = rol === 'organizo' ? 'actividades-organizo' : 'actividades-participo'
 
+  const actividadesQuery = useActividades()
   const actividades = useMemo(() => actividadesQuery.data ?? [], [actividadesQuery.data])
 
-  const actividadesOrganizo = useMemo(
-    () => actividades.filter((a) => a.rol === 'organizador' || a.rol === 'co-organizador'),
-    [actividades],
-  )
-  const actividadesParticipo = useMemo(
-    () => actividades.filter((a) => a.rol === 'participante'),
-    [actividades],
+  const actividadesRol = useMemo(
+    () =>
+      actividades.filter((a) =>
+        rol === 'organizo'
+          ? a.rol === 'organizador' || a.rol === 'co-organizador'
+          : a.rol === 'participante',
+      ),
+    [actividades, rol],
   )
 
   // Estados de pantalla (docs/diseno-desarrollo-nucleo.md §4.5): carga,
@@ -55,7 +67,7 @@ export function PantallaMisActividades() {
   // sesión (RutaProtegida) y esta pantalla no depende de membresía.
   if (actividadesQuery.isPending) {
     return (
-      <AppShell seccionActiva="actividades" titulo="Mis actividades">
+      <AppShell seccionActiva={seccionActiva} titulo={config.titulo}>
         <div className={styles.cargando} role="status" aria-label="Cargando tus actividades">
           <IconoCargando size={24} />
         </div>
@@ -65,7 +77,7 @@ export function PantallaMisActividades() {
 
   if (actividadesQuery.isError) {
     return (
-      <AppShell seccionActiva="actividades" titulo="Mis actividades">
+      <AppShell seccionActiva={seccionActiva} titulo={config.titulo}>
         <p className={styles.textoVacioTab}>
           No pudimos cargar tus actividades. Intenta recargar la página.
         </p>
@@ -73,42 +85,27 @@ export function PantallaMisActividades() {
     )
   }
 
-  const sinNadaTodavia = actividades.length === 0
-
-  if (sinNadaTodavia) {
+  if (actividadesRol.length === 0) {
     return (
-      <AppShell seccionActiva="actividades" titulo="Mis actividades">
+      <AppShell seccionActiva={seccionActiva} titulo={config.titulo}>
         <div className={styles.vacioInicial}>
-          <p className={styles.texto}>
-            Aquí verás las actividades colaborativas que organices o en las que participes. Empieza
-            creando una o uniéndote con una clave de ingreso.
-          </p>
-          <div className={styles.accionesVacio}>
-            <Button to="/actividades/nueva">Crear actividad</Button>
-            <Button to="/actividades/unirse" variant="secondary">
-              Unirse con clave
-            </Button>
-          </div>
+          <p className={styles.texto}>{config.textoVacio}</p>
+          <div className={styles.accionesVacio}>{config.accion}</div>
         </div>
       </AppShell>
     )
   }
 
-  const actividadesTab = tab === 'organizo' ? actividadesOrganizo : actividadesParticipo
   const termino = normalizarTexto(busqueda.trim())
   const hayFiltros = termino !== '' || filtroEstado !== 'todas'
-  const actividadesVisibles = actividadesTab.filter(
+  const actividadesVisibles = actividadesRol.filter(
     (actividad) =>
       (filtroEstado === 'todas' || actividad.fase === filtroEstado) &&
       (termino === '' ||
-        normalizarTexto(`${actividad.nombre} ${actividad.objetivo}`).includes(termino)),
+        normalizarTexto(
+          `${actividad.nombre} ${actividad.claveIngreso ?? ''} ${actividad.nombreOrganizador}`,
+        ).includes(termino)),
   )
-  const mensajeVacioTab =
-    actividadesTab.length > 0
-      ? 'Ninguna actividad coincide con tu búsqueda o filtro.'
-      : tab === 'organizo'
-        ? 'Todavía no organizas ninguna actividad.'
-        : 'Todavía no participas en ninguna actividad.'
 
   function limpiarFiltros() {
     setBusqueda('')
@@ -116,67 +113,40 @@ export function PantallaMisActividades() {
   }
 
   return (
-    <AppShell seccionActiva="actividades" titulo="Mis actividades" acciones={ACCIONES_ACTIVIDAD}>
+    <AppShell seccionActiva={seccionActiva} titulo={config.titulo} acciones={config.accion}>
       <div className={styles.contenido}>
-        <Tabs
-          label="Rol en la actividad"
-          items={TABS}
-          valor={tab}
-          onCambiar={(id) => setTab(id as RolTab)}
-          className={styles.tabs}
-        />
+        <div className={styles.barraFiltros}>
+          <div className={styles.busqueda}>
+            <Input
+              label="Buscar actividades"
+              type="search"
+              placeholder="Nombre, clave u organizador"
+              value={busqueda}
+              onChange={(evento) => setBusqueda(evento.target.value)}
+            />
+          </div>
 
-        <div
-          role="tabpanel"
-          id={`panel-${tab}`}
-          aria-labelledby={`tab-${tab}`}
-          className={styles.panel}
-        >
-          {actividadesTab.length > 0 ? (
-            <div className={styles.barraFiltros}>
-              <div className={styles.busqueda}>
-                <Input
-                  label="Buscar actividades"
-                  type="search"
-                  placeholder="Nombre u objetivo"
-                  value={busqueda}
-                  onChange={(evento) => setBusqueda(evento.target.value)}
-                />
-              </div>
-              <div className={styles.filtro}>
-                <Select
-                  label="Ver actividades en"
-                  value={filtroEstado}
-                  onChange={(evento) => setFiltroEstado(evento.target.value as FiltroEstado)}
-                >
-                  <option value="todas">Todos los estados</option>
-                  {ORDEN_FASES.map((fase) => (
-                    <option key={fase} value={fase}>
-                      {infoFase(fase).etiqueta}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-            </div>
-          ) : null}
-
-          {actividadesVisibles.length === 0 ? (
-            <div className={styles.sinResultados}>
-              <p className={styles.textoVacioTab}>{mensajeVacioTab}</p>
-              {actividadesTab.length > 0 && hayFiltros ? (
-                <Button variant="secondary" size="sm" onClick={limpiarFiltros}>
-                  Limpiar filtros
-                </Button>
-              ) : null}
-            </div>
-          ) : (
-            <div className={styles.grid}>
-              {actividadesVisibles.map((actividad) => (
-                <TarjetaActividad key={actividad.id} actividad={actividad} />
-              ))}
-            </div>
-          )}
+          <SelectorFase valor={filtroEstado} onCambiar={setFiltroEstado} />
         </div>
+
+        {actividadesVisibles.length === 0 ? (
+          <div className={styles.sinResultados}>
+            <p className={styles.textoVacioTab}>
+              Ninguna actividad coincide con tu búsqueda o filtro.
+            </p>
+            {hayFiltros ? (
+              <Button variant="secondary" size="sm" onClick={limpiarFiltros}>
+                Limpiar filtros
+              </Button>
+            ) : null}
+          </div>
+        ) : (
+          <div className={styles.grid}>
+            {actividadesVisibles.map((actividad) => (
+              <TarjetaActividad key={actividad.id} actividad={actividad} />
+            ))}
+          </div>
+        )}
       </div>
     </AppShell>
   )

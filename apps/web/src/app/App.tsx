@@ -31,11 +31,24 @@ export function App() {
           <Route path="/" element={<PantallaInicio />} />
           <Route path="/ingresar" element={<PantallaIngresar />} />
           <Route path="/registrarse" element={<PantallaRegistrarse />} />
+          {/* Organizo y Participo son ramificaciones propias del mapa del sitio
+              (barra lateral), no pestañas de una misma pantalla: cada una
+              tiene su única acción posible (crear / unirse con clave). La
+              ruta sin ramificación conserva los enlaces y marcadores viejos. */}
+          <Route path="/actividades" element={<Navigate to="/actividades/organizo" replace />} />
           <Route
-            path="/actividades"
+            path="/actividades/organizo"
             element={
               <RutaProtegida>
-                <PantallaMisActividades />
+                <PantallaMisActividades rol="organizo" />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="/actividades/participo"
+            element={
+              <RutaProtegida>
+                <PantallaMisActividades rol="participo" />
               </RutaProtegida>
             }
           />

@@ -1,7 +1,7 @@
 .contenido {
   display: flex;
   flex-direction: column;
-  gap: var(--space-8);
+  gap: var(--space-5);
 }
 
 .cargando {
@@ -12,36 +12,19 @@
   color: var(--color-text-muted);
 }
 
-.tabs {
-  margin-top: calc(var(--space-2) * -1);
-}
-
-.panel {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-5);
-}
-
 .barraFiltros {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
-  gap: var(--space-4);
+  /* flex-start y no flex-end: a diferencia del Select que remplazó,
+     SelectorFase trae su propia etiqueta arriba ("Ver actividades en"), así
+     que lo que debe alinearse es esa etiqueta con "Buscar actividades", no
+     las cajas de abajo. */
+  align-items: flex-start;
+  gap: var(--space-6);
 }
 
 .busqueda {
   width: 280px;
-  max-width: 100%;
-}
-
-/* El Input del sistema usa font-size-base y el Select font-size-sm; en la
-   misma fila se igualan para que las dos cajas tengan la misma altura. */
-.busqueda input {
-  font-size: var(--font-size-sm);
-}
-
-.filtro {
-  width: 220px;
   max-width: 100%;
 }
 

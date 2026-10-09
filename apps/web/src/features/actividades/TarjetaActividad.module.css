@@ -15,6 +15,11 @@
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-5);
+  /* .grid estira cada tarjeta a la altura de la fila (comportamiento por
+     defecto de CSS Grid); height: 100% deja que esta caja lo aproveche en vez
+     de quedarse en su alto de contenido, para que todas las de una fila
+     terminen igual de altas sin importar cuánto texto tenga cada una. */
+  height: 100%;
   transition: border-color 0.15s ease;
 }
 
@@ -22,23 +27,15 @@
   border-color: var(--color-border-strong);
 }
 
-.encabezado {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-2);
-}
-
-/* El estado va sobre el título y no a su lado: una etiqueta larga como
-   "Formación de equipos" le quitaba el ancho al nombre. */
-.estado {
-  align-self: flex-start;
-}
-
+/* Título y descripción se distinguen por tamaño y peso, no por color (DESIGN.md,
+   "The One-Face Rule": la jerarquía viene de tamaño y peso, nunca de una
+   segunda tipografía). Sin la píldora de estado encima, nombre y objetivo
+   quedaban demasiado parecidos: el nombre sube a font-size-lg para que se lea
+   como título a primera vista. */
 .nombre {
   min-width: 0;
   overflow-wrap: anywhere;
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-tight);
   color: var(--color-text);
@@ -47,6 +44,7 @@
 
 .objetivo {
   font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
   line-height: var(--line-height-normal);
   color: var(--color-text-muted);
   margin: 0;
@@ -61,6 +59,10 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-1) var(--space-4);
+  /* Con tarjetas de distinta altura por fila, ancla el pie abajo en vez de
+     dejarlo pegado al objetivo: todas las tarjetas de la fila terminan
+     alineadas en el mismo renglón. */
+  margin-top: auto;
 }
 
 .rol {

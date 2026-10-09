@@ -17,6 +17,9 @@ export interface Actividad {
   fechaClave: string
   /** Solo existe desde que se abre la inscripción (docs/diseno-desarrollo-nucleo.md §7.2). */
   claveIngreso?: string
+  // Nombre completo de quien organiza (docs/diseno-desarrollo-general.md §4.6).
+  // El buscador de "Organizo"/"Participo" lo usa junto con nombre y clave.
+  nombreOrganizador: string
   // Campos de docs/diseno-desarrollo-general.md §5.1 (relación 'actividades').
   // Opcionales en el tipo porque las fixtures anteriores a esta decisión no
   // los tienen todos; el formulario de creación sí los exige.

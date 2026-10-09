@@ -58,6 +58,10 @@ export interface ActividadRespuesta {
   numParticipantes: number
   fechaClave: string
   claveIngreso?: string
+  // Nombre completo de quien organiza (docs/diseno-desarrollo-general.md §4.6:
+  // toda actividad tiene exactamente una membresía de organizador). El
+  // buscador de "Organizo"/"Participo" lo usa junto con nombre y clave.
+  nombreOrganizador: string
   informacionGeneral: string
   fechaInicio: string
   fechaTermino: string
@@ -191,6 +195,7 @@ const INCLUIR_MEMBRESIAS_Y_CONFIGURACION = {
 function aRespuesta(
   actividad: ActividadConMembresiasYConteo,
   rolDelActor: RolMembresia,
+  nombreOrganizador: string,
 ): ActividadRespuesta {
   const numParticipantes = actividad.membresias.filter((m) => m.rol === 'participante').length
 
@@ -205,6 +210,7 @@ function aRespuesta(
     // igual que apps/web/.../actividades.api.ts construye su mock.
     fechaClave: `Clave: ${actividad.claveIngreso}`,
     claveIngreso: actividad.claveIngreso ?? undefined,
+    nombreOrganizador,
     informacionGeneral: actividad.informacionGeneral,
     fechaInicio: aFechaCalendario(actividad.fechaInicio),
     fechaTermino: aFechaCalendario(actividad.fechaTermino),
@@ -237,9 +243,10 @@ export function estadoFormacionEquipos(
 function aRespuestaConCapacidades(
   actividad: ActividadConMembresiasYConfiguracion,
   membresiaActor: MembresiaConPermisos,
+  nombreOrganizador: string,
 ): ActividadConCapacidades {
   return {
-    ...aRespuesta(actividad, membresiaActor.rol),
+    ...aRespuesta(actividad, membresiaActor.rol, nombreOrganizador),
     capacidades: capacidadesDe(contextoDe(membresiaActor), {
       estado: actividad.estado,
       formacionEquipos: estadoFormacionEquipos(actividad.configuracion),
@@ -274,6 +281,10 @@ function esColisionClaveIngreso(error: unknown): boolean {
 // reintenta en colisión de unicidad de la clave (§7.2).
 export async function crearActividad(
   idUsuarioOrganizador: string,
+  // Nombre de quien organiza, resuelto por quien llama (la ruta ya tiene al
+  // actor completo en sesión): quien crea la actividad es su organizador, así
+  // que no hace falta una consulta aparte para saber quién es.
+  nombreOrganizador: string,
   datos: DatosCrearActividadValidados,
 ): Promise<ActividadRespuesta> {
   for (let intento = 1; intento <= INTENTOS_MAXIMOS_CLAVE_INGRESO; intento += 1) {
@@ -331,7 +342,7 @@ export async function crearActividad(
         return creada
       })
 
-      return aRespuesta({ ...actividad, membresias: [] }, 'organizador')
+      return aRespuesta({ ...actividad, membresias: [] }, 'organizador', nombreOrganizador)
     } catch (error) {
       if (esColisionClaveIngreso(error) && intento < INTENTOS_MAXIMOS_CLAVE_INGRESO) continue
       throw error
@@ -352,7 +363,13 @@ export async function listarActividadesDeUsuario(idUsuario: string): Promise<Act
     orderBy: { fechaUnion: 'desc' },
   })
 
-  return membresias.map((membresia) => aRespuesta(membresia.actividad, membresia.rol))
+  // Una sola consulta para todas las actividades del listado en vez de una
+  // por fila (N+1): ver nombresDeOrganizadores.
+  const nombres = await nombresDeOrganizadores(membresias.map((m) => m.actividad.idActividad))
+
+  return membresias.map((membresia) =>
+    aRespuesta(membresia.actividad, membresia.rol, nombres.get(membresia.actividad.idActividad)!),
+  )
 }
 
 export interface VistaPreviaActividad {
@@ -367,8 +384,37 @@ interface UsuarioNombre {
   apellidoMaterno: string
 }
 
-function nombreCompleto(usuario: UsuarioNombre): string {
+export function nombreCompleto(usuario: UsuarioNombre): string {
   return `${usuario.nombre} ${usuario.apellidoPaterno} ${usuario.apellidoMaterno}`
+}
+
+// Nombre completo de quien organiza cada actividad, en una sola consulta en
+// vez de una por fila (docs/diseno-desarrollo-general.md §4.6: toda
+// actividad tiene exactamente una membresía de organizador). Si a alguna de
+// las actividades pedidas le falta, es un dato inconsistente y no un caso
+// normal a tolerar en silencio.
+async function nombresDeOrganizadores(idsActividades: string[]): Promise<Map<string, string>> {
+  if (idsActividades.length === 0) return new Map()
+
+  const organizadores = await prisma.membresia.findMany({
+    where: { idActividad: { in: idsActividades }, rol: 'organizador' },
+    include: {
+      usuario: { select: { nombre: true, apellidoPaterno: true, apellidoMaterno: true } },
+    },
+  })
+
+  const nombres = new Map(organizadores.map((m) => [m.idActividad, nombreCompleto(m.usuario)]))
+  for (const id of idsActividades) {
+    if (!nombres.has(id)) throw new Error(`La actividad ${id} no tiene organizador.`)
+  }
+  return nombres
+}
+
+// Variante de una sola actividad, para los caminos que ya resolvieron su id
+// (la vista previa por clave, o justo después de unirse).
+async function nombreDelOrganizador(idActividad: string): Promise<string> {
+  const nombres = await nombresDeOrganizadores([idActividad])
+  return nombres.get(idActividad)!
 }
 
 function tieneParticipantes(actividad: { membresias: { rol: RolMembresia }[] }): boolean {
@@ -420,21 +466,10 @@ export async function buscarActividadPorClave(clave: string): Promise<VistaPrevi
   const actividad = await actividadJoinablePorClave(clave)
   if (!actividad) throw new ErrorClaveInvalida()
 
-  const organizador = await prisma.membresia.findFirst({
-    where: { idActividad: actividad.idActividad, rol: 'organizador' },
-    include: {
-      usuario: { select: { nombre: true, apellidoPaterno: true, apellidoMaterno: true } },
-    },
-  })
-  // Toda actividad tiene exactamente una membresía de organizador
-  // (docs/diseno-desarrollo-general.md §4.6): si falta, es un dato
-  // inconsistente y no una clave inválida.
-  if (!organizador) throw new Error('La actividad no tiene organizador.')
-
   return {
     nombre: actividad.nombre,
     objetivo: actividad.objetivo,
-    nombreOrganizador: nombreCompleto(organizador.usuario),
+    nombreOrganizador: await nombreDelOrganizador(actividad.idActividad),
   }
 }
 
@@ -484,7 +519,11 @@ export async function unirseConClave(
     include: { membresias: { select: { rol: true } } },
   })
 
-  return aRespuesta(actividadActualizada, 'participante')
+  return aRespuesta(
+    actividadActualizada,
+    'participante',
+    await nombreDelOrganizador(actividad.idActividad),
+  )
 }
 
 // GET /api/actividades/{id} (docs/diseno-desarrollo-nucleo.md §7.7):
@@ -495,7 +534,11 @@ export async function obtenerActividadPorId(
   membresiaActor: MembresiaConPermisos,
 ): Promise<ActividadConCapacidades> {
   const actividad = await cargarActividadConMembresiasYConfiguracion(idActividad)
-  return aRespuestaConCapacidades(actividad, membresiaActor)
+  return aRespuestaConCapacidades(
+    actividad,
+    membresiaActor,
+    await nombreDelOrganizador(idActividad),
+  )
 }
 
 export type ActorTransicion = { tipo: 'usuario'; idUsuario: string } | { tipo: 'sistema' }

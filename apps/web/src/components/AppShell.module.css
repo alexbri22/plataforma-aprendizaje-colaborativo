@@ -137,7 +137,7 @@
     color 0.15s ease;
 }
 
-.grupoEncabezado svg {
+.grupoEncabezado svg:not(.grupoChevron) {
   width: 14px;
   height: 14px;
   flex-shrink: 0;
@@ -153,6 +153,52 @@
   outline-offset: 2px;
 }
 
+/* Grupo "principal" (Actividades): es un ítem más de .nav, mismo tamaño y
+   caja que los demás (Mi perfil, Recursos) — a diferencia de Administración
+   no es una sección de rol aparte, así que no lleva línea divisoria ni
+   versalitas. */
+.grupoPrincipal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.grupoEncabezadoPrincipal {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  border: none;
+  background: none;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.grupoEncabezadoPrincipal svg:not(.grupoChevron) {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.grupoEncabezadoPrincipal:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.grupoEncabezadoPrincipal:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
 /* Con el grupo cerrado, el encabezado delata que la pantalla actual vive
    dentro de él. */
 .grupoEncabezadoActivo[aria-expanded='false'] {
@@ -164,10 +210,14 @@
 }
 
 .grupoChevron {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
   transition: transform 0.2s ease;
 }
 
-.grupoEncabezado[aria-expanded='true'] .grupoChevron {
+.grupoEncabezado[aria-expanded='true'] .grupoChevron,
+.grupoEncabezadoPrincipal[aria-expanded='true'] .grupoChevron {
   transform: rotate(90deg);
 }
 
@@ -195,6 +245,13 @@
   /* Deja sitio al anillo de foco de los ítems, que el overflow recortaría. */
   padding: 2px;
   margin: -2px;
+}
+
+/* Organizo/Participo quedan sangrados bajo la etiqueta de Actividades
+   (ancho del ícono + su gap), para que el segundo nivel se lea como tal sin
+   depender de la caja de versalitas que usa Administración. */
+.grupoItemsPrincipal {
+  padding-left: calc(18px + var(--space-3));
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -370,7 +427,8 @@
     flex-wrap: wrap;
   }
 
-  .grupo {
+  .grupo,
+  .grupoPrincipal {
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
@@ -379,13 +437,18 @@
     border-top: none;
   }
 
-  .grupoEncabezado {
+  .grupoEncabezado,
+  .grupoEncabezadoPrincipal {
     width: auto;
   }
 
   .grupoItems {
     flex-direction: row;
     flex-wrap: wrap;
+  }
+
+  .grupoItemsPrincipal {
+    padding-left: 0;
   }
 
   .grupoPanel:not(.grupoPanelAbierto) {

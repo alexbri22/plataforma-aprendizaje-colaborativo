@@ -10,6 +10,7 @@ import {
   fijarLimitesEquipo,
   listarActividadesDeUsuario,
   listarParticipantes,
+  nombreCompleto,
   obtenerActividadPorId,
   obtenerMembresiaActiva,
 } from '../services/actividades/actividades.service.js'
@@ -28,7 +29,7 @@ export const actividadesRouter = Router()
 actividadesRouter.post('/actividades', exigirSesion, async (req, res) => {
   const datos = validarDatosCrearActividad(req.body)
   const actor = req.actor as UsuarioPublico
-  const actividad = await crearActividad(actor.idUsuario, datos)
+  const actividad = await crearActividad(actor.idUsuario, nombreCompleto(actor), datos)
   res.status(201).json({ actividad })
 })
 

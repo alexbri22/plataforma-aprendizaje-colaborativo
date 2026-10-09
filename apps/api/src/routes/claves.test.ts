@@ -120,10 +120,14 @@ describe('POST /api/claves/:clave/union', () => {
     expect(respuesta.status).toBe(201)
     expect(respuesta.body.actividad.rol).toBe('participante')
     expect(respuesta.body.actividad.numParticipantes).toBe(1)
+    // Quien se une no organiza: el nombre que acompaña la actividad es el de
+    // quien la organiza, no el propio (lo busca el buscador de "Participo").
+    expect(respuesta.body.actividad.nombreOrganizador).toBe('Ada Lovelace Byron')
 
     const listado = await request(app).get('/api/actividades').set('Cookie', cookieParticipante)
     expect(listado.body.actividades).toHaveLength(1)
     expect(listado.body.actividades[0].rol).toBe('participante')
+    expect(listado.body.actividades[0].nombreOrganizador).toBe('Ada Lovelace Byron')
   })
 
   it('responde 401 sin sesión', async () => {
