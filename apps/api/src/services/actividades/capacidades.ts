@@ -64,15 +64,22 @@ const PERMISO_REQUERIDO_POR_ACCION: Readonly<Record<AccionActividad, PermisoCoor
     generar_propuesta_equipos: 'gestionar_equipos',
     elegir_equipo: null,
     editar_equipo: 'gestionar_equipos',
+    // Sin permiso concreto: como elegir_equipo, es sobre el propio equipo y
+    // no una facultad de gestión (nucleo §9.1, general §7.3).
+    usar_espacio_equipo: null,
   }
 
 // Acciones abiertas además a los participantes, sobre sí mismos (elegir
-// equipo) o sobre su propio equipo (editarlo). Quien organiza o co-organiza
-// las tiene por su rol o permiso, como cualquier otra. autorizar() solo
-// decide que la acción está abierta al rol; que un participante actúe solo
-// sobre sí o sobre su equipo depende de datos y lo verifica el servicio
-// (nucleo §2.1).
-const ACCIONES_DE_AUTOSERVICIO: readonly AccionActividad[] = ['elegir_equipo', 'editar_equipo']
+// equipo) o sobre su propio equipo (editarlo, usar su espacio). Quien
+// organiza o co-organiza las tiene por su rol o permiso, como cualquier
+// otra. autorizar() solo decide que la acción está abierta al rol; que un
+// participante actúe solo sobre sí o sobre su equipo depende de datos y lo
+// verifica el servicio (nucleo §2.1).
+const ACCIONES_DE_AUTOSERVICIO: readonly AccionActividad[] = [
+  'elegir_equipo',
+  'editar_equipo',
+  'usar_espacio_equipo',
+]
 
 // Estados de `formacion_equipos` en los que cada acción está abierta.
 // Sin entrada: en cualquiera. Elegir equipo es cosa de los participantes
@@ -124,6 +131,10 @@ const FASES_POR_ACCION: Readonly<Record<AccionActividad, readonly EstadoActivida
   elegir_equipo: ['formacion_equipos'],
   editar_equipo: ['formacion_equipos', 'desarrollo', 'cierre'],
   generar_propuesta_equipos: ['formacion_equipos'],
+  // Seguimiento (general §7.4): "escribir en el espacio de equipo está
+  // permitido al participante, pero no una vez iniciado el cierre" — a
+  // diferencia de editar_equipo (nombre/descripción), que sí llega a cierre.
+  usar_espacio_equipo: ['formacion_equipos', 'desarrollo'],
 }
 
 // Orden de evaluación de nucleo §2.2: de lo más general y barato a lo más

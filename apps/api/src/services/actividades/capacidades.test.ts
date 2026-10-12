@@ -257,8 +257,15 @@ function contextoDeRol(rol: Rol): ContextoActorActividad {
   }
 }
 
+// Seguimiento (nucleo §9.1): comparte el catálogo de acciones de Actividades
+// (nucleo §2.2, "una sola función"), pero no es una acción de Equipos. Se
+// excluye aquí y se prueba en su propio describe más abajo, para no
+// contaminar la especificación celda por celda de Equipos.
+const ACCIONES_DE_SEGUIMIENTO: AccionActividad[] = ['usar_espacio_equipo']
+
 const ACCIONES_DE_EQUIPOS = ACCIONES_ACTIVIDAD.filter(
-  (accion) => !ACCIONES_DE_ACTIVIDADES.includes(accion),
+  (accion) =>
+    !ACCIONES_DE_ACTIVIDADES.includes(accion) && !ACCIONES_DE_SEGUIMIENTO.includes(accion),
 )
 
 describe('autorizar: acciones de Equipos, celda por celda', () => {
@@ -332,6 +339,43 @@ describe('autorizar: acciones de Equipos, celda por celda', () => {
     }
   })
 
+  describe('usar_espacio_equipo (Seguimiento, nucleo §9.1 y general §7.4)', () => {
+    const FASES_ABIERTAS: EstadoActividad[] = ['formacion_equipos', 'desarrollo']
+
+    it('organizador, co-organizador (con o sin permiso) y participante coinciden: solo depende de la fase', () => {
+      for (const rol of [
+        'organizador',
+        'co_con_permiso',
+        'co_sin_permiso',
+        'participante',
+      ] as Rol[]) {
+        for (const fase of TODAS_LAS_FASES) {
+          const resultado = autorizar(contextoDeRol(rol), 'usar_espacio_equipo', { estado: fase })
+          expect(resultado.concedido, `${rol} / ${fase}`).toBe(FASES_ABIERTAS.includes(fase))
+        }
+      }
+    })
+
+    it('no está abierta en cierre: general §7.4, "no una vez iniciado el cierre"', () => {
+      expect(autorizar(actor('participante'), 'usar_espacio_equipo', { estado: 'cierre' })).toEqual(
+        { concedido: false, motivo: 'fase' },
+      )
+    })
+
+    it('una membresía desactivada no puede, en ninguna fase', () => {
+      const desactivado: ContextoActorActividad = {
+        rol: 'participante',
+        estadoMembresia: 'desactivada',
+        permisos: new Set(),
+      }
+      for (const fase of FASES_ABIERTAS) {
+        expect(autorizar(desactivado, 'usar_espacio_equipo', { estado: fase }).concedido).toBe(
+          false,
+        )
+      }
+    })
+  })
+
   it('distingue el motivo: fase, estado de la función o rol', () => {
     const participante = actor('participante')
     expect(
@@ -402,13 +446,13 @@ describe('capacidadesDe', () => {
     }
   })
 
-  it('un participante en formación autogestionada solo obtiene elegir y editar equipo', () => {
+  it('un participante en formación autogestionada obtiene elegir y editar equipo, y usar su espacio', () => {
     expect(
       capacidadesDe(actor('participante'), {
         estado: 'formacion_equipos',
         formacionEquipos: 'autogestionado',
       }),
-    ).toEqual(['elegir_equipo', 'editar_equipo'])
+    ).toEqual(['elegir_equipo', 'editar_equipo', 'usar_espacio_equipo'])
   })
 
   it('en fase archivada nadie obtiene ninguna capacidad, ni con todos los permisos', () => {

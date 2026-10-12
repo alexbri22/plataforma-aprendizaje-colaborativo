@@ -8,7 +8,9 @@ import {
   CONFIGURACION_POR_DEFECTO,
   PERMISOS_COORGANIZADOR_POR_DEFECTO,
   esEstadoFormacionEquipos,
+  parsearEstadoEspacioEquipo,
   type AccionActividad,
+  type EstadoEspacioEquipo,
   type EstadoFormacionEquipos,
   type FuncionSeguimiento,
   type PermisoCoorganizador,
@@ -539,6 +541,33 @@ export async function obtenerActividadPorId(
     membresiaActor,
     await nombreDelOrganizador(idActividad),
   )
+}
+
+// Lectura mínima para módulos cuyas rutas no cuelgan de /actividades/{id} y
+// por tanto no pasan por cargarContextoActividad (p. ej. Seguimiento, en
+// /equipos/{id}/elementos): solo la fase, que es lo que exigirAccion
+// necesita para usar_espacio_equipo.
+export async function obtenerFaseDeActividad(idActividad: string): Promise<EstadoActividad> {
+  const actividad = await prisma.actividad.findUniqueOrThrow({
+    where: { idActividad },
+    select: { estado: true },
+  })
+  return actividad.estado
+}
+
+// Mismo criterio que estadoFormacionEquipos: Seguimiento necesita saber si el
+// elemento sobre el que se escribe está deshabilitado (general §3.5, "el
+// cliente nunca es la barrera de autorización" — ocultar el formulario no
+// basta, el servidor tiene que repetir la comprobación). Un valor ilegible o
+// ausente se trata como deshabilitado: lo conservador para una comprobación
+// que abre una escritura, al revés que estadoFormacionEquipos.
+export async function obtenerEstadoEspacioEquipo(
+  idActividad: string,
+): Promise<EstadoEspacioEquipo | null> {
+  const fila = await prisma.configuracionFuncion.findUnique({
+    where: { idActividad_funcion: { idActividad, funcion: 'espacio_equipo' } },
+  })
+  return fila ? parsearEstadoEspacioEquipo(fila.estado) : null
 }
 
 export type ActorTransicion = { tipo: 'usuario'; idUsuario: string } | { tipo: 'sistema' }

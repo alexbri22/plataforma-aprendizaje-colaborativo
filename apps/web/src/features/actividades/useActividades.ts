@@ -33,8 +33,14 @@ export function useActividades() {
   return useQuery({ queryKey: CLAVE_ACTIVIDADES, queryFn: obtenerActividades })
 }
 
-export function useActividad(id: string) {
-  return useQuery({ queryKey: claveActividad(id), queryFn: () => obtenerActividad(id) })
+// `enabled` en false: para quien solo conoce idActividad una vez resuelta
+// otra consulta primero (AppShellEquipo, que solo tiene idEquipo en la URL).
+export function useActividad(id: string, opciones?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: claveActividad(id),
+    queryFn: () => obtenerActividad(id),
+    enabled: opciones?.enabled ?? true,
+  })
 }
 
 // Avanzar de fase invalida la actividad completa, incluida su entrada en el

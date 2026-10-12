@@ -43,6 +43,13 @@ vi.mock('./actividades.api', async () => {
   }
 })
 
+vi.mock('../historial/historial.api', async () => {
+  const real = await vi.importActual<typeof import('../historial/historial.api')>(
+    '../historial/historial.api',
+  )
+  return { ...real, obtenerHistorial: vi.fn().mockResolvedValue([]) }
+})
+
 function renderPantalla(id: string) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -290,5 +297,19 @@ describe('PantallaResumenActividad', () => {
 
     await screen.findByRole('button', { name: 'Cerrar inscripción' })
     expect(screen.getByRole('link', { name: 'Equipos' })).toBeInTheDocument()
+  })
+
+  it('Historial abre un panel lateral, no navega a otra pantalla', async () => {
+    vi.mocked(obtenerActividad).mockResolvedValueOnce(ACTIVIDAD_BASE)
+    const usuario = userEvent.setup()
+    renderPantalla(ACTIVIDAD_BASE.id)
+
+    const botonHistorial = await screen.findByRole('button', { name: 'Historial' })
+    expect(botonHistorial).toBeInTheDocument()
+    await usuario.click(botonHistorial)
+
+    const panel = await screen.findByRole('dialog')
+    expect(panel).toHaveTextContent('Historial')
+    expect(screen.queryByRole('link', { name: 'Historial' })).not.toBeInTheDocument()
   })
 })

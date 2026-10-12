@@ -35,6 +35,12 @@ export const ACCIONES_ACTIVIDAD = [
   'elegir_equipo',
   'editar_equipo',
   'generar_propuesta_equipos',
+  // Seguimiento (nucleo §9.1): crear, editar o eliminar un elemento del
+  // espacio del propio equipo (metas, avances, recursos). La matriz de
+  // permisos sigue siendo de Actividades (nucleo §2.2, "una sola función");
+  // que el equipo sobre el que se actúa sea el propio depende de datos y lo
+  // verifica el servicio de Seguimiento, igual que editar_equipo.
+  'usar_espacio_equipo',
 ] as const
 
 export type AccionActividad = (typeof ACCIONES_ACTIVIDAD)[number]

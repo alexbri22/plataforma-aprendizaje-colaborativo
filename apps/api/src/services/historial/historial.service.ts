@@ -1,4 +1,6 @@
-import type { CategoriaEvento, Prisma, TipoActorHistorial } from '@prisma/client'
+import type { CategoriaEvento, Prisma, RolMembresia, TipoActorHistorial } from '@prisma/client'
+import type { EventoHistorial } from '@plataforma/shared'
+import { prisma } from '../../data/prisma.js'
 
 // Emisión mínima y provisional (decisión de alcance de este incremento): no
 // es todavía la envoltura transaccional de emisión garantizada de
@@ -31,4 +33,46 @@ export async function registrarEvento(
   evento: DatosEvento,
 ): Promise<void> {
   await tx.historial.create({ data: evento })
+}
+
+// Categorías visibles para un participante (general §7.3, fila "Consultar
+// los eventos de aportación y estructura", P-10): no ve evaluación dirigida
+// a otros. Este incremento ("Espacio de equipo y cierre de fase", nucleo
+// §11.2) es la consulta mínima de §5.5 — cronológica, sin filtros ni
+// agregación de ediciones consecutivas, que son Fase B (§11.3, "Cierre y
+// consulta"). Como todavía no hay eventos de evaluación con sujeto propio
+// que distinguir de los de terceros, el participante simplemente no ve la
+// categoría evaluación por ahora.
+const CATEGORIAS_DE_PARTICIPANTE: readonly CategoriaEvento[] = ['aportacion', 'estructura']
+
+// GET /api/actividades/{id}/historial: cronológico inverso. El organizador y
+// los co-organizadores ven todo (general §7.3); un participante, solo
+// aportación y estructura.
+export async function listarHistorial(
+  idActividad: string,
+  rolActor: RolMembresia,
+): Promise<EventoHistorial[]> {
+  const filas = await prisma.historial.findMany({
+    where: {
+      idActividad,
+      ...(rolActor === 'participante'
+        ? { categoria: { in: [...CATEGORIAS_DE_PARTICIPANTE] } }
+        : {}),
+    },
+    include: { usuarioActor: { select: { nombre: true, apellidoPaterno: true } } },
+    orderBy: { fecha: 'desc' },
+  })
+
+  return filas.map((fila) => ({
+    id: fila.idEvento,
+    tipoEvento: fila.tipoEvento,
+    tipoEntidad: fila.tipoEntidad,
+    idEntidad: fila.idEntidad,
+    categoria: fila.categoria,
+    actor: fila.usuarioActor
+      ? `${fila.usuarioActor.nombre} ${fila.usuarioActor.apellidoPaterno}`.trim()
+      : null,
+    datos: fila.datos as Record<string, unknown>,
+    fecha: fila.fecha.toISOString(),
+  }))
 }

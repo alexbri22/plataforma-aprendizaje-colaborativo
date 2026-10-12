@@ -375,6 +375,42 @@ describe('DELETE /api/equipos/:id/integrantes/:idMembresia', () => {
   })
 })
 
+describe('GET /api/equipos/:id', () => {
+  it('cualquier miembro de la actividad ve el equipo, con su idActividad', async () => {
+    const e = await actividadEnFormacion(2)
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    await asignar(idA, e.participantes[0].idMembresia, e.organizador.cookie)
+
+    // El organizador no integra el equipo y de todos modos lo ve (roster,
+    // no espacio de trabajo: P-04 no aplica aquí).
+    const comoOrganizador = await request(app)
+      .get(`/api/equipos/${idA}`)
+      .set('Cookie', e.organizador.cookie)
+    expect(comoOrganizador.status).toBe(200)
+    expect(comoOrganizador.body.equipo).toMatchObject({
+      id: idA,
+      nombre: 'Alfa',
+      idActividad: e.id,
+      idMiMembresia: e.organizador.idMembresia,
+    })
+    expect(comoOrganizador.body.equipo.integrantes).toHaveLength(1)
+
+    const comoParticipante = await request(app)
+      .get(`/api/equipos/${idA}`)
+      .set('Cookie', e.participantes[1].cookie)
+    expect(comoParticipante.status).toBe(200)
+  })
+
+  it('quien no es miembro de la actividad recibe 404', async () => {
+    const e = await actividadEnFormacion(1)
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    const ajeno = await registrar('Ajeno')
+
+    const respuesta = await request(app).get(`/api/equipos/${idA}`).set('Cookie', ajeno.cookie)
+    expect(respuesta.status).toBe(404)
+  })
+})
+
 describe('PATCH /api/equipos/:id', () => {
   it('un integrante edita su equipo y el evento guarda valor anterior y nuevo', async () => {
     const e = await actividadEnFormacion(2)
@@ -828,7 +864,11 @@ describe('capacidades en GET /api/actividades/:id', () => {
       (await request(app).get(`/api/actividades/${e.id}`).set('Cookie', cookie)).body.actividad
         .capacidades as string[]
 
-    expect(await capacidades(e.participantes[0].cookie)).toEqual(['elegir_equipo', 'editar_equipo'])
+    expect(await capacidades(e.participantes[0].cookie)).toEqual([
+      'elegir_equipo',
+      'editar_equipo',
+      'usar_espacio_equipo',
+    ])
     expect(await capacidades(e.organizador.cookie)).toEqual(
       expect.arrayContaining([
         'formar_equipos',
@@ -841,6 +881,9 @@ describe('capacidades en GET /api/actividades/:id', () => {
     expect(await capacidades(e.organizador.cookie)).not.toContain('generar_propuesta_equipos')
 
     await fijarFormacion(e, 'manual')
-    expect(await capacidades(e.participantes[0].cookie)).toEqual(['editar_equipo'])
+    expect(await capacidades(e.participantes[0].cookie)).toEqual([
+      'editar_equipo',
+      'usar_espacio_equipo',
+    ])
   })
 })

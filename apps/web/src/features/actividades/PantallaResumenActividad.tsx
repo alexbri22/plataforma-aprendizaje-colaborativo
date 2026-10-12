@@ -10,6 +10,7 @@ import {
   Paginacion,
   rebanar,
 } from '../../components/ui'
+import { PanelHistorial } from '../historial'
 import { infoFase } from './fase'
 import { formatearFecha, formatearFechaHora } from './formato'
 import { ErrorActividad } from './actividades.api'
@@ -23,6 +24,70 @@ import styles from './PantallaResumenActividad.module.css'
 const PARTICIPANTES_POR_PAGINA = 10
 
 const MENSAJE_ERROR_CIERRE_GENERICO = 'No pudimos cerrar la inscripción. Intenta de nuevo.'
+
+// Iconos de los accesos del topbar (Configurar, Equipos, Historial): mismo
+// trazo simple en los tres (viewBox 20x20 o 24x24, stroke ~1.3-1.5, sin
+// relleno). El de Configurar es el contorno de un engranaje de verdad (con
+// dientes) y no un aro con rayas delgadas, que se leía como un sol.
+function IconoConfigurar() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+        d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.61l-1.92-3.32a.5.5 0 0 0-.59-.22l-2.39.96a7.3 7.3 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.48-.41h-3.84a.5.5 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96a.5.5 0 0 0-.59.22L2.74 8.87a.5.5 0 0 0 .12.61l2.03 1.58c-.05.3-.07.63-.07.94s.02.64.07.94l-2.03 1.58a.5.5 0 0 0-.12.61l1.92 3.32a.5.5 0 0 0 .59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54a.5.5 0 0 0 .48.41h3.84a.5.5 0 0 0 .48-.41l.36-2.54a7.3 7.3 0 0 0 1.62-.94l2.39.96a.5.5 0 0 0 .59-.22l1.92-3.32a.5.5 0 0 0-.12-.61zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2"
+      />
+    </svg>
+  )
+}
+
+function IconoEquipos() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <circle cx="7" cy="7.5" r="2.3" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="13.5" cy="8" r="1.9" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <path
+        d="M2.8 16c.5-2.7 2-4.2 4.2-4.2s3.7 1.5 4.2 4.2M12 12.2c1.8 0 3 1.2 3.4 3.4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+function IconoHistorial() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <path
+        d="M4.5 4.8 3.3 3.5M4.5 4.8 3.2 5.9"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M4.5 4.8A6.5 6.5 0 1 1 3.5 11"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <path
+        d="M10 7v3.3l2.3 1.6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
 
 // La fase actual con la acción que la hace avanzar (docs/diseno-desarrollo-nucleo.md
 // §7.8): el organizador (o co-organizador con el permiso) ve el botón de la
@@ -164,6 +229,7 @@ function SeccionParticipantes({ id }: { id: string }) {
 export function PantallaResumenActividad() {
   const { id = '' } = useParams<{ id: string }>()
   const actividadQuery = useActividad(id)
+  const [historialAbierto, setHistorialAbierto] = useState(false)
 
   if (actividadQuery.isPending) {
     return (
@@ -189,31 +255,18 @@ export function PantallaResumenActividad() {
 
   const actividad = actividadQuery.data
   const fase = infoFase(actividad.fase)
-  const organiza = actividad.rol !== 'participante'
-
-  // Accesos al módulo de insignias. Se ofrecen siempre: la API decide si el
-  // ritual está abierto o si lo recibido ya se reveló, y cada pantalla lo
-  // explica. Ocultarlos por fase aquí duplicaría esa regla en el cliente.
-  const accionesInsignias = (
-    <>
-      <Button variant="ghost" size="sm" to={`/actividades/${actividad.id}/reconocer`}>
-        Reconocer al equipo
-      </Button>
-      <Button variant="ghost" size="sm" to={`/actividades/${actividad.id}/insignias`}>
-        Mis reconocimientos
-      </Button>
-      {organiza ? (
-        <Button variant="ghost" size="sm" to={`/actividades/${actividad.id}/participantes`}>
-          Participantes
-        </Button>
-      ) : null}
-    </>
-  )
 
   return (
     <AppShell
       seccionActiva="actividades"
       titulo={actividad.nombre}
+      // Solo iconos (sin texto): son accesos de gestión de la actividad, no
+      // el contenido de la pantalla. Reconocer al equipo y Mis
+      // reconocimientos se movieron al espacio de equipo (AppShellEquipo,
+      // sección Honoramiento): son del equipo del actor, no de la actividad
+      // completa. Participantes no está aquí: es parte de la sección de
+      // reconocimientos (features/insignias), cuya presentación le toca
+      // decidir a su responsable — no se improvisa un lugar para ella.
       acciones={
         <>
           {
@@ -223,15 +276,38 @@ export function PantallaResumenActividad() {
               (capacidad) =>
                 capacidad === 'configurar_funciones' || capacidad === 'ajustar_periodos',
             ) ? (
-              <Button variant="ghost" size="sm" to={`/actividades/${actividad.id}/configuracion`}>
-                Configurar
+              <Button
+                variant="ghost"
+                size="sm"
+                to={`/actividades/${actividad.id}/configuracion`}
+                aria-label="Configurar"
+                title="Configurar"
+              >
+                <IconoConfigurar />
               </Button>
             ) : null
           }
-          <Button variant="ghost" size="sm" to={`/actividades/${actividad.id}/equipos`}>
-            Equipos
+          <Button
+            variant="ghost"
+            size="sm"
+            to={`/actividades/${actividad.id}/equipos`}
+            aria-label="Equipos"
+            title="Equipos"
+          >
+            <IconoEquipos />
           </Button>
-          {accionesInsignias}
+          {/* Panel lateral, no una pantalla propia (decisión de producto):
+              no saca a quien organiza de donde está, igual que Configurar lo
+              hace desde Equipos. */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setHistorialAbierto(true)}
+            aria-label="Historial"
+            title="Historial"
+          >
+            <IconoHistorial />
+          </Button>
         </>
       }
     >
@@ -298,6 +374,11 @@ export function PantallaResumenActividad() {
           </dl>
         </Card>
       </div>
+      <PanelHistorial
+        idActividad={actividad.id}
+        abierto={historialAbierto}
+        onCerrar={() => setHistorialAbierto(false)}
+      />
     </AppShell>
   )
 }
