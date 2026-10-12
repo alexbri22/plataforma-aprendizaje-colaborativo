@@ -53,14 +53,14 @@ La regla de frontera del general (3.4) se cumple por servicio: Insignias nunca l
 
 Seis partes del contrato todavía no se cumplen. Cuatro dependen de piezas del núcleo que no existían o no estaban listas cuando se construyó el otorgamiento; dos son reglas del propio subsistema que están pendientes (10.2). En lugar de esperar, se implementó una aproximación cuyo contrato de API no cambia al llegar la pieza real. Se declaran aquí para que ninguna se tome por definitiva.
 
-| Contrato                                                                                                                                                    | Hoy                                                                                                        | Al llegar la pieza                                                                                            |
-| :---------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------ |
-| Se reconoce solo dentro del propio equipo (concepto §6, 4.6 del general)                                                                                    | Los compañeros son todos los participantes activos de la actividad                                         | `listarCompaneros` se acota al equipo del actor; ni esquema ni API cambian                                    |
-| El otorgamiento ocurre en el periodo de cierre (6.1)                                                                                                        | La ventana se calcula con fechas: de `fecha_termino` a `fecha_termino + plazo_cierre_dias`                 | La verificación lee el estado `cierre`; el intervalo deja de calcularse aquí                                  |
-| El otorgamiento emite un evento de evaluación (8.3)                                                                                                         | No se emite                                                                                                | Se emite al aplicarse, no al guardar (3.6)                                                                    |
-| Validación ligera del organizador (concepto §6)                                                                                                             | El organizador ve todo con autoría, pero no hay alerta de reciprocidad ni descarte                         | Incremento propio (10.2)                                                                                      |
-| Solo se otorga si la función `insignias` está habilitada y según su modo (6.2 del general); el co-organizador necesita el permiso `otorgar_insignias` (7.3) | El servicio no lee la configuración ni los permisos: basta ser miembro activo y estar dentro de la ventana | Se verifica con la función de autorización del núcleo (2.2 del núcleo), como especifica 6.1 de este documento |
-| Requisitos mínimos de la actividad: 4 participantes y 4 semanas (concepto §6)                                                                               | No se validan                                                                                              | Se evalúan al abrir el ritual (P-33)                                                                          |
+| Contrato                                                                                                                                                    | Hoy                                                                                                                                    | Al llegar la pieza                                                                                            |
+| :---------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------ |
+| Se reconoce solo dentro del propio equipo (concepto §6, 4.6 del general)                                                                                    | Los compañeros son todos los participantes activos de la actividad                                                                     | `listarCompaneros` se acota al equipo del actor; ni esquema ni API cambian                                    |
+| El otorgamiento ocurre en el periodo de cierre (6.1)                                                                                                        | La ventana abre con el estado `cierre` o con `fecha_termino`, lo que ocurra primero, porque la transición automática no existe todavía | La apertura depende solo del estado; las fechas quedan como salvaguarda del fin                               |
+| El otorgamiento emite un evento de evaluación (8.3)                                                                                                         | No se emite                                                                                                                            | Se emite al aplicarse, no al guardar (3.6)                                                                    |
+| Validación ligera del organizador (concepto §6)                                                                                                             | El organizador ve todo con autoría, pero no hay alerta de reciprocidad ni descarte                                                     | Incremento propio (10.2)                                                                                      |
+| Solo se otorga si la función `insignias` está habilitada y según su modo (6.2 del general); el co-organizador necesita el permiso `otorgar_insignias` (7.3) | El servicio no lee la configuración ni los permisos: basta ser miembro activo y estar dentro de la ventana                             | Se verifica con la función de autorización del núcleo (2.2 del núcleo), como especifica 6.1 de este documento |
+| Requisitos mínimos de la actividad: 4 participantes y 4 semanas (concepto §6)                                                                               | No se validan                                                                                                                          | Se evalúan al abrir el ritual (P-33)                                                                          |
 
 # **2\. Modelo del dominio**
 
@@ -137,11 +137,11 @@ Cada reconocimiento es persona, insignia y una frase de 1 a 140 caracteres. `FRA
 
 ## **3.5 La ventana y la revelación diferida**
 
-| Momento                                      | Guardar         | Quien recibe ve    | Quien organiza ve |
-| :------------------------------------------- | :-------------- | :----------------- | :---------------- |
-| Antes de `fecha_termino`                     | 409             | Nada               | Nada que ver      |
-| De `fecha_termino` a `fecha_termino + plazo` | Permitido       | Nada               | Todo, con autoría |
-| A partir del día siguiente al límite         | 409 (aplicados) | Lo suyo, sin autor | Todo, con autoría |
+| Momento                                                                  | Guardar         | Quien recibe ve    | Quien organiza ve |
+| :----------------------------------------------------------------------- | :-------------- | :----------------- | :---------------- |
+| Antes del cierre (ni estado `cierre` ni `fecha_termino`)                 | 409             | Nada               | Nada que ver      |
+| Desde el estado `cierre` o `fecha_termino` hasta `fecha_termino + plazo` | Permitido       | Nada               | Todo, con autoría |
+| A partir del día siguiente al límite, o con la actividad archivada       | 409 (aplicados) | Lo suyo, sin autor | Todo, con autoría |
 
 Las fechas de la actividad son de calendario; el término cuenta desde el inicio de su día y el límite hasta el final del suyo, para que "cierra el 14" incluya el 14.
 
@@ -257,6 +257,8 @@ Una insignia son dos capas: el marco del nivel (cinco PNG en `assets/marcos/`) y
 | /usuarios/{id}                                | Perfil de otra persona                     | `['usuarios', id]`                                                     |
 
 **Invalidación.** Guardar el ritual invalida todo lo de la actividad (`['actividades', id]`) y todo lo global de insignias (`['insignias']`). Editar datos o foto actualiza la sesión, que es la que pinta el avatar del menú, e invalida `['usuarios']`.
+
+**Los accesos al ritual siguen a la ventana.** En el resumen de la actividad, "Reconocer al equipo" solo aparece mientras el ritual está abierto, y "Mis reconocimientos" mientras está abierto o ya se aplicó. `AccionesReconocimiento` lo decide con `abierto` y `aplicados` del contexto del ritual, de modo que la pantalla no repite la regla de fechas y estado.
 
 **La interfaz oculta, el servidor decide.** El enlace a lo recibido por un participante solo aparece para quien organiza, pero la barrera es el 403 del servidor (7.4 del general).
 

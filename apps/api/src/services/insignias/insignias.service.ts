@@ -81,7 +81,10 @@ export interface ContextoReconocimiento {
 
 // Solo las dos fechas: así sirve igual para la actividad de una membresía y
 // para la que viene seleccionada en una consulta más chica.
-type FechasDeCierre = Pick<MembresiaEnActividad['actividad'], 'fechaTermino' | 'plazoCierreDias'>
+type FechasDeCierre = Pick<
+  MembresiaEnActividad['actividad'],
+  'estado' | 'fechaTermino' | 'plazoCierreDias'
+>
 
 function fechaLimiteDe(actividad: FechasDeCierre): Date {
   return new Date(actividad.fechaTermino.getTime() + actividad.plazoCierreDias * DIA_EN_MS)
@@ -90,11 +93,21 @@ function fechaLimiteDe(actividad: FechasDeCierre): Date {
 // Las fechas de la actividad son de calendario (YYYY-MM-DD guardadas a
 // medianoche UTC). El término cuenta desde el inicio de ese día y el límite
 // hasta el final del suyo, para que "cierra el 14" incluya el 14 completo.
+//
+// La ventana atiende al estado y a las fechas a la vez
+// (docs/diseno-desarrollo-insignias.md §3.5). Abre en cuanto la actividad está
+// en `cierre` —quien organiza puede iniciarlo antes de la fecha de término— o
+// al llegar esa fecha, mientras la transición a cierre no exista. Termina al
+// vencer el plazo o al archivarse, lo que ocurra primero: el plazo sigue
+// mandando aunque el estado no haya avanzado, para que un retraso de la tarea
+// programada nunca deje el ritual abierto de más (§7.5 del núcleo).
 function ventana(actividad: FechasDeCierre, ahora: Date) {
   const inicio = actividad.fechaTermino.getTime()
   const fin = fechaLimiteDe(actividad).getTime() + DIA_EN_MS - 1
   const t = ahora.getTime()
-  return { abierto: t >= inicio && t <= fin, aplicados: t > fin }
+  const aplicados = actividad.estado === 'archivada' || t > fin
+  const comenzo = actividad.estado === 'cierre' || t >= inicio
+  return { abierto: comenzo && !aplicados, aplicados }
 }
 
 function fuenteDe(rol: RolActividad): 'par' | 'organizador' {
@@ -349,7 +362,9 @@ export async function acumuladoDeUsuario(
     where: { receptor: { idUsuario } },
     include: {
       receptor: {
-        include: { actividad: { select: { fechaTermino: true, plazoCierreDias: true } } },
+        include: {
+          actividad: { select: { estado: true, fechaTermino: true, plazoCierreDias: true } },
+        },
       },
     },
   })
@@ -378,7 +393,13 @@ export async function listarRecibidosEnPerfil(
       receptor: {
         include: {
           actividad: {
-            select: { idActividad: true, nombre: true, fechaTermino: true, plazoCierreDias: true },
+            select: {
+              idActividad: true,
+              nombre: true,
+              estado: true,
+              fechaTermino: true,
+              plazoCierreDias: true,
+            },
           },
         },
       },
