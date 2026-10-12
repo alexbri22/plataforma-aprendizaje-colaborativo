@@ -968,6 +968,10 @@ describe('PantallaEquipos', () => {
     renderPantalla()
 
     expect(await screen.findByText('No pudimos cargar los equipos.')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Volver' })).toHaveAttribute(
+      'href',
+      '/actividades/act-1',
+    )
   })
 
   it('muestra un aviso si la actividad no existe o no se es miembro', async () => {

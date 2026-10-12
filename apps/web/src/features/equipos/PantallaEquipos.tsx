@@ -144,7 +144,11 @@ export function PantallaEquipos() {
 
   if (equiposQuery.isError || !equiposQuery.data) {
     return (
-      <AppShell seccionActiva="actividades" titulo={`Equipos de ${actividad.nombre}`}>
+      <AppShell
+        seccionActiva="actividades"
+        titulo={`Equipos de ${actividad.nombre}`}
+        volverA={`/actividades/${id}`}
+      >
         <AvisoError mensaje="No pudimos cargar los equipos." />
       </AppShell>
     )
