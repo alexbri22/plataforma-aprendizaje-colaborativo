@@ -120,10 +120,14 @@ describe('POST /api/claves/:clave/union', () => {
     expect(respuesta.status).toBe(201)
     expect(respuesta.body.actividad.rol).toBe('participante')
     expect(respuesta.body.actividad.numParticipantes).toBe(1)
+    // Quien se une no organiza: el nombre que acompaña la actividad es el de
+    // quien la organiza, no el propio (lo busca el buscador de "Participo").
+    expect(respuesta.body.actividad.nombreOrganizador).toBe('Ada Lovelace Byron')
 
     const listado = await request(app).get('/api/actividades').set('Cookie', cookieParticipante)
     expect(listado.body.actividades).toHaveLength(1)
     expect(listado.body.actividades[0].rol).toBe('participante')
+    expect(listado.body.actividades[0].nombreOrganizador).toBe('Ada Lovelace Byron')
   })
 
   it('responde 401 sin sesión', async () => {
@@ -155,29 +159,47 @@ describe('POST /api/claves/:clave/union', () => {
 
 // nucleo §7.5: la tarea programada avanza la fase, pero un retraso suyo no
 // debe dejar entrar a nadie después de la fecha límite. Aquí la tarea nunca
-// corre; se fija solo Date para que la fecha límite de DATOS_ACTIVIDAD
-// (2026-09-15) no dependa del día en que se corran las pruebas.
+// corre. El límite ya vencido se declara en la actividad, en vez de falsear el
+// reloj: el primer participante se inserta directo, porque por la API ya no
+// podría unirse después del límite con otro dentro.
 describe('clave con la fecha límite de inscripción vencida y la tarea sin correr', () => {
   afterEach(() => {
     vi.useRealTimers()
   })
 
-  async function actividadConUnParticipanteAntesDelLimite(): Promise<string> {
-    vi.useFakeTimers({ toFake: ['Date'] })
-    vi.setSystemTime(new Date('2026-09-12T18:00:00.000Z'))
-    const cookieOrganizadora = await registrarYObtenerCookie(DATOS_ORGANIZADORA)
-    const clave = await crearActividadYObtenerClave(cookieOrganizadora)
-    const cookieParticipante = await registrarYObtenerCookie(DATOS_PARTICIPANTE)
-    const union = await request(app)
-      .post(`/api/claves/${clave}/union`)
-      .set('Cookie', cookieParticipante)
-    expect(union.status).toBe(201)
-    return clave
+  const UN_DIA_MS = 24 * 60 * 60 * 1000
+  const enDias = (dias: number) =>
+    new Date(Date.now() + dias * UN_DIA_MS).toISOString().slice(0, 10)
+  const LIMITE_VENCIDO = {
+    ...DATOS_ACTIVIDAD,
+    fechaInicio: enDias(-20),
+    fechaLimiteInscripcion: enDias(-10),
+    fechaTermino: enDias(30),
+  }
+
+  async function crearActividadConLimiteVencido(cookieOrganizadora: string) {
+    const respuesta = await request(app)
+      .post('/api/actividades')
+      .set('Cookie', cookieOrganizadora)
+      .send(LIMITE_VENCIDO)
+    return {
+      id: respuesta.body.actividad.id as string,
+      clave: respuesta.body.actividad.claveIngreso as string,
+    }
+  }
+
+  async function agregarParticipanteDirecto(idActividad: string, correo: string) {
+    const usuario = await prisma.usuario.findFirstOrThrow({ where: { correo } })
+    await prisma.membresia.create({
+      data: { idActividad, idUsuario: usuario.idUsuario, rol: 'participante', estado: 'activa' },
+    })
   }
 
   it('ya no admite ni muestra la actividad si tiene al menos un participante', async () => {
-    const clave = await actividadConUnParticipanteAntesDelLimite()
-    vi.setSystemTime(new Date('2026-09-17T18:00:00.000Z'))
+    const cookieOrganizadora = await registrarYObtenerCookie(DATOS_ORGANIZADORA)
+    const { id, clave } = await crearActividadConLimiteVencido(cookieOrganizadora)
+    await registrarYObtenerCookie(DATOS_PARTICIPANTE)
+    await agregarParticipanteDirecto(id, DATOS_PARTICIPANTE.correo)
     const cookieTardia = await registrarYObtenerCookie({
       ...DATOS_PARTICIPANTE,
       nombre: 'Katherine',
@@ -194,30 +216,46 @@ describe('clave con la fecha límite de inscripción vencida y la tarea sin corr
     expect(await prisma.membresia.count({ where: { rol: 'participante' } })).toBe(1)
   })
 
-  it('sigue admitiendo el mismo día del límite, hasta que termina en Ciudad de México', async () => {
-    const clave = await actividadConUnParticipanteAntesDelLimite()
-    // 2026-09-15 23:00 en CDMX (UTC-6) es 2026-09-16 05:00 UTC: aún es el día.
-    vi.setSystemTime(new Date('2026-09-16T05:00:00.000Z'))
-    const cookieTardia = await registrarYObtenerCookie({
-      ...DATOS_PARTICIPANTE,
-      nombre: 'Katherine',
-      correo: 'katherine@ejemplo.com',
-    })
+  it('sin participantes la actividad permanece en inscripción y la clave sigue funcionando (nucleo §7.4, caso límite)', async () => {
+    const cookieOrganizadora = await registrarYObtenerCookie(DATOS_ORGANIZADORA)
+    const { clave } = await crearActividadConLimiteVencido(cookieOrganizadora)
+    const cookieTardia = await registrarYObtenerCookie(DATOS_PARTICIPANTE)
 
     const union = await request(app).post(`/api/claves/${clave}/union`).set('Cookie', cookieTardia)
 
     expect(union.status).toBe(201)
   })
 
-  it('sin participantes la actividad permanece en inscripción y la clave sigue funcionando (nucleo §7.4, caso límite)', async () => {
+  // Único caso que necesita un instante preciso: el límite termina al final
+  // del día en Ciudad de México (UTC-6), no a medianoche UTC. Reloj congelado,
+  // acotado a esta prueba (no escribe eventos cuyo orden importe).
+  it('admite hasta que termina el día del límite en Ciudad de México y no después', async () => {
     vi.useFakeTimers({ toFake: ['Date'] })
-    vi.setSystemTime(new Date('2026-09-17T18:00:00.000Z'))
+    vi.setSystemTime(new Date('2026-09-12T18:00:00.000Z'))
     const cookieOrganizadora = await registrarYObtenerCookie(DATOS_ORGANIZADORA)
-    const clave = await crearActividadYObtenerClave(cookieOrganizadora)
-    const cookieTardia = await registrarYObtenerCookie(DATOS_PARTICIPANTE)
+    const clave = await crearActividadYObtenerClave(cookieOrganizadora) // límite: 2026-09-15
+    await registrarYObtenerCookie(DATOS_PARTICIPANTE)
+    const actividad = await prisma.actividad.findFirstOrThrow({ where: { claveIngreso: clave } })
+    await agregarParticipanteDirecto(actividad.idActividad, DATOS_PARTICIPANTE.correo)
+    const cookieA = await registrarYObtenerCookie({
+      ...DATOS_PARTICIPANTE,
+      nombre: 'Katherine',
+      correo: 'katherine@ejemplo.com',
+    })
+    const cookieB = await registrarYObtenerCookie({
+      ...DATOS_PARTICIPANTE,
+      nombre: 'Dorothy',
+      correo: 'dorothy@ejemplo.com',
+    })
 
-    const union = await request(app).post(`/api/claves/${clave}/union`).set('Cookie', cookieTardia)
+    // 2026-09-15 23:00 en CDMX es 2026-09-16 05:00 UTC: todavía es el día.
+    vi.setSystemTime(new Date('2026-09-16T05:00:00.000Z'))
+    const antes = await request(app).post(`/api/claves/${clave}/union`).set('Cookie', cookieA)
+    expect(antes.status).toBe(201)
 
-    expect(union.status).toBe(201)
+    // 2026-09-16 00:30 en CDMX: ya pasó.
+    vi.setSystemTime(new Date('2026-09-16T06:30:00.000Z'))
+    const despues = await request(app).post(`/api/claves/${clave}/union`).set('Cookie', cookieB)
+    expect(despues.status).toBe(404)
   })
 })

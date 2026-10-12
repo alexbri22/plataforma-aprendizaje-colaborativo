@@ -49,7 +49,7 @@ describe('PantallaProximamente', () => {
     useSesionMock.mockReturnValue({ usuario: null, cargando: false })
     renderPantalla(false)
 
-    expect(screen.getByRole('link', { name: 'Mis actividades' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Actividades' })).toBeInTheDocument()
   })
 
   it('con publica, muestra un indicador de carga mientras se resuelve la sesión', () => {
@@ -63,7 +63,7 @@ describe('PantallaProximamente', () => {
     useSesionMock.mockReturnValue({ usuario: null, cargando: false })
     renderPantalla(true)
 
-    expect(screen.queryByRole('link', { name: 'Mis actividades' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Actividades' })).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Recursos' })).toBeInTheDocument()
   })
 
@@ -71,7 +71,7 @@ describe('PantallaProximamente', () => {
     useSesionMock.mockReturnValue({ usuario: USUARIO_PRUEBA, cargando: false })
     renderPantalla(true)
 
-    expect(screen.getByRole('link', { name: 'Mis actividades' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Actividades' })).toBeInTheDocument()
   })
 
   it('el sidebar muestra Cuentas solo a administradores', () => {
@@ -109,5 +109,27 @@ describe('PantallaProximamente', () => {
     await userEvent.click(encabezado)
     expect(encabezado).toHaveAttribute('aria-expanded', 'true')
     expect(panel).not.toHaveAttribute('inert')
+  })
+
+  it('el grupo Actividades se pliega y muestra Organizo y Participo como sus dos ramas', async () => {
+    localStorage.clear()
+    useSesionMock.mockReturnValue({ usuario: USUARIO_PRUEBA, cargando: false })
+    renderPantalla(false)
+
+    const encabezado = screen.getByRole('button', { name: 'Actividades' })
+    expect(encabezado).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('link', { name: 'Organizo' })).toHaveAttribute(
+      'href',
+      '/actividades/organizo',
+    )
+    expect(screen.getByRole('link', { name: 'Participo' })).toHaveAttribute(
+      'href',
+      '/actividades/participo',
+    )
+
+    await userEvent.click(encabezado)
+    expect(encabezado).toHaveAttribute('aria-expanded', 'false')
+    const panel = document.getElementById(encabezado.getAttribute('aria-controls')!)!
+    expect(panel).toHaveAttribute('inert')
   })
 })

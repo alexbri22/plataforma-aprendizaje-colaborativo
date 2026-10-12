@@ -1,0 +1,1 @@
+export { PantallaEquipos } from './PantallaEquipos'

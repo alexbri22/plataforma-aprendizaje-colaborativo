@@ -170,6 +170,7 @@ describe('PantallaCrearActividad', () => {
       numParticipantes: 0,
       fechaClave: 'Clave: ROBOT123',
       claveIngreso: 'ROBOT123',
+      nombreOrganizador: 'Ana García López',
     }
     vi.mocked(crearActividad).mockResolvedValueOnce(actividadCreada)
 

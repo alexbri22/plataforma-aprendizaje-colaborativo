@@ -27,7 +27,11 @@ export function PantallaReconocer() {
 
   if (ritual.isPending) {
     return (
-      <AppShell seccionActiva="actividades" titulo="Reconoce el trabajo de tu equipo">
+      <AppShell
+        seccionActiva="actividades"
+        titulo="Reconoce el trabajo de tu equipo"
+        volverA={`/actividades/${id}`}
+      >
         <div className={styles.cargando} role="status" aria-label="Cargando el ritual">
           <IconoCargando size={24} />
         </div>
@@ -37,7 +41,11 @@ export function PantallaReconocer() {
 
   if (ritual.isError || !ritual.data) {
     return (
-      <AppShell seccionActiva="actividades" titulo="Reconoce el trabajo de tu equipo">
+      <AppShell
+        seccionActiva="actividades"
+        titulo="Reconoce el trabajo de tu equipo"
+        volverA={`/actividades/${id}`}
+      >
         <AvisoError mensaje="No encontramos esta actividad, o ya no formas parte de ella." />
       </AppShell>
     )
@@ -56,7 +64,11 @@ export function PantallaReconocer() {
     )
 
   return (
-    <AppShell seccionActiva="actividades" titulo="Reconoce el trabajo de tu equipo">
+    <AppShell
+      seccionActiva="actividades"
+      titulo="Reconoce el trabajo de tu equipo"
+      volverA={`/actividades/${id}`}
+    >
       <div className={styles.encabezado}>
         <Badge variant="accent">Periodo de cierre</Badge>
         <p className={styles.lede}>

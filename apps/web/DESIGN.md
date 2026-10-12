@@ -198,6 +198,7 @@ Soft-edged and calm is the default register — generous internal padding, comfo
 - **Shape:** `rounded-md` (8px) — soft enough to feel calm, not sharp enough to feel clinical.
 - **Primary:** Study Ink fill, white text, `8px 16px` padding. Used once per view as the clear default action.
 - **Secondary:** Paper background, Graphite text, Hairline Strong border — same resting-surface pattern as Cards/Inputs, so it stays legible regardless of what page tone sits behind it. For the paired "Cancelar"-style action, never competing visually with Primary.
+- **Ghost:** no fill and no border, Graphite text, `surface-hover` on hover. For the row of actions of a toolbar that sits inside a screen (configure, generate, close), so it never reads as one of the outlined Secondary buttons in the page header. Pair it with at most one Primary in the same row.
 - **Danger:** Flag Red fill, white text — reserved for destructive, hard-to-reverse actions (removing a participant, deleting a report), never for routine negative actions like "Cancelar."
 - **Hover / Focus:** background shifts to the `-hover` step over 0.15s ease; `:focus-visible` gets a 2px Study Ink outline, 2px offset — never removed, never replaced with a subtler box-shadow-only treatment.
 
@@ -253,6 +254,17 @@ The one place in the system where raster artwork appears. A rank insignia is **t
 
 **Why this doesn't break the One-Bottle Rule.** Amber is reserved because recognition is supposed to be rare and earned; the insignia artwork exists for exactly that reason and appears only in that context. What would break the rule is this artwork leaking outward — a gold frame on a nav item, a diamond on a marketing panel. The frames are the bottle, not a new palette.
 
+### Pagination (`Paginacion`)
+
+- **Use:** long lists of people (assignment, participants), so a screen never turns into an endless scroll. Not for tabs or steps.
+- **Shape:** a hairline top border, the visible range on the left ("11–20 de 45", Soft Graphite, `aria-live="polite"`) and two secondary small icon buttons on the right, a left and a right chevron, named Anterior and Siguiente for assistive technology (`aria-label`). Nothing renders when everything fits on one page.
+- **Behavior:** the page clamps to the last one if the list shrinks. Ten rows per page is the default for people lists. It is client-side today; the API still returns whole lists, which are bounded by an activity's size.
+
+### Back arrow (`AppShell`, `volverA`)
+
+- **Use:** every screen that is not a root of the sidebar (activity summary, teams, configuration, participants, recognition screens, create and join) leads back with a left arrow icon in front of its title, never a text button in the header. The arrow goes to the screen you came from in the hierarchy (activity → list of activities; anything inside an activity → the activity; a participant's recognitions → the participants).
+- **Shape:** icon only, no box, `surface-hover` on hover, 2.25rem square target, `aria-label="Volver"`. Header actions next to the title are Ghost buttons.
+
 ### Navigation (not yet built — guidance for when it is)
 
 Should follow the Linear reference for the organizer-facing shell (activity configuration, participant management): compact, label-forward, Study Ink for the active item via `primary-subtle` background rather than a bold color block. Avoid a colored sidebar or top bar — navigation chrome stays Paper/Shelf so it never competes with Apothecary Amber's rarity.
@@ -275,5 +287,7 @@ Should follow the Linear reference for the organizer-facing shell (activity conf
 - **Don't** introduce mascots, confetti bursts, or loud Duolingo-style reward animations when a badge is awarded — the celebratory moment is the solid Apothecary Amber fill and nothing louder.
 - **Don't** use stock photography of people (students, teachers, meeting rooms) anywhere in the UI — use abstract shapes, icons, or simple illustration instead.
 - **Don't** add a second typeface for "warmth" or "technical feel" (The One-Face Rule) — hierarchy comes from size and weight on the single system sans stack.
+- **Don't** tint a whole card, panel or notice with a brand or status color to signal an action or a message (a blue "call to action" box, a yellow "warning" box). Every card stays Paper with a hairline border; emphasis comes from the Primary button, typography and small Badges. Color lives in Badges, buttons and inline error text only.
+- **Don't** explain how a screen works in paragraphs of interface text. Labels, Badges with figures, disabled states and short empty states carry it; prose is for consequences that are hard to undo and for server errors.
 - **Don't** put a shadow on a resting card heavier than Ambient, and never on a table row, list item, or form section at rest.
 - **Don't** apply `border-left`/`border-right` as a colored accent stripe on cards, list items, or callouts — use a full border, a subtle background tint, or a leading icon instead.

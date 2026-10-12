@@ -1,0 +1,11 @@
+.contenido {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* Los campos vienen pensados para una fila de configuración (alineados a la
+   derecha); en el panel van a la izquierda, como el resto del formulario. */
+.tamano > div {
+  align-items: flex-start;
+}

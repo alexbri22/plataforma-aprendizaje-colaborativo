@@ -3,7 +3,7 @@ import { Link, type LinkProps } from 'react-router-dom'
 import styles from './Button.module.css'
 
 export interface ButtonOwnProps {
-  variant?: 'primary' | 'secondary' | 'danger'
+  variant?: 'primary' | 'secondary' | 'danger' | 'ghost'
   size?: 'sm' | 'md'
 }
 
