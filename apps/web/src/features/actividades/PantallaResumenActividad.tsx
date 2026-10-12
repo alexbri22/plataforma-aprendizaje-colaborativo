@@ -10,6 +10,7 @@ import {
   Paginacion,
   rebanar,
 } from '../../components/ui'
+import { AccionesReconocimiento } from '../insignias'
 import { infoFase } from './fase'
 import { formatearFecha, formatearFechaHora } from './formato'
 import { ErrorActividad } from './actividades.api'
@@ -191,17 +192,12 @@ export function PantallaResumenActividad() {
   const fase = infoFase(actividad.fase)
   const organiza = actividad.rol !== 'participante'
 
-  // Accesos al módulo de insignias. Se ofrecen siempre: la API decide si el
-  // ritual está abierto o si lo recibido ya se reveló, y cada pantalla lo
-  // explica. Ocultarlos por fase aquí duplicaría esa regla en el cliente.
+  // Accesos al módulo de insignias. Los de reconocimiento solo aparecen durante
+  // el cierre (y "Mis reconocimientos" también después); cuándo es eso lo decide
+  // el módulo de insignias con lo que responde la API, no esta pantalla.
   const accionesInsignias = (
     <>
-      <Button variant="ghost" size="sm" to={`/actividades/${actividad.id}/reconocer`}>
-        Reconocer al equipo
-      </Button>
-      <Button variant="ghost" size="sm" to={`/actividades/${actividad.id}/insignias`}>
-        Mis reconocimientos
-      </Button>
+      <AccionesReconocimiento idActividad={actividad.id} />
       {organiza ? (
         <Button variant="ghost" size="sm" to={`/actividades/${actividad.id}/participantes`}>
           Participantes
