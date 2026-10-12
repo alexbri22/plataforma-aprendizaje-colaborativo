@@ -62,9 +62,10 @@ export function TarjetaEquipo({
   const bajoMinimoConfigurado =
     !bajoMinimoObligatorio && limites.minimo !== null && cantidad < limites.minimo
 
-  // Un participante siempre pertenece a un equipo: solo se mueve, no sale.
+  // Durante la formación autogestionada, cada persona también puede
+  // retirarse de su propio equipo.
   const mostrarUnirme = !soyIntegrante && puedeMoverme
-  const mostrarSalir = soyIntegrante && puedeMoverme && miRol !== 'participante'
+  const mostrarSalir = soyIntegrante && puedeMoverme
   const mostrarEditar = puede('editar_equipo') && (miRol !== 'participante' || soyIntegrante)
 
   return (
