@@ -214,6 +214,7 @@ export function PantallaResumenActividad() {
     <AppShell
       seccionActiva="actividades"
       titulo={actividad.nombre}
+      volverA={organiza ? '/actividades/organizo' : '/actividades/participo'}
       acciones={
         <>
           {
@@ -221,7 +222,9 @@ export function PantallaResumenActividad() {
             // de avances: la pantalla de configuración sigue siendo el lugar.
             actividad.capacidades?.some(
               (capacidad) =>
-                capacidad === 'configurar_funciones' || capacidad === 'ajustar_periodos',
+                capacidad === 'configurar_funciones' ||
+                capacidad === 'ajustar_funciones' ||
+                capacidad === 'ajustar_periodos',
             ) ? (
               <Button variant="ghost" size="sm" to={`/actividades/${actividad.id}/configuracion`}>
                 Configurar

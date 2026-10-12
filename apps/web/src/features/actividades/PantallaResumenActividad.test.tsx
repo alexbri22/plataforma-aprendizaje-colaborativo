@@ -254,6 +254,18 @@ describe('PantallaResumenActividad', () => {
     expect(await screen.findByRole('link', { name: 'Configurar' })).toBeInTheDocument()
   })
 
+  it('muestra Configurar si solo puede ajustar funciones, como en cierre', async () => {
+    vi.mocked(obtenerActividad).mockResolvedValueOnce({
+      ...ACTIVIDAD_BASE,
+      fase: 'cierre',
+      capacidades: ['ajustar_funciones', 'agregar_coorganizador'],
+    })
+
+    renderPantalla(ACTIVIDAD_BASE.id)
+
+    expect(await screen.findByRole('link', { name: 'Configurar' })).toBeInTheDocument()
+  })
+
   it('en formación de equipos no repite el acceso a Equipos en una tarjeta: ya está en el encabezado', async () => {
     vi.mocked(obtenerActividad).mockResolvedValueOnce({
       ...ACTIVIDAD_BASE,
@@ -272,14 +284,31 @@ describe('PantallaResumenActividad', () => {
     expect(screen.queryByRole('heading', { name: 'Formación de equipos' })).not.toBeInTheDocument()
   })
 
-  it('tiene una flecha para volver a Mis actividades', async () => {
+  it('la flecha para volver lleva a Organizo para quien organiza', async () => {
     vi.mocked(obtenerActividad).mockResolvedValueOnce(ACTIVIDAD_BASE)
 
     renderPantalla(ACTIVIDAD_BASE.id)
 
-    expect(await screen.findByRole('link', { name: 'Volver' })).toHaveAttribute(
+    await screen.findByText(ACTIVIDAD_BASE.nombre)
+    expect(screen.getByRole('link', { name: 'Volver' })).toHaveAttribute(
       'href',
-      '/actividades',
+      '/actividades/organizo',
+    )
+  })
+
+  it('la flecha para volver lleva a Participo para un participante', async () => {
+    vi.mocked(obtenerActividad).mockResolvedValueOnce({
+      ...ACTIVIDAD_BASE,
+      rol: 'participante',
+      capacidades: [],
+    })
+
+    renderPantalla(ACTIVIDAD_BASE.id)
+
+    await screen.findByText(ACTIVIDAD_BASE.nombre)
+    expect(screen.getByRole('link', { name: 'Volver' })).toHaveAttribute(
+      'href',
+      '/actividades/participo',
     )
   })
 
