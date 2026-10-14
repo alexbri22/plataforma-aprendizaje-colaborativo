@@ -1,0 +1,65 @@
+.cargando {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-6) 0;
+  color: var(--color-text-muted);
+}
+
+.ayuda {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  margin: 0;
+}
+
+.grupo + .grupo {
+  margin-top: var(--space-4);
+}
+
+.grupoTitulo {
+  margin: 0 0 var(--space-1);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.fila {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.fila > :first-child {
+  flex-shrink: 0;
+}
+
+.fila:last-child {
+  border-bottom: none;
+}
+
+.filaTextos {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.filaDescripcion {
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+
+.filaActor {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.filaHora {
+  flex-shrink: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}

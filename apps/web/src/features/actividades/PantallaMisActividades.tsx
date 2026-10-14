@@ -116,6 +116,8 @@ export function PantallaMisActividades({ rol }: PantallaMisActividadesProps) {
     <AppShell seccionActiva={seccionActiva} titulo={config.titulo} acciones={config.accion}>
       <div className={styles.contenido}>
         <div className={styles.barraFiltros}>
+          <SelectorFase valor={filtroEstado} onCambiar={setFiltroEstado} />
+
           <div className={styles.busqueda}>
             <Input
               label="Buscar actividades"
@@ -125,8 +127,6 @@ export function PantallaMisActividades({ rol }: PantallaMisActividadesProps) {
               onChange={(evento) => setBusqueda(evento.target.value)}
             />
           </div>
-
-          <SelectorFase valor={filtroEstado} onCambiar={setFiltroEstado} />
         </div>
 
         {actividadesVisibles.length === 0 ? (

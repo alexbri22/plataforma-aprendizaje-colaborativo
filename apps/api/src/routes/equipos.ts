@@ -12,6 +12,7 @@ import {
   generarPropuesta,
   intercambiarIntegrantes,
   listarEquipos,
+  obtenerEquipoPorId,
   retirarIntegrante,
 } from '../services/equipos/equipos.service.js'
 import {
@@ -116,6 +117,14 @@ equiposRouter.post(
     res.status(200).json({ actividad })
   },
 )
+
+// GET /api/equipos/{id}: equipo con su actividad, para el shell de
+// navegación scoped al equipo (nucleo §4.2).
+equiposRouter.get('/equipos/:id', exigirSesion, async (req, res) => {
+  const actor = req.actor as UsuarioPublico
+  const equipo = await obtenerEquipoPorId(req.params.id as string, actor.idUsuario)
+  res.status(200).json({ equipo })
+})
 
 // PATCH /api/equipos/{id}: nombre, descripción y forma de trabajo.
 equiposRouter.patch('/equipos/:id', exigirSesion, async (req, res) => {

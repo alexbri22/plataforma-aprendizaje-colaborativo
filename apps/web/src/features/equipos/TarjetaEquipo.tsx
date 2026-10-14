@@ -5,6 +5,8 @@ import {
   type LimitesEquipo,
   type RolIntegrante,
 } from '@plataforma/shared'
+import type { KeyboardEvent, MouseEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Badge, Button, Card } from '../../components/ui'
 import styles from './TarjetaEquipo.module.css'
 
@@ -42,6 +44,7 @@ export function TarjetaEquipo({
   onSalir,
   onEditar,
 }: TarjetaEquipoProps) {
+  const navigate = useNavigate()
   const puede = (accion: AccionActividad) => capacidades.includes(accion)
 
   const soyIntegrante = equipo.integrantes.some((i) => i.idMembresia === idMiMembresia)
@@ -62,14 +65,54 @@ export function TarjetaEquipo({
   const bajoMinimoConfigurado =
     !bajoMinimoObligatorio && limites.minimo !== null && cantidad < limites.minimo
 
-  // Durante la formación autogestionada, cada persona también puede
-  // retirarse de su propio equipo.
-  const mostrarUnirme = !soyIntegrante && puedeMoverme
+  // Lleno no se muestra como botón deshabilitado "Equipo lleno": la insignia
+  // de "X de Y integrantes" de arriba ya lo dice, y repetirlo como acción sin
+  // acción es ruido. Durante la formación autogestionada, cada persona
+  // también puede retirarse de su propio equipo (antes solo quien organiza o
+  // co-organiza podía "salir" de un equipo del que era integrante).
+  const mostrarUnirme = !soyIntegrante && puedeMoverme && !lleno
   const mostrarSalir = soyIntegrante && puedeMoverme
   const mostrarEditar = puede('editar_equipo') && (miRol !== 'participante' || soyIntegrante)
+  // Espacio de equipo (nucleo §9.1, general §7.3): un participante solo entra
+  // al suyo; quien organiza o co-organiza entra a cualquiera, a revisarlo.
+  const mostrarEspacio = miRol !== 'participante' || soyIntegrante
+
+  function entrarAlEspacio() {
+    navigate(`/equipos/${equipo.id}`)
+  }
+
+  // La tarjeta completa es el acceso al espacio (no solo un botón): más
+  // superficie de clic, igual que abrir un documento desde su fila en un
+  // explorador de archivos. Las acciones propias (Unirme, Salir, Editar)
+  // detienen la propagación para no disparar también la navegación.
+  function detenerPropagacion(evento: MouseEvent) {
+    evento.stopPropagation()
+  }
+
+  function manejarTeclado(evento: KeyboardEvent<HTMLDivElement>) {
+    if (!mostrarEspacio) return
+    if (evento.key !== 'Enter') return
+    // Un botón interno ya maneja su propio Enter; que no dispare además la
+    // navegación de la tarjeta.
+    if (evento.target !== evento.currentTarget) return
+    entrarAlEspacio()
+  }
 
   return (
-    <Card className={styles.tarjeta}>
+    <Card
+      className={[styles.tarjeta, mostrarEspacio ? styles.tarjetaClicable : null]
+        .filter(Boolean)
+        .join(' ')}
+      {...(mostrarEspacio
+        ? {
+            role: 'link',
+            tabIndex: 0,
+            'aria-label': `Entrar al espacio de ${equipo.nombre}`,
+            onClick: entrarAlEspacio,
+            onKeyDown: manejarTeclado,
+          }
+        : {})}
+    >
       <div className={styles.encabezado}>
         <h2 className={styles.nombre}>{equipo.nombre}</h2>
         <Badge variant="neutral">
@@ -131,10 +174,10 @@ export function TarjetaEquipo({
       ) : null}
 
       {mostrarUnirme || mostrarSalir || mostrarEditar ? (
-        <div className={styles.acciones}>
+        <div className={styles.acciones} onClick={detenerPropagacion}>
           {mostrarUnirme ? (
-            <Button size="sm" disabled={ocupado || lleno} onClick={() => onUnirme(equipo.id)}>
-              {lleno ? 'Equipo lleno' : 'Unirme'}
+            <Button size="sm" disabled={ocupado} onClick={() => onUnirme(equipo.id)}>
+              Unirme
             </Button>
           ) : null}
           {mostrarSalir ? (

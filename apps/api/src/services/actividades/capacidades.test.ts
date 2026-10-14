@@ -90,6 +90,44 @@ describe('autorizar: cerrar_inscripcion', () => {
   })
 })
 
+describe('autorizar: iniciar_cierre', () => {
+  it('el organizador solo puede en fase desarrollo', () => {
+    for (const estado of TODAS_LAS_FASES) {
+      const resultado = autorizar(actor('organizador'), 'iniciar_cierre', { estado })
+      if (estado === 'desarrollo') {
+        expect(resultado).toEqual({ concedido: true })
+      } else {
+        expect(resultado.concedido).toBe(false)
+      }
+    }
+  })
+
+  it('un co-organizador sin el permiso iniciar_cierre_y_archivar no puede', () => {
+    const resultado = autorizar(
+      actor('co_organizador', ['configurar_actividad']),
+      'iniciar_cierre',
+      { estado: 'desarrollo' },
+    )
+    expect(resultado).toEqual({ concedido: false, motivo: 'rol' })
+  })
+
+  it('un co-organizador con el permiso iniciar_cierre_y_archivar sí puede', () => {
+    const resultado = autorizar(
+      actor('co_organizador', ['iniciar_cierre_y_archivar']),
+      'iniciar_cierre',
+      { estado: 'desarrollo' },
+    )
+    expect(resultado).toEqual({ concedido: true })
+  })
+
+  it('un participante nunca puede', () => {
+    const resultado = autorizar(actor('participante'), 'iniciar_cierre', {
+      estado: 'desarrollo',
+    })
+    expect(resultado).toEqual({ concedido: false, motivo: 'rol' })
+  })
+})
+
 describe('autorizar: configurar_funciones', () => {
   it('se permite en configuración, inscripción y formación; no en desarrollo, cierre ni archivada', () => {
     const permitidas: EstadoActividad[] = ['configuracion', 'inscripcion', 'formacion_equipos']
@@ -203,6 +241,7 @@ const ACCIONES_DE_ACTIVIDADES: AccionActividad[] = [
   'ajustar_funciones',
   'ajustar_periodos',
   'cerrar_inscripcion',
+  'iniciar_cierre',
   'agregar_coorganizador',
 ]
 
@@ -257,8 +296,15 @@ function contextoDeRol(rol: Rol): ContextoActorActividad {
   }
 }
 
+// Seguimiento (nucleo §9.1): comparte el catálogo de acciones de Actividades
+// (nucleo §2.2, "una sola función"), pero no es una acción de Equipos. Se
+// excluye aquí y se prueba en su propio describe más abajo, para no
+// contaminar la especificación celda por celda de Equipos.
+const ACCIONES_DE_SEGUIMIENTO: AccionActividad[] = ['usar_espacio_equipo']
+
 const ACCIONES_DE_EQUIPOS = ACCIONES_ACTIVIDAD.filter(
-  (accion) => !ACCIONES_DE_ACTIVIDADES.includes(accion),
+  (accion) =>
+    !ACCIONES_DE_ACTIVIDADES.includes(accion) && !ACCIONES_DE_SEGUIMIENTO.includes(accion),
 )
 
 describe('autorizar: acciones de Equipos, celda por celda', () => {
@@ -332,6 +378,43 @@ describe('autorizar: acciones de Equipos, celda por celda', () => {
     }
   })
 
+  describe('usar_espacio_equipo (Seguimiento, nucleo §9.1 y general §7.4)', () => {
+    const FASES_ABIERTAS: EstadoActividad[] = ['formacion_equipos', 'desarrollo']
+
+    it('organizador, co-organizador (con o sin permiso) y participante coinciden: solo depende de la fase', () => {
+      for (const rol of [
+        'organizador',
+        'co_con_permiso',
+        'co_sin_permiso',
+        'participante',
+      ] as Rol[]) {
+        for (const fase of TODAS_LAS_FASES) {
+          const resultado = autorizar(contextoDeRol(rol), 'usar_espacio_equipo', { estado: fase })
+          expect(resultado.concedido, `${rol} / ${fase}`).toBe(FASES_ABIERTAS.includes(fase))
+        }
+      }
+    })
+
+    it('no está abierta en cierre: general §7.4, "no una vez iniciado el cierre"', () => {
+      expect(autorizar(actor('participante'), 'usar_espacio_equipo', { estado: 'cierre' })).toEqual(
+        { concedido: false, motivo: 'fase' },
+      )
+    })
+
+    it('una membresía desactivada no puede, en ninguna fase', () => {
+      const desactivado: ContextoActorActividad = {
+        rol: 'participante',
+        estadoMembresia: 'desactivada',
+        permisos: new Set(),
+      }
+      for (const fase of FASES_ABIERTAS) {
+        expect(autorizar(desactivado, 'usar_espacio_equipo', { estado: fase }).concedido).toBe(
+          false,
+        )
+      }
+    })
+  })
+
   it('distingue el motivo: fase, estado de la función o rol', () => {
     const participante = actor('participante')
     expect(
@@ -402,13 +485,13 @@ describe('capacidadesDe', () => {
     }
   })
 
-  it('un participante en formación autogestionada solo obtiene elegir y editar equipo', () => {
+  it('un participante en formación autogestionada obtiene elegir y editar equipo, y usar su espacio', () => {
     expect(
       capacidadesDe(actor('participante'), {
         estado: 'formacion_equipos',
         formacionEquipos: 'autogestionado',
       }),
-    ).toEqual(['elegir_equipo', 'editar_equipo'])
+    ).toEqual(['elegir_equipo', 'editar_equipo', 'usar_espacio_equipo'])
   })
 
   it('en fase archivada nadie obtiene ninguna capacidad, ni con todos los permisos', () => {

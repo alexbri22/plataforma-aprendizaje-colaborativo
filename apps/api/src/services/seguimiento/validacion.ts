@@ -1,6 +1,9 @@
 import {
+  ELEMENTOS_ESPACIO_EQUIPO,
   ESTADOS_PERIODO,
+  LONGITUD_MAXIMA_CONTENIDO_ELEMENTO,
   PERIODICIDADES,
+  type ElementoEspacioEquipo,
   type EstadoPeriodo,
   type Periodicidad,
 } from '@plataforma/shared'
@@ -69,4 +72,46 @@ export function validarDatosActualizarPeriodo(cuerpo: unknown): CambiosPeriodo {
   if (Object.keys(detallePorCampo).length > 0) throw new ErrorValidacion(detallePorCampo)
 
   return cambios
+}
+
+// Espacio de equipo (nucleo §9.1): metas, avances y recursos.
+
+function validarContenido(valor: unknown): { contenido: string } | { error: string } {
+  if (typeof valor !== 'string' || valor.trim() === '') {
+    return { error: 'Escribe el contenido del elemento.' }
+  }
+  const contenido = valor.trim()
+  if (contenido.length > LONGITUD_MAXIMA_CONTENIDO_ELEMENTO) {
+    return { error: `Debe tener a lo más ${LONGITUD_MAXIMA_CONTENIDO_ELEMENTO} caracteres.` }
+  }
+  return { contenido }
+}
+
+export function validarDatosCrearElemento(cuerpo: unknown): {
+  tipo: ElementoEspacioEquipo
+  contenido: string
+} {
+  const datos = comoObjeto(cuerpo)
+  const detallePorCampo: Record<string, string> = {}
+  let contenido = ''
+
+  if (
+    typeof datos.tipo !== 'string' ||
+    !(ELEMENTOS_ESPACIO_EQUIPO as readonly string[]).includes(datos.tipo)
+  ) {
+    detallePorCampo.tipo = `Debe ser uno de: ${ELEMENTOS_ESPACIO_EQUIPO.join(', ')}.`
+  }
+
+  const resultado = validarContenido(datos.contenido)
+  if ('error' in resultado) detallePorCampo.contenido = resultado.error
+  else contenido = resultado.contenido
+
+  if (Object.keys(detallePorCampo).length > 0) throw new ErrorValidacion(detallePorCampo)
+  return { tipo: datos.tipo as ElementoEspacioEquipo, contenido }
+}
+
+export function validarDatosActualizarElemento(cuerpo: unknown): { contenido: string } {
+  const resultado = validarContenido(comoObjeto(cuerpo).contenido)
+  if ('error' in resultado) throw new ErrorValidacion({ contenido: resultado.error })
+  return resultado
 }

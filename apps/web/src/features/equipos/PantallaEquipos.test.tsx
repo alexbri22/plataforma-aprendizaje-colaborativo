@@ -726,7 +726,7 @@ describe('PantallaEquipos', () => {
       sinEquipo,
     })
 
-    it('muestra cuántos caben, avisa de los que están bajo el mínimo y bloquea unirse a uno lleno', async () => {
+    it('muestra cuántos caben, avisa de los que están bajo el mínimo y no ofrece unirse a uno lleno', async () => {
       vi.mocked(obtenerActividad).mockResolvedValue(
         actividad({ capacidades: ['elegir_equipo', 'editar_equipo'] }),
       )
@@ -752,7 +752,9 @@ describe('PantallaEquipos', () => {
       expect(await screen.findByText('3 de 3 integrantes')).toBeInTheDocument()
       expect(screen.getByText('2 de 3 integrantes')).toBeInTheDocument()
       expect(screen.getByText('Menos del mínimo de 3')).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Equipo lleno' })).toBeDisabled()
+      // El equipo lleno no ofrece "Unirme": la insignia "3 de 3 integrantes"
+      // ya lo dice, un botón deshabilitado repitiéndolo sería ruido.
+      expect(screen.getAllByRole('button', { name: 'Unirme' })).toHaveLength(1)
       expect(screen.getByRole('button', { name: 'Unirme' })).toBeEnabled()
     })
 
@@ -947,6 +949,78 @@ describe('PantallaEquipos', () => {
       expect(
         screen.queryByRole('navigation', { name: 'Personas sin equipo' }),
       ).not.toBeInTheDocument()
+    })
+  })
+
+  describe('entrar al espacio de equipo', () => {
+    // La tarjeta completa es el acceso (role="link" con aria-label propio),
+    // no un botón aparte: se necesita una ruta real para comprobar que el
+    // clic efectivamente navega, además de solo contar cuántas aparecen.
+    function renderConRutaDeEquipo(id = 'act-1') {
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+      })
+      return render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={[`/actividades/${id}/equipos`]}>
+            <Routes>
+              <Route path="/actividades/:id/equipos" element={<PantallaEquipos />} />
+              <Route path="/equipos/:idEquipo" element={<p>Espacio de equipo abierto</p>} />
+            </Routes>
+          </MemoryRouter>
+        </QueryClientProvider>,
+      )
+    }
+
+    it('un participante solo puede entrar a su propio equipo, con toda la tarjeta clicable', async () => {
+      vi.mocked(obtenerActividad).mockResolvedValue(
+        actividad({ capacidades: ['elegir_equipo', 'editar_equipo', 'usar_espacio_equipo'] }),
+      )
+      vi.mocked(obtenerEquipos).mockResolvedValue(
+        lista([
+          equipo('e1', 'Alfa', [persona(YO, 'Ana García')]),
+          equipo('e2', 'Beta', [persona('m2', 'Luis Pérez')]),
+        ]),
+      )
+      const usuario = userEvent.setup()
+      renderConRutaDeEquipo()
+
+      const tarjetas = await screen.findAllByRole('link', { name: /Entrar al espacio de/ })
+      expect(tarjetas).toHaveLength(1)
+      expect(tarjetas[0]).toHaveAccessibleName('Entrar al espacio de Alfa')
+
+      await usuario.click(tarjetas[0])
+      expect(await screen.findByText('Espacio de equipo abierto')).toBeInTheDocument()
+    })
+
+    it('quien organiza puede entrar a cualquier equipo, aunque no integre ninguno', async () => {
+      vi.mocked(obtenerActividad).mockResolvedValue(
+        actividad({ rol: 'organizador', capacidades: ['formar_equipos'] }),
+      )
+      vi.mocked(obtenerEquipos).mockResolvedValue(
+        lista([
+          equipo('e1', 'Alfa', [persona('m2', 'Luis Pérez')]),
+          equipo('e2', 'Beta', [persona('m3', 'Eva Ruiz')]),
+        ]),
+      )
+      renderConRutaDeEquipo()
+
+      expect(await screen.findAllByRole('link', { name: /Entrar al espacio de/ })).toHaveLength(2)
+    })
+
+    it('un clic en Unirme no dispara también la navegación de la tarjeta', async () => {
+      vi.mocked(obtenerActividad).mockResolvedValue(
+        actividad({ rol: 'organizador', capacidades: ['formar_equipos', 'asignar_integrantes'] }),
+      )
+      vi.mocked(obtenerEquipos).mockResolvedValue(lista([equipo('e1', 'Alfa')]))
+      vi.mocked(asignarIntegrante).mockResolvedValue(equipo('e1', 'Alfa'))
+      const usuario = userEvent.setup()
+      renderConRutaDeEquipo()
+
+      await usuario.click(await screen.findByRole('button', { name: 'Unirme' }))
+
+      await waitFor(() => expect(asignarIntegrante).toHaveBeenCalled())
+      expect(screen.queryByText('Espacio de equipo abierto')).not.toBeInTheDocument()
     })
   })
 

@@ -180,6 +180,25 @@ export async function cerrarInscripcion(id: string): Promise<Actividad> {
   return actividad
 }
 
+// POST /api/actividades/{id}/cierre (docs/diseno-desarrollo-nucleo.md §7.4 y
+// §7.7): inicia el periodo de cierre. Es la acción de avance que
+// PantallaResumenActividad muestra cuando 'iniciar_cierre' está en las
+// capacidades del actor (§7.8, §4.3).
+export async function iniciarCierre(id: string): Promise<Actividad> {
+  const respuesta = await pedir(`/api/actividades/${encodeURIComponent(id)}/cierre`, {
+    method: 'POST',
+  })
+
+  if (!respuesta.ok) {
+    throw new ErrorActividad(
+      await leerMensajeError(respuesta, 'No pudimos iniciar el cierre. Intenta de nuevo.'),
+    )
+  }
+
+  const { actividad } = (await respuesta.json()) as { actividad: Actividad }
+  return actividad
+}
+
 // PUT /api/actividades/{id}/configuracion/{funcion} (docs/diseno-desarrollo-nucleo.md
 // §7.7): fija el estado de una función. `cuerpo` es {estado} para las siete
 // funciones simples, o {metas, avances, recursos} para espacio_equipo

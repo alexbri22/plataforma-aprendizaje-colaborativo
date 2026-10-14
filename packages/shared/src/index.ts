@@ -94,3 +94,9 @@ export type { NivelEstudios, TipoFotoPerfil } from './perfil.js'
 export { LIMITE_PERIODOS, generarPeriodos } from './periodos.js'
 
 export type { PeriodoGenerado } from './periodos.js'
+
+export { LONGITUD_MAXIMA_CONTENIDO_ELEMENTO } from './seguimiento.js'
+
+export type { ElementoDeEspacioEquipo } from './seguimiento.js'
+
+export type { CategoriaEvento, EventoHistorial } from './historial.js'

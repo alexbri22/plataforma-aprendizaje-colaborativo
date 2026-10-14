@@ -334,6 +334,49 @@ async function contextoDeEquipo(idEquipo: string, idUsuario: string) {
   return { idActividad: equipo.idActividad, membresia }
 }
 
+// GET /api/equipos/{id} (nucleo §4.2, "Un equipo con su espacio de trabajo"):
+// nombre, integrantes y la actividad a la que pertenece. Cualquier miembro de
+// la actividad lo ve, no solo quien integra el equipo — es la misma
+// visibilidad de listarEquipos (P-04 es sobre el contenido del espacio, no
+// sobre el roster). Lo usa el shell de navegación scoped al equipo
+// (AppShellEquipo), que solo conoce idEquipo por la URL y necesita
+// idActividad para pedir la actividad completa (capacidades incluidas).
+export async function obtenerEquipoPorId(
+  idEquipo: string,
+  idUsuarioActor: string,
+): Promise<Equipo & { idActividad: string; idMiMembresia: string }> {
+  const { idActividad, membresia } = await contextoDeEquipo(idEquipo, idUsuarioActor)
+  const equipo = await obtenerEquipo(prisma, idActividad, idEquipo)
+  return { ...equipo, idActividad, idMiMembresia: membresia.idMembresia }
+}
+
+export interface ContextoEquipoParaSeguimiento {
+  idActividad: string
+  membresia: MembresiaActor
+  /** Si la membresía del actor integra este equipo (nucleo §9.1: cualquier
+   * integrante puede crear, editar o eliminar cualquier elemento de su
+   * espacio). Quien organiza o co-organiza lee cualquier equipo sin
+   * integrarlo (general §7.3); Seguimiento decide con este dato y no vuelve
+   * a tocar la tabla de integrantes, que es de este módulo. */
+  esIntegrante: boolean
+}
+
+// Punto de entrada de Seguimiento a los datos de Equipos (nucleo §1.2:
+// "Seguimiento depende de Equipos", "ningún módulo accede a los datos de
+// otro directamente"). Mismo criterio de 404 que contextoDeEquipo: quien no
+// es miembro de la actividad del equipo no distingue "no existe" de "no es
+// tuyo".
+export async function contextoEquipoParaSeguimiento(
+  idEquipo: string,
+  idUsuario: string,
+): Promise<ContextoEquipoParaSeguimiento> {
+  const { idActividad, membresia } = await contextoDeEquipo(idEquipo, idUsuario)
+  const integrante = await prisma.integranteEquipo.findUnique({
+    where: { idEquipo_idMembresia: { idEquipo, idMembresia: membresia.idMembresia } },
+  })
+  return { idActividad, membresia, esIntegrante: integrante !== null }
+}
+
 // ---------------------------------------------------------------------------
 // Escrituras
 // ---------------------------------------------------------------------------
