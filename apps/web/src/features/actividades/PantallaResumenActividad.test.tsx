@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Usuario } from '../cuentas/api'
 import {
   cerrarInscripcion,
+  iniciarCierre,
   obtenerActividad,
   obtenerParticipantes,
   type Participante,
@@ -39,6 +40,7 @@ vi.mock('./actividades.api', async () => {
     ...real,
     obtenerActividad: vi.fn(),
     cerrarInscripcion: vi.fn(),
+    iniciarCierre: vi.fn(),
     obtenerParticipantes: vi.fn().mockResolvedValue([]),
   }
 })
@@ -88,6 +90,7 @@ describe('PantallaResumenActividad', () => {
   beforeEach(() => {
     vi.mocked(obtenerActividad).mockReset()
     vi.mocked(cerrarInscripcion).mockReset()
+    vi.mocked(iniciarCierre).mockReset()
     vi.mocked(obtenerParticipantes).mockReset().mockResolvedValue([])
   })
 
@@ -177,6 +180,38 @@ describe('PantallaResumenActividad', () => {
 
     expect(await screen.findByRole('button', { name: 'Cerrar inscripción' })).toBeInTheDocument()
     expect(cerrarInscripcion).not.toHaveBeenCalled()
+  })
+
+  it('muestra el botón de iniciar cierre cuando esa capacidad está presente, en vez del de cerrar inscripción', async () => {
+    vi.mocked(obtenerActividad).mockResolvedValueOnce({
+      ...ACTIVIDAD_BASE,
+      fase: 'desarrollo',
+      capacidades: ['iniciar_cierre'],
+    })
+
+    renderPantalla(ACTIVIDAD_BASE.id)
+
+    expect(await screen.findByRole('button', { name: 'Iniciar cierre' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Cerrar inscripción' })).not.toBeInTheDocument()
+  })
+
+  it('pide confirmación y solo inicia el cierre tras confirmar', async () => {
+    const usuario = userEvent.setup()
+    const actividadEnDesarrollo: Actividad = {
+      ...ACTIVIDAD_BASE,
+      fase: 'desarrollo',
+      capacidades: ['iniciar_cierre'],
+    }
+    vi.mocked(obtenerActividad).mockResolvedValue(actividadEnDesarrollo)
+    vi.mocked(iniciarCierre).mockResolvedValueOnce({ ...actividadEnDesarrollo, capacidades: [] })
+
+    renderPantalla(ACTIVIDAD_BASE.id)
+
+    await usuario.click(await screen.findByRole('button', { name: 'Iniciar cierre' }))
+    expect(iniciarCierre).not.toHaveBeenCalled()
+
+    await usuario.click(await screen.findByRole('button', { name: 'Sí, iniciar cierre' }))
+    await waitFor(() => expect(iniciarCierre).toHaveBeenCalledWith(ACTIVIDAD_BASE.id))
   })
 
   it('muestra el estado vacío de participantes cuando nadie se ha unido', async () => {

@@ -701,6 +701,71 @@ export async function transicionarActividadesVencidas(
   return { procesadas, omitidasPorSinParticipantes }
 }
 
+// Escritura y evento de Desarrollo → Cierre, mismo patrón que
+// escribirCierreInscripcion: condicional al estado de origen, para que un
+// disparo manual tardío (la actividad ya avanzó, por ejemplo por la futura
+// tarea de vencimiento) no repita la transición ni el evento.
+async function escribirInicioDeCierre(
+  tx: Prisma.TransactionClient,
+  idActividad: string,
+  actor: ActorTransicion,
+): Promise<boolean> {
+  const { count } = await tx.actividad.updateMany({
+    where: { idActividad, estado: 'desarrollo' },
+    data: { estado: 'cierre' },
+  })
+  if (count === 0) return false
+
+  await registrarEvento(tx, {
+    idActividad,
+    tipoActor: actor.tipo,
+    idUsuarioActor: actor.tipo === 'usuario' ? actor.idUsuario : null,
+    tipoEvento: 'fase_avanzada',
+    tipoEntidad: 'actividad',
+    idEntidad: idActividad,
+    datos: {
+      faseOrigen: 'desarrollo',
+      faseDestino: 'cierre',
+      disparadoPor: actor.tipo,
+    },
+    categoria: 'estructura',
+  })
+  return true
+}
+
+// POST /api/actividades/{id}/cierre (docs/diseno-desarrollo-nucleo.md §7.4 y
+// §7.7): inicia el periodo de cierre. Sin precondición, a diferencia de
+// cerrarInscripcion (que exige al menos un participante). El único efecto
+// implementado hoy es el cambio de fase: abrir calificación y evaluaciones,
+// y caducar invitaciones pendientes (nucleo §7.4) no tienen qué hacer
+// todavía porque esos módulos no existen; el otorgamiento de insignias ya
+// no depende de este estado sino de la fecha de término
+// (insignias.service.ts, función ventana()). La transición automática por
+// llegada de la fecha de término (nucleo §7.5) queda fuera de este
+// incremento: hoy solo existe el disparo manual.
+export async function iniciarCierre(
+  idActividad: string,
+  idUsuarioActor: string,
+  membresiaActor: MembresiaConPermisos,
+): Promise<ActividadConCapacidades> {
+  const actividad = await cargarActividadConMembresiasYConfiguracion(idActividad)
+  exigirAccion(
+    membresiaActor,
+    'iniciar_cierre',
+    actividad.estado,
+    'La actividad no está en desarrollo.',
+  )
+
+  const cerrada = await prisma.$transaction((tx) =>
+    escribirInicioDeCierre(tx, idActividad, { tipo: 'usuario', idUsuario: idUsuarioActor }),
+  )
+  // Otro disparo ganó entre la lectura de arriba y la escritura: mismo caso
+  // que cerrarInscripcion.
+  if (!cerrada) throw new ErrorFaseNoPermiteAccion('La actividad no está en desarrollo.')
+
+  return obtenerActividadPorId(idActividad, membresiaActor)
+}
+
 // PUT /api/actividades/{id}/configuracion/{funcion} (docs/diseno-desarrollo-nucleo.md
 // §7.7 y general §6.2): fija el estado de una función. `estadoNuevo` ya
 // llegó validado contra el catálogo de la función (validarDatosConfigurarFuncion).

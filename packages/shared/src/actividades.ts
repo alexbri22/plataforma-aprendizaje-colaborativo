@@ -25,6 +25,11 @@ export const ACCIONES_ACTIVIDAD = [
   'ajustar_funciones',
   'ajustar_periodos',
   'cerrar_inscripcion',
+  // Desarrollo → Cierre (nucleo §7.4). Sin precondición, a diferencia de
+  // cerrar_inscripcion. Hoy el único efecto implementado es el cambio de
+  // fase: abrir calificación/evaluaciones y caducar invitaciones pendientes
+  // no tienen qué hacer todavía porque esos módulos no existen.
+  'iniciar_cierre',
   'agregar_coorganizador',
   // Equipos (nucleo §8). Sus permisos salen del rol, del permiso de
   // co-organizador y del estado de `formacion_equipos`; nunca de un tipo de

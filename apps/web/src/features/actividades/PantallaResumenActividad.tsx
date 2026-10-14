@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { UseMutationResult } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
 import { AppShell } from '../../components/AppShell'
 import {
@@ -14,7 +15,12 @@ import { PanelHistorial } from '../historial'
 import { infoFase } from './fase'
 import { formatearFecha, formatearFechaHora } from './formato'
 import { ErrorActividad } from './actividades.api'
-import { useActividad, useCerrarInscripcionMutation, useParticipantes } from './useActividades'
+import {
+  useActividad,
+  useCerrarInscripcionMutation,
+  useIniciarCierreMutation,
+  useParticipantes,
+} from './useActividades'
 import type { Actividad } from './tipos'
 import styles from './PantallaResumenActividad.module.css'
 
@@ -23,7 +29,9 @@ import styles from './PantallaResumenActividad.module.css'
 // pantalla.
 const PARTICIPANTES_POR_PAGINA = 10
 
-const MENSAJE_ERROR_CIERRE_GENERICO = 'No pudimos cerrar la inscripción. Intenta de nuevo.'
+const MENSAJE_ERROR_CIERRE_INSCRIPCION_GENERICO =
+  'No pudimos cerrar la inscripción. Intenta de nuevo.'
+const MENSAJE_ERROR_INICIAR_CIERRE_GENERICO = 'No pudimos iniciar el cierre. Intenta de nuevo.'
 
 // Iconos de los accesos del topbar (Configurar, Equipos, Historial): mismo
 // trazo simple en los tres (viewBox 20x20 o 24x24, stroke ~1.3-1.5, sin
@@ -89,71 +97,77 @@ function IconoHistorial() {
   )
 }
 
-// La fase actual con la acción que la hace avanzar (docs/diseno-desarrollo-nucleo.md
-// §7.8): el organizador (o co-organizador con el permiso) ve el botón de la
-// única transición que este incremento admite; quien no tiene el permiso no
-// ve nada, porque 'cerrar_inscripcion' no está en su conjunto de
-// capacidades. La pantalla nunca evalúa rol ni fase por su cuenta (§4.3):
-// solo pregunta si la acción está en actividad.capacidades.
-function AccionDeAvance({ actividad }: { actividad: Actividad }) {
-  const [confirmando, setConfirmando] = useState(false)
-  const cerrarInscripcionMutacion = useCerrarInscripcionMutation(actividad.id)
+interface InfoAccionConfirmable {
+  titulo: string
+  descripcion: string
+  textoBoton: string
+  textoConfirmacion: string
+  textoBotonConfirmar: string
+  textoBotonCargando: string
+  mensajeErrorGenerico: string
+  mutacion: UseMutationResult<Actividad, unknown, void>
+}
 
-  if (!actividad.capacidades?.includes('cerrar_inscripcion')) return null
+// Tarjeta de "botón con confirmación" compartida por las dos acciones de
+// avance de fase de esta pantalla (cerrar inscripción, iniciar cierre): el
+// mismo patrón de dos pasos (explicación + botón, luego confirmación con
+// aviso de error) con textos y mutación distintos.
+function AccionConfirmable({
+  titulo,
+  descripcion,
+  textoBoton,
+  textoConfirmacion,
+  textoBotonConfirmar,
+  textoBotonCargando,
+  mensajeErrorGenerico,
+  mutacion,
+}: InfoAccionConfirmable) {
+  const [confirmando, setConfirmando] = useState(false)
 
   return (
     <Card className={styles.accion}>
       {!confirmando ? (
         <>
           <div>
-            <h2 className={styles.tituloSeccion}>Inscripción abierta</h2>
-            <p className={styles.accionTexto}>
-              Ciérrala cuando ya tengas a los participantes que esperabas. La actividad pasará a
-              formación de equipos.
-            </p>
+            <h2 className={styles.tituloSeccion}>{titulo}</h2>
+            <p className={styles.accionTexto}>{descripcion}</p>
           </div>
           <Button onClick={() => setConfirmando(true)} className={styles.accionBoton}>
-            Cerrar inscripción
+            {textoBoton}
           </Button>
         </>
       ) : (
         <>
-          {cerrarInscripcionMutacion.isError ? (
+          {mutacion.isError ? (
             <AvisoError
               mensaje={
-                cerrarInscripcionMutacion.error instanceof ErrorActividad
-                  ? cerrarInscripcionMutacion.error.message
-                  : MENSAJE_ERROR_CIERRE_GENERICO
+                mutacion.error instanceof ErrorActividad
+                  ? mutacion.error.message
+                  : mensajeErrorGenerico
               }
             />
           ) : null}
 
-          <p className={styles.accionTexto}>
-            Una vez cerrada, la clave de ingreso deja de admitir nuevas uniones y no se reactiva.
-            ¿Confirmas que quieres cerrar la inscripción?
-          </p>
+          <p className={styles.accionTexto}>{textoConfirmacion}</p>
 
           <div className={styles.accionBotones}>
-            <Button
-              onClick={() => cerrarInscripcionMutacion.mutate()}
-              disabled={cerrarInscripcionMutacion.isPending}
-            >
-              {cerrarInscripcionMutacion.isPending ? (
+            <Button onClick={() => mutacion.mutate()} disabled={mutacion.isPending}>
+              {mutacion.isPending ? (
                 <>
                   <IconoCargando />
-                  Cerrando…
+                  {textoBotonCargando}
                 </>
               ) : (
-                'Sí, cerrar inscripción'
+                textoBotonConfirmar
               )}
             </Button>
             <Button
               variant="secondary"
               onClick={() => {
                 setConfirmando(false)
-                cerrarInscripcionMutacion.reset()
+                mutacion.reset()
               }}
-              disabled={cerrarInscripcionMutacion.isPending}
+              disabled={mutacion.isPending}
             >
               Cancelar
             </Button>
@@ -162,6 +176,51 @@ function AccionDeAvance({ actividad }: { actividad: Actividad }) {
       )}
     </Card>
   )
+}
+
+// La fase actual con la acción que la hace avanzar (docs/diseno-desarrollo-nucleo.md
+// §7.8): el organizador (o co-organizador con el permiso) ve el botón de la
+// transición disponible en la fase actual; quien no tiene el permiso no ve
+// nada, porque ni 'cerrar_inscripcion' ni 'iniciar_cierre' están en su
+// conjunto de capacidades. La pantalla nunca evalúa rol ni fase por su
+// cuenta (§4.3): solo pregunta si la acción está en actividad.capacidades.
+// Las dos son mutuamente excluyentes (cada una vive en una fase distinta),
+// así que basta con mostrar la primera que aplique.
+function AccionDeAvance({ actividad }: { actividad: Actividad }) {
+  const cerrarInscripcionMutacion = useCerrarInscripcionMutation(actividad.id)
+  const iniciarCierreMutacion = useIniciarCierreMutation(actividad.id)
+
+  if (actividad.capacidades?.includes('cerrar_inscripcion')) {
+    return (
+      <AccionConfirmable
+        titulo="Inscripción abierta"
+        descripcion="Ciérrala cuando ya tengas a los participantes que esperabas. La actividad pasará a formación de equipos."
+        textoBoton="Cerrar inscripción"
+        textoConfirmacion="Una vez cerrada, la clave de ingreso deja de admitir nuevas uniones y no se reactiva. ¿Confirmas que quieres cerrar la inscripción?"
+        textoBotonConfirmar="Sí, cerrar inscripción"
+        textoBotonCargando="Cerrando…"
+        mensajeErrorGenerico={MENSAJE_ERROR_CIERRE_INSCRIPCION_GENERICO}
+        mutacion={cerrarInscripcionMutacion}
+      />
+    )
+  }
+
+  if (actividad.capacidades?.includes('iniciar_cierre')) {
+    return (
+      <AccionConfirmable
+        titulo="En desarrollo"
+        descripcion="Inicia el cierre cuando el periodo de trabajo haya terminado. Cierra las aportaciones del equipo y abre el reconocimiento entre compañeros."
+        textoBoton="Iniciar cierre"
+        textoConfirmacion="Una vez iniciado, el cierre no tiene vuelta atrás. ¿Confirmas que quieres iniciar el periodo de cierre?"
+        textoBotonConfirmar="Sí, iniciar cierre"
+        textoBotonCargando="Iniciando…"
+        mensajeErrorGenerico={MENSAJE_ERROR_INICIAR_CIERRE_GENERICO}
+        mutacion={iniciarCierreMutacion}
+      />
+    )
+  }
+
+  return null
 }
 
 // Quiénes se han unido hasta ahora (pedido explícito: es lo que informa si

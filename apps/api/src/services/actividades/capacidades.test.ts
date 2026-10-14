@@ -90,6 +90,44 @@ describe('autorizar: cerrar_inscripcion', () => {
   })
 })
 
+describe('autorizar: iniciar_cierre', () => {
+  it('el organizador solo puede en fase desarrollo', () => {
+    for (const estado of TODAS_LAS_FASES) {
+      const resultado = autorizar(actor('organizador'), 'iniciar_cierre', { estado })
+      if (estado === 'desarrollo') {
+        expect(resultado).toEqual({ concedido: true })
+      } else {
+        expect(resultado.concedido).toBe(false)
+      }
+    }
+  })
+
+  it('un co-organizador sin el permiso iniciar_cierre_y_archivar no puede', () => {
+    const resultado = autorizar(
+      actor('co_organizador', ['configurar_actividad']),
+      'iniciar_cierre',
+      { estado: 'desarrollo' },
+    )
+    expect(resultado).toEqual({ concedido: false, motivo: 'rol' })
+  })
+
+  it('un co-organizador con el permiso iniciar_cierre_y_archivar sí puede', () => {
+    const resultado = autorizar(
+      actor('co_organizador', ['iniciar_cierre_y_archivar']),
+      'iniciar_cierre',
+      { estado: 'desarrollo' },
+    )
+    expect(resultado).toEqual({ concedido: true })
+  })
+
+  it('un participante nunca puede', () => {
+    const resultado = autorizar(actor('participante'), 'iniciar_cierre', {
+      estado: 'desarrollo',
+    })
+    expect(resultado).toEqual({ concedido: false, motivo: 'rol' })
+  })
+})
+
 describe('autorizar: configurar_funciones', () => {
   it('se permite en configuración, inscripción y formación; no en desarrollo, cierre ni archivada', () => {
     const permitidas: EstadoActividad[] = ['configuracion', 'inscripcion', 'formacion_equipos']
@@ -203,6 +241,7 @@ const ACCIONES_DE_ACTIVIDADES: AccionActividad[] = [
   'ajustar_funciones',
   'ajustar_periodos',
   'cerrar_inscripcion',
+  'iniciar_cierre',
   'agregar_coorganizador',
 ]
 
