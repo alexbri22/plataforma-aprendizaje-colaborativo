@@ -260,13 +260,15 @@ export function PantallaResumenActividad() {
     <AppShell
       seccionActiva="actividades"
       titulo={actividad.nombre}
-      // Solo iconos (sin texto): son accesos de gestión de la actividad, no
-      // el contenido de la pantalla. Reconocer al equipo y Mis
-      // reconocimientos se movieron al espacio de equipo (AppShellEquipo,
-      // sección Honoramiento): son del equipo del actor, no de la actividad
-      // completa. Participantes no está aquí: es parte de la sección de
-      // reconocimientos (features/insignias), cuya presentación le toca
-      // decidir a su responsable — no se improvisa un lugar para ella.
+      // Icono + palabra, igual que la navegación lateral (AppShell.tsx,
+      // .navItem): icono solo se leía como un bloque de botones anónimos,
+      // sin relación visual con el resto de la navegación de la app.
+      // Reconocer al equipo y Mis reconocimientos se movieron al espacio de
+      // equipo (AppShellEquipo, sección Honoramiento): son del equipo del
+      // actor, no de la actividad completa. Participantes no está aquí: es
+      // parte de la sección de reconocimientos (features/insignias), cuya
+      // presentación le toca decidir a su responsable — no se improvisa un
+      // lugar para ella.
       acciones={
         <>
           {
@@ -276,37 +278,22 @@ export function PantallaResumenActividad() {
               (capacidad) =>
                 capacidad === 'configurar_funciones' || capacidad === 'ajustar_periodos',
             ) ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                to={`/actividades/${actividad.id}/configuracion`}
-                aria-label="Configurar"
-                title="Configurar"
-              >
+              <Button variant="ghost" size="sm" to={`/actividades/${actividad.id}/configuracion`}>
                 <IconoConfigurar />
+                Configurar
               </Button>
             ) : null
           }
-          <Button
-            variant="ghost"
-            size="sm"
-            to={`/actividades/${actividad.id}/equipos`}
-            aria-label="Equipos"
-            title="Equipos"
-          >
+          <Button variant="ghost" size="sm" to={`/actividades/${actividad.id}/equipos`}>
             <IconoEquipos />
+            Equipos
           </Button>
           {/* Panel lateral, no una pantalla propia (decisión de producto):
               no saca a quien organiza de donde está, igual que Configurar lo
               hace desde Equipos. */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setHistorialAbierto(true)}
-            aria-label="Historial"
-            title="Historial"
-          >
+          <Button variant="ghost" size="sm" onClick={() => setHistorialAbierto(true)}>
             <IconoHistorial />
+            Historial
           </Button>
         </>
       }

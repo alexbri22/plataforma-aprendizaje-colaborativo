@@ -8,27 +8,41 @@ export interface SelectorFaseProps {
   onCambiar: (valor: FaseActividad | 'todas') => void
 }
 
+interface Opcion {
+  valor: FaseActividad | 'todas'
+  etiqueta: string
+}
+
+// 'todas' va primero y es el estado por defecto (sin filtro) — antes no
+// tenía su propio círculo y solo se volvía a él tocando de nuevo la fase
+// activa, lo que no dejaba ver cuál era la opción inicial.
+const OPCIONES: Opcion[] = [
+  { valor: 'todas', etiqueta: 'Todas' },
+  ...ORDEN_FASES.map((fase) => ({ valor: fase, etiqueta: infoFase(fase).etiqueta })),
+]
+
 // Remplaza el picker de estado por un diagrama de las etapas del ciclo de
-// vida (fase.ts, ORDEN_FASES, ya incluye formación de equipos). Cada círculo
-// filtra por esa fase; tocar la fase ya activa vuelve a "todos los estados".
-// Gris/azul y no el color propio de cada fase (infoFase().variant): esto es
-// un filtro, no la píldora de estado de la tarjeta.
+// vida (fase.ts, ORDEN_FASES, ya incluye formación de equipos), con 'todas'
+// como primer paso. Cada círculo de fase filtra por esa fase; tocar la fase
+// ya activa, o tocar 'todas', vuelve a "todos los estados". Gris/azul y no
+// el color propio de cada fase (infoFase().variant): esto es un filtro, no
+// la píldora de estado de la tarjeta.
 export function SelectorFase({ valor, onCambiar }: SelectorFaseProps) {
   const idBase = useId()
 
   return (
     <div className={styles.selector}>
       <span className={styles.etiquetaGrupo} id={`${idBase}-grupo`}>
-        Ver actividades en
+        Ver actividades por etapa
       </span>
 
       <div className={styles.pasos} role="group" aria-labelledby={`${idBase}-grupo`}>
-        {ORDEN_FASES.map((fase) => {
-          const activo = valor === fase
-          const idTexto = `${idBase}-${fase}`
+        {OPCIONES.map((opcion) => {
+          const activo = valor === opcion.valor
+          const idTexto = `${idBase}-${opcion.valor}`
 
           return (
-            <div className={styles.paso} key={fase}>
+            <div className={styles.paso} key={opcion.valor}>
               <button
                 type="button"
                 className={[styles.circulo, activo ? styles.circuloActivo : null]
@@ -36,7 +50,9 @@ export function SelectorFase({ valor, onCambiar }: SelectorFaseProps) {
                   .join(' ')}
                 aria-pressed={activo}
                 aria-labelledby={idTexto}
-                onClick={() => onCambiar(activo ? 'todas' : fase)}
+                onClick={() =>
+                  onCambiar(opcion.valor === 'todas' || activo ? 'todas' : opcion.valor)
+                }
               />
               <span
                 id={idTexto}
@@ -44,7 +60,7 @@ export function SelectorFase({ valor, onCambiar }: SelectorFaseProps) {
                   .filter(Boolean)
                   .join(' ')}
               >
-                {infoFase(fase).etiqueta}
+                {opcion.etiqueta}
               </span>
             </div>
           )
