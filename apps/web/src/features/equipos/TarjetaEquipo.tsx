@@ -65,12 +65,13 @@ export function TarjetaEquipo({
   const bajoMinimoConfigurado =
     !bajoMinimoObligatorio && limites.minimo !== null && cantidad < limites.minimo
 
-  // Un participante siempre pertenece a un equipo: solo se mueve, no sale.
   // Lleno no se muestra como botón deshabilitado "Equipo lleno": la insignia
   // de "X de Y integrantes" de arriba ya lo dice, y repetirlo como acción sin
-  // acción es ruido.
+  // acción es ruido. Durante la formación autogestionada, cada persona
+  // también puede retirarse de su propio equipo (antes solo quien organiza o
+  // co-organiza podía "salir" de un equipo del que era integrante).
   const mostrarUnirme = !soyIntegrante && puedeMoverme && !lleno
-  const mostrarSalir = soyIntegrante && puedeMoverme && miRol !== 'participante'
+  const mostrarSalir = soyIntegrante && puedeMoverme
   const mostrarEditar = puede('editar_equipo') && (miRol !== 'participante' || soyIntegrante)
   // Espacio de equipo (nucleo §9.1, general §7.3): un participante solo entra
   // al suyo; quien organiza o co-organiza entra a cualquiera, a revisarlo.

@@ -48,7 +48,10 @@ export function useEquipo(idEquipo: string) {
 // de esa clave.
 function useInvalidarActividad(idActividad: string) {
   const queryClient = useQueryClient()
-  return () => queryClient.invalidateQueries({ queryKey: claveActividad(idActividad) })
+  return () => {
+    queryClient.invalidateQueries({ queryKey: claveActividad(idActividad) })
+    queryClient.invalidateQueries({ queryKey: CLAVE_ACTIVIDADES, exact: true })
+  }
 }
 
 export function useCrearEquipoMutation(idActividad: string) {

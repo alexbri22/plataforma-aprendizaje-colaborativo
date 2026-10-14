@@ -219,7 +219,7 @@ describe('PantallaEquipos', () => {
     })
   })
 
-  it('un participante que ya tiene equipo no ve "Salir", solo puede moverse; y edita el suyo', async () => {
+  it('un participante que ya tiene equipo puede salir o moverse; y edita el suyo', async () => {
     vi.mocked(obtenerActividad).mockResolvedValue(
       actividad({ capacidades: ['elegir_equipo', 'editar_equipo'] }),
     )
@@ -229,13 +229,18 @@ describe('PantallaEquipos', () => {
         equipo('e2', 'Beta'),
       ]),
     )
+    vi.mocked(retirarIntegrante).mockResolvedValue(equipo('e1', 'Alfa'))
+    const usuario = userEvent.setup()
     renderPantalla()
 
     await screen.findByText('Ana García (tú)')
-    expect(screen.queryByRole('button', { name: 'Salir del equipo' })).not.toBeInTheDocument()
     // Solo el equipo propio es editable.
     expect(screen.getAllByRole('button', { name: 'Editar' })).toHaveLength(1)
     expect(screen.getAllByRole('button', { name: 'Unirme' })).toHaveLength(1)
+
+    await usuario.click(screen.getByRole('button', { name: 'Salir del equipo' }))
+
+    await waitFor(() => expect(retirarIntegrante).toHaveBeenCalledWith('e1', YO))
   })
 
   it('con la formación manual el participante solo consulta', async () => {
@@ -1037,6 +1042,10 @@ describe('PantallaEquipos', () => {
     renderPantalla()
 
     expect(await screen.findByText('No pudimos cargar los equipos.')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Volver' })).toHaveAttribute(
+      'href',
+      '/actividades/act-1',
+    )
   })
 
   it('muestra un aviso si la actividad no existe o no se es miembro', async () => {

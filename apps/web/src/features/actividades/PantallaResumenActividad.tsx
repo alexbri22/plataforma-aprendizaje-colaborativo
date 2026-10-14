@@ -255,11 +255,18 @@ export function PantallaResumenActividad() {
 
   const actividad = actividadQuery.data
   const fase = infoFase(actividad.fase)
+  // Destino de la flecha de regreso: Organizo o Participo según el rol, en
+  // vez del alias /actividades que siempre manda a Organizo. La vista
+  // cargada no pasaba volverA a AppShell y la flecha no se mostraba aquí
+  // (el único caso que la prueba cubría era el enlace transitorio del
+  // estado de carga).
+  const organiza = actividad.rol !== 'participante'
 
   return (
     <AppShell
       seccionActiva="actividades"
       titulo={actividad.nombre}
+      volverA={organiza ? '/actividades/organizo' : '/actividades/participo'}
       // Icono + palabra, igual que la navegación lateral (AppShell.tsx,
       // .navItem): icono solo se leía como un bloque de botones anónimos,
       // sin relación visual con el resto de la navegación de la app.
@@ -276,7 +283,9 @@ export function PantallaResumenActividad() {
             // de avances: la pantalla de configuración sigue siendo el lugar.
             actividad.capacidades?.some(
               (capacidad) =>
-                capacidad === 'configurar_funciones' || capacidad === 'ajustar_periodos',
+                capacidad === 'configurar_funciones' ||
+                capacidad === 'ajustar_funciones' ||
+                capacidad === 'ajustar_periodos',
             ) ? (
               <Button variant="ghost" size="sm" to={`/actividades/${actividad.id}/configuracion`}>
                 <IconoConfigurar />

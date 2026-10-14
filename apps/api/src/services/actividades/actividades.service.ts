@@ -266,6 +266,19 @@ async function cargarActividadConMembresiasYConfiguracion(
   })
 }
 
+/** Toma la fila de la actividad con FOR UPDATE y la relee: autorizar contra
+ * una fase leída antes del candado puede eludir una transición que otra
+ * petición confirma mientras esta espera. Toda escritura de Configuración
+ * (configurarFuncion, fijarLimitesEquipo) autoriza y escribe sobre este
+ * mismo estado, dentro de la transacción que lo bloqueó. */
+async function bloquearActividadParaConfiguracion(
+  tx: Prisma.TransactionClient,
+  idActividad: string,
+) {
+  await tx.$queryRaw`SELECT 1 FROM actividades WHERE id_actividad = ${idActividad} FOR UPDATE`
+  return tx.actividad.findUniqueOrThrow({ where: { idActividad } })
+}
+
 const INTENTOS_MAXIMOS_CLAVE_INGRESO = 5
 
 function esColisionClaveIngreso(error: unknown): boolean {
@@ -701,22 +714,22 @@ export async function configurarFuncion(
   idUsuarioActor: string,
   membresiaActor: MembresiaConPermisos,
 ): Promise<ActividadConCapacidades> {
-  const actividad = await cargarActividadConMembresiasYConfiguracion(idActividad)
-  const enCurso = actividad.estado === 'desarrollo' || actividad.estado === 'cierre'
-
-  const resultado = autorizar(
-    contextoDe(membresiaActor),
-    enCurso ? 'ajustar_funciones' : 'configurar_funciones',
-    { estado: actividad.estado },
-  )
-  if (!resultado.concedido) {
-    lanzarErrorDeAutorizacion(
-      resultado.motivo,
-      'La configuración no puede modificarse en esta fase.',
-    )
-  }
-
   await prisma.$transaction(async (tx) => {
+    const actividad = await bloquearActividadParaConfiguracion(tx, idActividad)
+    const enCurso = actividad.estado === 'desarrollo' || actividad.estado === 'cierre'
+
+    const resultado = autorizar(
+      contextoDe(membresiaActor),
+      enCurso ? 'ajustar_funciones' : 'configurar_funciones',
+      { estado: actividad.estado },
+    )
+    if (!resultado.concedido) {
+      lanzarErrorDeAutorizacion(
+        resultado.motivo,
+        'La configuración no puede modificarse en esta fase.',
+      )
+    }
+
     // Se relee dentro de la transacción: el estado anterior que se registra y
     // contra el que se evalúa el cambio es el que realmente hay.
     const actual = await tx.configuracionFuncion.findUnique({
@@ -761,25 +774,25 @@ export async function fijarLimitesEquipo(
   idUsuarioActor: string,
   membresiaActor: MembresiaConPermisos,
 ): Promise<ActividadConCapacidades> {
-  const actividad = await cargarActividadConMembresiasYConfiguracion(idActividad)
-  exigirAccion(
-    membresiaActor,
-    'configurar_funciones',
-    actividad.estado,
-    'Los límites de los equipos no pueden modificarse en esta fase.',
-  )
+  await prisma.$transaction(async (tx) => {
+    const actividad = await bloquearActividadParaConfiguracion(tx, idActividad)
+    exigirAccion(
+      membresiaActor,
+      'configurar_funciones',
+      actividad.estado,
+      'Los límites de los equipos no pueden modificarse en esta fase.',
+    )
 
-  const antes = { minimo: actividad.tamanoMinimoEquipo, maximo: actividad.tamanoMaximoEquipo }
-  const despues = {
-    minimo: cambios.minimo === undefined ? antes.minimo : cambios.minimo,
-    maximo: cambios.maximo === undefined ? antes.maximo : cambios.maximo,
-  }
-  if (despues.minimo !== null && despues.maximo !== null && despues.minimo > despues.maximo) {
-    throw new ErrorValidacion({ minimo: 'El mínimo no puede ser mayor que el máximo.' })
-  }
+    const antes = { minimo: actividad.tamanoMinimoEquipo, maximo: actividad.tamanoMaximoEquipo }
+    const despues = {
+      minimo: cambios.minimo === undefined ? antes.minimo : cambios.minimo,
+      maximo: cambios.maximo === undefined ? antes.maximo : cambios.maximo,
+    }
+    if (despues.minimo !== null && despues.maximo !== null && despues.minimo > despues.maximo) {
+      throw new ErrorValidacion({ minimo: 'El mínimo no puede ser mayor que el máximo.' })
+    }
 
-  if (despues.minimo !== antes.minimo || despues.maximo !== antes.maximo) {
-    await prisma.$transaction(async (tx) => {
+    if (despues.minimo !== antes.minimo || despues.maximo !== antes.maximo) {
       await tx.actividad.update({
         where: { idActividad },
         data: { tamanoMinimoEquipo: despues.minimo, tamanoMaximoEquipo: despues.maximo },
@@ -794,8 +807,8 @@ export async function fijarLimitesEquipo(
         datos: { funcion: 'formacion_equipos', campo: 'limites_de_tamano', antes, despues },
         categoria: 'estructura',
       })
-    })
-  }
+    }
+  })
 
   return obtenerActividadPorId(idActividad, membresiaActor)
 }
