@@ -1,0 +1,183 @@
+.contenido {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.subtitulo {
+  margin: 0;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-muted);
+  text-wrap: pretty;
+}
+
+.subtitulo a,
+.enlaceTitulo {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+}
+
+.subtitulo a:hover,
+.enlaceTitulo:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.subtitulo a:focus-visible,
+.enlaceTitulo:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.estadoTexto {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.orden {
+  color: var(--color-text-muted);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+}
+
+/* Confirmación tras guardar en el editor. Verde de "hecho" (Confirmed Green,
+   DESIGN.md); nunca Apothecary Amber, reservado a insignias. */
+.confirmacion {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-success);
+  border-radius: var(--radius-md);
+  background: var(--color-success-subtle);
+  color: var(--color-success-ink);
+  animation: aparecer 0.2s ease-out;
+}
+
+.confirmacion:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.confirmacionIcono {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.confirmacionIcono svg {
+  width: var(--space-6);
+  height: var(--space-6);
+}
+
+.confirmacionTexto {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+}
+
+.confirmacionTexto p {
+  margin: 0;
+}
+
+.confirmacionTitulo {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+}
+
+.confirmacionEnlaces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-top: var(--space-2) !important;
+}
+
+.confirmacionEnlaces a {
+  color: var(--color-success-ink);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.confirmacionEnlaces a:focus-visible,
+.confirmacionCerrar:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.confirmacionCerrar {
+  flex: 0 0 auto;
+  width: var(--space-8);
+  height: var(--space-8);
+  margin: calc(var(--space-1) * -1);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: inherit;
+  font-size: var(--font-size-xl);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.confirmacionCerrar:hover {
+  background: var(--color-success-subtle);
+  filter: brightness(0.95);
+}
+
+/* La fila recién editada se marca y el tinte se desvanece solo; el aviso de
+   arriba es el que conserva la información. */
+.filaReciente td {
+  animation: resaltar 3s ease-out forwards;
+}
+
+@keyframes resaltar {
+  0%,
+  40% {
+    background: var(--color-primary-subtle);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+@keyframes aparecer {
+  from {
+    opacity: 0;
+    transform: translateY(calc(var(--space-1) * -1));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confirmacion {
+    animation: none;
+  }
+
+  .filaReciente td {
+    animation: none;
+    background: var(--color-primary-subtle);
+  }
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Mientras llega la página nueva se sigue viendo la anterior, atenuada. */
+.actualizando {
+  opacity: 0.6;
+  transition: opacity 0.15s ease;
+}

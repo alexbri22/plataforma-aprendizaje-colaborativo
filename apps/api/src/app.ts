@@ -12,6 +12,7 @@ import { cuentasRouter } from './routes/cuentas.js'
 import { healthRouter } from './routes/health.js'
 import { periodosRouter } from './routes/periodos.js'
 import { tareasRouter } from './routes/tareas.js'
+import { adminRecursosRouter, recursosRouter } from './routes/recursos.js'
 
 // Cada preview de Vercel vive en un subdominio *.vercel.app distinto e
 // impredecible (uno por rama/PR) — no se puede precargar en WEB_ORIGIN.
@@ -60,11 +61,13 @@ export function createApp(): Express {
   app.use('/api/health', healthRouter)
   app.use('/api', cuentasRouter)
   app.use('/api/admin', adminRouter)
+  app.use('/api/admin', adminRecursosRouter)
   app.use('/api', actividadesRouter)
   app.use('/api', clavesRouter)
   app.use('/api', periodosRouter)
   app.use('/api', tareasRouter)
   app.use('/api', insigniasRouter)
+  app.use('/api', recursosRouter)
 
   app.use(manejadorErrores)
 

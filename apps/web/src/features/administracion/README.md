@@ -44,9 +44,20 @@ El script vive en `apps/api/scripts/promover-admin.mjs` (declarado en
 Una vez promovida, esa persona ve el enlace **Cuentas** y puede promover a
 otras desde… todavía no: por ahora la promoción es solo por este script.
 
+## Contenido formativo
+
+- `PantallaContenido` (`/admin/contenido`) — todos los recursos con su estatus
+  (borrador, publicado, retirado) escrito en texto, no solo en color.
+- `PantallaEditarRecurso` (`/admin/contenido/nuevo` y `/admin/contenido/:id`) —
+  alta y edición, carga del PDF, publicar, retirar (con confirmación) y
+  eliminar borradores. Los mínimos de publicación los valida el servidor
+  (`docs/diseno-desarrollo-formacion.md` §6.4) y sus errores se muestran junto
+  a cada campo.
+
+Ambas consumen los hooks de `features/formacion`, dueña del módulo.
+
 **Fuera de este incremento:** activar/desactivar cuenta
-(`PATCH /api/admin/usuarios/{id}`), gestión del contenido formativo y de los
-umbrales de insignias.
+(`PATCH /api/admin/usuarios/{id}`) y umbrales de insignias.
 
 Convención de la carpeta: componentes, queries (TanStack Query) y estado de
 esta feature viven aquí. Los componentes visuales consumen `components/ui/` y

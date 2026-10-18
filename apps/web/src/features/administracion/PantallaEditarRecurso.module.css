@@ -1,0 +1,254 @@
+.pagina {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: 48rem;
+}
+
+.barra {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.volver {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+}
+
+.volver:hover {
+  color: var(--color-primary);
+}
+
+.volver:focus-visible,
+.subirArchivo:focus-within,
+.archivoActual a:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.aviso {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-success-subtle);
+  color: var(--color-success-ink);
+  font-size: var(--font-size-sm);
+}
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.seccion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.seccion h2 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+}
+
+.fila {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.filaCorta {
+  max-width: 12rem;
+}
+
+.monoespaciado {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+}
+
+.nota {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-normal);
+}
+
+.nota code {
+  font-family: var(--font-family-mono);
+}
+
+.vistaPrevia {
+  margin-top: var(--space-3);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+}
+
+.archivo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.archivo h3 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.archivoActual {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.archivoActual a {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-sm);
+}
+
+.archivoAcciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Input de archivo oculto tras una etiqueta con aspecto de botón secundario:
+   el control nativo no admite los tokens de DESIGN.md. */
+.subirArchivo {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+}
+
+.subirArchivo:hover {
+  background: var(--color-surface-hover);
+}
+
+.subirArchivo input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.errorCampo {
+  margin: 0;
+  color: var(--color-danger-ink);
+  font-size: var(--font-size-xs);
+}
+
+.elementos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.elementos legend {
+  margin-bottom: var(--space-2);
+  padding: 0;
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.accionDestructiva {
+  margin-left: auto;
+}
+
+.accionesModal {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+@media (max-width: 42rem) {
+  .fila {
+    grid-template-columns: 1fr;
+  }
+
+  .accionDestructiva {
+    margin-left: 0;
+  }
+}
+
+/* Resumen de errores: dice qué falta y cada campo es un botón que lleva a
+   él. Mismo tono que AvisoError, con la lista debajo. */
+.resumenErrores {
+  padding: var(--space-4);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-md);
+  background: var(--color-danger-subtle);
+  color: var(--color-danger-ink);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+}
+
+.resumenErrores:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.resumenErroresTitulo {
+  margin: 0;
+  font-weight: var(--font-weight-semibold);
+}
+
+.resumenErrores ul {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-5);
+}
+
+.resumenErrores li + li {
+  margin-top: var(--space-1);
+}
+
+.resumenErrores button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: var(--font-weight-semibold);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.resumenErrores button:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}

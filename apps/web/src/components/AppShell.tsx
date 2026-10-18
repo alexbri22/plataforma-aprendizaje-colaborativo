@@ -4,7 +4,7 @@ import { useCerrarSesionMutation, useSesion } from '../features/cuentas'
 import { Avatar } from './ui'
 import styles from './AppShell.module.css'
 
-export type SeccionApp = 'actividades' | 'perfil' | 'recursos' | 'cuentas'
+export type SeccionApp = 'actividades' | 'perfil' | 'recursos' | 'cuentas' | 'contenido'
 
 interface ItemNav {
   id: SeccionApp
@@ -167,6 +167,7 @@ const ITEMS_NAV: ItemNav[] = [
 // herramientas de administración se agregan aquí y aparecen dentro del grupo.
 const ITEMS_NAV_ADMIN: ItemNav[] = [
   { id: 'cuentas', etiqueta: 'Cuentas', to: '/admin/cuentas', Icono: IconoCuentas },
+  { id: 'contenido', etiqueta: 'Contenido', to: '/admin/contenido', Icono: IconoRecursos },
 ]
 
 // Preferencia de la persona (abierto/cerrado) para el grupo de
