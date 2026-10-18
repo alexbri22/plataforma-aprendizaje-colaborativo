@@ -367,12 +367,13 @@ function CentroFormacion() {
               </Card>
             ))}
           </div>
+          {/* Paginacion (DESIGN.md) cuenta páginas desde 0; la API desde 1. */}
           <Paginacion
             etiqueta="Páginas de artículos"
-            pagina={articulos.data.paginacion.pagina}
-            totalPaginas={articulos.data.paginacion.totalPaginas}
-            onCambiar={(p) => cambiarPagina('articulos', p)}
-            deshabilitada={articulos.isFetching}
+            total={articulos.data.paginacion.total}
+            tamano={articulos.data.paginacion.porPagina}
+            pagina={articulos.data.paginacion.pagina - 1}
+            onCambiar={(p) => cambiarPagina('articulos', p + 1)}
           />
         </section>
       ) : null}
@@ -409,12 +410,13 @@ function CentroFormacion() {
                 </li>
               ))}
             </ul>
+            {/* Paginacion (DESIGN.md) cuenta páginas desde 0; la API desde 1. */}
             <Paginacion
               etiqueta="Páginas de recursos breves"
-              pagina={breves.data.paginacion.pagina}
-              totalPaginas={breves.data.paginacion.totalPaginas}
-              onCambiar={(p) => cambiarPagina('breves', p)}
-              deshabilitada={breves.isFetching}
+              total={breves.data.paginacion.total}
+              tamano={breves.data.paginacion.porPagina}
+              pagina={breves.data.paginacion.pagina - 1}
+              onCambiar={(p) => cambiarPagina('breves', p + 1)}
             />
           </div>
         </section>

@@ -1,10 +1,8 @@
 import type { AccionActividad, FuncionSeguimiento } from '@plataforma/shared'
 
-// El ciclo de vida real tiene seis estados (docs/diseno-desarrollo-nucleo.md
-// §7.4): configuración, inscripción, formación, desarrollo, cierre y
-// archivada. 'formacion' se pliega dentro de 'inscripcion' en este tipo
-// porque es transicional y breve.
-export type FaseActividad = 'configuracion' | 'inscripcion' | 'desarrollo' | 'cierre' | 'archivada'
+// Las seis fases del ciclo de vida (docs/diseno-desarrollo-nucleo.md §7.4).
+export type FaseActividad =
+  'configuracion' | 'inscripcion' | 'formacion_equipos' | 'desarrollo' | 'cierre' | 'archivada'
 
 export type RolActividad = 'organizador' | 'co-organizador' | 'participante'
 
@@ -19,6 +17,9 @@ export interface Actividad {
   fechaClave: string
   /** Solo existe desde que se abre la inscripción (docs/diseno-desarrollo-nucleo.md §7.2). */
   claveIngreso?: string
+  // Nombre completo de quien organiza (docs/diseno-desarrollo-general.md §4.6).
+  // El buscador de "Organizo"/"Participo" lo usa junto con nombre y clave.
+  nombreOrganizador: string
   // Campos de docs/diseno-desarrollo-general.md §5.1 (relación 'actividades').
   // Opcionales en el tipo porque las fixtures anteriores a esta decisión no
   // los tienen todos; el formulario de creación sí los exige.
@@ -28,6 +29,9 @@ export interface Actividad {
   fechaLimiteInscripcion?: string
   plazoCierreDias?: number
   numeroEquiposEsperado?: number
+  // Ajuste de la formación de equipos (nucleo §8.8, P-27); nulo = sin límite.
+  tamanoMinimoEquipo?: number | null
+  tamanoMaximoEquipo?: number | null
   // Solo GET /api/actividades/{id} los incluye, no el listado (docs/diseno-desarrollo-nucleo.md
   // §4.3 y §4.2): el conjunto de acciones que el actor puede ejecutar ahora
   // mismo. La pantalla nunca vuelve a evaluar rol ni fase por su cuenta,

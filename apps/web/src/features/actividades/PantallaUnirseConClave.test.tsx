@@ -127,6 +127,7 @@ describe('PantallaUnirseConClave', () => {
       rol: 'participante',
       numParticipantes: 1,
       fechaClave: 'Clave: ECO4H7KP',
+      nombreOrganizador: VISTA_PREVIA.nombreOrganizador,
     }
     vi.mocked(unirseConClave).mockResolvedValueOnce(actividad)
 

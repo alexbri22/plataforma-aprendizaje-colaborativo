@@ -1,74 +1,75 @@
-import { paginasVisibles } from './paginasVisibles'
+import { Button } from './Button'
 import styles from './Paginacion.module.css'
 
 export interface PaginacionProps {
+  /** Total de elementos, no de páginas. */
+  total: number
+  /** Elementos por página. */
+  tamano: number
+  /** Página actual, empezando en 0. */
   pagina: number
-  totalPaginas: number
   onCambiar: (pagina: number) => void
-  /** Nombre accesible de la navegación, p. ej. "Páginas de artículos". Hace
-   * falta cuando hay más de una paginación en la misma pantalla. */
+  /** Qué se está paginando, para el lector de pantalla: "Personas". */
   etiqueta?: string
-  deshabilitada?: boolean
 }
 
-// Navegación entre páginas (DESIGN.md §5: controles sobrios, la página actual
-// marcada con fondo primary-subtle y aria-current, nunca solo con color). Con
-// una sola página no se muestra.
+function Flecha({ direccion }: { direccion: 'izquierda' | 'derecha' }) {
+  return (
+    <svg className={styles.icono} viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+      <path
+        d={direccion === 'izquierda' ? 'M10 3.5 5.5 8 10 12.5' : 'M6 3.5 10.5 8 6 12.5'}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+// Paginación de listas largas (DESIGN.md, "Pagination"): rango visible y dos
+// botones. No se pinta si todo cabe en una página.
 export function Paginacion({
+  total,
+  tamano,
   pagina,
-  totalPaginas,
   onCambiar,
   etiqueta = 'Paginación',
-  deshabilitada = false,
 }: PaginacionProps) {
-  if (totalPaginas <= 1) return null
+  if (total <= tamano) return null
+
+  const ultima = Math.ceil(total / tamano) - 1
+  const desde = pagina * tamano + 1
+  const hasta = Math.min(total, (pagina + 1) * tamano)
 
   return (
     <nav className={styles.paginacion} aria-label={etiqueta}>
-      <button
-        type="button"
-        className={styles.boton}
-        onClick={() => onCambiar(pagina - 1)}
-        disabled={deshabilitada || pagina <= 1}
-      >
-        <span aria-hidden="true">←</span> Anterior
-      </button>
-
-      <ol className={styles.paginas}>
-        {paginasVisibles(pagina, totalPaginas).map((entrada, i) =>
-          entrada === 'hueco' ? (
-            <li key={`hueco-${i}`} className={styles.hueco} aria-hidden="true">
-              …
-            </li>
-          ) : (
-            <li key={entrada}>
-              <button
-                type="button"
-                className={entrada === pagina ? styles.paginaActual : styles.pagina}
-                aria-current={entrada === pagina ? 'page' : undefined}
-                aria-label={`Página ${entrada}`}
-                onClick={() => onCambiar(entrada)}
-                disabled={deshabilitada}
-              >
-                {entrada}
-              </button>
-            </li>
-          ),
-        )}
-      </ol>
-
-      <span className={styles.resumen}>
-        Página {pagina} de {totalPaginas}
+      <span className={styles.rango} aria-live="polite">
+        {desde}–{hasta} de {total}
       </span>
-
-      <button
-        type="button"
-        className={styles.boton}
-        onClick={() => onCambiar(pagina + 1)}
-        disabled={deshabilitada || pagina >= totalPaginas}
-      >
-        Siguiente <span aria-hidden="true">→</span>
-      </button>
+      <div className={styles.botones}>
+        <Button
+          variant="secondary"
+          size="sm"
+          className={styles.flecha}
+          disabled={pagina <= 0}
+          aria-label="Anterior"
+          onClick={() => onCambiar(pagina - 1)}
+        >
+          <Flecha direccion="izquierda" />
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          className={styles.flecha}
+          disabled={pagina >= ultima}
+          aria-label="Siguiente"
+          onClick={() => onCambiar(pagina + 1)}
+        >
+          <Flecha direccion="derecha" />
+        </Button>
+      </div>
     </nav>
   )
 }

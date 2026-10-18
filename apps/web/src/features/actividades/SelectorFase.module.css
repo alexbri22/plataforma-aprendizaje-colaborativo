@@ -1,0 +1,115 @@
+.selector {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  /* width y no solo max-width: .paso usa flex: 1 para repartir el ancho en
+     cinco partes iguales, pero eso solo ocurre cuando .pasos tiene un ancho
+     definido del que repartir sobrante. Con max-width nada más, .selector se
+     mide por el contenido de cada columna (shrink-to-fit) y cada una termina
+     con el ancho mínimo que pide su propia etiqueta, no un quinto parejo —
+     por eso las etiquetas largas como "Formación de equipos" se amontonaban.
+     min() para seguir respetando el espacio disponible en pantallas angostas. */
+  width: min(640px, 100%);
+  /* Comparte fila con "Buscar actividades" (PantallaMisActividades):
+     flex-shrink: 0 para que no se vaya aplastando mientras quede espacio; si
+     de verdad no cabe, flex-wrap en esa fila lo manda a su propio renglón. */
+  flex-shrink: 0;
+}
+
+.etiquetaGrupo {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+}
+
+.pasos {
+  display: flex;
+  align-items: flex-start;
+}
+
+.paso {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+}
+
+/* La línea conecta el centro de este círculo con el centro del anterior
+   (right: 50% ancla el borde derecho de la línea al centro de .paso; width:
+   100% la extiende un ancho de columna hacia la izquierda, hasta el centro
+   de la columna previa, que mide lo mismo). Un pseudo-elemento y no un
+   elemento flex a los lados del círculo: así el círculo y su etiqueta se
+   centran igual en cada columna, primera y última incluidas, en vez de
+   quedar empujados hacia dentro por una línea fantasma en los extremos. */
+.paso:not(:first-child)::before {
+  content: '';
+  position: absolute;
+  top: 7px;
+  right: 50%;
+  width: 100%;
+  height: 2px;
+  background: var(--color-border-strong);
+  /* La línea de este paso se extiende hacia atrás, sobre el círculo del
+     paso anterior; sin esto, además de tapar visualmente ese círculo (ver
+     z-index abajo) también le robaría los clics. */
+  pointer-events: none;
+}
+
+.circulo {
+  /* z-index, no solo position: relative. position: relative únicamente
+     ordena al círculo por encima de SU PROPIA línea (incluida en su mismo
+     .paso), pero la línea del paso SIGUIENTE se extiende hacia atrás sobre
+     este círculo y, al venir después en el DOM, se pintaba encima de él
+     (tapando el círculo y, en Chrome, robándole los clics). Un z-index
+     explícito lo saca de ese orden por documento. */
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--color-border-strong);
+  background: var(--color-bg);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.circulo:hover {
+  border-color: var(--color-primary-border);
+}
+
+.circulo:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.circuloActivo,
+.circuloActivo:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+}
+
+.texto {
+  max-width: 88px;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-tight);
+  color: var(--color-text-muted);
+  text-align: center;
+  text-wrap: balance;
+}
+
+.textoActivo {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+@media (max-width: 640px) {
+  .texto {
+    max-width: none;
+  }
+}

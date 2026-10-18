@@ -1,38 +1,65 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { Paginacion } from './Paginacion'
-import { paginasVisibles } from './paginasVisibles'
+import { rebanar } from './rebanar'
 
-describe('paginasVisibles', () => {
-  it('muestra todas cuando son pocas', () => {
-    expect(paginasVisibles(1, 5)).toEqual([1, 2, 3, 4, 5])
+const renderizar = (props: Partial<Parameters<typeof Paginacion>[0]> = {}) => {
+  const onCambiar = vi.fn()
+  render(
+    <MemoryRouter>
+      <Paginacion
+        total={25}
+        tamano={10}
+        pagina={0}
+        onCambiar={onCambiar}
+        etiqueta="Personas"
+        {...props}
+      />
+    </MemoryRouter>,
+  )
+  return onCambiar
+}
+
+describe('Paginacion', () => {
+  it('muestra el rango y deshabilita Anterior en la primera página', () => {
+    renderizar()
+    expect(screen.getByText('1–10 de 25')).toBeInTheDocument()
+    expect(screen.getByRole('navigation', { name: 'Personas' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Anterior' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Siguiente' })).toBeEnabled()
   })
 
-  it('resume con huecos y conserva primera, última y vecinas', () => {
-    expect(paginasVisibles(5, 10)).toEqual([1, 'hueco', 4, 5, 6, 'hueco', 10])
-    expect(paginasVisibles(1, 10)).toEqual([1, 2, 'hueco', 10])
-    // Un hueco de una sola página se muestra como número, no como "…".
-    expect(paginasVisibles(4, 10)).toEqual([1, 2, 3, 4, 5, 'hueco', 10])
+  it('en la última página recorta el rango y deshabilita Siguiente', () => {
+    renderizar({ pagina: 2 })
+    expect(screen.getByText('21–25 de 25')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Siguiente' })).toBeDisabled()
+  })
+
+  it('avisa la página a la que se quiere ir', async () => {
+    const onCambiar = renderizar({ pagina: 1 })
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Anterior' }))
+    expect(onCambiar).toHaveBeenNthCalledWith(1, 2)
+    expect(onCambiar).toHaveBeenNthCalledWith(2, 0)
+  })
+
+  it('no se pinta si todo cabe en una página', () => {
+    renderizar({ total: 10 })
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument()
   })
 })
 
-describe('Paginacion', () => {
-  it('no se muestra con una sola página', () => {
-    const { container } = render(<Paginacion pagina={1} totalPaginas={1} onCambiar={vi.fn()} />)
-    expect(container).toBeEmptyDOMElement()
+describe('rebanar', () => {
+  const lista = Array.from({ length: 25 }, (_, i) => i + 1)
+
+  it('devuelve la página pedida', () => {
+    expect(rebanar(lista, 1, 10)).toEqual({ visibles: lista.slice(10, 20), pagina: 1 })
   })
 
-  it('marca la página actual y avisa el cambio', async () => {
-    const user = userEvent.setup()
-    const onCambiar = vi.fn()
-    render(<Paginacion pagina={1} totalPaginas={3} onCambiar={onCambiar} />)
-
-    expect(screen.getByRole('button', { name: 'Página 1' })).toHaveAttribute('aria-current', 'page')
-    expect(screen.getByRole('button', { name: /Anterior/ })).toBeDisabled()
-
-    await user.click(screen.getByRole('button', { name: /Siguiente/ }))
-    await user.click(screen.getByRole('button', { name: 'Página 3' }))
-    expect(onCambiar.mock.calls).toEqual([[2], [3]])
+  it('si la página ya no existe, muestra la última en vez de una vacía', () => {
+    expect(rebanar(lista.slice(0, 12), 2, 10)).toEqual({ visibles: [11, 12], pagina: 1 })
+    expect(rebanar([], 3, 10)).toEqual({ visibles: [], pagina: 0 })
   })
 })

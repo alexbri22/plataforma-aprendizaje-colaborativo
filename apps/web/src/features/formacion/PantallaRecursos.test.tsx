@@ -160,7 +160,7 @@ describe('PantallaRecursos', () => {
     const articulos = await screen.findByRole('region', { name: 'Artículos' })
     expect(within(articulos).getAllByRole('heading', { level: 3 })).toHaveLength(6)
 
-    await user.click(within(articulos).getByRole('button', { name: 'Página 2' }))
+    await user.click(within(articulos).getByRole('button', { name: 'Siguiente' }))
     expect(await within(articulos).findByText('Artículo 7')).toBeInTheDocument()
     expect(within(articulos).queryByText('Artículo 1')).not.toBeInTheDocument()
 

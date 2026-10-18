@@ -7,8 +7,10 @@ import {
   cerrarInscripcion,
   configurarFuncion,
   crearActividad,
+  fijarLimitesEquipo,
   listarActividadesDeUsuario,
   listarParticipantes,
+  nombreCompleto,
   obtenerActividadPorId,
   obtenerMembresiaActiva,
 } from '../services/actividades/actividades.service.js'
@@ -16,6 +18,7 @@ import {
   validarDatosAgregarCoorganizador,
   validarDatosConfigurarFuncion,
   validarDatosCrearActividad,
+  validarDatosLimitesEquipo,
   validarFuncion,
 } from '../services/actividades/validacion.js'
 
@@ -26,7 +29,7 @@ export const actividadesRouter = Router()
 actividadesRouter.post('/actividades', exigirSesion, async (req, res) => {
   const datos = validarDatosCrearActividad(req.body)
   const actor = req.actor as UsuarioPublico
-  const actividad = await crearActividad(actor.idUsuario, datos)
+  const actividad = await crearActividad(actor.idUsuario, nombreCompleto(actor), datos)
   res.status(201).json({ actividad })
 })
 
@@ -85,6 +88,26 @@ actividadesRouter.post(
     const { membresia } = req.contextoActividad!
     const actor = req.actor as UsuarioPublico
     const actividad = await cerrarInscripcion(req.params.id as string, actor.idUsuario, membresia)
+    res.status(200).json({ actividad })
+  },
+)
+
+// PUT /api/actividades/{id}/formacion/limites: tamaño mínimo y máximo de un
+// equipo (nucleo §8.8, P-27).
+actividadesRouter.put(
+  '/actividades/:id/formacion/limites',
+  exigirSesion,
+  cargarContextoActividad,
+  async (req, res) => {
+    const { membresia } = req.contextoActividad!
+    const actor = req.actor as UsuarioPublico
+    const cambios = validarDatosLimitesEquipo(req.body)
+    const actividad = await fijarLimitesEquipo(
+      req.params.id as string,
+      cambios,
+      actor.idUsuario,
+      membresia,
+    )
     res.status(200).json({ actividad })
   },
 )

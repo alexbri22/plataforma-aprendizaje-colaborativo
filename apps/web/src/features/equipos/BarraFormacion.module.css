@@ -1,0 +1,27 @@
+/* Una barra de acciones en la pantalla, sin caja: las tarjetas quedan para los
+   equipos. */
+.barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.grupo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.pregunta {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+}
+
+.estado {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}

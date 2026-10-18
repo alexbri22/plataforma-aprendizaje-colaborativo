@@ -104,8 +104,7 @@ export function PantallaContenido() {
   // compartir y el editor sabe a cuál volver.
   const [parametros, setParametros] = useSearchParams()
   const pagina = leerPagina(parametros.get('pagina'))
-  const { data, isPending, isError, error, isPlaceholderData, isFetching } =
-    useRecursosAdmin(pagina)
+  const { data, isPending, isError, error, isPlaceholderData } = useRecursosAdmin(pagina)
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -165,11 +164,6 @@ export function PantallaContenido() {
           />
         ) : (
           <>
-            <p className={styles.estadoTexto}>
-              Mostrando {(data.paginacion.pagina - 1) * data.paginacion.porPagina + 1}–
-              {(data.paginacion.pagina - 1) * data.paginacion.porPagina + data.recursos.length} de{' '}
-              {data.paginacion.total}
-            </p>
             <Table
               caption="Recursos formativos"
               className={isPlaceholderData ? styles.actualizando : undefined}
@@ -214,12 +208,13 @@ export function PantallaContenido() {
                 ))}
               </tbody>
             </Table>
+            {/* Paginacion (DESIGN.md) cuenta páginas desde 0; la API desde 1. */}
             <Paginacion
               etiqueta="Páginas de recursos"
-              pagina={data.paginacion.pagina}
-              totalPaginas={data.paginacion.totalPaginas}
-              onCambiar={irAPagina}
-              deshabilitada={isFetching}
+              total={data.paginacion.total}
+              tamano={data.paginacion.porPagina}
+              pagina={data.paginacion.pagina - 1}
+              onCambiar={(p) => irAPagina(p + 1)}
             />
           </>
         )}

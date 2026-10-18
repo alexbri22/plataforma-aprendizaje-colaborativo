@@ -26,7 +26,11 @@ export function PantallaMisReconocimientos() {
 
   if (recibidos.isPending || acumulado.isPending) {
     return (
-      <AppShell seccionActiva="actividades" titulo="Mis reconocimientos">
+      <AppShell
+        seccionActiva="actividades"
+        titulo="Mis reconocimientos"
+        volverA={`/actividades/${id}`}
+      >
         <div className={styles.cargando} role="status" aria-label="Cargando tus reconocimientos">
           <IconoCargando size={24} />
         </div>
@@ -36,7 +40,11 @@ export function PantallaMisReconocimientos() {
 
   if (recibidos.isError || acumulado.isError || !recibidos.data || !acumulado.data) {
     return (
-      <AppShell seccionActiva="actividades" titulo="Mis reconocimientos">
+      <AppShell
+        seccionActiva="actividades"
+        titulo="Mis reconocimientos"
+        volverA={`/actividades/${id}`}
+      >
         <AvisoError mensaje="No pudimos cargar tus reconocimientos." />
       </AppShell>
     )
@@ -52,7 +60,11 @@ export function PantallaMisReconocimientos() {
   })).filter((c) => c.recibidos.length > 0)
 
   return (
-    <AppShell seccionActiva="actividades" titulo="Mis reconocimientos">
+    <AppShell
+      seccionActiva="actividades"
+      titulo="Mis reconocimientos"
+      volverA={`/actividades/${id}`}
+    >
       <section className={styles.seccion}>
         <h2 className={styles.tituloSeccion}>En esta actividad</h2>
         <Card>

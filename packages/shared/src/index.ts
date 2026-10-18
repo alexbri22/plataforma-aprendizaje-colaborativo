@@ -8,6 +8,7 @@ export {
   ACCIONES_ACTIVIDAD,
   CONFIGURACION_POR_DEFECTO,
   ELEMENTOS_ESPACIO_EQUIPO,
+  ESTADOS_FORMACION_EQUIPOS,
   ESTADOS_ELEMENTO_ESPACIO_EQUIPO,
   ESTADOS_PERIODO,
   ESTADOS_POR_FUNCION,
@@ -15,6 +16,7 @@ export {
   PERIODICIDADES,
   PERMISOS_COORGANIZADOR,
   PERMISOS_COORGANIZADOR_POR_DEFECTO,
+  esEstadoFormacionEquipos,
   parsearEstadoEspacioEquipo,
   serializarEstadoEspacioEquipo,
 } from './actividades.js'
@@ -24,6 +26,7 @@ export type {
   ElementoEspacioEquipo,
   EstadoElementoEspacioEquipo,
   EstadoEspacioEquipo,
+  EstadoFormacionEquipos,
   EstadoPeriodo,
   FuncionSeguimiento,
   Periodicidad,
@@ -58,6 +61,24 @@ export type {
   ProgresoNivel,
   RangoCategoria,
 } from './insignias.js'
+
+export {
+  LIMITE_MAXIMO_TAMANO_EQUIPO,
+  LONGITUD_MAXIMA_NOMBRE_EQUIPO,
+  LONGITUD_MAXIMA_TEXTO_EQUIPO,
+  SEMILLA_MAXIMA,
+  TAMANO_MINIMO_EQUIPO,
+} from './equipos.js'
+
+export type {
+  Equipo,
+  IntegranteEquipo,
+  LimitesEquipo,
+  ListaEquipos,
+  ParticipanteSinEquipo,
+  PropuestaEquipos,
+  RolIntegrante,
+} from './equipos.js'
 
 export {
   ETIQUETAS_NIVEL_ESTUDIOS,
