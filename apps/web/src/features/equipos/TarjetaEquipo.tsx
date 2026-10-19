@@ -5,8 +5,7 @@ import {
   type LimitesEquipo,
   type RolIntegrante,
 } from '@plataforma/shared'
-import type { KeyboardEvent, MouseEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { Badge, Button, Card } from '../../components/ui'
 import styles from './TarjetaEquipo.module.css'
 
@@ -44,7 +43,6 @@ export function TarjetaEquipo({
   onSalir,
   onEditar,
 }: TarjetaEquipoProps) {
-  const navigate = useNavigate()
   const puede = (accion: AccionActividad) => capacidades.includes(accion)
 
   const soyIntegrante = equipo.integrantes.some((i) => i.idMembresia === idMiMembresia)
@@ -77,42 +75,29 @@ export function TarjetaEquipo({
   // al suyo; quien organiza o co-organiza entra a cualquiera, a revisarlo.
   const mostrarEspacio = miRol !== 'participante' || soyIntegrante
 
-  function entrarAlEspacio() {
-    navigate(`/equipos/${equipo.id}`)
-  }
-
-  // La tarjeta completa es el acceso al espacio (no solo un botón): más
-  // superficie de clic, igual que abrir un documento desde su fila en un
-  // explorador de archivos. Las acciones propias (Unirme, Salir, Editar)
-  // detienen la propagación para no disparar también la navegación.
-  function detenerPropagacion(evento: MouseEvent) {
-    evento.stopPropagation()
-  }
-
-  function manejarTeclado(evento: KeyboardEvent<HTMLDivElement>) {
-    if (!mostrarEspacio) return
-    if (evento.key !== 'Enter') return
-    // Un botón interno ya maneja su propio Enter; que no dispare además la
-    // navegación de la tarjeta.
-    if (evento.target !== evento.currentTarget) return
-    entrarAlEspacio()
-  }
-
   return (
     <Card
       className={[styles.tarjeta, mostrarEspacio ? styles.tarjetaClicable : null]
         .filter(Boolean)
         .join(' ')}
-      {...(mostrarEspacio
-        ? {
-            role: 'link',
-            tabIndex: 0,
-            'aria-label': `Entrar al espacio de ${equipo.nombre}`,
-            onClick: entrarAlEspacio,
-            onKeyDown: manejarTeclado,
-          }
-        : {})}
     >
+      {mostrarEspacio ? (
+        // Enlace superpuesto ("stretched link") y no la tarjeta entera con
+        // role="link": la tarjeta contiene botones reales (Unirme, Salir,
+        // Editar), y un control con role="link" no puede contener otros
+        // controles enfocables sin romper la semántica de accesibilidad ni
+        // confundir la navegación por teclado/lector de pantalla. Este
+        // enlace es hermano del resto del contenido, no su contenedor:
+        // cubre toda la tarjeta (position: absolute, TarjetaEquipo.module.css)
+        // y los botones, que vienen después en el documento, se elevan por
+        // encima (z-index) para seguir siendo clicables por su cuenta — sin
+        // necesitar detener la propagación del clic.
+        <Link
+          to={`/equipos/${equipo.id}`}
+          className={styles.enlaceSuperpuesto}
+          aria-label={`Entrar al espacio de ${equipo.nombre}`}
+        />
+      ) : null}
       <div className={styles.encabezado}>
         <h2 className={styles.nombre}>{equipo.nombre}</h2>
         <Badge variant="neutral">
@@ -174,7 +159,7 @@ export function TarjetaEquipo({
       ) : null}
 
       {mostrarUnirme || mostrarSalir || mostrarEditar ? (
-        <div className={styles.acciones} onClick={detenerPropagacion}>
+        <div className={styles.acciones}>
           {mostrarUnirme ? (
             <Button size="sm" disabled={ocupado} onClick={() => onUnirme(equipo.id)}>
               Unirme
