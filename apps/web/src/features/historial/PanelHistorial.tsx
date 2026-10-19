@@ -1,4 +1,5 @@
-import { Avatar, AvisoError, IconoCargando, PanelLateral } from '../../components/ui'
+import { useMemo } from 'react'
+import { Avatar, AvisoError, Button, IconoCargando, PanelLateral } from '../../components/ui'
 import { agruparPorDia, formatearHora } from './agrupar'
 import { descripcionEvento } from './descripcion'
 import { useHistorial } from './useHistorial'
@@ -21,15 +22,27 @@ function partirNombre(actor: string | null): { nombre: string; apellidoPaterno: 
 
 // Consulta cronológica mínima del historial (nucleo §5.5, §11.2): sin
 // filtros ni agregación de ediciones consecutivas todavía, que son Fase B
-// (§11.3, "Cierre y consulta"). Como panel lateral y no una pantalla propia
-// (decisión de producto, mismo criterio que PanelAjustesFormacion): no saca
-// a quien organiza de donde está. Lista compacta agrupada por día, sin una
-// tarjeta por evento — referencia: el historial de versiones de Google Docs.
+// (§11.3, "Cierre y consulta"). Sí paginada por cursor (nucleo §3.1: el
+// historial no tiene cota de tamaño), con "Cargar más" al final en vez de
+// scroll infinito automático — más simple y más predecible en un panel
+// lateral compacto, donde el volumen esperado por apertura es bajo. Como
+// panel lateral y no una pantalla propia (decisión de producto, mismo
+// criterio que PanelAjustesFormacion): no saca a quien organiza de donde
+// está. Lista compacta agrupada por día, sin una tarjeta por evento —
+// referencia: el historial de versiones de Google Docs.
 export function PanelHistorial({ idActividad, abierto, onCerrar }: PanelHistorialProps) {
   // La consulta solo importa mientras el panel está abierto; TanStack Query
   // mantiene en caché lo ya traído, así que reabrir no vuelve a pedirlo salvo
   // que algo lo invalide (una escritura registrable).
   const historialQuery = useHistorial(idActividad, { enabled: abierto })
+
+  // Páginas ya cargadas, aplanadas: agruparPorDia no distingue de qué página
+  // vino cada evento, solo le importa el orden cronológico que el servidor
+  // ya le dio a cada una (nucleo §5.5).
+  const eventos = useMemo(
+    () => historialQuery.data?.pages.flatMap((pagina) => pagina.eventos) ?? [],
+    [historialQuery.data],
+  )
 
   return (
     <PanelLateral abierto={abierto} titulo="Historial" onCerrar={onCerrar}>
@@ -39,27 +52,48 @@ export function PanelHistorial({ idActividad, abierto, onCerrar }: PanelHistoria
         </div>
       ) : historialQuery.isError || !historialQuery.data ? (
         <AvisoError mensaje="No pudimos cargar el historial." />
-      ) : historialQuery.data.length === 0 ? (
+      ) : eventos.length === 0 ? (
         <p className={styles.ayuda}>Todavía no hay nada que mostrar aquí.</p>
       ) : (
-        agruparPorDia(historialQuery.data).map((grupo) => (
-          <div key={grupo.dia} className={styles.grupo}>
-            <p className={styles.grupoTitulo}>{grupo.dia}</p>
-            {grupo.eventos.map((evento) => {
-              const { nombre, apellidoPaterno } = partirNombre(evento.actor)
-              return (
-                <div key={evento.id} className={styles.fila}>
-                  <Avatar nombre={nombre} apellidoPaterno={apellidoPaterno} fotoUrl={null} />
-                  <div className={styles.filaTextos}>
-                    <span className={styles.filaDescripcion}>{descripcionEvento(evento)}</span>
-                    <span className={styles.filaActor}>{evento.actor ?? 'Sistema'}</span>
+        <>
+          {agruparPorDia(eventos).map((grupo) => (
+            <div key={grupo.dia} className={styles.grupo}>
+              <p className={styles.grupoTitulo}>{grupo.dia}</p>
+              {grupo.eventos.map((evento) => {
+                const { nombre, apellidoPaterno } = partirNombre(evento.actor)
+                return (
+                  <div key={evento.id} className={styles.fila}>
+                    <Avatar nombre={nombre} apellidoPaterno={apellidoPaterno} fotoUrl={null} />
+                    <div className={styles.filaTextos}>
+                      <span className={styles.filaDescripcion}>{descripcionEvento(evento)}</span>
+                      <span className={styles.filaActor}>{evento.actor ?? 'Sistema'}</span>
+                    </div>
+                    <span className={styles.filaHora}>{formatearHora(evento.fecha)}</span>
                   </div>
-                  <span className={styles.filaHora}>{formatearHora(evento.fecha)}</span>
-                </div>
-              )
-            })}
-          </div>
-        ))
+                )
+              })}
+            </div>
+          ))}
+          {historialQuery.hasNextPage ? (
+            <div className={styles.cargarMas}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => historialQuery.fetchNextPage()}
+                disabled={historialQuery.isFetchingNextPage}
+              >
+                {historialQuery.isFetchingNextPage ? (
+                  <>
+                    <IconoCargando size={16} />
+                    Cargando…
+                  </>
+                ) : (
+                  'Cargar más'
+                )}
+              </Button>
+            </div>
+          ) : null}
+        </>
       )}
     </PanelLateral>
   )

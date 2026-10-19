@@ -63,3 +63,9 @@
   color: var(--color-text-muted);
   white-space: nowrap;
 }
+
+.cargarMas {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-4);
+}

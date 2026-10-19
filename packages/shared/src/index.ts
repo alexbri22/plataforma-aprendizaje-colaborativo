@@ -99,4 +99,4 @@ export { LONGITUD_MAXIMA_CONTENIDO_ELEMENTO } from './seguimiento.js'
 
 export type { ElementoDeEspacioEquipo } from './seguimiento.js'
 
-export type { CategoriaEvento, EventoHistorial } from './historial.js'
+export type { CategoriaEvento, EventoHistorial, PaginaHistorial } from './historial.js'

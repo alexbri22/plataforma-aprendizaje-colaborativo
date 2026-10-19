@@ -49,7 +49,10 @@ vi.mock('../historial/historial.api', async () => {
   const real = await vi.importActual<typeof import('../historial/historial.api')>(
     '../historial/historial.api',
   )
-  return { ...real, obtenerHistorial: vi.fn().mockResolvedValue([]) }
+  return {
+    ...real,
+    obtenerHistorial: vi.fn().mockResolvedValue({ eventos: [], cursorSiguiente: null }),
+  }
 })
 
 function renderPantalla(id: string) {

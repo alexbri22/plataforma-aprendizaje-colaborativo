@@ -1,4 +1,4 @@
-import type { EventoHistorial } from '@plataforma/shared'
+import type { PaginaHistorial } from '@plataforma/shared'
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? ''
 
@@ -21,12 +21,18 @@ async function leerMensajeError(respuesta: Response, mensajePorDefecto: string):
 }
 
 // GET /api/actividades/{id}/historial (nucleo §5.5, §11.2): consulta
-// cronológica mínima de este incremento, sin filtros (Fase B).
-export async function obtenerHistorial(idActividad: string): Promise<EventoHistorial[]> {
+// cronológica mínima de este incremento, sin filtros (Fase B), paginada por
+// cursor (nucleo §3.1). cursor es el id del último evento de la página
+// anterior; sin él, trae la primera página.
+export async function obtenerHistorial(
+  idActividad: string,
+  cursor?: string,
+): Promise<PaginaHistorial> {
+  const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''
   let respuesta: Response
   try {
     respuesta = await fetch(
-      `${BASE_URL}/api/actividades/${encodeURIComponent(idActividad)}/historial`,
+      `${BASE_URL}/api/actividades/${encodeURIComponent(idActividad)}/historial${query}`,
       {
         credentials: 'include',
       },
@@ -39,5 +45,5 @@ export async function obtenerHistorial(idActividad: string): Promise<EventoHisto
     throw new ErrorHistorial(await leerMensajeError(respuesta, 'No pudimos cargar el historial.'))
   }
 
-  return ((await respuesta.json()) as { eventos: EventoHistorial[] }).eventos
+  return (await respuesta.json()) as PaginaHistorial
 }

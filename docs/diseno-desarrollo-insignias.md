@@ -39,23 +39,26 @@ El deslinde sigue la misma regla que el documento del núcleo: es de nivel y no 
 
 ## **1.3 Dependencias con el núcleo**
 
-La regla de frontera del general (3.4) se cumple por servicio: Insignias nunca lee `membresias` ni `actividades` directamente.
+La regla de frontera del general (3.4) se cumple por servicio: Insignias nunca lee `membresias`, `actividades`, `equipos` ni `integrantes_equipo` directamente.
 
-| Qué consume                                 | Servicio del núcleo                              | Para qué                                                                    |
-| :------------------------------------------ | :----------------------------------------------- | :-------------------------------------------------------------------------- |
-| Membresía activa del actor con su actividad | `obtenerMembresiaActiva(idUsuario, idActividad)` | Rol, fechas de la actividad, y el 404 cuando no es miembro (3.3 del núcleo) |
-| Participantes activos de la actividad       | `listarParticipantes(idActividad)`               | Compañeros reconocibles y tamaño del equipo para el presupuesto             |
-| Registro de eventos                         | `registrarEvento(tx, evento)`                    | Evento de otorgamiento (8.3 del general). Pendiente, ver 1.4                |
+| Qué consume                                 | Servicio del núcleo                                | Para qué                                                                                          |
+| :------------------------------------------ | :------------------------------------------------- | :------------------------------------------------------------------------------------------------ |
+| Membresía activa del actor con su actividad | `obtenerMembresiaActiva(idUsuario, idActividad)`   | Rol, fechas de la actividad, y el 404 cuando no es miembro (3.3 del núcleo)                       |
+| Participantes activos de la actividad       | `listarParticipantes(idActividad)`                 | Compañeros reconocibles y presupuesto de quien organiza o co-organiza, que no tiene equipo propio |
+| Equipo que integra el actor                 | `obtenerIdEquipoDeMembresia(idMembresia)`          | Saber si un participante ya tiene equipo (sin uno, cero compañeros)                               |
+| Integrantes de un equipo                    | `listarIntegrantesDeEquipo(idEquipo, idActividad)` | Compañeros reconocibles y presupuesto de un participante (concepto §6, 4.6 del general, ver 1.4)  |
+| Registro de eventos                         | `registrarEvento(tx, evento)`                      | Evento de otorgamiento (8.3 del general). Pendiente, ver 1.4                                      |
 
 **La única dependencia en sentido inverso** es la que prevé 1.3 del núcleo: Cuentas consume el acumulado para mostrar rangos. Está implementada como una llamada a `acumuladoDeUsuario` desde `perfil.service.ts`, y no como una implementación vacía, porque Insignias llegó antes que el perfil.
 
 ## **1.4 Desviaciones vigentes respecto al contrato**
 
-Seis partes del contrato todavía no se cumplen. Cuatro dependen de piezas del núcleo que no existían o no estaban listas cuando se construyó el otorgamiento; dos son reglas del propio subsistema que están pendientes (10.2). En lugar de esperar, se implementó una aproximación cuyo contrato de API no cambia al llegar la pieza real. Se declaran aquí para que ninguna se tome por definitiva.
+Cinco partes del contrato todavía no se cumplen. Tres dependen de piezas del núcleo que no existían o no estaban listas cuando se construyó el otorgamiento; dos son reglas del propio subsistema que están pendientes (10.2). En lugar de esperar, se implementó una aproximación cuyo contrato de API no cambia al llegar la pieza real. Se declaran aquí para que ninguna se tome por definitiva.
+
+Resuelta: "se reconoce solo dentro del propio equipo" (concepto §6, 4.6 del general). Equipo ya existe; `companerosDe` (insignias.service.ts) acota compañeros, presupuesto y receptores válidos al equipo del actor cuando es participante — quien organiza o co-organiza sigue viendo toda la actividad, por el motivo que explica el comentario de ese módulo. Ni esquema ni forma de la API cambiaron.
 
 | Contrato                                                                                                                                                    | Hoy                                                                                                        | Al llegar la pieza                                                                                            |
 | :---------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------ |
-| Se reconoce solo dentro del propio equipo (concepto §6, 4.6 del general)                                                                                    | Los compañeros son todos los participantes activos de la actividad                                         | `listarCompaneros` se acota al equipo del actor; ni esquema ni API cambian                                    |
 | El otorgamiento ocurre en el periodo de cierre (6.1)                                                                                                        | La ventana se calcula con fechas: de `fecha_termino` a `fecha_termino + plazo_cierre_dias`                 | La verificación lee el estado `cierre`; el intervalo deja de calcularse aquí                                  |
 | El otorgamiento emite un evento de evaluación (8.3)                                                                                                         | No se emite                                                                                                | Se emite al aplicarse, no al guardar (3.6)                                                                    |
 | Validación ligera del organizador (concepto §6)                                                                                                             | El organizador ve todo con autoría, pero no hay alerta de reciprocidad ni descarte                         | Incremento propio (10.2)                                                                                      |

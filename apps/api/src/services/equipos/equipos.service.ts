@@ -4,6 +4,7 @@ import {
   SEMILLA_MAXIMA,
   TAMANO_MINIMO_EQUIPO,
   type Equipo,
+  type IntegranteEquipo,
   type ListaEquipos,
   type PropuestaEquipos,
 } from '@plataforma/shared'
@@ -241,6 +242,10 @@ async function colocarIntegrante(
       nombre: miembro.nombre,
       equipoAnterior: previo ? { id: previo.equipo.idEquipo, nombre: previo.equipo.nombre } : null,
       equipoNuevo: { id: equipo.idEquipo, nombre: equipo.nombre },
+      // listarHistorial (P-10) lo usa para decidir a quién le toca ver este
+      // evento: a quien integra el equipo de destino, y también a quien
+      // integraba el de origen si hubo uno (se fue de su equipo).
+      equipos: previo ? [equipo.idEquipo, previo.idEquipo] : [equipo.idEquipo],
     },
     categoria: 'estructura',
   })
@@ -377,6 +382,38 @@ export async function contextoEquipoParaSeguimiento(
   return { idActividad, membresia, esIntegrante: integrante !== null }
 }
 
+// Punto de entrada de Historial a los datos de Equipos (mismo principio de
+// contextoEquipoParaSeguimiento: "ningún módulo accede a los datos de otro
+// directamente", nucleo §1.2). Una membresía integra a lo más un equipo
+// (integrantes_equipo tiene idMembresia único): null si todavía no tiene uno
+// (p. ej. en formación) o nunca lo tuvo.
+export async function obtenerIdEquipoDeMembresia(idMembresia: string): Promise<string | null> {
+  const integrante = await prisma.integranteEquipo.findUnique({ where: { idMembresia } })
+  return integrante?.idEquipo ?? null
+}
+
+// Punto de entrada de Insignias a los datos de Equipos (mismo principio que
+// las dos funciones de arriba: nucleo §1.2, "ningún módulo accede a los
+// datos de otro directamente"). Incluye a quien organiza o co-organiza si
+// integra este equipo (general §7.3, puede hacerlo): a quien llama le toca
+// decidir si cuentan como "compañero" reconocible, igual que antes de
+// Equipos decidía con listarParticipantes (solo participantes).
+export async function listarIntegrantesDeEquipo(
+  idEquipo: string,
+  idActividad: string,
+): Promise<IntegranteEquipo[]> {
+  const [filas, miembros] = await Promise.all([
+    prisma.integranteEquipo.findMany({ where: { idEquipo }, select: { idMembresia: true } }),
+    listarMiembros(idActividad),
+  ])
+  const idsDelEquipo = new Set(filas.map((f) => f.idMembresia))
+  const porId = new Map(miembros.map((m) => [m.idMembresia, m]))
+  return [...idsDelEquipo]
+    .map((id) => porId.get(id))
+    .filter((m): m is MiembroDeActividad => m !== undefined && m.activa)
+    .map((m) => ({ idMembresia: m.idMembresia, nombre: m.nombre, rol: m.rol }))
+}
+
 // ---------------------------------------------------------------------------
 // Escrituras
 // ---------------------------------------------------------------------------
@@ -417,7 +454,8 @@ export async function crearEquipo(
       tipoEvento: 'equipo_creado',
       tipoEntidad: 'equipo',
       idEntidad: creado.idEquipo,
-      datos: { nombre: creado.nombre },
+      // equipos: ver el comentario de integrante_retirado.
+      datos: { nombre: creado.nombre, equipos: [creado.idEquipo] },
       categoria: 'estructura',
     })
 
@@ -543,6 +581,10 @@ export async function intercambiarIntegrantes(
           de: { id: filaB.equipo.idEquipo, nombre: filaB.equipo.nombre },
           a: { id: filaA.equipo.idEquipo, nombre: filaA.equipo.nombre },
         },
+        // listarHistorial (P-10): visible para quien integra cualquiera de
+        // los dos equipos del intercambio, no solo uno — el movimiento es de
+        // ambos a la vez.
+        equipos: [filaA.equipo.idEquipo, filaB.equipo.idEquipo],
       },
       categoria: 'estructura',
     })
@@ -596,6 +638,9 @@ export async function retirarIntegrante(
         idMembresia: miembro.idMembresia,
         nombre: miembro.nombre,
         equipo: { id: equipo.idEquipo, nombre: equipo.nombre },
+        // listarHistorial (P-10) lo usa para acotar la visibilidad a quien
+        // integra este equipo.
+        equipos: [idEquipo],
       },
       categoria: 'estructura',
     })
@@ -660,7 +705,9 @@ export async function editarEquipo(
       tipoEvento: 'equipo_modificado',
       tipoEntidad: 'equipo',
       idEntidad: idEquipo,
-      datos: { nombre: actual.nombre, antes, despues },
+      // equipos: ver el comentario de integrante_retirado, listarHistorial
+      // (P-10) lo usa para acotar la visibilidad.
+      datos: { nombre: actual.nombre, antes, despues, equipos: [idEquipo] },
       categoria: 'estructura',
     })
   })
@@ -710,6 +757,10 @@ export async function eliminarEquipo(idEquipo: string, idUsuarioActor: string): 
           idMembresia: i.idMembresia,
           nombre: nombreMiembro.get(i.idMembresia) ?? '',
         })),
+        // equipos: ver el comentario de integrante_retirado. Sigue sirviendo
+        // aunque el equipo ya no exista: lo que filtra es si el actor lo
+        // integraba, y eso vive en integrantes_equipo, no en equipos.
+        equipos: [idEquipo],
       },
       categoria: 'estructura',
     })

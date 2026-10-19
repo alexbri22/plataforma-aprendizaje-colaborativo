@@ -87,6 +87,20 @@ async function montarActividad(numParticipantes: number, terminoHaceDias = 1): P
     })
     participantes.push({ ...cuenta, idMembresia: m.idMembresia })
   }
+
+  // Compañeros reconocibles (concepto §6, 4.6 del general) salen del propio
+  // equipo: sin uno, nadie es compañero de nadie. Un solo equipo con todos
+  // los participantes reproduce el escenario "todos son compañeros" que
+  // estas pruebas ya asumían antes de Equipos.
+  if (participantes.length > 0) {
+    const equipo = await prisma.equipo.create({
+      data: { idActividad: actividad.idActividad, nombre: 'Único' },
+    })
+    await prisma.integranteEquipo.createMany({
+      data: participantes.map((p) => ({ idEquipo: equipo.idEquipo, idMembresia: p.idMembresia })),
+    })
+  }
+
   return {
     id: actividad.idActividad,
     organizador: { ...org, idMembresia: membresiaOrg.idMembresia },
@@ -96,6 +110,36 @@ async function montarActividad(numParticipantes: number, terminoHaceDias = 1): P
 
 function reconocer(idMembresiaReceptor: string, categoria = 'liderazgo', frase = 'Nos destrabó') {
   return { idMembresiaReceptor, categoria, frase }
+}
+
+// Para probar el acotamiento por equipo (nucleo §1.2, concepto §6): reparte
+// a los participantes de montarActividad en los equipos que indique
+// `tamanos`, en vez del único equipo que montarActividad arma por defecto.
+async function montarActividadConEquipos(
+  tamanos: number[],
+): Promise<Escenario & { equipos: { id: string; participantes: Miembro[] }[] }> {
+  const total = tamanos.reduce((a, b) => a + b, 0)
+  const base = await montarActividad(total)
+  await prisma.integranteEquipo.deleteMany({
+    where: { idMembresia: { in: base.participantes.map((p) => p.idMembresia) } },
+  })
+  await prisma.equipo.deleteMany({ where: { idActividad: base.id } })
+
+  const equipos: { id: string; participantes: Miembro[] }[] = []
+  let cursor = 0
+  for (const [i, tamano] of tamanos.entries()) {
+    const integrantes = base.participantes.slice(cursor, cursor + tamano)
+    cursor += tamano
+    const equipo = await prisma.equipo.create({
+      data: { idActividad: base.id, nombre: `Equipo ${i + 1}` },
+    })
+    await prisma.integranteEquipo.createMany({
+      data: integrantes.map((p) => ({ idEquipo: equipo.idEquipo, idMembresia: p.idMembresia })),
+    })
+    equipos.push({ id: equipo.idEquipo, participantes: integrantes })
+  }
+
+  return { ...base, equipos }
 }
 
 beforeAll(async () => {
@@ -142,6 +186,40 @@ describe('GET /api/actividades/:id/reconocimientos', () => {
     expect(
       r.body.contexto.companeros.map((c: { idMembresia: string }) => c.idMembresia),
     ).not.toContain(yo.idMembresia)
+  })
+
+  // Concepto §6 y 4.6 del general: compañeros reconocibles son los del
+  // propio equipo, no toda la actividad. Antes de Equipos esto era una
+  // deviación documentada (docs/diseno-desarrollo-insignias.md §1.4).
+  it('un participante solo ve y puede reconocer a los de su propio equipo, no a los de otro', async () => {
+    const { id, equipos } = await montarActividadConEquipos([3, 3])
+    const [yo, ...restoDelMio] = equipos[0].participantes
+    const otroEquipo = equipos[1].participantes
+
+    const r = await request(app)
+      .get(`/api/actividades/${id}/reconocimientos`)
+      .set('Cookie', yo.cookie)
+
+    expect(r.status).toBe(200)
+    const idsCompaneros = r.body.contexto.companeros
+      .map((c: { idMembresia: string }) => c.idMembresia)
+      .sort()
+    expect(idsCompaneros).toEqual(restoDelMio.map((p) => p.idMembresia).sort())
+    for (const ajenoAlEquipo of otroEquipo) {
+      expect(idsCompaneros).not.toContain(ajenoAlEquipo.idMembresia)
+    }
+    // Presupuesto por el tamaño de SU equipo (3: 33 % de 2 compañeros,
+    // redondeado hacia arriba, es 1), no el de toda la actividad (6).
+    expect(r.body.contexto.presupuesto).toBe(1)
+
+    // No es solo que no aparezca en la lista: intentar reconocer a alguien
+    // de otro equipo se rechaza explícitamente.
+    const intento = await request(app)
+      .put(`/api/actividades/${id}/reconocimientos`)
+      .set('Cookie', yo.cookie)
+      .send({ reconocimientos: [reconocer(otroEquipo[0].idMembresia)] })
+    expect(intento.status).toBe(400)
+    expect(intento.body.detallePorCampo['reconocimientos[0].idMembresiaReceptor']).toBeDefined()
   })
 
   it('no da presupuesto a quien organiza', async () => {
