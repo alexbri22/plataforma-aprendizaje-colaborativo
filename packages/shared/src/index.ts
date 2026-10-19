@@ -110,3 +110,43 @@ export type {
 } from './seguimiento.js'
 
 export type { CategoriaEvento, EventoHistorial, PaginaHistorial } from './historial.js'
+
+export {
+  AREAS_HABILIDAD,
+  DURACION_MAXIMA_RECURSO_MIN,
+  ELEMENTOS_COLABORACION,
+  ESTATUS_RECURSO,
+  ETIQUETAS_AREA,
+  ETIQUETAS_ELEMENTO,
+  ETIQUETAS_ESTATUS_RECURSO,
+  ETIQUETAS_SECCION,
+  ETIQUETAS_TIPO_RECURSO,
+  LARGO_MAXIMO_RECURSO,
+  MAX_BYTES_ARCHIVO_RECURSO,
+  POR_PAGINA_ADMIN,
+  POR_PAGINA_MAXIMA,
+  POR_PAGINA_PUBLICA,
+  SECCIONES_FORMATIVAS,
+  TIPOS_ARCHIVO_RECURSO,
+  TIPOS_CON_ARCHIVO,
+  TIPOS_CON_URL,
+  TIPOS_LECTURA,
+  TIPOS_RECURSO,
+  esAreaHabilidad,
+  esElementoColaboracion,
+  esEstatusRecurso,
+  esSeccionFormativa,
+  esTipoArchivoRecurso,
+  esTipoRecurso,
+  esUrlSegura,
+  normalizarBusqueda,
+} from './formacion.js'
+
+export type {
+  AreaHabilidad,
+  ElementoColaboracion,
+  EstatusRecurso,
+  Paginacion,
+  SeccionFormativa,
+  TipoRecurso,
+} from './formacion.js'

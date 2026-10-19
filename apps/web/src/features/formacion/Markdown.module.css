@@ -1,0 +1,119 @@
+/* Lectura calmada, contenido primero y ancho cómodo
+   (docs/diseno-desarrollo-formacion.md §10.1). */
+.markdown {
+  max-width: var(--layout-copy-max);
+  color: var(--color-text);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+}
+
+.markdown > :first-child {
+  margin-top: 0;
+}
+
+.markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown p,
+.markdown ul,
+.markdown ol,
+.markdown blockquote {
+  margin: 0 0 var(--space-4);
+  text-wrap: pretty;
+}
+
+.markdown h2,
+.markdown h3,
+.markdown h4 {
+  margin: var(--space-8) 0 var(--space-3);
+  color: var(--color-text);
+  line-height: var(--line-height-tight);
+  text-wrap: balance;
+}
+
+.markdown h2 {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+}
+
+.markdown h3 {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.markdown h4 {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+}
+
+.markdown ul,
+.markdown ol {
+  padding-left: var(--space-6);
+}
+
+.markdown li + li {
+  margin-top: var(--space-2);
+}
+
+.markdown strong {
+  font-weight: var(--font-weight-semibold);
+}
+
+.markdown code {
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  font-family: var(--font-family-mono);
+  font-size: 0.9em;
+}
+
+.markdown a {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.markdown a:hover {
+  color: var(--color-primary-hover);
+}
+
+.markdown a:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Fondo sutil y borde completo, nunca una franja de color a un lado
+   (DESIGN.md, "Don't" sobre border-left como acento). */
+.markdown blockquote {
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.tablaContenedor {
+  margin: 0 0 var(--space-4);
+  overflow-x: auto;
+}
+
+.markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.markdown th,
+.markdown td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.markdown th {
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-semibold);
+}

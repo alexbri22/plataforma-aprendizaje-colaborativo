@@ -16,6 +16,7 @@ export type SeccionApp =
   | 'perfil'
   | 'recursos'
   | 'cuentas'
+  | 'contenido'
 
 interface ItemNav {
   id: SeccionApp
@@ -213,6 +214,7 @@ const ITEMS_NAV: ItemNav[] = [
 // herramientas de administración se agregan aquí y aparecen dentro del grupo.
 const ITEMS_NAV_ADMIN: ItemNav[] = [
   { id: 'cuentas', etiqueta: 'Cuentas', to: '/admin/cuentas', Icono: IconoCuentas },
+  { id: 'contenido', etiqueta: 'Contenido', to: '/admin/contenido', Icono: IconoRecursos },
 ]
 
 function ItemNavLink({ item, activo }: { item: ItemNav; activo: boolean }) {

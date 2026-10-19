@@ -30,16 +30,18 @@ export function Encabezado() {
               Insignias
             </Link>
             {esAdministrador ? (
-              <Link to="/admin/cuentas" className={styles.navLink}>
-                Cuentas
-              </Link>
+              <>
+                <Link to="/admin/cuentas" className={styles.navLink}>
+                  Cuentas
+                </Link>
+                <Link to="/admin/contenido" className={styles.navLink}>
+                  Contenido
+                </Link>
+              </>
             ) : null}
-            {/* Sin destino todavía: el contenido formativo público no está
-                construido. Se queda como botón inerte hasta que exista, porque
-                un enlace que no lleva a ningún lado es peor que uno ausente. */}
-            <button type="button" className={styles.navLink}>
+            <Link to="/recursos" className={styles.navLink}>
               Recursos
-            </button>
+            </Link>
           </nav>
         </div>
       </header>
