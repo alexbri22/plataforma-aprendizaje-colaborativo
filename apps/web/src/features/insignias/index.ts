@@ -31,7 +31,7 @@ export {
   type ReconocimientoBorrador,
   type RitualReconocimientoProps,
 } from './RitualReconocimiento'
-export { useRecibidosEnPerfil } from './useReconocimientos'
+export { useRecibidosEnPerfil, useRitual } from './useReconocimientos'
 export type { ReconocimientoEnPerfil } from './insignias.api'
 export {
   VitrinaInsignias,

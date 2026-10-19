@@ -10,7 +10,7 @@
 import { PERMISOS_COORGANIZADOR_POR_DEFECTO, type FuncionSeguimiento } from '@plataforma/shared'
 import { prisma } from '../src/data/prisma.js'
 import { config } from '../src/config.js'
-import { crearActividad } from '../src/services/actividades/actividades.service.js'
+import { crearActividad, nombreCompleto } from '../src/services/actividades/actividades.service.js'
 import { hashContrasena } from '../src/services/cuentas/contrasena.js'
 
 const CONTRASENA = 'contrasena-larga'
@@ -119,27 +119,41 @@ interface Escenario {
   organizador: string
   participantes: string[]
   coorganizadores?: string[]
-  estado: 'inscripcion' | 'formacion_equipos'
+  estado: 'inscripcion' | 'formacion_equipos' | 'desarrollo' | 'cierre'
   formacion: 'autogestionado' | 'manual'
   equiposEsperados: number
   limites?: { minimo?: number; maximo?: number }
   // Equipos ya formados: nombre y quiénes los integran.
   equipos?: { nombre: string; integrantes: string[] }[]
+  // Por defecto hoy y hoy+60 (abajo). Un escenario que ya debe verse en
+  // desarrollo o cierre necesita fechaTermino en el pasado: la ventana de
+  // reconocimiento (insignias.service.ts, función ventana()) se calcula a
+  // partir de esa fecha y de plazoCierreDias, no del campo estado.
+  fechaInicio?: Date
+  fechaTermino?: Date
+  plazoCierreDias?: number
 }
 
-async function sembrar(escenario: Escenario, idPorCorreo: Map<string, string>) {
-  const idUsuario = (correoLocal: string) => idPorCorreo.get(correoLocal) as string
+async function sembrar(
+  escenario: Escenario,
+  idPorCorreo: Map<string, { id: string; nombreCompleto: string }>,
+) {
+  const idUsuario = (correoLocal: string) => idPorCorreo.get(correoLocal)!.id
 
-  const actividad = await crearActividad(idUsuario(escenario.organizador), {
-    nombre: escenario.nombre,
-    objetivo: 'Datos de prueba para recorrer la aplicación.',
-    informacionGeneral: 'Actividad creada por el script de sembrado de desarrollo.',
-    fechaInicio: fecha(0),
-    fechaTermino: fecha(60),
-    fechaLimiteInscripcion: fecha(7),
-    plazoCierreDias: 14,
-    numeroEquiposEsperado: escenario.equiposEsperados,
-  })
+  const actividad = await crearActividad(
+    idUsuario(escenario.organizador),
+    idPorCorreo.get(escenario.organizador)!.nombreCompleto,
+    {
+      nombre: escenario.nombre,
+      objetivo: 'Datos de prueba para recorrer la aplicación.',
+      informacionGeneral: 'Actividad creada por el script de sembrado de desarrollo.',
+      fechaInicio: escenario.fechaInicio ?? fecha(0),
+      fechaTermino: escenario.fechaTermino ?? fecha(60),
+      fechaLimiteInscripcion: fecha(7),
+      plazoCierreDias: escenario.plazoCierreDias ?? 14,
+      numeroEquiposEsperado: escenario.equiposEsperados,
+    },
+  )
 
   const membresia: Record<string, string> = {}
   for (const correoLocal of escenario.participantes) {
@@ -193,7 +207,7 @@ async function main() {
   await limpiar()
   const hash = await hashContrasena(CONTRASENA)
 
-  const idPorCorreo = new Map<string, string>()
+  const idPorCorreo = new Map<string, { id: string; nombreCompleto: string }>()
   const alumnos = NOMBRES.map((nombre, i) => ({
     correoLocal: `alumno${String(i + 1).padStart(2, '0')}`,
     nombre,
@@ -206,7 +220,7 @@ async function main() {
   ]
   for (const p of personas) {
     const u = await crearUsuario(p.correoLocal, p.nombre, p.apellido, hash)
-    idPorCorreo.set(p.correoLocal, u.idUsuario)
+    idPorCorreo.set(p.correoLocal, { id: u.idUsuario, nombreCompleto: nombreCompleto(u) })
   }
 
   const a = (desde: number, hasta: number) =>
@@ -323,6 +337,32 @@ async function main() {
         { nombre: 'Gamma', integrantes: a(5, 6) },
         { nombre: 'Delta', integrantes: a(7, 8) },
       ],
+    },
+    idPorCorreo,
+  )
+
+  // Desarrollo → Cierre todavía no es una transición real de la app (ver
+  // docs/diseno-desarrollo-nucleo.md §7.5): este escenario fuerza el estado
+  // y las fechas a mano para poder probar lo que depende de él —
+  // reconocimiento (insignias) entre otros — mientras esa transición no
+  // exista. fechaTermino en el pasado y plazoCierreDias generoso para que
+  // la ventana de reconocimiento (insignias.service.ts, ventana()) esté
+  // abierta hoy.
+  await sembrar(
+    {
+      nombre: 'Seed · En cierre (probar reconocimiento)',
+      organizador: 'org',
+      participantes: a(1, 8),
+      estado: 'cierre',
+      formacion: 'autogestionado',
+      equiposEsperados: 2,
+      equipos: [
+        { nombre: 'Alfa', integrantes: a(1, 4) },
+        { nombre: 'Beta', integrantes: a(5, 8) },
+      ],
+      fechaInicio: fecha(-30),
+      fechaTermino: fecha(-3),
+      plazoCierreDias: 14,
     },
     idPorCorreo,
   )

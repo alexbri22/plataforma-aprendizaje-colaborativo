@@ -13,6 +13,10 @@ import {
   type MembresiaEnActividad,
   type RolActividad,
 } from '../actividades/actividades.service.js'
+import {
+  listarIntegrantesDeEquipo,
+  obtenerIdEquipoDeMembresia,
+} from '../equipos/equipos.service.js'
 
 /*
  * Reglas del otorgamiento (docs/concepto-producto.md §6 y
@@ -21,10 +25,12 @@ import {
  * cuenta receptores distintos, la pertenencia a la misma actividad cruza dos
  * membresías, y la ventana de tiempo depende de fechas de la actividad.
  *
- * Deviación documentada: mientras no exista Equipo, los "compañeros" de un
- * participante son todos los participantes de la actividad. El presupuesto se
- * calcula sobre ese conjunto. Al llegar los equipos, listarCompaneros se acota
- * y nada más cambia.
+ * Los "compañeros" de un participante son los integrantes de su propio
+ * equipo (concepto §6, 4.6 del general); el presupuesto se calcula sobre ese
+ * conjunto — ver companerosDe() abajo. Quien organiza o co-organiza no tiene
+ * este límite y ve a todos los participantes de la actividad: su papel es
+ * compensar a quien los pares no vieron (concepto §6), y eso solo funciona
+ * mirando la actividad completa, no un equipo a la vez.
  */
 
 const DIA_EN_MS = 24 * 60 * 60 * 1000
@@ -124,17 +130,42 @@ function esCategoria(valor: string): valor is CategoriaInsignia {
   return (CATEGORIAS_INSIGNIA as readonly string[]).includes(valor)
 }
 
+// Quién cuenta como "compañero" reconocible. Para un participante, los
+// demás integrantes de su propio equipo (concepto §6); sin equipo todavía
+// (p. ej. en formación, o nunca se le asignó uno), ninguno — no hay de
+// dónde sacar compañeros si no hay equipo. Para quien organiza o
+// co-organiza, toda la actividad (ver el porqué en el comentario de
+// arriba del archivo). Solo cuentan participantes en ambos casos: igual que
+// antes de Equipos, alguien que organiza o co-organiza no es "compañero"
+// reconocible aunque integre el mismo equipo.
+async function companerosDe(
+  membresia: MembresiaEnActividad,
+  rol: RolActividad,
+  idActividad: string,
+): Promise<{ idMembresia: string; nombre: string }[]> {
+  if (rol !== 'participante') {
+    const participantes = await listarParticipantes(idActividad)
+    return participantes
+      .filter((p) => p.idMembresia !== membresia.idMembresia)
+      .map(({ idMembresia, nombre }) => ({ idMembresia, nombre }))
+  }
+
+  const idEquipo = await obtenerIdEquipoDeMembresia(membresia.idMembresia)
+  if (!idEquipo) return []
+  const integrantes = await listarIntegrantesDeEquipo(idEquipo, idActividad)
+  return integrantes
+    .filter((i) => i.rol === 'participante' && i.idMembresia !== membresia.idMembresia)
+    .map(({ idMembresia, nombre }) => ({ idMembresia, nombre }))
+}
+
 export async function contextoDeReconocimiento(
   idUsuario: string,
   idActividad: string,
   ahora = new Date(),
 ): Promise<ContextoReconocimiento> {
   const membresia = await obtenerMembresiaActiva(idUsuario, idActividad)
-  const participantes = await listarParticipantes(idActividad)
   const rol = rolDe(membresia)
-  const companeros = participantes
-    .filter((p) => p.idMembresia !== membresia.idMembresia)
-    .map(({ idMembresia, nombre }) => ({ idMembresia, nombre }))
+  const companeros = await companerosDe(membresia, rol, idActividad)
 
   const { abierto, aplicados } = ventana(membresia.actividad, ahora)
 
@@ -143,9 +174,10 @@ export async function contextoDeReconocimiento(
     rol,
     idMembresiaActor: membresia.idMembresia,
     companeros,
-    // El tamaño del equipo incluye a quien reconoce: personasReconocibles ya
-    // descuenta a esa persona.
-    presupuesto: rol === 'participante' ? personasReconocibles(participantes.length) : null,
+    // companeros ya excluye a quien reconoce; +1 restaura el tamaño del
+    // equipo (o de la actividad, para quien organiza) que personasReconocibles
+    // espera, que a su vez descuenta esa misma persona.
+    presupuesto: rol === 'participante' ? personasReconocibles(companeros.length + 1) : null,
     fechaLimite: fechaLimiteDe(membresia.actividad).toISOString().slice(0, 10),
     abierto,
     aplicados,
@@ -196,10 +228,8 @@ export async function guardarMisReconocimientos(
   }
 
   const rol = rolDe(membresia)
-  const participantes = await listarParticipantes(idActividad)
-  const receptoresValidos = new Set(
-    participantes.map((p) => p.idMembresia).filter((id) => id !== membresia.idMembresia),
-  )
+  const companeros = await companerosDe(membresia, rol, idActividad)
+  const receptoresValidos = new Set(companeros.map((c) => c.idMembresia))
 
   const detallePorCampo: Record<string, string> = {}
   const vistos = new Set<string>()
@@ -244,7 +274,9 @@ export async function guardarMisReconocimientos(
   })
 
   if (rol === 'participante') {
-    const presupuesto = personasReconocibles(participantes.length)
+    // companeros ya excluye al actor; +1 restaura el tamaño del equipo que
+    // personasReconocibles espera (ver el comentario en contextoDeReconocimiento).
+    const presupuesto = personasReconocibles(companeros.length + 1)
     const receptores = new Set(validadas.map((v) => v.idMembresiaReceptor)).size
     if (receptores > presupuesto) {
       detallePorCampo.reconocimientos =

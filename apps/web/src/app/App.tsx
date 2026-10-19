@@ -20,6 +20,7 @@ import {
   PantallaReconocimientosDeParticipante,
 } from '../features/insignias'
 import { PantallaPerfil, PantallaPerfilDeUsuario } from '../features/perfil'
+import { PantallaEspacioEquipo } from '../features/seguimiento'
 import { queryClient } from './queryClient'
 import { RutaProtegida } from './RutaProtegida'
 
@@ -81,6 +82,36 @@ export function App() {
             element={
               <RutaProtegida>
                 <PantallaEquipos />
+              </RutaProtegida>
+            }
+          />
+          {/* Espacio de equipo (nucleo §9.1): shell de navegación propio
+              (AppShellEquipo), scoped por idEquipo y no por idActividad —
+              simétrico con PATCH/DELETE /api/equipos/{id}. Sirve tanto al
+              participante entrando a su propio equipo como a quien
+              organiza revisando el de otro. */}
+          <Route path="/equipos/:idEquipo" element={<Navigate to="metas" replace />} />
+          <Route
+            path="/equipos/:idEquipo/metas"
+            element={
+              <RutaProtegida>
+                <PantallaEspacioEquipo tipo="metas" />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="/equipos/:idEquipo/avances"
+            element={
+              <RutaProtegida>
+                <PantallaEspacioEquipo tipo="avances" />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="/equipos/:idEquipo/recursos"
+            element={
+              <RutaProtegida>
+                <PantallaEspacioEquipo tipo="recursos" />
               </RutaProtegida>
             }
           />

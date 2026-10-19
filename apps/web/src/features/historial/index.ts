@@ -1,0 +1,1 @@
+export { PanelHistorial } from './PanelHistorial'
