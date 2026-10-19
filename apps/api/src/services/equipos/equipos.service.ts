@@ -106,11 +106,16 @@ async function cargarEquipos(
     if (idEquipo) {
       porId.get(idEquipo)?.integrantes.push({
         idMembresia: miembro.idMembresia,
+        idUsuario: miembro.idUsuario,
         nombre: miembro.nombre,
         rol: miembro.rol,
       })
     } else if (miembro.rol === 'participante') {
-      sinEquipo.push({ idMembresia: miembro.idMembresia, nombre: miembro.nombre })
+      sinEquipo.push({
+        idMembresia: miembro.idMembresia,
+        idUsuario: miembro.idUsuario,
+        nombre: miembro.nombre,
+      })
     }
   }
 

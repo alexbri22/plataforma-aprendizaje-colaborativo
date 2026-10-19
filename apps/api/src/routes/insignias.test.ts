@@ -407,6 +407,11 @@ describe('visibilidad de lo recibido', () => {
       .get(`/api/actividades/${id}/participantes/${a.idMembresia}/reconocimientos`)
       .set('Cookie', organizador.cookie)
     expect(org.status).toBe(200)
+    expect(org.body.participante).toEqual({
+      idMembresia: a.idMembresia,
+      idUsuario: a.idUsuario,
+      nombre: a.nombre + ' Lovelace',
+    })
     expect(org.body.reconocimientos[0].otorgadoPor).toBe('P0 Lovelace')
 
     const par = await request(app)

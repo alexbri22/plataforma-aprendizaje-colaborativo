@@ -200,7 +200,10 @@ describe('PantallaResumenActividad', () => {
 
     renderPantalla(ACTIVIDAD_BASE.id)
 
-    expect(await screen.findByText('Grace Hopper')).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: 'Grace Hopper' })).toHaveAttribute(
+      'href',
+      '/usuarios/p-1',
+    )
     expect(screen.getByText('Participantes (1)')).toBeInTheDocument()
   })
 
