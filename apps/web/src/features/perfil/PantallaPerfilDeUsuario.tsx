@@ -1,4 +1,5 @@
 import { Navigate, useParams } from 'react-router-dom'
+import { ETIQUETAS_NIVEL_ESTUDIOS } from '@plataforma/shared'
 import { AppShell } from '../../components/AppShell'
 import { Avatar, AvisoError, Card, IconoCargando } from '../../components/ui'
 import { VitrinaInsignias } from '../insignias'
@@ -48,14 +49,20 @@ export function PantallaPerfilDeUsuario() {
           fotoUrl={usuario.fotoUrl}
           tamano="lg"
         />
-        <h2 className={styles.nombre}>
-          {usuario.nombre} {usuario.apellidoPaterno} {usuario.apellidoMaterno}
-        </h2>
+        <div className={styles.identidad}>
+          <h2 className={styles.nombre}>
+            {usuario.nombre} {usuario.apellidoPaterno} {usuario.apellidoMaterno}
+          </h2>
+          <p className={styles.correo}>{usuario.correo}</p>
+          <p className={styles.estudios}>
+            {ETIQUETAS_NIVEL_ESTUDIOS[usuario.nivelEstudios]} · {usuario.institucionEducativa}
+          </p>
+        </div>
       </Card>
 
-      {/* Misma estructura que Mi perfil: cabecera con foto y nombre, y el grupo
-          de insignias. Los datos generales no aparecen: de otra persona solo
-          se ven nombre, foto y rangos (docs/diseno-desarrollo-nucleo.md §6.3). */}
+      {/* Misma estructura que Mi perfil, de solo lectura: cabecera con foto y
+          datos básicos, y el grupo de insignias. Lo que le dijeron al
+          reconocerla no se muestra (docs/diseno-desarrollo-nucleo.md §6.3). */}
       <section className={styles.grupo} aria-labelledby="titulo-insignias">
         <h2 id="titulo-insignias" className={styles.tituloGrupo}>
           Insignias

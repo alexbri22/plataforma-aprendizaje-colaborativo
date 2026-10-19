@@ -22,13 +22,18 @@ export interface PerfilPropio extends UsuarioPublico {
   acumulado: Acumulado
 }
 
-/** Lo que otro usuario con sesión ve: nombre, foto y rangos. Ni correo ni
- * institución (§6.3: "el correo nunca se muestra"). */
+/** Lo que otro usuario con sesión ve: datos básicos de la cuenta (nombre,
+ * correo, nivel de estudios, institución), foto y rangos
+ * (docs/diseno-desarrollo-nucleo.md §6.3). Nunca la contraseña, el tipo ni el
+ * estado de la cuenta, ni lo que le dijeron al reconocerlo. */
 export interface PerfilBasico {
   idUsuario: string
   nombre: string
   apellidoPaterno: string
   apellidoMaterno: string
+  correo: string
+  nivelEstudios: NivelEstudios
+  institucionEducativa: string
   fotoUrl: string | null
   acumulado: Acumulado
 }
@@ -61,6 +66,9 @@ export async function obtenerPerfilBasico(idUsuario: string): Promise<PerfilBasi
     nombre: publico.nombre,
     apellidoPaterno: publico.apellidoPaterno,
     apellidoMaterno: publico.apellidoMaterno,
+    correo: publico.correo,
+    nivelEstudios: usuario.nivelEstudios,
+    institucionEducativa: usuario.institucionEducativa,
     fotoUrl: publico.fotoUrl,
     acumulado: await acumuladoDeUsuario(idUsuario),
   }
