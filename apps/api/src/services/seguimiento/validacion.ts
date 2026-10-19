@@ -1,6 +1,8 @@
 import {
   ELEMENTOS_ESPACIO_EQUIPO,
   ESTADOS_PERIODO,
+  LONGITUD_MAXIMA_CONTENIDO_BITACORA,
+  LONGITUD_MAXIMA_CONTENIDO_COMENTARIO,
   LONGITUD_MAXIMA_CONTENIDO_ELEMENTO,
   PERIODICIDADES,
   type ElementoEspacioEquipo,
@@ -112,6 +114,44 @@ export function validarDatosCrearElemento(cuerpo: unknown): {
 
 export function validarDatosActualizarElemento(cuerpo: unknown): { contenido: string } {
   const resultado = validarContenido(comoObjeto(cuerpo).contenido)
+  if ('error' in resultado) throw new ErrorValidacion({ contenido: resultado.error })
+  return resultado
+}
+
+// Bitácora individual (nucleo §9.3).
+
+function validarContenidoConLimite(
+  valor: unknown,
+  limite: number,
+  mensajeVacio: string,
+): { contenido: string } | { error: string } {
+  if (typeof valor !== 'string' || valor.trim() === '') return { error: mensajeVacio }
+  const contenido = valor.trim()
+  if (contenido.length > limite) {
+    return { error: `Debe tener a lo más ${limite} caracteres.` }
+  }
+  return { contenido }
+}
+
+export function validarDatosEntradaBitacora(cuerpo: unknown): { contenido: string } {
+  const resultado = validarContenidoConLimite(
+    comoObjeto(cuerpo).contenido,
+    LONGITUD_MAXIMA_CONTENIDO_BITACORA,
+    'Escribe el contenido de la entrada.',
+  )
+  if ('error' in resultado) throw new ErrorValidacion({ contenido: resultado.error })
+  return resultado
+}
+
+// Comentarios (nucleo §10.4): mismo cuerpo para crear y editar, sobre un
+// elemento o sobre una entrada de bitácora.
+
+export function validarDatosComentario(cuerpo: unknown): { contenido: string } {
+  const resultado = validarContenidoConLimite(
+    comoObjeto(cuerpo).contenido,
+    LONGITUD_MAXIMA_CONTENIDO_COMENTARIO,
+    'Escribe el contenido del comentario.',
+  )
   if ('error' in resultado) throw new ErrorValidacion({ contenido: resultado.error })
   return resultado
 }

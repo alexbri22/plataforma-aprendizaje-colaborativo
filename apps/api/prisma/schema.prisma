@@ -248,6 +248,8 @@ model Membresia {
   insigniasRecibidas InsigniaOtorgada[]      @relation("receptor")
   integranteEquipo   IntegranteEquipo?
   elementosDeEquipo  ElementoEspacioEquipo[]
+  entradasBitacora   Bitacora[]
+  comentarios        Comentario[]
 
   @@unique([idActividad, idUsuario])
   @@map("membresias")
@@ -389,6 +391,53 @@ enum TipoElemento {
   recursos
 
   @@map("tipo_elemento")
+}
+
+// docs/diseno-desarrollo-general.md §4.4 y §5.2; docs/diseno-desarrollo-nucleo.md
+// §9.3. Vinculada a la membresía y no al equipo, de modo que acompaña a la
+// persona si se la reasigna. La propiedad es del módulo de Seguimiento, que
+// es el único que lee y escribe esta tabla.
+model Bitacora {
+  idEntrada          String   @id @default(uuid()) @map("id_entrada")
+  idMembresia        String   @map("id_membresia")
+  contenido          String
+  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+
+  membresia Membresia @relation(fields: [idMembresia], references: [idMembresia], onDelete: Cascade)
+
+  @@index([idMembresia])
+  @@map("bitacoras")
+}
+
+enum TipoEntidadComentario {
+  elemento_espacio_equipo
+  bitacora
+
+  @@map("tipo_entidad_comentario")
+}
+
+// docs/diseno-desarrollo-general.md §4.4 y §5.3; docs/diseno-desarrollo-nucleo.md
+// §10.4. Un comentario apunta a un elemento concreto del espacio de equipo o
+// a una entrada de bitácora, nunca a un equipo ni a una persona en
+// abstracto: id_entidad es siempre un identificador presente, sin llave
+// foránea porque apunta a dos tablas distintas según tipo_entidad — mismo
+// patrón sin llave foránea que ya usa Historial (§4.4, "Transversales"). La
+// visibilidad no es un atributo propio: la hereda la entidad referida
+// (concepto §5.3).
+model Comentario {
+  idComentario       String                 @id @default(uuid()) @map("id_comentario")
+  idMembresiaAutor   String                 @map("id_membresia_autor")
+  tipoEntidad        TipoEntidadComentario  @map("tipo_entidad")
+  idEntidad          String                 @map("id_entidad")
+  contenido          String
+  fechaCreacion      DateTime               @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime               @updatedAt @map("fecha_actualizacion")
+
+  autor Membresia @relation(fields: [idMembresiaAutor], references: [idMembresia], onDelete: Cascade)
+
+  @@index([tipoEntidad, idEntidad])
+  @@map("comentarios")
 }
 
 // docs/diseno-desarrollo-general.md §4.4: referencia polimórfica hacia la

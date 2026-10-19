@@ -1,15 +1,26 @@
-import { parsearEstadoEspacioEquipo, type ElementoEspacioEquipo } from '@plataforma/shared'
-import type { ReactNode } from 'react'
+import {
+  parsearEstadoEspacioEquipo,
+  type ElementoEspacioEquipo,
+  type Equipo,
+} from '@plataforma/shared'
+import { useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { formatearFecha, useActividad, type Actividad } from '../features/actividades'
 import { useEquipo } from '../features/equipos/useEquipos'
 import { useCerrarSesionMutation, useSesion } from '../features/cuentas'
+import { PanelHistorial } from '../features/historial'
 import { useRitual } from '../features/insignias'
-import { Avatar, IconoCargando } from './ui'
+import { Avatar, Button, IconoCargando } from './ui'
 import { GrupoNav } from './GrupoNav'
 import styles from './AppShellEquipo.module.css'
 
 export type SeccionEspacioEquipo = ElementoEspacioEquipo
+
+// 'bitacora' no es un elemento del espacio de equipo (nucleo §9.3: está
+// vinculada a la membresía, no al equipo), pero su pantalla vive dentro de
+// este shell igual que las demás — el usuario nunca "sale" del equipo para
+// verla, así que necesita su propio valor de seccionActiva.
+export type SeccionEquipo = SeccionEspacioEquipo | 'bitacora'
 
 const ETIQUETAS: Record<SeccionEspacioEquipo, string> = {
   metas: 'Metas',
@@ -161,6 +172,71 @@ function IconoSalir() {
   )
 }
 
+// Mismo trazo que el de PantallaResumenActividad.tsx: una sola referencia
+// visual para "Historial" en toda la app.
+function IconoHistorial() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <path
+        d="M4.5 4.8 3.3 3.5M4.5 4.8 3.2 5.9"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M4.5 4.8A6.5 6.5 0 1 1 3.5 11"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <path
+        d="M10 7v3.3l2.3 1.6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+interface ItemIntegranteProps {
+  integrante: Equipo['integrantes'][number]
+  idEquipo: string
+  /** Organizador o co-organizador, con `bitacora_individual` habilitada
+   * (nucleo §9.3, P-06). El permiso concreto (`leer_bitacoras`) lo verifica
+   * el servidor, no este componente (general §7.4). */
+  puedeVerBitacora: boolean
+}
+
+// Cada integrante del equipo: su nombre lleva al perfil básico (abierto a
+// cualquier usuario registrado, general §7.2); "Bitácora" solo aparece para
+// quien organiza y solo sobre un participante — quien organiza o
+// co-organiza no tiene bitácora propia (general §7.3). Cuelga de
+// /equipos/{id}, no de /actividades/{id}: se queda en este mismo shell, no
+// lleva fuera del espacio de equipo.
+function ItemIntegrante({ integrante, idEquipo, puedeVerBitacora }: ItemIntegranteProps) {
+  return (
+    <div className={styles.integrante}>
+      <Link to={`/usuarios/${integrante.idUsuario}`} className={styles.integranteNombre}>
+        {integrante.nombre}
+      </Link>
+      {puedeVerBitacora && integrante.rol === 'participante' ? (
+        <Link
+          to={`/equipos/${idEquipo}/participantes/${integrante.idMembresia}/bitacora`}
+          className={styles.integranteAccion}
+        >
+          Bitácora
+        </Link>
+      ) : null}
+    </div>
+  )
+}
+
 interface ItemSeccionProps {
   seccion: SeccionEspacioEquipo
   idEquipo: string
@@ -183,10 +259,24 @@ function ItemSeccion({ seccion, idEquipo, activa }: ItemSeccionProps) {
 // implementado en features/insignias): son del equipo del actor, no de la
 // actividad completa, así que entran aquí y no en los accesos de gestión del
 // resumen. Llevan a pantallas con AppShell (el shell global), no con este —
-// salir del espacio de equipo a propósito es correcto, no un error.
-function ItemHonoramiento({ to, etiqueta }: { to: string; etiqueta: string }) {
+// salir del espacio de equipo a propósito es correcto, no un error. Mi
+// bitácora es distinta (ver más abajo): se queda en este mismo shell, por
+// eso acepta `activa` para resaltarse cuando es la sección actual.
+function ItemHonoramiento({
+  to,
+  etiqueta,
+  activa = false,
+}: {
+  to: string
+  etiqueta: string
+  activa?: boolean
+}) {
   return (
-    <Link to={to} className={styles.navItem}>
+    <Link
+      to={to}
+      className={[styles.navItem, activa ? styles.navItemActivo : null].filter(Boolean).join(' ')}
+      aria-current={activa ? 'page' : undefined}
+    >
       {etiqueta}
     </Link>
   )
@@ -203,7 +293,7 @@ function ItemProcesoPlaceholder({ etiqueta }: { etiqueta: string }) {
 
 export interface AppShellEquipoProps {
   idEquipo: string
-  seccionActiva: SeccionEspacioEquipo
+  seccionActiva: SeccionEquipo
   titulo: string
   acciones?: ReactNode
   children: ReactNode
@@ -230,6 +320,15 @@ export function AppShellEquipo({
   const soyIntegrante = equipoQuery.data
     ? equipoQuery.data.integrantes.some((i) => i.idMembresia === equipoQuery.data.idMiMembresia)
     : false
+  // Quién puede ver la bitácora de un integrante participante (nucleo §9.3,
+  // P-06): organizador o co-organizador, con la función habilitada. El
+  // permiso concreto (`leer_bitacoras`) no se expone al cliente — lo
+  // verifica el servidor, mismo criterio que el resto de accesos de
+  // conveniencia (general §7.4).
+  const puedeVerBitacora =
+    actividadQuery.data !== undefined &&
+    actividadQuery.data.rol !== 'participante' &&
+    actividadQuery.data.configuracion?.bitacora_individual === 'habilitada'
   // "Reconocer al equipo" y "Mis reconocimientos" no están abiertos siempre
   // (docs/diseno-desarrollo-insignias.md §3.5): mismo contexto del ritual que
   // AccionesReconocimiento usa en el resumen de la actividad para decidir lo
@@ -239,6 +338,7 @@ export function AppShellEquipo({
   const { usuario } = useSesion()
   const cerrarSesionMutacion = useCerrarSesionMutation()
   const navigate = useNavigate()
+  const [historialAbierto, setHistorialAbierto] = useState(false)
 
   async function manejarCerrarSesion() {
     await cerrarSesionMutacion.mutateAsync()
@@ -293,12 +393,13 @@ export function AppShellEquipo({
                   Icono={IconoEquipo}
                   contieneActivo
                 >
-                  {/* Sin enlace todavía (decisión pendiente: a dónde debería
-                      llevar el nombre de cada integrante). */}
                   {equipoQuery.data.integrantes.map((integrante) => (
-                    <span key={integrante.idMembresia} className={styles.integrante}>
-                      {integrante.nombre}
-                    </span>
+                    <ItemIntegrante
+                      key={integrante.idMembresia}
+                      integrante={integrante}
+                      idEquipo={idEquipo}
+                      puedeVerBitacora={puedeVerBitacora}
+                    />
                   ))}
                 </GrupoNav>
 
@@ -306,7 +407,7 @@ export function AppShellEquipo({
                   claveAlmacenamiento="co3.navEquipo.proyecto.abierto"
                   etiqueta="Proyecto colaborativo"
                   Icono={IconoProyecto}
-                  contieneActivo={SECCIONES.includes(seccionActiva)}
+                  contieneActivo={(SECCIONES as readonly SeccionEquipo[]).includes(seccionActiva)}
                 >
                   {/* Una sección deshabilitada no existe en la interfaz
                       (nucleo §4.3); la actual, si llegó por URL directa,
@@ -334,6 +435,21 @@ export function AppShellEquipo({
                     <ItemProcesoPlaceholder key={aspecto} etiqueta={aspecto} />
                   ))}
                 </GrupoNav>
+
+                {/* Bitácora individual (nucleo §9.3): vinculada a la propia
+                    membresía y no al equipo, pero vive aquí por el mismo
+                    motivo que Honoramiento más abajo — es personal de quien
+                    participa, mientras trabaja en su equipo, no una vista de
+                    gestión. Solo participante (general §7.3, "—" fijo para
+                    organizador y co-organizador). */}
+                {actividadQuery.data.rol === 'participante' &&
+                actividadQuery.data.configuracion?.bitacora_individual === 'habilitada' ? (
+                  <ItemHonoramiento
+                    to={`/equipos/${idEquipo}/bitacora`}
+                    etiqueta="Mi bitácora"
+                    activa={seccionActiva === 'bitacora'}
+                  />
+                ) : null}
 
                 {soyIntegrante && ritual && (ritual.abierto || ritual.aplicados) ? (
                   <GrupoNav
@@ -387,13 +503,31 @@ export function AppShellEquipo({
       <div className={styles.columna}>
         <header className={styles.topbar}>
           <h1 className={styles.titulo}>{titulo}</h1>
-          {acciones ? <div className={styles.acciones}>{acciones}</div> : null}
+          <div className={styles.acciones}>
+            {acciones}
+            {/* Mismo lugar y mismo botón que en el resumen de la actividad
+                (PantallaResumenActividad): arriba a la derecha, no en el
+                sidebar. Acotado a este equipo (nucleo §5.5) — "qué cambió
+                aquí recientemente" —, disponible a cualquier integrante. */}
+            <Button variant="ghost" size="sm" onClick={() => setHistorialAbierto(true)}>
+              <IconoHistorial />
+              Historial
+            </Button>
+          </div>
         </header>
 
         <main id="contenido" className={styles.contenido}>
           {children}
         </main>
       </div>
+
+      <PanelHistorial
+        idActividad={idActividad ?? ''}
+        idEquipo={idEquipo}
+        idMiMembresia={equipoQuery.data?.idMiMembresia}
+        abierto={historialAbierto}
+        onCerrar={() => setHistorialAbierto(false)}
+      />
     </div>
   )
 }

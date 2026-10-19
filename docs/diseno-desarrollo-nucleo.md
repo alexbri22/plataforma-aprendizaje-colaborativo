@@ -136,7 +136,7 @@ El mecanismo aporta dos propiedades. La primera es atomicidad: el evento se escr
 
 El manejador es PostgreSQL y el acceso se resuelve con Prisma (2.2 del general). Los servicios reciben el cliente de Prisma, o el cliente de transacción cuando operan dentro de la envoltura de 2.4, y no construyen consultas fuera de su propio módulo: la frontera entre módulos de 3.4 del general se sostiene por disciplina de servicio y no por una interfaz de repositorio, que sobre un cliente ya tipado añadiría una capa sin criterio propio.
 
-**Lo que Prisma no cubre y se escribe como migración con SQL.** Dos casos, ambos derivados de decisiones ya tomadas. La unicidad del correo sin distinguir mayúsculas (6.2) exige la extensión citext o un índice único sobre la forma en minúsculas, y ninguna se declara en el esquema. Las restricciones de verificación tampoco: de las ocho reglas de 4.6 del general, dos pueden reforzarse en la base de datos —que un comentario tenga exactamente un destino, y que solo las membresías de co-organizador tengan filas de permisos—, y hacerlo no sustituye a la prueba de contrato, que sigue siendo obligatoria, pero convierte un dato inconsistente en un error de escritura en lugar de en un dato que entra sin protestar.
+**Lo que Prisma no cubre y se escribe como migración con SQL.** Dos casos, ambos derivados de decisiones ya tomadas. La unicidad del correo sin distinguir mayúsculas (6.2) exige la extensión citext o un índice único sobre la forma en minúsculas, y ninguna se declara en el esquema. Las restricciones de verificación tampoco: de las siete reglas de 4.6 del general, una puede reforzarse en la base de datos —que solo las membresías de co-organizador tengan filas de permisos—, y hacerlo no sustituye a la prueba de contrato, que sigue siendo obligatoria, pero convierte un dato inconsistente en un error de escritura en lugar de en un dato que entra sin protestar.
 
 **Registro de decisión — Prisma frente a consultas escritas a mano.** La alternativa era un cliente de Postgres sin mapeador, con las consultas en SQL. Habría conservado la dirección de la verdad sin necesidad de verificación de deriva, y evitado la clase de consulta que un mapeador genera de forma poco eficiente sin que quien la escribió lo advierta. Se descartó porque el contrato tipado de extremo a extremo (3.4) pierde su continuidad en la frontera con la base de datos: cada resultado tendría que tiparse a mano, y ese tipado escrito por una persona es exactamente la clase de duplicado que diverge en silencio. Del enfoque descartado se conserva la posibilidad de bajar a SQL donde la consulta lo pida, en particular en la consulta del historial con filtros combinados.
 
@@ -329,8 +329,7 @@ La categoría, y no el tipo, determina la visibilidad del evento (8.1 del genera
 | Estructura | Reparto automático de participantes sin equipo ejecutado, con actor de tipo sistema             | Equipos     |
 | Estructura | Propuesta de equipos generada, con su semilla y lo que reemplazó                                | Equipos     |
 | Evaluación | Calificación asignada o modificada                                                              | Evaluación  |
-| Evaluación | Comentario dirigido a un equipo escrito                                                         | Evaluación  |
-| Evaluación | Comentario individual escrito                                                                   | Evaluación  |
+| Evaluación | Comentario escrito o editado sobre un elemento del espacio de equipo o una entrada de bitácora  | Evaluación  |
 | Evaluación | Insignia otorgada                                                                               | Insignias   |
 
 **Los cambios de configuración se registran todos.** No solo los que retiran a los participantes algo que ya estaban usando, conforme a la categoría de estructura de 8.1 del general. Registrar también las habilitaciones cuesta lo mismo y hace legible cómo evolucionó la actividad. Al quedar en la categoría de estructura, el cambio es visible para los participantes y no solo para quien organiza, lo que es coherente con que la configuración determina lo que cada uno puede hacer.
@@ -738,6 +737,8 @@ Metas, avances y recursos comparten una sola relación con un atributo de tipo (
 
 **Eliminación.** El evento conserva el contenido íntegro de lo eliminado (5.1). Es el caso que el documento general cita como motivo del historial: que quien organiza pueda ver que alguien borró el trabajo del equipo y qué era lo borrado.
 
+**Comentarios sobre un elemento.** Quien organiza y los co-organizadores con `calificar_y_comentar` pueden comentar una meta, un avance o un recurso. La visibilidad es la del elemento mismo: todo el equipo lo ve, porque el elemento es compartido (10.4).
+
 ## **9.2 Reportes de trabajo y sus cuatro modos**
 
 **Decisión de producto vigente — los avances son el reporte, con calendario de periodos.** El reporte de trabajo dejó de ser una función con cuatro estados (6.2 del general): es el elemento `avances` del espacio de equipo, con estado Deshabilitado / Opcional / Obligatorio y, opcionalmente, un calendario. Lo que sigue de esta sección describe el diseño original de cuatro modos y queda superado en lo relativo al estado y al calendario; el formato (texto libre o instrumento estructurado) sigue por definir en el incremento de Seguimiento.
@@ -765,32 +766,39 @@ La bitácora está vinculada a la membresía y no al equipo (5.2 del general), d
 
 Su visibilidad es la de la propuesta por defecto de P-06: el autor, quien organiza y los co-organizadores con el permiso correspondiente. La respuesta a esa pregunta cambia lo que los estudiantes escriben en ella, y por eso conviene resolverla antes de implementar la pantalla y no después.
 
+**Comentarios sobre una entrada.** Quien organiza y los co-organizadores con `calificar_y_comentar` pueden comentar una entrada de bitácora, con la misma visibilidad que la entrada misma: solo la ve quien ya podía leerla. Es una instancia del módulo de Comentarios (10.4), no un mecanismo propio de la bitácora.
+
 ## **9.4 Endpoints**
 
-| Método y ruta                                    | Quién                    | Qué hace                                                              |
-| :----------------------------------------------- | :----------------------- | :-------------------------------------------------------------------- |
-| GET /api/equipos/{id}/elementos                  | Integrante u organizador | Espacio del equipo, filtrable por tipo                                |
-| POST /api/equipos/{id}/elementos                 | Integrante               | Crea una meta, un avance o un recurso                                 |
-| PATCH /api/elementos/{id}                        | Integrante               | Edita el contenido                                                    |
-| DELETE /api/elementos/{id}                       | Integrante               | Elimina; el evento conserva el contenido                              |
-| GET /api/equipos/{id}/reportes                   | Integrante u organizador | Reportes del equipo con su periodo                                    |
-| POST /api/equipos/{id}/reportes                  | Integrante               | Crea el reporte del periodo                                           |
-| PATCH /api/reportes/{id}                         | Integrante               | Edita el reporte mientras la actividad lo admita                      |
-| GET /api/actividades/{id}/periodos               | Miembro                  | Periodos de reporte configurados                                      |
-| PUT /api/actividades/{id}/periodos               | Organizador              | Genera el calendario desde una periodicidad, o lo borra con `ninguna` |
-| PATCH /api/actividades/{id}/periodos/{idPeriodo} | Organizador              | Mueve las fechas de un periodo o lo cancela y reactiva                |
-| GET /api/actividades/{id}/bitacora               | Autor u organizador      | Entradas de bitácora, propias o de un participante                    |
-| POST /api/actividades/{id}/bitacora              | Participante             | Crea una entrada                                                      |
-| PATCH /api/bitacora/{id}                         | Autor                    | Edita una entrada propia                                              |
+| Método y ruta                                    | Quién                    | Qué hace                                                                 |
+| :----------------------------------------------- | :----------------------- | :----------------------------------------------------------------------- |
+| GET /api/equipos/{id}/elementos                  | Integrante u organizador | Espacio del equipo, filtrable por tipo                                   |
+| POST /api/equipos/{id}/elementos                 | Integrante               | Crea una meta, un avance o un recurso                                    |
+| PATCH /api/elementos/{id}                        | Integrante               | Edita el contenido                                                       |
+| DELETE /api/elementos/{id}                       | Integrante               | Elimina; el evento conserva el contenido                                 |
+| GET /api/equipos/{id}/reportes                   | Integrante u organizador | Reportes del equipo con su periodo                                       |
+| POST /api/equipos/{id}/reportes                  | Integrante               | Crea el reporte del periodo                                              |
+| PATCH /api/reportes/{id}                         | Integrante               | Edita el reporte mientras la actividad lo admita                         |
+| GET /api/actividades/{id}/periodos               | Miembro                  | Periodos de reporte configurados                                         |
+| PUT /api/actividades/{id}/periodos               | Organizador              | Genera el calendario desde una periodicidad, o lo borra con `ninguna`    |
+| PATCH /api/actividades/{id}/periodos/{idPeriodo} | Organizador              | Mueve las fechas de un periodo o lo cancela y reactiva                   |
+| GET /api/actividades/{id}/bitacora               | Autor u organizador      | Entradas de bitácora, propias o de un participante                       |
+| POST /api/actividades/{id}/bitacora              | Participante             | Crea una entrada                                                         |
+| PATCH /api/bitacora/{id}                         | Autor                    | Edita una entrada propia                                                 |
+| GET /api/elementos/{id}/comentarios              | Integrante u organizador | Comentarios sobre el elemento (10.4); visibilidad heredada del elemento  |
+| POST /api/elementos/{id}/comentarios             | Organizador              | Escribe un comentario sobre el elemento                                  |
+| GET /api/bitacora/{id}/comentarios               | Autor u organizador      | Comentarios sobre la entrada; visibilidad heredada de la bitácora (P-06) |
+| POST /api/bitacora/{id}/comentarios              | Organizador              | Escribe un comentario sobre la entrada                                   |
+| PATCH /api/comentarios/{id}                      | Autor del comentario     | Edita el comentario; el historial conserva el valor anterior             |
 
 ## **9.5 Pantallas**
 
-| Pantalla                    | Contenido                                                                                                                                                   |
-| :-------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Espacio del equipo          | Metas, avances y recursos en secciones separadas, cada una presente solo si la configuración la habilita. Los obligatorios ausentes se señalan sin bloquear |
-| Reportes del equipo         | Los reportes por periodo. En modo con fechas, los periodos sin reporte aparecen como pendientes                                                             |
-| Mi bitácora                 | Entradas propias en orden cronológico inverso, con la indicación de quién más puede leerlas                                                                 |
-| Seguimiento del organizador | Vista por equipo con el estado de cada función: qué reportó, qué falta y cuándo fue la última aportación                                                    |
+| Pantalla                    | Contenido                                                                                                                                                                                                                         |
+| :-------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Espacio del equipo          | Metas, avances y recursos en secciones separadas, cada una presente solo si la configuración la habilita. Los obligatorios ausentes se señalan sin bloquear. Cada elemento muestra, si existen, los comentarios de quien organiza |
+| Reportes del equipo         | Los reportes por periodo. En modo con fechas, los periodos sin reporte aparecen como pendientes                                                                                                                                   |
+| Mi bitácora                 | Entradas propias en orden cronológico inverso, con la indicación de quién más puede leerlas y, si existen, los comentarios recibidos en cada una                                                                                  |
+| Seguimiento del organizador | Vista por equipo con el estado de cada función: qué reportó, qué falta y cuándo fue la última aportación                                                                                                                          |
 
 ## **9.6 Pregunta abierta de este módulo**
 
@@ -849,34 +857,38 @@ Los tres instrumentos se responden durante el periodo de cierre (6.1 del general
 
 ## **10.4 Comentarios**
 
-Un comentario se dirige a un equipo o a un participante, y exactamente uno de los dos destinos está presente (4.6 del general). Los individuales son privados entre quien organiza y su destinatario, conforme al documento de concepto, y esa privacidad es la que recorta el alcance del historial visible para los demás participantes (7.3 del general).
+**Decisión de producto vigente — un comentario apunta a un elemento, no a un equipo ni a una persona.** El modelo anterior (comentario dirigido a un equipo o a un participante, con exactamente uno de los dos destinos presente) queda superado. Un comentario se escribe sobre un elemento concreto del trabajo — una meta, un avance, un recurso del espacio de equipo (9.1), o una entrada de bitácora (9.3) — mediante un `id_entidad` siempre presente y sin llave foránea, igual que el historial (4.4 del general, "Transversales"). Es continuo a lo largo del desarrollo y del cierre, no un paso exclusivo de este último (6.1 del general).
 
-Son editables mientras la actividad no esté archivada, y la edición conserva el valor anterior en el historial, por la misma razón que la calificación.
+**Visibilidad: heredada del elemento, no una regla propia.** Sobre una meta, un avance o un recurso, lo ve todo el equipo, porque el elemento mismo es compartido (9.1). Sobre una entrada de bitácora, solo lo ve su autor y quien organiza o co-organiza con `leer_bitacoras` (P-06): la bitácora sigue siendo privada, y un comentario sobre ella no puede ser más visible que ella.
+
+**Quién escribe.** El organizador y los co-organizadores con el permiso `calificar_y_comentar` (general §7.3), ya en el catálogo y sin cambio. Los participantes no escriben comentarios ni les responden: es retroalimentación de quien organiza hacia el trabajo, no una discusión bidireccional. Si conviniera que el destinatario pudiera responder, es una pregunta abierta nueva y no algo que este diseño resuelva.
+
+Son editables mientras la actividad no esté archivada, y la edición conserva el valor anterior en el historial, por la misma razón que la calificación (5.1). El evento que registra, categoría evaluación (5.2), es visible para quien organiza con independencia de que el propio comentario sea legible por el equipo o por el autor de la bitácora: ver el comentario en el elemento y ver el evento en el historial son dos cosas distintas (7.3 del general).
+
+Los endpoints y las pantallas de este módulo viven junto a los del elemento que comentan: ver 9.4 y 9.5.
 
 ## **10.5 Endpoints**
 
-| Método y ruta                                          | Quién                | Qué hace                                          |
-| :----------------------------------------------------- | :------------------- | :------------------------------------------------ |
-| GET /api/actividades/{id}/instrumentos                 | Miembro              | Instrumentos de la actividad con sus campos       |
-| POST /api/actividades/{id}/instrumentos                | Organizador          | Crea un instrumento a partir de la plantilla      |
-| PUT /api/instrumentos/{id}/campos                      | Organizador          | Define los campos, si no hay respuestas           |
-| POST /api/instrumentos/{id}/respuestas                 | Participante         | Responde el instrumento                           |
-| GET /api/instrumentos/{id}/respuestas                  | Organizador o sujeto | Respuestas, con el alcance de P-08                |
-| PUT /api/actividades/{id}/calificaciones/{idMembresia} | Organizador          | Asigna o corrige la calificación                  |
-| GET /api/actividades/{id}/calificaciones               | Organizador          | Todas las calificaciones de la actividad          |
-| POST /api/actividades/{id}/comentarios                 | Organizador          | Escribe un comentario a un equipo o a una persona |
-| GET /api/actividades/{id}/comentarios                  | Miembro              | Comentarios visibles para el actor                |
-| PATCH /api/comentarios/{id}                            | Autor                | Edita el comentario                               |
+| Método y ruta                                          | Quién                | Qué hace                                     |
+| :----------------------------------------------------- | :------------------- | :------------------------------------------- |
+| GET /api/actividades/{id}/instrumentos                 | Miembro              | Instrumentos de la actividad con sus campos  |
+| POST /api/actividades/{id}/instrumentos                | Organizador          | Crea un instrumento a partir de la plantilla |
+| PUT /api/instrumentos/{id}/campos                      | Organizador          | Define los campos, si no hay respuestas      |
+| POST /api/instrumentos/{id}/respuestas                 | Participante         | Responde el instrumento                      |
+| GET /api/instrumentos/{id}/respuestas                  | Organizador o sujeto | Respuestas, con el alcance de P-08           |
+| PUT /api/actividades/{id}/calificaciones/{idMembresia} | Organizador          | Asigna o corrige la calificación             |
+| GET /api/actividades/{id}/calificaciones               | Organizador          | Todas las calificaciones de la actividad     |
+
+Los de Comentarios están en 9.4, porque cuelgan del elemento o de la entrada de bitácora que comentan y no de la actividad.
 
 ## **10.6 Pantallas**
 
-| Pantalla              | Contenido                                                                                                                   |
-| :-------------------- | :-------------------------------------------------------------------------------------------------------------------------- |
-| Rúbrica               | Definición de criterios y puntajes. Bloqueada con el motivo si ya hay calificaciones                                        |
-| Calificar             | Lista de participantes con su calificación y su avance. En modo rúbrica, los criterios con el total calculado               |
-| Responder instrumento | Formulario construido a partir de la definición del instrumento (4.4). En evaluación por pares, un formulario por compañero |
-| Mis resultados        | Calificación propia, comentarios recibidos y lo que la evaluación por pares devuelva según P-08                             |
-| Comentarios           | Los emitidos por quien organiza, separados por destino                                                                      |
+| Pantalla              | Contenido                                                                                                                                                                         |
+| :-------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rúbrica               | Definición de criterios y puntajes. Bloqueada con el motivo si ya hay calificaciones                                                                                              |
+| Calificar             | Lista de participantes con su calificación y su avance. En modo rúbrica, los criterios con el total calculado                                                                     |
+| Responder instrumento | Formulario construido a partir de la definición del instrumento (4.4). En evaluación por pares, un formulario por compañero                                                       |
+| Mis resultados        | Calificación propia y lo que la evaluación por pares devuelva según P-08. Los comentarios recibidos se ven en el elemento o la entrada de bitácora que los originó (9.5), no aquí |
 
 ## **10.7 Pregunta abierta de este módulo**
 
@@ -909,13 +921,13 @@ Cada incremento es vertical y se considera terminado cuando tiene sus cuatro pie
 
 ## **11.3 Fase B — del 7 de septiembre al 2 de octubre**
 
-| Incremento            | Contenido                                                                     |
-| :-------------------- | :---------------------------------------------------------------------------- |
-| Seguimiento           | Reportes en sus tres modos activos, periodos de reporte y bitácora individual |
-| Motor de instrumentos | Instrumentos, campos y respuestas, con las plantillas por defecto             |
-| Calificación          | Modo directo y modo rúbrica, con el recálculo y la visibilidad de P-18        |
-| Evaluación            | Autoevaluaciones, evaluación por pares y comentarios                          |
-| Cierre y consulta     | Periodo de cierre y archivado, historial con filtros y agregación             |
+| Incremento            | Contenido                                                                                                                                               |
+| :-------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Seguimiento           | Reportes en sus tres modos activos, periodos de reporte, bitácora individual y comentarios sobre elementos del espacio de equipo y entradas de bitácora |
+| Motor de instrumentos | Instrumentos, campos y respuestas, con las plantillas por defecto                                                                                       |
+| Calificación          | Modo directo y modo rúbrica, con el recálculo y la visibilidad de P-18                                                                                  |
+| Evaluación            | Autoevaluaciones y evaluación por pares                                                                                                                 |
+| Cierre y consulta     | Periodo de cierre y archivado, historial con filtros y agregación                                                                                       |
 
 ## **11.4 Riesgos propios del núcleo**
 

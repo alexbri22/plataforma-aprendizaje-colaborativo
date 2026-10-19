@@ -20,7 +20,11 @@ import {
   PantallaReconocimientosDeParticipante,
 } from '../features/insignias'
 import { PantallaPerfil, PantallaPerfilDeUsuario } from '../features/perfil'
-import { PantallaEspacioEquipo } from '../features/seguimiento'
+import {
+  PantallaBitacoraDeParticipante,
+  PantallaEspacioEquipo,
+  PantallaMiBitacora,
+} from '../features/seguimiento'
 import { queryClient } from './queryClient'
 import { RutaProtegida } from './RutaProtegida'
 
@@ -112,6 +116,30 @@ export function App() {
             element={
               <RutaProtegida>
                 <PantallaEspacioEquipo tipo="recursos" />
+              </RutaProtegida>
+            }
+          />
+          {/* Bitácora individual (nucleo §9.3, §9.5): vinculada a la propia
+              membresía, no al equipo, pero vive bajo /equipos (decisión de
+              producto): se llega aquí desde el espacio de equipo y el
+              camino de vuelta es el mismo shell, no una salida hacia
+              /actividades. La propia (participante) y la de otro
+              (organizador/co-organizador con `leer_bitacoras`) son dos
+              rutas distintas porque son dos pantallas distintas: una se
+              escribe, la otra es de solo lectura. */}
+          <Route
+            path="/equipos/:idEquipo/bitacora"
+            element={
+              <RutaProtegida>
+                <PantallaMiBitacora />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="/equipos/:idEquipo/participantes/:idMembresia/bitacora"
+            element={
+              <RutaProtegida>
+                <PantallaBitacoraDeParticipante />
               </RutaProtegida>
             }
           />

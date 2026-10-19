@@ -141,6 +141,33 @@ async function cargarElementoConEquipo(idElemento: string): Promise<FilaElemento
   return fila
 }
 
+export interface ContextoElementoParaComentario extends ContextoEquipoParaSeguimiento {
+  idEquipo: string
+  tipoElemento: ElementoEspacioEquipo
+}
+
+// Punto de entrada de Comentarios a los datos de Seguimiento (nucleo §1.2:
+// "ningún módulo accede a los datos de otro directamente"). Reutiliza
+// exactamente el contexto de listarElementos: un comentario sobre un
+// elemento hereda la visibilidad del elemento mismo (concepto §5.3, nucleo
+// §10.4), así que la condición para leerlo es la misma que para leer el
+// elemento — "participante que no integra este equipo" se trata igual que
+// si el elemento no existiera (esIntegrante) — y la condición para
+// escribirlo es la del permiso de comentar, que resuelve exigirAccion con
+// la membresía que aquí se expone. idEquipo y tipoElemento viajan también:
+// comentarios.service.ts los guarda en el evento del historial para poder
+// construir el enlace de vuelta al elemento (`/equipos/{id}/{tipo}`) sin
+// otra consulta, y para que el historial acotado a un equipo (nucleo §5.5)
+// pueda incluir estos comentarios como propios de ese equipo.
+export async function contextoElementoParaComentario(
+  idElemento: string,
+  idUsuario: string,
+): Promise<ContextoElementoParaComentario> {
+  const actual = await cargarElementoConEquipo(idElemento)
+  const contexto = await contextoEquipoParaSeguimiento(actual.idEquipo, idUsuario)
+  return { ...contexto, idEquipo: actual.idEquipo, tipoElemento: actual.tipoElemento }
+}
+
 // PATCH /api/elementos/{id}: cualquier integrante del equipo edita el
 // contenido de cualquier elemento, no solo el que creó (nucleo §9.1).
 export async function editarElemento(

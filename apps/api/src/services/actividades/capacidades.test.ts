@@ -296,11 +296,17 @@ function contextoDeRol(rol: Rol): ContextoActorActividad {
   }
 }
 
-// Seguimiento (nucleo §9.1): comparte el catálogo de acciones de Actividades
-// (nucleo §2.2, "una sola función"), pero no es una acción de Equipos. Se
-// excluye aquí y se prueba en su propio describe más abajo, para no
-// contaminar la especificación celda por celda de Equipos.
-const ACCIONES_DE_SEGUIMIENTO: AccionActividad[] = ['usar_espacio_equipo']
+// Seguimiento y Evaluación (nucleo §9.1, §10.4): comparten el catálogo de
+// acciones de Actividades (nucleo §2.2, "una sola función"), pero no son
+// acciones de Equipos. Se excluyen aquí; 'usar_espacio_equipo' se prueba en
+// su propio describe más abajo, para no contaminar la especificación celda
+// por celda de Equipos. escribir_bitacora y comentar todavía no tienen el
+// suyo (pendiente, igual que el resto de Seguimiento/Evaluación).
+const ACCIONES_DE_SEGUIMIENTO: AccionActividad[] = [
+  'usar_espacio_equipo',
+  'escribir_bitacora',
+  'comentar',
+]
 
 const ACCIONES_DE_EQUIPOS = ACCIONES_ACTIVIDAD.filter(
   (accion) =>

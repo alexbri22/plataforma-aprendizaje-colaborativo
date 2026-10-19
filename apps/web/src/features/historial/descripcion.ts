@@ -14,6 +14,16 @@ const DESCRIPCIONES: Partial<Record<string, (datos: Record<string, unknown>) => 
   elemento_creado: (d) => `Agregó ${etiquetaTipo(d.tipo)}: "${recortar(d.extracto)}"`,
   elemento_modificado: (d) => `Editó ${etiquetaTipo(d.tipo)}`,
   elemento_eliminado: (d) => `Eliminó ${etiquetaTipo(d.tipo)}: "${recortar(d.contenido)}"`,
+  entrada_bitacora_creada: (d) => `Escribió en la bitácora: "${recortar(d.extracto)}"`,
+  entrada_bitacora_modificada: () => 'Editó una entrada de bitácora',
+  comentario_escrito: (d) =>
+    `Comentó ${etiquetaEntidadComentada(d.tipoEntidadComentada)}: "${recortar(d.extracto)}"`,
+  comentario_modificado: (d) =>
+    `Editó un comentario sobre ${etiquetaEntidadComentada(d.tipoEntidadComentada)}`,
+}
+
+function etiquetaEntidadComentada(valor: unknown): string {
+  return valor === 'bitacora' ? 'una entrada de bitácora' : 'un elemento del espacio de equipo'
 }
 
 function etiquetaTipo(valor: unknown): string {

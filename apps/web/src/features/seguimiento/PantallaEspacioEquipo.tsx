@@ -5,7 +5,7 @@ import {
   type ElementoEspacioEquipo,
 } from '@plataforma/shared'
 import { useState, type FormEvent } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { AppShellEquipo } from '../../components/AppShellEquipo'
 import {
   AvisoError,
@@ -40,7 +40,10 @@ const AYUDA: Record<ElementoEspacioEquipo, string> = {
   recursos: 'Enlaces o notas que el equipo necesita a la mano.',
 }
 
-const TAMANO_PAGINA = 10
+// Las tarjetas ahora empiezan colapsadas (TarjetaElemento): una fila
+// compacta cada una, así que una página más grande sigue cabiendo sin
+// desplazamiento excesivo.
+const TAMANO_PAGINA = 20
 
 function mensajeDe(error: unknown): string {
   return error instanceof Error
@@ -104,13 +107,29 @@ export interface PantallaEspacioEquipoProps {
 export function PantallaEspacioEquipo({ tipo }: PantallaEspacioEquipoProps) {
   const { idEquipo } = useParams<{ idEquipo: string }>()
   const id = idEquipo as string
+  const [parametros] = useSearchParams()
+  const idAAbrir = parametros.get('abrir')
   const [pagina, setPagina] = useState(0)
   const [errorPorId, setErrorPorId] = useState<Record<string, string>>({})
+  // Qué idAAbrir ya saltó de página, para no repetir el salto en cada
+  // render una vez la persona cambia de página a propósito.
+  const [idAAbrirProcesado, setIdAAbrirProcesado] = useState<string | null>(null)
 
   const equipoQuery = useEquipo(id)
   const idActividad = equipoQuery.data?.idActividad
   const actividadQuery = useActividad(idActividad ?? '', { enabled: Boolean(idActividad) })
   const elementosQuery = useElementos(id, tipo)
+
+  // Al llegar desde un evento del historial (nucleo §5.5): salta a la
+  // página donde está ese elemento, para que la tarjeta que se abre
+  // también quede visible sin tener que buscarla entre las demás páginas.
+  // Ajuste durante el render (no en un efecto): elementosQuery.data llega
+  // después del primer render, así que no hay otro momento seguro.
+  if (idAAbrir && idAAbrir !== idAAbrirProcesado && elementosQuery.data) {
+    const indice = elementosQuery.data.findIndex((e) => e.id === idAAbrir)
+    if (indice >= 0) setPagina(Math.floor(indice / TAMANO_PAGINA))
+    setIdAAbrirProcesado(idAAbrir)
+  }
 
   const crear = useCrearElementoMutation(id, tipo)
   const editar = useEditarElementoMutation(id, tipo)
@@ -139,6 +158,7 @@ export function PantallaEspacioEquipo({ tipo }: PantallaEspacioEquipoProps) {
   const capacidades: readonly AccionActividad[] = actividad.capacidades ?? []
   const soyIntegrante = equipo.integrantes.some((i) => i.idMembresia === equipo.idMiMembresia)
   const puedeEscribir = soyIntegrante && capacidades.includes('usar_espacio_equipo')
+  const puedeComentar = capacidades.includes('comentar')
 
   const estadoEspacio = actividad.configuracion?.espacio_equipo
     ? parsearEstadoEspacioEquipo(actividad.configuracion.espacio_equipo)
@@ -208,6 +228,9 @@ export function PantallaEspacioEquipo({ tipo }: PantallaEspacioEquipoProps) {
                       guardando={editar.isPending && editar.variables?.idElemento === elemento.id}
                       eliminando={eliminar.isPending && eliminar.variables === elemento.id}
                       error={errorPorId[elemento.id] ?? null}
+                      idMiMembresia={equipo.idMiMembresia}
+                      puedeComentar={puedeComentar}
+                      expandidaInicial={elemento.id === idAAbrir}
                       onGuardar={async (contenido) => {
                         limpiarError(elemento.id)
                         try {

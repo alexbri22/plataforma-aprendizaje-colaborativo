@@ -1,4 +1,71 @@
 .tarjeta {
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Encabezado fijo: igual colapsado o expandido (mismo criterio que
+   .grupoEncabezado en components/GrupoNav.module.css — la fila que ya se ve
+   no cambia de forma). El margen negativo cancela el padding de Card
+   (espacio normal del sistema de diseño) para que el botón llene la
+   tarjeta de borde a borde, sin depender del orden de las hojas de estilo
+   frente a Card.module.css. */
+.encabezado {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: none;
+  background: none;
+  font-family: var(--font-family-base);
+  text-align: left;
+  cursor: pointer;
+}
+
+.encabezado:hover {
+  background: var(--color-surface-hover);
+}
+
+.encabezado:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+
+.contenidoPreview {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.autoria {
+  flex-shrink: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.chevron {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  color: var(--color-text-muted);
+  transition: transform 0.2s ease;
+}
+
+.encabezado[aria-expanded='true'] .chevron {
+  transform: rotate(90deg);
+}
+
+/* Panel: lo que estaba escondido (contenido completo, acciones,
+   comentarios), debajo del encabezado y sin tocarlo. */
+.panel {
+  padding: 0 var(--space-4) var(--space-4);
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-4);
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -12,18 +79,6 @@
   white-space: pre-wrap;
 }
 
-.pie {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.autoria {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
-}
-
 .acciones {
   display: flex;
   gap: var(--space-2);
@@ -33,4 +88,10 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chevron {
+    transition: none;
+  }
 }

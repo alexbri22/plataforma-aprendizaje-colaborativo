@@ -33,6 +33,8 @@ export type CodigoError =
   | 'intercambio_invalido'
   | 'foto_invalida'
   | 'elemento_no_encontrado'
+  | 'entrada_bitacora_no_encontrada'
+  | 'comentario_no_encontrado'
 
 export abstract class ErrorDominio extends Error {
   abstract readonly codigo: CodigoError
@@ -356,6 +358,29 @@ export class ErrorElementoNoEncontrado extends ErrorDominio {
 
   constructor() {
     super('No encontramos este elemento, o no formas parte de su equipo.')
+  }
+}
+
+// Mismo criterio que ErrorElementoNoEncontrado: una entrada que no existe y
+// una que pertenece a la bitácora de otra persona se responden igual
+// (docs/diseno-desarrollo-nucleo.md §3.3, §9.3).
+export class ErrorEntradaBitacoraNoEncontrada extends ErrorDominio {
+  readonly codigo = 'entrada_bitacora_no_encontrada' as const
+  readonly status = 404
+
+  constructor() {
+    super('No encontramos esta entrada, o no puedes verla.')
+  }
+}
+
+// Mismo criterio: un comentario que no existe y uno que no escribió el
+// actor se responden igual (docs/diseno-desarrollo-nucleo.md §3.3, §10.4).
+export class ErrorComentarioNoEncontrado extends ErrorDominio {
+  readonly codigo = 'comentario_no_encontrado' as const
+  readonly status = 404
+
+  constructor() {
+    super('No encontramos este comentario, o no eres su autor.')
   }
 }
 

@@ -83,6 +83,14 @@ export interface ActividadRespuesta {
 export interface ActividadConCapacidades extends ActividadRespuesta {
   capacidades: AccionActividad[]
   configuracion: Record<FuncionSeguimiento, string>
+  // La propia membresía del actor en esta actividad (nucleo §9.3, §10.4):
+  // lo que necesita el cliente para saber si una fila con autoría (una
+  // entrada de bitácora, un comentario) es suya, sin tener que preguntarle
+  // al servidor otra vez. No es nueva autorización: el servidor ya la
+  // comprueba en cada escritura; esto solo evita una comparación redundante
+  // de "¿este autor soy yo?" fuera de las pantallas con equipo, donde
+  // equipo.idMiMembresia ya cumple el mismo papel.
+  idMiMembresia: string
 }
 
 // Forma mínima de membresía que necesita la función de autorización: la que
@@ -244,7 +252,7 @@ export function estadoFormacionEquipos(
 
 function aRespuestaConCapacidades(
   actividad: ActividadConMembresiasYConfiguracion,
-  membresiaActor: MembresiaConPermisos,
+  membresiaActor: MembresiaActor,
   nombreOrganizador: string,
 ): ActividadConCapacidades {
   return {
@@ -254,6 +262,7 @@ function aRespuestaConCapacidades(
       formacionEquipos: estadoFormacionEquipos(actividad.configuracion),
     }),
     configuracion: aMapaConfiguracion(actividad.configuracion),
+    idMiMembresia: membresiaActor.idMembresia,
   }
 }
 
@@ -546,7 +555,7 @@ export async function unirseConClave(
 // ya resolvió que el actor es miembro; aquí solo se construye la respuesta.
 export async function obtenerActividadPorId(
   idActividad: string,
-  membresiaActor: MembresiaConPermisos,
+  membresiaActor: MembresiaActor,
 ): Promise<ActividadConCapacidades> {
   const actividad = await cargarActividadConMembresiasYConfiguracion(idActividad)
   return aRespuestaConCapacidades(
@@ -581,6 +590,19 @@ export async function obtenerEstadoEspacioEquipo(
     where: { idActividad_funcion: { idActividad, funcion: 'espacio_equipo' } },
   })
   return fila ? parsearEstadoEspacioEquipo(fila.estado) : null
+}
+
+// Mismo criterio que obtenerEstadoEspacioEquipo: Seguimiento necesita saber
+// si la función está deshabilitada antes de aceptar una escritura en la
+// bitácora (general §6.2), y el cliente oculta el formulario por
+// conveniencia pero no es la barrera de autorización (general §3.5). Nulo
+// o "deshabilitada" se trata igual por quien llama: ninguno habilita la
+// escritura.
+export async function obtenerEstadoBitacoraIndividual(idActividad: string): Promise<string | null> {
+  const fila = await prisma.configuracionFuncion.findUnique({
+    where: { idActividad_funcion: { idActividad, funcion: 'bitacora_individual' } },
+  })
+  return fila?.estado ?? null
 }
 
 export type ActorTransicion = { tipo: 'usuario'; idUsuario: string } | { tipo: 'sistema' }
@@ -634,7 +656,7 @@ async function escribirCierreInscripcion(
 export async function cerrarInscripcion(
   idActividad: string,
   idUsuarioActor: string,
-  membresiaActor: MembresiaConPermisos,
+  membresiaActor: MembresiaActor,
 ): Promise<ActividadConCapacidades> {
   const actividad = await cargarActividadConMembresiasYConfiguracion(idActividad)
 
@@ -746,7 +768,7 @@ async function escribirInicioDeCierre(
 export async function iniciarCierre(
   idActividad: string,
   idUsuarioActor: string,
-  membresiaActor: MembresiaConPermisos,
+  membresiaActor: MembresiaActor,
 ): Promise<ActividadConCapacidades> {
   const actividad = await cargarActividadConMembresiasYConfiguracion(idActividad)
   exigirAccion(
@@ -777,7 +799,7 @@ export async function configurarFuncion(
   funcion: FuncionSeguimiento,
   estadoNuevo: string,
   idUsuarioActor: string,
-  membresiaActor: MembresiaConPermisos,
+  membresiaActor: MembresiaActor,
 ): Promise<ActividadConCapacidades> {
   await prisma.$transaction(async (tx) => {
     const actividad = await bloquearActividadParaConfiguracion(tx, idActividad)
@@ -837,7 +859,7 @@ export async function fijarLimitesEquipo(
   idActividad: string,
   cambios: CambiosLimitesEquipo,
   idUsuarioActor: string,
-  membresiaActor: MembresiaConPermisos,
+  membresiaActor: MembresiaActor,
 ): Promise<ActividadConCapacidades> {
   await prisma.$transaction(async (tx) => {
     const actividad = await bloquearActividadParaConfiguracion(tx, idActividad)
@@ -887,7 +909,7 @@ export async function agregarOPromoverCoorganizador(
   idUsuarioObjetivo: string,
   permisosSolicitados: PermisoCoorganizador[] | undefined,
   idUsuarioActor: string,
-  membresiaActor: MembresiaConPermisos,
+  membresiaActor: MembresiaActor,
 ): Promise<ActividadConCapacidades> {
   const actividad = await cargarActividadConMembresiasYConfiguracion(idActividad)
 
