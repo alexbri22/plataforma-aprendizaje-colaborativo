@@ -21,6 +21,9 @@ const OTRA: PerfilBasico = {
   nombre: 'Bruno',
   apellidoPaterno: 'Ruiz',
   apellidoMaterno: 'Mena',
+  correo: 'bruno@example.com',
+  nivelEstudios: 'posgrado',
+  institucionEducativa: 'IPN',
   fotoUrl: 'http://api.test/api/usuarios/u2/foto?v=1',
   acumulado: { companerismo: 9 },
 }
@@ -57,16 +60,17 @@ describe('PantallaPerfilDeUsuario', () => {
     vi.mocked(obtenerPerfilDeUsuario).mockReset()
   })
 
-  it('muestra nombre, foto y rangos de otra persona, sin datos de contacto', async () => {
+  it('muestra los datos básicos, la foto y los rangos de otra persona', async () => {
     vi.mocked(obtenerPerfilDeUsuario).mockResolvedValue(OTRA)
 
     renderPantalla('u2')
 
     expect(await screen.findByRole('heading', { name: 'Bruno Ruiz Mena' })).toBeInTheDocument()
+    expect(screen.getByText('bruno@example.com')).toBeInTheDocument()
+    expect(screen.getByText('Posgrado · IPN')).toBeInTheDocument()
     expect(screen.getByRole('figure', { name: 'Compañerismo, nivel Plata' })).toBeInTheDocument()
     // La vitrina ajena no se abre: no hay botones de insignia.
     expect(screen.queryByRole('button', { name: /Compañerismo/ })).not.toBeInTheDocument()
-    expect(screen.queryByText(/@/)).not.toBeInTheDocument()
     expect(
       document.querySelector('img[src="http://api.test/api/usuarios/u2/foto?v=1"]'),
     ).not.toBeNull()

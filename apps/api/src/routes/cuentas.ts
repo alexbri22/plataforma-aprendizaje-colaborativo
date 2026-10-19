@@ -125,8 +125,8 @@ cuentasRouter.get('/usuarios/:id/foto', exigirSesion, async (req, res) => {
     .send(foto.contenido)
 })
 
-// GET /api/usuarios/{id}: perfil básico de otro usuario, nombre y rangos
-// (§6.3). Nunca el correo.
+// GET /api/usuarios/{id}: perfil básico de otro usuario, con sus datos
+// básicos, foto y rangos (§6.3). Nunca la contraseña ni el estado de la cuenta.
 cuentasRouter.get('/usuarios/:id', exigirSesion, async (req, res) => {
   const usuario = await obtenerPerfilBasico(req.params.id as string)
   res.status(200).json({ usuario })

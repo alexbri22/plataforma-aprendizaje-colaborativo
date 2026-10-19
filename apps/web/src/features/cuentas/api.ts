@@ -38,13 +38,16 @@ export interface PerfilPropio extends Usuario {
   acumulado: PuntosPorCategoria
 }
 
-/** Lo que se ve de otra persona: nombre, foto y rangos. Nunca su correo
+/** Lo que se ve de otra persona: datos básicos, foto y rangos
  * (docs/diseno-desarrollo-nucleo.md §6.3). */
 export interface PerfilBasico {
   idUsuario: string
   nombre: string
   apellidoPaterno: string
   apellidoMaterno: string
+  correo: string
+  nivelEstudios: NivelEstudios
+  institucionEducativa: string
   fotoUrl: string | null
   acumulado: PuntosPorCategoria
 }

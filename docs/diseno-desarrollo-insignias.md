@@ -161,13 +161,13 @@ Las fechas de la actividad son de calendario; el término cuenta desde el inicio
 
 Resuelve P-09 del general en el sentido de su propuesta por defecto: anónimo hacia quien recibe entre pares, atribuido hacia quien organiza.
 
-| Quién                        | Qué ve                                                                                | Desde cuándo         |
-| :--------------------------- | :------------------------------------------------------------------------------------ | :------------------- |
-| Quien recibe                 | Categoría, frase, puntos y si vino de quien organiza. Nunca el autor par              | Cuando se aplica     |
-| Quien reconoció              | Su propio borrador, editable                                                          | Durante la ventana   |
-| Organizador y co-organizador | Lo recibido por cada participante, con el nombre de quien lo dio                      | En cualquier momento |
-| Otro participante            | Nada de lo que recibió un compañero. Un intento directo responde 403                  | —                    |
-| Cualquier usuario con sesión | Nombre, foto y nivel por categoría de otra persona. Ni frases, ni correo, ni progreso | Cuando se aplica     |
+| Quién                        | Qué ve                                                                           | Desde cuándo         |
+| :--------------------------- | :------------------------------------------------------------------------------- | :------------------- |
+| Quien recibe                 | Categoría, frase, puntos y si vino de quien organiza. Nunca el autor par         | Cuando se aplica     |
+| Quien reconoció              | Su propio borrador, editable                                                     | Durante la ventana   |
+| Organizador y co-organizador | Lo recibido por cada participante, con el nombre de quien lo dio                 | En cualquier momento |
+| Otro participante            | Nada de lo que recibió un compañero. Un intento directo responde 403             | —                    |
+| Cualquier usuario con sesión | Datos básicos, foto y nivel por categoría de otra persona. Ni frases ni progreso | Cuando se aplica     |
 
 **Lo que recibió alguien de quien organiza sí lleva atribución**, aunque no su nombre: la fuente `organizador` se muestra como "de quien organiza". El concepto lo quiere así porque el doble peso solo se entiende si se sabe de dónde vino.
 
@@ -216,7 +216,7 @@ Fuera de la ventana nadie otorga (409). Con la función deshabilitada, o sin el 
 | PATCH /api/usuarios/yo                                                | Usuario                      | Nombre y apellidos, o contraseña; nunca ambos en la misma petición (Cuentas)                      |
 | PUT y DELETE /api/usuarios/yo/foto                                    | Usuario                      | Sube la imagen como cuerpo crudo o la quita (Cuentas)                                             |
 | GET /api/usuarios/{id}/foto                                           | Usuario                      | La imagen, cacheable sin plazo: la URL lleva la fecha de la foto (Cuentas)                        |
-| GET /api/usuarios/{id}                                                | Usuario                      | Nombre, foto y acumulado de otra persona. Nunca el correo (Cuentas)                               |
+| GET /api/usuarios/{id}                                                | Usuario                      | Datos básicos, foto y acumulado de otra persona (Cuentas)                                         |
 
 **Errores.** 400 con detalle por campo cuando falla una validación del ritual, con la llave `reconocimientos[i].campo` para que el cliente marque la fila exacta, y `reconocimientos` para el presupuesto. 409 `fuera_de_plazo` fuera de la ventana. 403 `sin_permiso` cuando un participante pide lo de otro. Un receptor inválido produce un solo mensaje ("no es un compañero al que puedas reconocer") para tres casos distintos: no es de la actividad, no es participante o es el propio actor. Distinguirlos no ayuda a quien usa la interfaz y sí revela membresías ajenas.
 
@@ -264,16 +264,16 @@ Una insignia son dos capas: el marco del nivel (cinco PNG en `assets/marcos/`) y
 
 # **8\. El perfil**
 
-Es la pantalla de Mi perfil de 6.6 del núcleo, con las insignias como contenido central.
+Es la pantalla de Mi perfil de 6.6 del núcleo. No es un ítem de la navegación: se abre desde el nombre de la cuenta, al pie del menú. Debajo de la cabecera se divide en dos grupos, Datos generales e Insignias.
 
-| Sección       | Contenido                                                                                        |
-| :------------ | :----------------------------------------------------------------------------------------------- |
-| Identidad     | Foto o iniciales, nombre completo, correo (solo lo ve su dueño), nivel de estudios e institución |
-| Tus insignias | Vitrina interactiva; al elegir una, `DetalleInsignia` con nivel, avance y frases recibidas       |
-| Tus datos     | Nombre y apellidos. El correo no es editable (6.3 del núcleo)                                    |
-| Contraseña    | Actual, nueva y confirmación. Al cambiarla se cierran las demás sesiones (3.2 del núcleo)        |
+| Grupo           | Sección    | Contenido                                                                                        |
+| :-------------- | :--------- | :----------------------------------------------------------------------------------------------- |
+| Cabecera        | Identidad  | Foto o iniciales, nombre completo, correo (solo lo ve su dueño), nivel de estudios e institución |
+| Datos generales | Tus datos  | Nombre y apellidos. El correo no es editable (6.3 del núcleo)                                    |
+| Datos generales | Contraseña | Actual, nueva y confirmación. Al cambiarla se cierran las demás sesiones (3.2 del núcleo)        |
+| Insignias       | —          | Vitrina interactiva; al elegir una, `DetalleInsignia` con nivel, avance y frases recibidas       |
 
-El perfil de otra persona muestra nombre, foto y la vitrina de solo lectura, y se abre desde la lista de participantes. Abrir el propio identificador redirige a /perfil.
+El perfil de otra persona sigue la misma estructura, de solo lectura y sin el grupo de datos generales: cabecera con foto, nombre, correo, nivel de estudios e institución, y el grupo Insignias con la vitrina sin detalle. Se abre desde la lista de participantes. Abrir el propio identificador redirige a /perfil.
 
 **La foto se prepara en el navegador.** `prepararFoto` recorta al centro en cuadrado, respeta la orientación EXIF, reduce a 256 px y codifica en WebP, o en JPEG donde el navegador no sepa producir WebP. Mientras se prepara y se sube, los controles de foto quedan deshabilitados para que una segunda elección o "Quitar foto" no compitan con la primera.
 

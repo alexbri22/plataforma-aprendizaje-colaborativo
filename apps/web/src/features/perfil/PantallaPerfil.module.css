@@ -30,6 +30,7 @@
 .correo {
   margin: 0;
   color: var(--color-text-muted);
+  overflow-wrap: anywhere;
 }
 
 .estudios {
@@ -45,15 +46,30 @@
   margin-top: var(--space-3);
 }
 
+/* Un grupo reúne secciones afines bajo un título mayor: "Datos generales"
+   (tus datos y contraseña) e "Insignias". */
+.grupo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-bottom: var(--space-10);
+}
+
+.tituloGrupo {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  margin: 0;
+}
+
 .seccion {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  margin-bottom: var(--space-8);
 }
 
 .tituloSeccion {
-  font-size: var(--font-size-xl);
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-tight);
   margin: 0;
@@ -61,8 +77,8 @@
 
 .texto {
   margin: 0 0 var(--space-6);
-  max-width: 60ch;
   color: var(--color-text-muted);
+  text-wrap: pretty;
 }
 
 .vitrina {
