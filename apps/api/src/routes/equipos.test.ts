@@ -864,11 +864,7 @@ describe('capacidades en GET /api/actividades/:id', () => {
       (await request(app).get(`/api/actividades/${e.id}`).set('Cookie', cookie)).body.actividad
         .capacidades as string[]
 
-    expect(await capacidades(e.participantes[0].cookie)).toEqual([
-      'elegir_equipo',
-      'editar_equipo',
-      'usar_espacio_equipo',
-    ])
+    expect(await capacidades(e.participantes[0].cookie)).toEqual(['elegir_equipo', 'editar_equipo'])
     expect(await capacidades(e.organizador.cookie)).toEqual(
       expect.arrayContaining([
         'formar_equipos',
@@ -881,9 +877,6 @@ describe('capacidades en GET /api/actividades/:id', () => {
     expect(await capacidades(e.organizador.cookie)).not.toContain('generar_propuesta_equipos')
 
     await fijarFormacion(e, 'manual')
-    expect(await capacidades(e.participantes[0].cookie)).toEqual([
-      'editar_equipo',
-      'usar_espacio_equipo',
-    ])
+    expect(await capacidades(e.participantes[0].cookie)).toEqual(['editar_equipo'])
   })
 })

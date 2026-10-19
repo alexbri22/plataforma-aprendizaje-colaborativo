@@ -122,8 +122,9 @@ export async function crearElemento(
       tipoEntidad: 'elemento_espacio_equipo',
       idEntidad: creado.idElemento,
       // nucleo §5.1 ("creación: identificación legible de lo creado"): tipo y
-      // primeras líneas, no el contenido completo.
-      datos: { tipo, extracto: contenido.slice(0, 140) },
+      // primeras líneas, no el contenido completo. idEquipo: ver el
+      // comentario en editarElemento, listarHistorial lo usa para P-10.
+      datos: { tipo, extracto: contenido.slice(0, 140), idEquipo },
       categoria: 'aportacion',
     })
 
@@ -151,6 +152,19 @@ export async function editarElemento(
   const contexto = await contextoEquipoParaSeguimiento(actual.idEquipo, idUsuarioActor)
   await exigirEscrituraSobreEquipo(contexto)
 
+  // Mismo gate que crearElemento, repetido aquí y no solo ahí: la
+  // configuración de espacio_equipo puede cambiar libremente durante la
+  // formación (P-17 todavía no aplica, eso empieza en desarrollo), así que
+  // un elemento creado cuando su tipo estaba habilitado puede quedar
+  // deshabilitado después. Sin este gate, seguiría editable indefinidamente
+  // pese a estar deshabilitado — solo crearlo quedaría bloqueado.
+  const estadoEspacio = await obtenerEstadoEspacioEquipo(contexto.idActividad)
+  if (!estadoEspacio || estadoEspacio[actual.tipoElemento] === 'deshabilitado') {
+    throw new ErrorFaseNoPermiteAccion(
+      `No puedes editar ${actual.tipoElemento}: está deshabilitado en esta actividad.`,
+    )
+  }
+
   const fila = await prisma.$transaction(async (tx) => {
     if (contenido === actual.contenido) return actual
 
@@ -166,7 +180,15 @@ export async function editarElemento(
       tipoEvento: 'elemento_modificado',
       tipoEntidad: 'elemento_espacio_equipo',
       idEntidad: idElemento,
-      datos: { tipo: actual.tipoElemento, antes: actual.contenido, despues: contenido },
+      // idEquipo no es solo para mostrar: listarHistorial (P-10) lo usa para
+      // acotar lo que un participante ve a su propio equipo. No hay de dónde
+      // más sacarlo una vez eliminado el elemento (ver eliminarElemento).
+      datos: {
+        tipo: actual.tipoElemento,
+        antes: actual.contenido,
+        despues: contenido,
+        idEquipo: actual.idEquipo,
+      },
       categoria: 'aportacion',
     })
 
@@ -184,6 +206,14 @@ export async function eliminarElemento(idElemento: string, idUsuarioActor: strin
   const contexto = await contextoEquipoParaSeguimiento(actual.idEquipo, idUsuarioActor)
   await exigirEscrituraSobreEquipo(contexto)
 
+  // Mismo gate que editarElemento: ver el comentario ahí.
+  const estadoEspacio = await obtenerEstadoEspacioEquipo(contexto.idActividad)
+  if (!estadoEspacio || estadoEspacio[actual.tipoElemento] === 'deshabilitado') {
+    throw new ErrorFaseNoPermiteAccion(
+      `No puedes eliminar ${actual.tipoElemento}: está deshabilitado en esta actividad.`,
+    )
+  }
+
   await prisma.$transaction(async (tx) => {
     await tx.elementoEspacioEquipo.delete({ where: { idElemento } })
 
@@ -194,7 +224,9 @@ export async function eliminarElemento(idElemento: string, idUsuarioActor: strin
       tipoEvento: 'elemento_eliminado',
       tipoEntidad: 'elemento_espacio_equipo',
       idEntidad: idElemento,
-      datos: { tipo: actual.tipoElemento, contenido: actual.contenido },
+      // idEquipo: ver el comentario en editarElemento. Aquí es el único
+      // lugar donde sobrevive, porque la fila ya se borró arriba.
+      datos: { tipo: actual.tipoElemento, contenido: actual.contenido, idEquipo: actual.idEquipo },
       categoria: 'aportacion',
     })
   })

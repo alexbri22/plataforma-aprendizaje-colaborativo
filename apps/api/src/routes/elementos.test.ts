@@ -139,11 +139,16 @@ describe('POST /api/equipos/:id/elementos', () => {
     expect(respuesta.status).toBe(409)
   })
 
-  it('en formación ya se puede (el equipo existe desde ahí); en cierre ya no: 409', async () => {
+  it('no se puede escribir durante la formación (el espacio de equipo llega con el desarrollo); en cierre ya no: 409', async () => {
     const e = await actividadEnFormacion(2)
     const idEquipo = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
     await asignar(idEquipo, e.participantes[0].idMembresia, e.organizador.cookie)
 
+    expect((await crearElemento(idEquipo, e.participantes[0].cookie, 'metas', 'x')).status).toBe(
+      409,
+    )
+
+    await prisma.actividad.update({ where: { idActividad: e.id }, data: { estado: 'desarrollo' } })
     expect((await crearElemento(idEquipo, e.participantes[0].cookie, 'metas', 'x')).status).toBe(
       201,
     )
@@ -227,6 +232,32 @@ describe('PATCH /api/elementos/:id', () => {
     )
     expect(respuestaOrganizador.status).toBe(403)
   })
+
+  // P-17 (vía evaluarCambioEnCurso) ya impide deshabilitar un tipo con
+  // contenido desde este mismo endpoint de configuración, así que esta
+  // combinación no se alcanza por la vía normal de la API; se fuerza el
+  // estado directo en la base, como defensa en profundidad — igual que
+  // crearElemento repite su propio gate en vez de confiar en que la
+  // autorización del cliente (o de otra regla) ya lo cubrió.
+  it('no se puede editar un elemento cuyo tipo quedó deshabilitado: 409', async () => {
+    const e = await equipoEnDesarrollo()
+    const creado = await crearElemento(e.idEquipo, e.participantes[0].cookie, 'metas', 'Original')
+    expect(creado.status).toBe(201)
+
+    await prisma.configuracionFuncion.update({
+      where: { idActividad_funcion: { idActividad: e.id, funcion: 'espacio_equipo' } },
+      data: {
+        estado: JSON.stringify({
+          metas: 'deshabilitado',
+          avances: 'opcional',
+          recursos: 'opcional',
+        }),
+      },
+    })
+
+    const respuesta = await editarElemento(creado.body.elemento.id, e.participantes[0].cookie, 'y')
+    expect(respuesta.status).toBe(409)
+  })
 })
 
 describe('DELETE /api/elementos/:id', () => {
@@ -253,6 +284,28 @@ describe('DELETE /api/elementos/:id', () => {
       tipo: 'recursos',
       contenido: 'Contenido a conservar',
     })
+  })
+
+  // Misma defensa en profundidad que en PATCH: ver el comentario de la
+  // prueba equivalente en describe('PATCH /api/elementos/:id').
+  it('no se puede eliminar un elemento cuyo tipo quedó deshabilitado: 409', async () => {
+    const e = await equipoEnDesarrollo()
+    const creado = await crearElemento(e.idEquipo, e.participantes[0].cookie, 'recursos', 'x')
+    expect(creado.status).toBe(201)
+
+    await prisma.configuracionFuncion.update({
+      where: { idActividad_funcion: { idActividad: e.id, funcion: 'espacio_equipo' } },
+      data: {
+        estado: JSON.stringify({
+          metas: 'opcional',
+          avances: 'opcional',
+          recursos: 'deshabilitado',
+        }),
+      },
+    })
+
+    const respuesta = await eliminarElemento(creado.body.elemento.id, e.participantes[0].cookie)
+    expect(respuesta.status).toBe(409)
   })
 })
 

@@ -136,7 +136,13 @@ const FASES_POR_ACCION: Readonly<Record<AccionActividad, readonly EstadoActivida
   // Seguimiento (general §7.4): "escribir en el espacio de equipo está
   // permitido al participante, pero no una vez iniciado el cierre" — a
   // diferencia de editar_equipo (nombre/descripción), que sí llega a cierre.
-  usar_espacio_equipo: ['formacion_equipos', 'desarrollo'],
+  // Sin formacion_equipos: "el espacio de equipo llega con el desarrollo"
+  // (nucleo §7.4, decisión de eliminar un equipo en formación) es la premisa
+  // de la que depende eliminarEquipo para borrar sin conservar contenido
+  // (equipos.service.ts) — permitir escritura antes de eso dejaría esa
+  // eliminación destruyendo elementos_espacio_equipo en cascada y sin
+  // evento.
+  usar_espacio_equipo: ['desarrollo'],
 }
 
 // Orden de evaluación de nucleo §2.2: de lo más general y barato a lo más

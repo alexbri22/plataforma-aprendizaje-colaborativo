@@ -379,7 +379,10 @@ describe('autorizar: acciones de Equipos, celda por celda', () => {
   })
 
   describe('usar_espacio_equipo (Seguimiento, nucleo §9.1 y general §7.4)', () => {
-    const FASES_ABIERTAS: EstadoActividad[] = ['formacion_equipos', 'desarrollo']
+    // Sin formacion_equipos: "el espacio de equipo llega con el desarrollo"
+    // (nucleo §7.4) es la premisa de la que depende eliminarEquipo para
+    // borrar un equipo en formación sin conservar contenido.
+    const FASES_ABIERTAS: EstadoActividad[] = ['desarrollo']
 
     it('organizador, co-organizador (con o sin permiso) y participante coinciden: solo depende de la fase', () => {
       for (const rol of [
@@ -485,13 +488,13 @@ describe('capacidadesDe', () => {
     }
   })
 
-  it('un participante en formación autogestionada obtiene elegir y editar equipo, y usar su espacio', () => {
+  it('un participante en formación autogestionada obtiene elegir y editar equipo, pero no usar su espacio (llega con el desarrollo)', () => {
     expect(
       capacidadesDe(actor('participante'), {
         estado: 'formacion_equipos',
         formacionEquipos: 'autogestionado',
       }),
-    ).toEqual(['elegir_equipo', 'editar_equipo', 'usar_espacio_equipo'])
+    ).toEqual(['elegir_equipo', 'editar_equipo'])
   })
 
   it('en fase archivada nadie obtiene ninguna capacidad, ni con todos los permisos', () => {
