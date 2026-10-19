@@ -115,7 +115,7 @@ export async function obtenerRecibidosDeParticipante(
   idActividad: string,
   idMembresia: string,
 ): Promise<{
-  participante: Companero
+  participante: Companero & { idUsuario: string }
   reconocimientos: ReconocimientoRecibidoConAutor[]
 }> {
   const r = await pedir(

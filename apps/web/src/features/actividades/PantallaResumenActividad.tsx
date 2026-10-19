@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { AppShell } from '../../components/AppShell'
+import { EnlacePerfil } from '../../components/EnlacePerfil'
 import {
   AvisoError,
   Badge,
@@ -140,7 +141,11 @@ function SeccionParticipantes({ id }: { id: string }) {
               <ul className={styles.listaParticipantes}>
                 {visibles.map((participante) => (
                   <li key={participante.idUsuario} className={styles.filaParticipante}>
-                    <span className={styles.nombreParticipante}>{participante.nombre}</span>
+                    <span className={styles.nombreParticipante}>
+                      <EnlacePerfil idUsuario={participante.idUsuario}>
+                        {participante.nombre}
+                      </EnlacePerfil>
+                    </span>
                     <span className={styles.fechaParticipante}>
                       Se unió el {formatearFechaHora(participante.fechaUnion)}
                     </span>

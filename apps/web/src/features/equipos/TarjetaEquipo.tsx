@@ -5,6 +5,7 @@ import {
   type LimitesEquipo,
   type RolIntegrante,
 } from '@plataforma/shared'
+import { EnlacePerfil } from '../../components/EnlacePerfil'
 import { Badge, Button, Card } from '../../components/ui'
 import styles from './TarjetaEquipo.module.css'
 
@@ -119,7 +120,7 @@ export function TarjetaEquipo({
           {equipo.integrantes.map((integrante) => (
             <li key={integrante.idMembresia} className={styles.integrante}>
               <span>
-                {integrante.nombre}
+                <EnlacePerfil idUsuario={integrante.idUsuario}>{integrante.nombre}</EnlacePerfil>
                 {integrante.idMembresia === idMiMembresia ? ' (tú)' : ''}
               </span>
               {ETIQUETA_ROL[integrante.rol] ? (

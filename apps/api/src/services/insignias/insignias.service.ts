@@ -318,7 +318,7 @@ export async function listarRecibidosDeParticipante(
   idActividad: string,
   idMembresiaParticipante: string,
 ): Promise<{
-  participante: { idMembresia: string; nombre: string }
+  participante: { idMembresia: string; idUsuario: string; nombre: string }
   reconocimientos: ReconocimientoRecibidoConAutor[]
 }> {
   const membresia = await obtenerMembresiaActiva(idUsuarioActor, idActividad)
@@ -339,7 +339,11 @@ export async function listarRecibidosDeParticipante(
   })
 
   return {
-    participante: { idMembresia: participante.idMembresia, nombre: participante.nombre },
+    participante: {
+      idMembresia: participante.idMembresia,
+      idUsuario: participante.idUsuario,
+      nombre: participante.nombre,
+    },
     reconocimientos: filas.map((f) => ({
       categoria: f.categoria as CategoriaInsignia,
       frase: f.frase,

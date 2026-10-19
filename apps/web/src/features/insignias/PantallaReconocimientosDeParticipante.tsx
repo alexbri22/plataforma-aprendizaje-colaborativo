@@ -1,7 +1,7 @@
 import { useParams } from 'react-router-dom'
 import { CATALOGO_INSIGNIAS } from '@plataforma/shared'
 import { AppShell } from '../../components/AppShell'
-import { AvisoError, Card, IconoCargando } from '../../components/ui'
+import { AvisoError, Button, Card, IconoCargando } from '../../components/ui'
 import { IconoCategoria } from './IconoCategoria'
 import { useRecibidosDeParticipante } from './useReconocimientos'
 import styles from './PantallaReconocimientosDeParticipante.module.css'
@@ -54,6 +54,11 @@ export function PantallaReconocimientosDeParticipante() {
       seccionActiva="actividades"
       titulo={participante.nombre}
       volverA={`/actividades/${id}/participantes`}
+      acciones={
+        <Button variant="ghost" size="sm" to={`/usuarios/${participante.idUsuario}`}>
+          Ver perfil
+        </Button>
+      }
     >
       <Card>
         {porCategoria.length === 0 ? (
