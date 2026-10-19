@@ -1,0 +1,504 @@
+import type { Prisma } from '@prisma/client'
+import {
+  ETIQUETAS_TIPO_LECCION,
+  MAX_LECCIONES_CURSO,
+  MIN_LECCIONES_CURSO,
+  normalizarBusqueda,
+  type AreaHabilidad,
+  type ElementoColaboracion,
+  type EstatusCurso,
+  type EstatusRecurso,
+  type NivelCurso,
+  type Paginacion,
+  type TipoLeccion,
+  type TipoRecurso,
+} from '@plataforma/shared'
+import { prisma } from '../../data/prisma.js'
+import {
+  ErrorCursoNoEncontrado,
+  ErrorLeccionNoEncontrada,
+  ErrorRecursoNoEncontrado,
+  ErrorValidacion,
+} from '../../errores.js'
+import type { DatosCurso, DatosLeccion } from './cursos.validacion.js'
+import type { PeticionPagina } from './validacion.js'
+
+/*
+ * Cursos del Centro de formación (docs/diseno-desarrollo-formacion.md §2.4,
+ * §5 y §9). Un curso es una secuencia ordenada de 2 a 5 lecciones; cada
+ * lección reutiliza un recurso de la biblioteca o es contenido propio
+ * (lectura, práctica o reflexión). En este paso solo hay API de
+ * administración; la pública llega con el catálogo y el visor.
+ *
+ * Mismo ciclo editorial que los recursos: borrador → publicado → retirado →
+ * publicado, sin volver a borrador. Un curso publicado debe seguir cumpliendo
+ * los mínimos después de cualquier cambio en su ficha o en sus lecciones: si
+ * un cambio los rompe, se rechaza completo (la transacción se deshace).
+ */
+
+export interface RecursoDeLeccion {
+  idRecurso: string
+  titulo: string
+  tipoRecurso: TipoRecurso
+  estatus: EstatusRecurso
+  duracionMin: number | null
+}
+
+export interface LeccionAdmin {
+  idLeccion: string
+  orden: number
+  /** En una lección de recurso puede venir vacío: se muestra el del recurso. */
+  titulo: string
+  tipo: TipoLeccion
+  contenido: string
+  obligatoria: boolean
+  /** La que se capturó en la lección; null en una de recurso usa la del
+   * recurso (ver duracionEfectivaMin). */
+  duracionMin: number | null
+  duracionEfectivaMin: number | null
+  recurso: RecursoDeLeccion | null
+}
+
+export interface ResumenCursoAdmin {
+  idCurso: string
+  titulo: string
+  resumen: string
+  area: AreaHabilidad | null
+  nivel: NivelCurso | null
+  estatus: EstatusCurso
+  orden: number
+  numLecciones: number
+  /** Suma de la duración de sus lecciones. */
+  duracionMin: number
+  fechaActualizacion: string
+}
+
+export interface CursoAdmin extends ResumenCursoAdmin {
+  objetivo: string
+  elementos: ElementoColaboracion[]
+  practicaFinal: string
+  fechaCreacion: string
+  autor: { idUsuario: string; nombre: string } | null
+  lecciones: LeccionAdmin[]
+}
+
+export interface PaginaDeCursos {
+  cursos: ResumenCursoAdmin[]
+  paginacion: Paginacion
+}
+
+const INCLUIR_CURSO = {
+  autor: { select: { idUsuario: true, nombre: true, apellidoPaterno: true } },
+  lecciones: {
+    orderBy: { orden: 'asc' },
+    include: {
+      recurso: {
+        select: {
+          idRecurso: true,
+          titulo: true,
+          tipoRecurso: true,
+          estatus: true,
+          duracionMin: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.CursoInclude
+
+type FilaCurso = Prisma.CursoGetPayload<{ include: typeof INCLUIR_CURSO }>
+type FilaLeccion = FilaCurso['lecciones'][number]
+type Cliente = Prisma.TransactionClient | typeof prisma
+
+const ORDEN_CURSOS = [
+  { orden: 'asc' },
+  { fechaCreacion: 'asc' },
+  { idCurso: 'asc' },
+] satisfies Prisma.CursoOrderByWithRelationInput[]
+
+function duracionDe(leccion: FilaLeccion): number | null {
+  return leccion.duracionMin ?? leccion.recurso?.duracionMin ?? null
+}
+
+function aLeccion(fila: FilaLeccion): LeccionAdmin {
+  return {
+    idLeccion: fila.idLeccion,
+    orden: fila.orden,
+    titulo: fila.titulo,
+    tipo: fila.tipo,
+    contenido: fila.contenido,
+    obligatoria: fila.obligatoria,
+    duracionMin: fila.duracionMin,
+    duracionEfectivaMin: duracionDe(fila),
+    recurso: fila.recurso,
+  }
+}
+
+function aResumen(fila: FilaCurso): ResumenCursoAdmin {
+  return {
+    idCurso: fila.idCurso,
+    titulo: fila.titulo,
+    resumen: fila.resumen,
+    area: fila.area as AreaHabilidad | null,
+    nivel: fila.nivel,
+    estatus: fila.estatus,
+    orden: fila.orden,
+    numLecciones: fila.lecciones.length,
+    duracionMin: fila.lecciones.reduce((total, l) => total + (duracionDe(l) ?? 0), 0),
+    fechaActualizacion: fila.fechaActualizacion.toISOString(),
+  }
+}
+
+function aAdmin(fila: FilaCurso): CursoAdmin {
+  return {
+    ...aResumen(fila),
+    objetivo: fila.objetivo,
+    elementos: fila.elementos as ElementoColaboracion[],
+    practicaFinal: fila.practicaFinal,
+    fechaCreacion: fila.fechaCreacion.toISOString(),
+    autor: fila.autor
+      ? {
+          idUsuario: fila.autor.idUsuario,
+          nombre: `${fila.autor.nombre} ${fila.autor.apellidoPaterno}`,
+        }
+      : null,
+    lecciones: fila.lecciones.map(aLeccion),
+  }
+}
+
+/** Lo que guarda texto_busqueda, con la misma regla que en recursos. */
+function textoDeBusqueda(
+  c: Pick<DatosCurso, 'titulo' | 'resumen' | 'objetivo' | 'area' | 'elementos'>,
+): string {
+  return normalizarBusqueda(
+    [c.titulo, c.resumen, c.objetivo, c.area ?? '', ...c.elementos].join(' '),
+  )
+}
+
+async function leerCurso(cliente: Cliente, idCurso: string): Promise<FilaCurso> {
+  const fila = await cliente.curso.findUnique({ where: { idCurso }, include: INCLUIR_CURSO })
+  if (!fila) throw new ErrorCursoNoEncontrado()
+  return fila
+}
+
+// ---- Reglas de publicación ----
+
+type FichaCurso = Pick<
+  DatosCurso,
+  'resumen' | 'objetivo' | 'area' | 'elementos' | 'nivel' | 'practicaFinal'
+>
+
+/**
+ * Mínimos de un curso publicado (§2.4 y §6.4): ficha completa; entre 2 y 5
+ * lecciones con al menos una práctica y una reflexión; cada lección de
+ * recurso apunta a un recurso publicado; cada lección propia tiene título,
+ * contenido y duración. Los errores de una lección van en
+ * `lecciones.<idLeccion>` para poder marcarla en el editor.
+ */
+function validarPublicable(ficha: FichaCurso, lecciones: FilaLeccion[]): void {
+  const detalle: Record<string, string> = {}
+
+  if (!ficha.resumen) detalle.resumen = 'Escribe un resumen antes de publicar.'
+  if (!ficha.objetivo) detalle.objetivo = 'Escribe el objetivo antes de publicar.'
+  if (!ficha.area) detalle.area = 'Elige el área de habilidad antes de publicar.'
+  if (ficha.elementos.length === 0) {
+    detalle.elementos = 'Relaciona al menos un elemento de colaboración.'
+  }
+  if (!ficha.nivel) detalle.nivel = 'Elige el nivel antes de publicar.'
+  if (!ficha.practicaFinal) {
+    detalle.practicaFinal = 'Describe el resultado práctico que obtendrá la persona.'
+  }
+
+  const faltas: string[] = []
+  if (lecciones.length < MIN_LECCIONES_CURSO) {
+    faltas.push(`al menos ${MIN_LECCIONES_CURSO} lecciones`)
+  }
+  for (const tipo of ['practica', 'reflexion'] as const) {
+    if (!lecciones.some((l) => l.tipo === tipo)) {
+      faltas.push(`una lección de ${ETIQUETAS_TIPO_LECCION[tipo].toLowerCase()}`)
+    }
+  }
+  if (faltas.length > 0) detalle.lecciones = `El curso necesita ${faltas.join(', ')}.`
+
+  for (const l of lecciones) {
+    const clave = `lecciones.${l.idLeccion}`
+    if (l.tipo === 'recurso') {
+      if (l.recurso?.estatus !== 'publicado') {
+        detalle[clave] = 'El recurso de esta lección no está publicado.'
+      }
+    } else if (!l.titulo || !l.contenido || l.duracionMin === null) {
+      detalle[clave] = 'La lección necesita título, contenido y duración.'
+    }
+  }
+
+  if (Object.keys(detalle).length > 0) throw new ErrorValidacion(detalle)
+}
+
+function fichaDe(fila: FilaCurso): FichaCurso {
+  return {
+    resumen: fila.resumen,
+    objetivo: fila.objetivo,
+    area: fila.area as AreaHabilidad | null,
+    elementos: fila.elementos as ElementoColaboracion[],
+    nivel: fila.nivel,
+    practicaFinal: fila.practicaFinal,
+  }
+}
+
+/** Después de tocar las lecciones de un curso: si está publicado, debe
+ * seguir siendo publicable (si no, lanza y la transacción se deshace). Además
+ * marca el curso como actualizado. */
+async function cerrarCambioDeLecciones(tx: Prisma.TransactionClient, idCurso: string) {
+  const curso = await tx.curso.update({
+    where: { idCurso },
+    data: { fechaActualizacion: new Date() },
+    include: INCLUIR_CURSO,
+  })
+  if (curso.estatus === 'publicado') validarPublicable(fichaDe(curso), curso.lecciones)
+  return curso
+}
+
+const TRANSICIONES: Readonly<Record<EstatusCurso, readonly EstatusCurso[]>> = {
+  borrador: ['borrador', 'publicado'],
+  publicado: ['publicado', 'retirado'],
+  retirado: ['retirado', 'publicado'],
+}
+
+// ---- Cursos ----
+
+export async function listarCursosAdmin({
+  pagina,
+  porPagina,
+}: PeticionPagina): Promise<PaginaDeCursos> {
+  const [total, filas] = await prisma.$transaction([
+    prisma.curso.count(),
+    prisma.curso.findMany({
+      include: INCLUIR_CURSO,
+      orderBy: ORDEN_CURSOS,
+      skip: (pagina - 1) * porPagina,
+      take: porPagina,
+    }),
+  ])
+  return {
+    cursos: filas.map(aResumen),
+    paginacion: { pagina, porPagina, total, totalPaginas: Math.ceil(total / porPagina) },
+  }
+}
+
+export async function obtenerCursoAdmin(idCurso: string): Promise<CursoAdmin> {
+  return aAdmin(await leerCurso(prisma, idCurso))
+}
+
+export async function crearCurso(
+  idUsuarioAutor: string,
+  datos: Partial<DatosCurso>,
+): Promise<CursoAdmin> {
+  const ficha = {
+    titulo: datos.titulo ?? '',
+    resumen: datos.resumen ?? '',
+    objetivo: datos.objetivo ?? '',
+    area: datos.area ?? null,
+    elementos: datos.elementos ?? [],
+    nivel: datos.nivel ?? null,
+    practicaFinal: datos.practicaFinal ?? '',
+  }
+  // Un curso nuevo no tiene lecciones: pedir publicarlo en el alta siempre
+  // falla con el mensaje de lo que falta.
+  if (datos.estatus === 'publicado') validarPublicable(ficha, [])
+  if (datos.estatus === 'retirado') {
+    throw new ErrorValidacion({ estatus: 'Un curso nuevo nace como borrador.' })
+  }
+
+  const orden =
+    datos.orden ?? ((await prisma.curso.aggregate({ _max: { orden: true } }))._max.orden ?? -1) + 1
+
+  const fila = await prisma.curso.create({
+    data: { ...ficha, orden, textoBusqueda: textoDeBusqueda(ficha), idUsuarioAutor },
+    include: INCLUIR_CURSO,
+  })
+  return aAdmin(fila)
+}
+
+export async function actualizarCurso(
+  idCurso: string,
+  cambios: Partial<DatosCurso>,
+): Promise<CursoAdmin> {
+  const fila = await prisma.$transaction(async (tx) => {
+    const actual = await leerCurso(tx, idCurso)
+
+    if (cambios.estatus && !TRANSICIONES[actual.estatus].includes(cambios.estatus)) {
+      throw new ErrorValidacion({
+        estatus:
+          actual.estatus === 'borrador'
+            ? 'Un borrador solo puede publicarse.'
+            : 'Un curso publicado no vuelve a borrador; edítalo o retíralo.',
+      })
+    }
+
+    const final = { titulo: actual.titulo, ...fichaDe(actual), ...cambios }
+    if ((cambios.estatus ?? actual.estatus) === 'publicado') {
+      validarPublicable(final, actual.lecciones)
+    }
+
+    return tx.curso.update({
+      where: { idCurso },
+      data: { ...cambios, textoBusqueda: textoDeBusqueda(final) },
+      include: INCLUIR_CURSO,
+    })
+  })
+  return aAdmin(fila)
+}
+
+/** Borra el curso y sus lecciones. Los recursos que usaba no se tocan. */
+export async function eliminarCurso(idCurso: string): Promise<void> {
+  const { count } = await prisma.curso.deleteMany({ where: { idCurso } })
+  if (count === 0) throw new ErrorCursoNoEncontrado()
+}
+
+// ---- Lecciones ----
+
+type LeccionCombinada = Pick<DatosLeccion, 'tipo' | 'idRecurso' | 'titulo'>
+
+/** Reglas de una lección que no dependen del estatus del curso: la de
+ * recurso apunta a un recurso que existe; la propia no apunta a ninguno y
+ * lleva título. */
+async function validarLeccion(cliente: Cliente, l: LeccionCombinada): Promise<void> {
+  if (l.tipo === 'recurso') {
+    if (!l.idRecurso) {
+      throw new ErrorValidacion({ idRecurso: 'Elige el recurso de la biblioteca.' })
+    }
+    const existe = await cliente.recursoFormativo.findUnique({
+      where: { idRecurso: l.idRecurso },
+      select: { idRecurso: true },
+    })
+    if (!existe) throw new ErrorRecursoNoEncontrado()
+    return
+  }
+  const detalle: Record<string, string> = {}
+  if (l.idRecurso) detalle.idRecurso = 'Solo una lección de recurso apunta a la biblioteca.'
+  if (!l.titulo) detalle.titulo = 'La lección necesita un título.'
+  if (Object.keys(detalle).length > 0) throw new ErrorValidacion(detalle)
+}
+
+/** Reasigna el orden 0..n-1 siguiendo `ids`. En dos pasos, pasando primero
+ * por valores negativos, porque la unicidad (curso, orden) se comprueba fila
+ * por fila y un intercambio directo chocaría a la mitad. */
+async function renumerar(tx: Prisma.TransactionClient, ids: string[]) {
+  for (const [i, idLeccion] of ids.entries()) {
+    await tx.leccionCurso.update({ where: { idLeccion }, data: { orden: -(i + 1) } })
+  }
+  for (const [i, idLeccion] of ids.entries()) {
+    await tx.leccionCurso.update({ where: { idLeccion }, data: { orden: i } })
+  }
+}
+
+export async function agregarLeccion(
+  idCurso: string,
+  datos: Partial<DatosLeccion>,
+): Promise<CursoAdmin> {
+  const fila = await prisma.$transaction(async (tx) => {
+    const curso = await leerCurso(tx, idCurso)
+    if (curso.lecciones.length >= MAX_LECCIONES_CURSO) {
+      throw new ErrorValidacion({
+        lecciones: `Un curso tiene como máximo ${MAX_LECCIONES_CURSO} lecciones.`,
+      })
+    }
+
+    const leccion = {
+      tipo: datos.tipo as TipoLeccion,
+      idRecurso: datos.idRecurso ?? null,
+      titulo: datos.titulo ?? '',
+    }
+    await validarLeccion(tx, leccion)
+
+    await tx.leccionCurso.create({
+      data: {
+        idCurso,
+        orden: curso.lecciones.length,
+        tipo: leccion.tipo,
+        idRecurso: leccion.idRecurso,
+        titulo: leccion.titulo,
+        contenido: datos.contenido ?? '',
+        obligatoria: datos.obligatoria ?? true,
+        duracionMin: datos.duracionMin ?? null,
+      },
+    })
+    return cerrarCambioDeLecciones(tx, idCurso)
+  })
+  return aAdmin(fila)
+}
+
+export async function actualizarLeccion(
+  idCurso: string,
+  idLeccion: string,
+  cambios: Partial<DatosLeccion>,
+): Promise<CursoAdmin> {
+  const fila = await prisma.$transaction(async (tx) => {
+    const actual = await tx.leccionCurso.findFirst({ where: { idLeccion, idCurso } })
+    if (!actual) throw new ErrorLeccionNoEncontrada()
+
+    const final = {
+      tipo: cambios.tipo ?? actual.tipo,
+      idRecurso: cambios.idRecurso !== undefined ? cambios.idRecurso : actual.idRecurso,
+      titulo: cambios.titulo ?? actual.titulo,
+    }
+    // Al cambiar a una lección propia, el recurso deja de aplicar.
+    if (cambios.tipo && cambios.tipo !== 'recurso' && cambios.idRecurso === undefined) {
+      final.idRecurso = null
+    }
+    await validarLeccion(tx, final)
+
+    await tx.leccionCurso.update({
+      where: { idLeccion },
+      data: { ...cambios, idRecurso: final.idRecurso },
+    })
+    return cerrarCambioDeLecciones(tx, idCurso)
+  })
+  return aAdmin(fila)
+}
+
+export async function eliminarLeccion(idCurso: string, idLeccion: string): Promise<CursoAdmin> {
+  const fila = await prisma.$transaction(async (tx) => {
+    const curso = await leerCurso(tx, idCurso)
+    if (!curso.lecciones.some((l) => l.idLeccion === idLeccion)) {
+      throw new ErrorLeccionNoEncontrada()
+    }
+    await tx.leccionCurso.delete({ where: { idLeccion } })
+    await renumerar(
+      tx,
+      curso.lecciones.filter((l) => l.idLeccion !== idLeccion).map((l) => l.idLeccion),
+    )
+    return cerrarCambioDeLecciones(tx, idCurso)
+  })
+  return aAdmin(fila)
+}
+
+/** Reordena con la lista completa: debe traer exactamente las lecciones del
+ * curso, cada una una vez. */
+export async function reordenarLecciones(idCurso: string, ids: string[]): Promise<CursoAdmin> {
+  const fila = await prisma.$transaction(async (tx) => {
+    const curso = await leerCurso(tx, idCurso)
+    const actuales = new Set(curso.lecciones.map((l) => l.idLeccion))
+    if (ids.length !== actuales.size || !ids.every((id) => actuales.has(id))) {
+      throw new ErrorValidacion({
+        lecciones: 'La lista debe incluir exactamente las lecciones del curso.',
+      })
+    }
+    await renumerar(tx, ids)
+    return cerrarCambioDeLecciones(tx, idCurso)
+  })
+  return aAdmin(fila)
+}
+
+// ---- Uso de recursos en cursos ----
+
+/** Cursos (sin repetir) que usan un recurso en alguna lección. Lo consume el
+ * servicio de recursos para impedir borrarlo y para avisar en el editor. */
+export async function cursosQueUsanRecurso(
+  idRecurso: string,
+): Promise<{ idCurso: string; titulo: string; estatus: EstatusCurso }[]> {
+  return prisma.curso.findMany({
+    where: { lecciones: { some: { idRecurso } } },
+    select: { idCurso: true, titulo: true, estatus: true },
+    orderBy: { titulo: 'asc' },
+  })
+}

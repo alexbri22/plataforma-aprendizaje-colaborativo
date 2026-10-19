@@ -78,6 +78,8 @@ let admin: { id: string; cookie: string }
 let usuario: { id: string; cookie: string }
 
 beforeAll(async () => {
+  // Primero los cursos: sus lecciones impiden borrar los recursos que usan.
+  await prisma.curso.deleteMany()
   await prisma.recursoFormativo.deleteMany()
   await prisma.sesion.deleteMany()
   await prisma.usuario.deleteMany()
@@ -86,6 +88,8 @@ beforeAll(async () => {
 })
 
 beforeEach(async () => {
+  // Primero los cursos: sus lecciones impiden borrar los recursos que usan.
+  await prisma.curso.deleteMany()
   await prisma.recursoFormativo.deleteMany()
 })
 

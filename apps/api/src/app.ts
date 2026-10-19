@@ -10,6 +10,7 @@ import { clavesRouter } from './routes/claves.js'
 import { equiposRouter } from './routes/equipos.js'
 import { insigniasRouter } from './routes/insignias.js'
 import { cuentasRouter } from './routes/cuentas.js'
+import { adminCursosRouter } from './routes/cursos.js'
 import { healthRouter } from './routes/health.js'
 import { periodosRouter } from './routes/periodos.js'
 import { tareasRouter } from './routes/tareas.js'
@@ -63,6 +64,7 @@ export function createApp(): Express {
   app.use('/api', cuentasRouter)
   app.use('/api/admin', adminRouter)
   app.use('/api/admin', adminRecursosRouter)
+  app.use('/api/admin', adminCursosRouter)
   app.use('/api', actividadesRouter)
   app.use('/api', clavesRouter)
   app.use('/api', periodosRouter)

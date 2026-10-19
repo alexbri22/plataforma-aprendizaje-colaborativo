@@ -34,6 +34,9 @@ export type CodigoError =
   | 'foto_invalida'
   | 'recurso_no_encontrado'
   | 'archivo_invalido'
+  | 'curso_no_encontrado'
+  | 'leccion_no_encontrada'
+  | 'recurso_en_uso'
 
 export abstract class ErrorDominio extends Error {
   abstract readonly codigo: CodigoError
@@ -382,5 +385,40 @@ export class ErrorArchivoInvalido extends ErrorDominio {
 
   constructor(mensaje: string) {
     super(mensaje)
+  }
+}
+
+export class ErrorCursoNoEncontrado extends ErrorDominio {
+  readonly codigo = 'curso_no_encontrado' as const
+  readonly status = 404
+
+  constructor() {
+    super('No encontramos este curso.')
+  }
+}
+
+export class ErrorLeccionNoEncontrada extends ErrorDominio {
+  readonly codigo = 'leccion_no_encontrada' as const
+  readonly status = 404
+
+  constructor() {
+    super('No encontramos esta lección en el curso.')
+  }
+}
+
+// Un recurso que forma parte de algún curso no se puede eliminar
+// (docs/diseno-desarrollo-formacion.md, decisiones del incremento 2). El
+// mensaje nombra los cursos para que el administrador sepa dónde quitarlo.
+export class ErrorRecursoEnUso extends ErrorDominio {
+  readonly codigo = 'recurso_en_uso' as const
+  readonly status = 409
+
+  constructor(readonly cursos: { idCurso: string; titulo: string }[]) {
+    const nombres = cursos.map((c) => `«${c.titulo}»`).join(', ')
+    super(
+      `No se puede eliminar: este recurso forma parte de ${
+        cursos.length === 1 ? 'el curso' : 'los cursos'
+      } ${nombres}. Quítalo de ${cursos.length === 1 ? 'ese curso' : 'esos cursos'} primero, o retíralo.`,
+    )
   }
 }
