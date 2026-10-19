@@ -154,7 +154,7 @@
 }
 
 /* Grupo "principal" (Actividades): es un ítem más de .nav, mismo tamaño y
-   caja que los demás (Mi perfil, Recursos) — a diferencia de Administración
+   caja que los demás (Recursos) — a diferencia de Administración
    no es una sección de rol aparte, así que no lleva línea divisoria ni
    versalitas. */
 .grupoPrincipal {
@@ -282,6 +282,13 @@
 
 .cuentaInfo:hover {
   background: var(--color-surface-hover);
+}
+
+/* En Mi perfil, el nombre hace de ítem activo: es la única entrada a esa
+   pantalla, con el mismo tratamiento que .navItemActivo. */
+.cuentaActiva,
+.cuentaActiva:hover {
+  background: var(--color-primary-subtle);
 }
 
 .nombreUsuario {
