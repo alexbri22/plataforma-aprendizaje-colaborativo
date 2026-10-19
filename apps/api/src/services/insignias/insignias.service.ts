@@ -69,18 +69,21 @@ export interface ContextoReconocimiento {
    * que no tienen presupuesto: su papel es compensar a quien los pares no
    * vieron, no competir con ellos. */
   presupuesto: number | null
-  /** Fin del periodo de cierre: hasta cuándo se puede editar, y desde cuándo
-   * se aplica lo guardado. */
+  /** Último día del plazo de cierre (`fecha_termino + plazo_cierre_dias`).
+   * Hasta entonces se puede editar, salvo que la actividad se archive antes. */
   fechaLimite: string
-  /** Si hoy se puede reconocer: entre el término de la actividad y el fin del
-   * cierre. */
+  /** Si hoy se puede reconocer. Abre con el estado `cierre` o al llegar
+   * `fecha_termino`, lo que ocurra primero, y cierra al vencer `fechaLimite`
+   * o al archivarse la actividad. Ver `ventana`. */
   abierto: boolean
-  /** Si lo guardado ya se aplicó y es visible para quien lo recibió. */
+  /** Si lo guardado ya se aplicó y es visible para quien lo recibió: pasada
+   * `fechaLimite` o con la actividad archivada. */
   aplicados: boolean
 }
 
-// Solo las dos fechas: así sirve igual para la actividad de una membresía y
-// para la que viene seleccionada en una consulta más chica.
+// Solo el estado y las dos fechas que deciden la ventana: así sirve igual para
+// la actividad de una membresía y para la que viene seleccionada en una
+// consulta más chica.
 type FechasDeCierre = Pick<
   MembresiaEnActividad['actividad'],
   'estado' | 'fechaTermino' | 'plazoCierreDias'

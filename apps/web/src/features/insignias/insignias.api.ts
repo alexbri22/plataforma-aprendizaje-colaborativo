@@ -48,8 +48,12 @@ export interface ContextoReconocimiento {
   idMembresiaActor: string
   companeros: Companero[]
   presupuesto: number | null
+  /** Último día del plazo de cierre. */
   fechaLimite: string
+  /** Si hoy se puede reconocer. Lo decide el servidor con el estado de la
+   * actividad y sus fechas; el cliente no recalcula la ventana. */
   abierto: boolean
+  /** Si lo guardado ya se aplicó y quien lo recibió puede verlo. */
   aplicados: boolean
 }
 
