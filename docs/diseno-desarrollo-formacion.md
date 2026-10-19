@@ -549,9 +549,9 @@ Decisiones tomadas con el equipo antes de construir la biblioteca de recursos. S
 
 - **Alcance:** solo el administrador crea y publica contenido (opción A de 13.1 para la autoría). No hay cola de revisión ni versiones mientras la autoría sea solo del administrador: un recurso publicado se edita en sitio y, si hay un problema, se retira.
 - **Archivos:** PDF guardado en la base (`bytea`, tabla `archivos_recurso`), hasta 4 MB por el límite de cuerpo de Vercel. Los videos son solo enlaces externos con transcripción obligatoria.
-- **Categorías:** las áreas de 9.1: comunicación, organización, conflictos, coordinación y reflexión (`AREAS_HABILIDAD` en `packages/shared`).
+- **Categorías:** las áreas de 9.1: comunicación, organización, conflictos, coordinación y reflexión, más **Otros** para el recurso cuyo tema no encaja en ninguna (`AREAS_HABILIDAD` en `packages/shared`). Otros aparece también como filtro del catálogo público.
 - **Secciones del concepto:** _Qué es colaborar_ y _Cómo colaborar_ se conservan como dato del recurso para filtrar, no como división de la pantalla.
-- **Acceso:** catálogo, ficha y lectura son públicos; guardar progreso (incremento 3) exigirá sesión.
+- **Acceso:** catálogo, ficha y lectura son públicos; guardar progreso (incremento 3) exigirá sesión. Quien entra sin sesión ve un aviso en Recursos: puede consultar y descargar todo, pero su progreso no se guarda hasta que inicie sesión. "Ingresar" lo regresa a la misma página. El aviso se puede cerrar y no reaparece durante esa visita.
 
 ### Modelo implementado
 

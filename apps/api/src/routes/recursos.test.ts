@@ -241,6 +241,7 @@ describe('catálogo público', () => {
 
     expect(await ids('seccion=que_es_colaborar')).toEqual([otro])
     expect(await ids('area=comunicacion')).toEqual([otro])
+    expect(await ids('area=otros')).toEqual([])
     expect(await ids('q=ESCUCHA')).toEqual([otro])
     // Sin acentos ni mayúsculas, y también por el área.
     expect(await ids('q=comunicacion')).toEqual([otro])
@@ -321,6 +322,16 @@ describe('paginación', () => {
 })
 
 describe('PATCH /api/admin/recursos/:id', () => {
+  it('acepta "otros" como área cuando el tema no encaja en las cinco', async () => {
+    const id = await crear(admin.cookie, {
+      ...ARTICULO_COMPLETO,
+      area: 'otros',
+      estatus: 'publicado',
+    })
+    const lista = await request(app).get('/api/recursos?area=otros').expect(200)
+    expect(lista.body.recursos.map((r: { idRecurso: string }) => r.idRecurso)).toEqual([id])
+  })
+
   it('al editar, la búsqueda encuentra el título nuevo y no el anterior', async () => {
     const id = await crear(admin.cookie, { ...ARTICULO_COMPLETO, estatus: 'publicado' })
     await request(app)

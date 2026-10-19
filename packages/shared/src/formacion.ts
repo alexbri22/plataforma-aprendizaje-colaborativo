@@ -35,13 +35,15 @@ export const ETIQUETAS_TIPO_RECURSO: Readonly<Record<TipoRecurso, string>> = {
   plantilla: 'Plantilla',
 }
 
-/** Áreas de habilidad (§9.1, entidad AreaHabilidad). */
+/** Áreas de habilidad (§9.1, entidad AreaHabilidad). `otros` es para el
+ * recurso cuyo tema no encaja en ninguna de las cinco; va siempre al final. */
 export const AREAS_HABILIDAD = [
   'comunicacion',
   'organizacion',
   'conflictos',
   'coordinacion',
   'reflexion',
+  'otros',
 ] as const
 export type AreaHabilidad = (typeof AREAS_HABILIDAD)[number]
 
@@ -51,6 +53,7 @@ export const ETIQUETAS_AREA: Readonly<Record<AreaHabilidad, string>> = {
   conflictos: 'Conflictos',
   coordinacion: 'Coordinación',
   reflexion: 'Reflexión',
+  otros: 'Otros',
 }
 
 /** Los cinco elementos de Johnson y Johnson (§3). */
