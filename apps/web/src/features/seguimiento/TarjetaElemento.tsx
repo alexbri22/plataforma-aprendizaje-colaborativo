@@ -83,7 +83,20 @@ export function TarjetaElemento({
         </span>
         {puedeEscribir ? (
           <div className={styles.acciones}>
-            <Button type="button" variant="ghost" size="sm" onClick={() => setEditando(true)}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                // borrador se inicializó al montar la tarjeta (useState):
+                // si el contenido cambió desde entonces por un refetch (lo
+                // editó alguien más, o este mismo onGuardar lo actualizó),
+                // reiniciarlo aquí evita abrir la edición sobre un valor ya
+                // obsoleto y terminar guardándolo encima de uno más nuevo.
+                setBorrador(elemento.contenido)
+                setEditando(true)
+              }}
+            >
               Editar
             </Button>
             <Button

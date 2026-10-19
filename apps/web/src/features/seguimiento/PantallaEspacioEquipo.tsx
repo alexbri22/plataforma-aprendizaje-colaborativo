@@ -188,38 +188,51 @@ export function PantallaEspacioEquipo({ tipo }: PantallaEspacioEquipoProps) {
                 : 'El equipo todavía no ha agregado nada aquí.'}
             </p>
           ) : (
-            <>
-              {rebanar(elementosQuery.data, pagina, TAMANO_PAGINA).visibles.map((elemento) => (
-                <TarjetaElemento
-                  key={elemento.id}
-                  elemento={elemento}
-                  puedeEscribir={puedeEscribir}
-                  guardando={editar.isPending && editar.variables?.idElemento === elemento.id}
-                  eliminando={eliminar.isPending && eliminar.variables === elemento.id}
-                  error={errorPorId[elemento.id] ?? null}
-                  onGuardar={async (contenido) => {
-                    limpiarError(elemento.id)
-                    try {
-                      await editar.mutateAsync({ idElemento: elemento.id, contenido })
-                    } catch (e) {
-                      alFallar(elemento.id, e)
-                      throw e
-                    }
-                  }}
-                  onEliminar={() => {
-                    limpiarError(elemento.id)
-                    eliminar.mutate(elemento.id, { onError: (e) => alFallar(elemento.id, e) })
-                  }}
-                />
-              ))}
-              <Paginacion
-                total={elementosQuery.data.length}
-                tamano={TAMANO_PAGINA}
-                pagina={pagina}
-                onCambiar={setPagina}
-                etiqueta={TITULOS[tipo]}
-              />
-            </>
+            (() => {
+              // rebanar corrige la página si dejó de existir (p. ej. se
+              // eliminó el único elemento de la última): pasar la que
+              // devuelve, no el estado crudo, para que Paginacion no
+              // muestre un rango imposible como "21-20 de 20".
+              const { visibles, pagina: paginaActual } = rebanar(
+                elementosQuery.data,
+                pagina,
+                TAMANO_PAGINA,
+              )
+              return (
+                <>
+                  {visibles.map((elemento) => (
+                    <TarjetaElemento
+                      key={elemento.id}
+                      elemento={elemento}
+                      puedeEscribir={puedeEscribir}
+                      guardando={editar.isPending && editar.variables?.idElemento === elemento.id}
+                      eliminando={eliminar.isPending && eliminar.variables === elemento.id}
+                      error={errorPorId[elemento.id] ?? null}
+                      onGuardar={async (contenido) => {
+                        limpiarError(elemento.id)
+                        try {
+                          await editar.mutateAsync({ idElemento: elemento.id, contenido })
+                        } catch (e) {
+                          alFallar(elemento.id, e)
+                          throw e
+                        }
+                      }}
+                      onEliminar={() => {
+                        limpiarError(elemento.id)
+                        eliminar.mutate(elemento.id, { onError: (e) => alFallar(elemento.id, e) })
+                      }}
+                    />
+                  ))}
+                  <Paginacion
+                    total={elementosQuery.data.length}
+                    tamano={TAMANO_PAGINA}
+                    pagina={paginaActual}
+                    onCambiar={setPagina}
+                    etiqueta={TITULOS[tipo]}
+                  />
+                </>
+              )
+            })()
           )}
         </div>
       )}

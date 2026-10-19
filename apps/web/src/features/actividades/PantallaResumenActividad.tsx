@@ -209,7 +209,7 @@ function AccionDeAvance({ actividad }: { actividad: Actividad }) {
     return (
       <AccionConfirmable
         titulo="En desarrollo"
-        descripcion="Inicia el cierre cuando el periodo de trabajo haya terminado. Cierra las aportaciones del equipo y abre el reconocimiento entre compañeros."
+        descripcion="Inicia el cierre cuando el periodo de trabajo haya terminado. A partir de ese momento ya no se podrán modificar las aportaciones del equipo."
         textoBoton="Iniciar cierre"
         textoConfirmacion="Una vez iniciado, el cierre no tiene vuelta atrás. ¿Confirmas que quieres iniciar el periodo de cierre?"
         textoBotonConfirmar="Sí, iniciar cierre"

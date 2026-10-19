@@ -172,6 +172,35 @@ describe('PantallaEspacioEquipo', () => {
     await waitFor(() => expect(eliminarElemento).toHaveBeenCalledWith('el-1'))
   })
 
+  it('tras eliminar el único elemento de la última página, la paginación muestra un rango válido', async () => {
+    const elementos21 = Array.from({ length: 21 }, (_, i) =>
+      elemento({ id: `el-${i + 1}`, contenido: `Meta ${i + 1}` }),
+    )
+    vi.mocked(obtenerEquipoConActividad).mockResolvedValue(equipo())
+    vi.mocked(obtenerActividad).mockResolvedValue(actividad())
+    vi.mocked(obtenerElementos)
+      .mockResolvedValueOnce(elementos21)
+      .mockResolvedValueOnce(elementos21.slice(0, 20))
+    vi.mocked(eliminarElemento).mockResolvedValue(undefined)
+    const usuario = userEvent.setup()
+    renderPantalla()
+
+    await screen.findByText('Meta 1')
+    await usuario.click(await screen.findByRole('button', { name: 'Siguiente' }))
+    await screen.findByText('Meta 11')
+    await usuario.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await screen.findByText('Meta 21')
+
+    await usuario.click(screen.getByRole('button', { name: 'Eliminar' }))
+    await waitFor(() => expect(eliminarElemento).toHaveBeenCalledWith('el-21'))
+
+    // rebanar corrigió la página (ya no existe la 3ª, con un solo elemento
+    // que se acaba de borrar): el rango vuelve a la última página real, no
+    // "21–20 de 20".
+    await waitFor(() => expect(screen.getByText('Meta 11')).toBeInTheDocument())
+    expect(screen.getByText('11–20 de 20')).toBeInTheDocument()
+  })
+
   it('quien no integra el equipo ve el contenido pero no puede escribir', async () => {
     vi.mocked(obtenerEquipoConActividad).mockResolvedValue(
       equipo({
