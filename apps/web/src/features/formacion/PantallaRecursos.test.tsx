@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { obtenerSesionActual } from '../cuentas/api'
 import { normalizarBusqueda } from '@plataforma/shared'
 import { listarRecursos, type ConsultaRecursos, type ResumenRecurso } from './formacion.api'
@@ -86,6 +86,12 @@ function servidor(catalogo: ResumenRecurso[]) {
     }
   }
 }
+
+beforeAll(() => {
+  // jsdom no implementa el desplazamiento; la pantalla lo usa al cambiar de
+  // página para llevar la vista al inicio de la sección.
+  Element.prototype.scrollIntoView = vi.fn()
+})
 
 describe('PantallaRecursos', () => {
   beforeEach(() => {
