@@ -1,6 +1,7 @@
 import 'dotenv/config'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { PrismaClient } from '@prisma/client'
+import { normalizarBusqueda } from '@plataforma/shared'
 
 // Carga los recursos formativos iniciales (docs/diseno-desarrollo-formacion.md
 // §11.2, incremento B1) para que el catálogo no arranque vacío. Solo inserta
@@ -245,6 +246,12 @@ try {
     await prisma.recursoFormativo.createMany({
       data: RECURSOS.map((recurso, orden) => ({
         ...recurso,
+        // createMany no pasa por crearRecurso: el texto de búsqueda se arma
+        // aquí con la misma regla (textoDeBusqueda en recursos.service.ts),
+        // o ninguna búsqueda del catálogo encontraría los recursos sembrados.
+        textoBusqueda: normalizarBusqueda(
+          [recurso.titulo, recurso.resumen, recurso.area ?? '', ...recurso.elementos].join(' '),
+        ),
         fuente: FUENTE,
         licencia: LICENCIA,
         orden,

@@ -1,4 +1,4 @@
-import express, { Router } from 'express'
+import express, { Router, type Response } from 'express'
 import {
   MAX_BYTES_ARCHIVO_RECURSO,
   POR_PAGINA_ADMIN,
@@ -14,6 +14,7 @@ import {
   guardarArchivoRecurso,
   listarRecursosAdmin,
   listarRecursosPublicados,
+  obtenerArchivoAdmin,
   obtenerArchivoPublicado,
   obtenerRecursoAdmin,
   obtenerRecursoPublicado,
@@ -29,6 +30,17 @@ import {
 // y §12.6). Las rutas públicas no exigen sesión (concepto §2.6: el contenido
 // formativo es visible sin cuenta); las administrativas exigen sesión de
 // administrador en cada endpoint.
+/**
+ * Límite del cuerpo JSON de las rutas de administración de recursos. El de
+ * express.json() por defecto (100 KB) es menor que lo que la validación
+ * permite: los textos de un recurso suman unos 71 000 caracteres (contenido
+ * 20 000, transcripción 50 000, más título, resumen, fuente y licencia). En el
+ * peor caso cada carácter ocupa 4 bytes en UTF-8, o 6 si JSON lo escapa como
+ * \uXXXX: ~425 KB. Con 1 MB todo lo válido cabe y la validación de campos es
+ * la que responde; sigue muy por debajo del tope de 4.5 MB de Vercel.
+ */
+export const LIMITE_JSON_RECURSOS = '1mb'
+
 export const recursosRouter = Router()
 export const adminRecursosRouter = Router()
 
@@ -50,21 +62,34 @@ recursosRouter.get('/recursos/:id', async (req, res) => {
   res.status(200).json({ recurso })
 })
 
-// GET /api/recursos/:id/archivo: el PDF del recurso. Se sirve en línea para
-// que el navegador lo abra en su visor; la URL lleva la fecha del archivo,
-// así que se cachea sin plazo. nosniff para que el navegador nunca lo
-// interprete como otra cosa que el tipo declarado.
-recursosRouter.get('/recursos/:id/archivo', async (req, res) => {
-  const archivo = await obtenerArchivoPublicado(req.params.id as string)
+/** Envía un PDF en línea, para que el navegador lo abra en su visor.
+ * nosniff para que nunca lo interprete como otra cosa que el tipo declarado.
+ * Express agrega un ETag, así que una revalidación de un archivo que no
+ * cambió responde 304 sin volver a mandar los bytes. */
+function enviarArchivo(
+  res: Response,
+  archivo: { contenido: Uint8Array; tipo: string; nombre: string },
+  cacheControl: string,
+) {
   res
     .status(200)
     .type(archivo.tipo)
     .set({
       'Content-Disposition': `inline; filename*=UTF-8''${encodeURIComponent(archivo.nombre)}`,
-      'Cache-Control': 'public, max-age=31536000, immutable',
+      'Cache-Control': cacheControl,
       'X-Content-Type-Options': 'nosniff',
     })
     .send(Buffer.from(archivo.contenido))
+}
+
+// GET /api/recursos/:id/archivo: el PDF de un recurso publicado. no-cache
+// (no "no-store"): el navegador y las cachés compartidas pueden guardarlo,
+// pero deben preguntar al servidor antes de reusarlo. Así, retirar o borrar
+// el recurso corta el acceso de inmediato (la revalidación recibe 404), y un
+// archivo sin cambios se sigue sirviendo con un 304 barato.
+recursosRouter.get('/recursos/:id/archivo', async (req, res) => {
+  const archivo = await obtenerArchivoPublicado(req.params.id as string)
+  enviarArchivo(res, archivo, 'public, no-cache')
 })
 
 // ---- Administración (/api/admin) ----
@@ -128,6 +153,14 @@ adminRecursosRouter.put(
     res.status(200).json({ recurso })
   },
 )
+
+// GET /api/admin/recursos/:id/archivo: el PDF en cualquier estatus, para
+// revisarlo antes de publicar. private, no-store: un borrador no debe quedar
+// en ninguna caché.
+adminRecursosRouter.get('/recursos/:id/archivo', exigirAdministrador, async (req, res) => {
+  const archivo = await obtenerArchivoAdmin(req.params.id as string)
+  enviarArchivo(res, archivo, 'private, no-store')
+})
 
 adminRecursosRouter.delete('/recursos/:id/archivo', exigirAdministrador, async (req, res) => {
   const recurso = await quitarArchivoRecurso(req.params.id as string)

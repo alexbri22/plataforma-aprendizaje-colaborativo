@@ -34,7 +34,7 @@ import {
   ErrorFormacion,
   Markdown,
   formatoTamano,
-  urlArchivo,
+  urlArchivoAdmin,
   useActualizarRecurso,
   useCrearRecurso,
   useEliminarRecurso,
@@ -550,12 +550,18 @@ function Editor({ recurso }: { recurso: RecursoAdmin | null }) {
                   <>
                     {archivo ? (
                       <p className={styles.archivoActual}>
-                        <a href={urlArchivo(archivo)} target="_blank" rel="noopener noreferrer">
+                        {/* Descarga del panel: abre también el PDF de un borrador
+                            o de un recurso retirado, para revisarlo. */}
+                        <a
+                          href={urlArchivoAdmin(idRecurso, archivo)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
                           {archivo.nombre}
                         </a>{' '}
                         · {formatoTamano(archivo.tamano)}
                         {estatus !== 'publicado' ? (
-                          <span className={styles.nota}> (visible al publicar)</span>
+                          <span className={styles.nota}> (el público lo verá al publicar)</span>
                         ) : null}
                       </p>
                     ) : (

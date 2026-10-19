@@ -45,11 +45,22 @@ describe('GET /api/actividades/:id/equipos', () => {
         nombre: 'Alfa',
         descripcionActividad: null,
         formaDeTrabajo: null,
-        integrantes: [{ idMembresia: e.participantes[0].idMembresia, rol: 'participante' }],
+        integrantes: [
+          {
+            idMembresia: e.participantes[0].idMembresia,
+            idUsuario: e.participantes[0].idUsuario,
+            rol: 'participante',
+          },
+        ],
       })
       expect(respuesta.body.sinEquipo.map((p: { nombre: string }) => p.nombre)).toEqual([
         'Pablo2 Prueba',
         'Pablo3 Prueba',
+      ])
+      // El id de la cuenta viaja para enlazar al perfil de cada persona.
+      expect(respuesta.body.sinEquipo.map((p: { idUsuario: string }) => p.idUsuario)).toEqual([
+        e.participantes[1].idUsuario,
+        e.participantes[2].idUsuario,
       ])
     }
   })
@@ -103,7 +114,12 @@ describe('POST /api/actividades/:id/equipos', () => {
 
     expect(respuesta.status).toBe(201)
     expect(respuesta.body.equipo.integrantes).toEqual([
-      { idMembresia: e.participantes[0].idMembresia, nombre: 'Pablo1 Prueba', rol: 'participante' },
+      {
+        idMembresia: e.participantes[0].idMembresia,
+        idUsuario: e.participantes[0].idUsuario,
+        nombre: 'Pablo1 Prueba',
+        rol: 'participante',
+      },
     ])
     expect(await eventos(e.id, 'equipo_creado')).toHaveLength(1)
     expect(await eventos(e.id, 'integrante_asignado')).toHaveLength(1)
@@ -293,7 +309,12 @@ describe('PUT /api/equipos/:id/integrantes/:idMembresia', () => {
     const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
     const respuesta = await asignar(idA, e.organizador.idMembresia, e.organizador.cookie)
     expect(respuesta.body.equipo.integrantes).toEqual([
-      { idMembresia: e.organizador.idMembresia, nombre: 'Olga Prueba', rol: 'organizador' },
+      {
+        idMembresia: e.organizador.idMembresia,
+        idUsuario: e.organizador.idUsuario,
+        nombre: 'Olga Prueba',
+        rol: 'organizador',
+      },
     ])
     // El organizador no cuenta como "sin equipo" y los participantes siguen pendientes.
     const lista = (await listar(e.id, e.organizador.cookie)).body
@@ -372,6 +393,42 @@ describe('DELETE /api/equipos/:id/integrantes/:idMembresia', () => {
       .delete(`/api/equipos/${idA}/integrantes/${e.participantes[1].idMembresia}`)
       .set('Cookie', e.participantes[0].cookie)
     expect(respuesta.status).toBe(403)
+  })
+})
+
+describe('GET /api/equipos/:id', () => {
+  it('cualquier miembro de la actividad ve el equipo, con su idActividad', async () => {
+    const e = await actividadEnFormacion(2)
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    await asignar(idA, e.participantes[0].idMembresia, e.organizador.cookie)
+
+    // El organizador no integra el equipo y de todos modos lo ve (roster,
+    // no espacio de trabajo: P-04 no aplica aquí).
+    const comoOrganizador = await request(app)
+      .get(`/api/equipos/${idA}`)
+      .set('Cookie', e.organizador.cookie)
+    expect(comoOrganizador.status).toBe(200)
+    expect(comoOrganizador.body.equipo).toMatchObject({
+      id: idA,
+      nombre: 'Alfa',
+      idActividad: e.id,
+      idMiMembresia: e.organizador.idMembresia,
+    })
+    expect(comoOrganizador.body.equipo.integrantes).toHaveLength(1)
+
+    const comoParticipante = await request(app)
+      .get(`/api/equipos/${idA}`)
+      .set('Cookie', e.participantes[1].cookie)
+    expect(comoParticipante.status).toBe(200)
+  })
+
+  it('quien no es miembro de la actividad recibe 404', async () => {
+    const e = await actividadEnFormacion(1)
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    const ajeno = await registrar('Ajeno')
+
+    const respuesta = await request(app).get(`/api/equipos/${idA}`).set('Cookie', ajeno.cookie)
+    expect(respuesta.status).toBe(404)
   })
 })
 

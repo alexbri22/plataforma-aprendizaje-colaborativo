@@ -32,6 +32,7 @@ export type CodigoError =
   | 'equipo_lleno'
   | 'intercambio_invalido'
   | 'foto_invalida'
+  | 'elemento_no_encontrado'
   | 'recurso_no_encontrado'
   | 'archivo_invalido'
 
@@ -345,6 +346,18 @@ export class ErrorIntercambioInvalido extends ErrorDominio {
 
   constructor() {
     super('Elige dos personas que estén en equipos distintos.')
+  }
+}
+
+// Mismo criterio que ErrorEquipoNoEncontrado: un elemento que no existe y uno
+// que pertenece al equipo de otra persona se responden igual
+// (docs/diseno-desarrollo-nucleo.md §3.3).
+export class ErrorElementoNoEncontrado extends ErrorDominio {
+  readonly codigo = 'elemento_no_encontrado' as const
+  readonly status = 404
+
+  constructor() {
+    super('No encontramos este elemento, o no formas parte de su equipo.')
   }
 }
 

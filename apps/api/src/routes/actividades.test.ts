@@ -579,6 +579,78 @@ describe('POST /api/actividades/:id/inscripcion/cierre', () => {
   })
 })
 
+describe('POST /api/actividades/:id/cierre', () => {
+  async function actividadEnDesarrollo(correo = 'ada@ejemplo.com') {
+    const cookie = await registrarYObtenerCookie(correo)
+    const { id } = await crearActividad(cookie)
+    await prisma.actividad.update({ where: { idActividad: id }, data: { estado: 'desarrollo' } })
+    return { cookie, id }
+  }
+
+  it('inicia el cierre sin precondición', async () => {
+    const { cookie, id } = await actividadEnDesarrollo()
+
+    const respuesta = await request(app).post(`/api/actividades/${id}/cierre`).set('Cookie', cookie)
+
+    expect(respuesta.status).toBe(200)
+    expect(respuesta.body.actividad.fase).toBe('cierre')
+    const actividadEnBD = await prisma.actividad.findUniqueOrThrow({ where: { idActividad: id } })
+    expect(actividadEnBD.estado).toBe('cierre')
+  })
+
+  it('responde 403 a un participante que intenta iniciarlo', async () => {
+    const cookieOrganizador = await registrarYObtenerCookie('ada@ejemplo.com')
+    const cookieParticipante = await registrarYObtenerCookie('grace@ejemplo.com')
+    const { id, claveIngreso } = await crearActividad(cookieOrganizador)
+    await unirseComoParticipante(claveIngreso, cookieParticipante)
+    await prisma.actividad.update({ where: { idActividad: id }, data: { estado: 'desarrollo' } })
+
+    const respuesta = await request(app)
+      .post(`/api/actividades/${id}/cierre`)
+      .set('Cookie', cookieParticipante)
+
+    expect(respuesta.status).toBe(403)
+  })
+
+  it('responde 409 si no está en desarrollo', async () => {
+    const cookieOrganizador = await registrarYObtenerCookie('ada@ejemplo.com')
+    const { id } = await crearActividad(cookieOrganizador)
+
+    const respuesta = await request(app)
+      .post(`/api/actividades/${id}/cierre`)
+      .set('Cookie', cookieOrganizador)
+
+    expect(respuesta.status).toBe(409)
+    expect(respuesta.body.codigo).toBe('fase_no_permite_accion')
+  })
+
+  it('registra un evento de historial con el actor de tipo usuario', async () => {
+    const { cookie, id } = await actividadEnDesarrollo()
+
+    await request(app).post(`/api/actividades/${id}/cierre`).set('Cookie', cookie)
+
+    const eventos = await prisma.historial.findMany({
+      where: { idActividad: id, tipoEvento: 'fase_avanzada' },
+    })
+    expect(eventos).toHaveLength(1)
+    expect(eventos[0]).toMatchObject({ tipoActor: 'usuario', categoria: 'estructura' })
+  })
+
+  it('dos inicios de cierre simultáneos ejecutan la transición una sola vez', async () => {
+    const { cookie, id } = await actividadEnDesarrollo()
+
+    const respuestas = await Promise.all(
+      [1, 2].map(() => request(app).post(`/api/actividades/${id}/cierre`).set('Cookie', cookie)),
+    )
+
+    expect(respuestas.map((r) => r.status).sort()).toEqual([200, 409])
+    const eventos = await prisma.historial.findMany({
+      where: { idActividad: id, tipoEvento: 'fase_avanzada' },
+    })
+    expect(eventos).toHaveLength(1)
+  })
+})
+
 describe('PUT /api/actividades/:id/coorganizadores/:idUsuario', () => {
   it('agrega a un usuario sin membresía previa como co-organizador con el conjunto de permisos por defecto', async () => {
     const cookieOrganizador = await registrarYObtenerCookie('ada@ejemplo.com')

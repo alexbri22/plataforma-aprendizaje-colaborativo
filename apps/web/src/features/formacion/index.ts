@@ -8,7 +8,7 @@ export { PantallaRecursos } from './PantallaRecursos'
 export { PantallaRecurso } from './PantallaRecurso'
 export { Markdown } from './Markdown'
 export { formatoTamano } from './formato'
-export { ErrorFormacion, urlArchivo } from './formacion.api'
+export { ErrorFormacion, urlArchivo, urlArchivoAdmin } from './formacion.api'
 export type { DatosRecurso, RecursoAdmin, RecursoPublico, ResumenRecurso } from './formacion.api'
 export {
   useActualizarRecurso,

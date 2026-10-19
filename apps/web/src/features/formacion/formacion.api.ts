@@ -131,6 +131,17 @@ export function urlArchivo(archivo: ArchivoRecurso): string {
   return `${BASE_URL}${archivo.url}`
 }
 
+/** Descarga del archivo para el panel: funciona en cualquier estatus (la
+ * pública solo con el recurso publicado), para revisar el PDF de un borrador
+ * antes de publicarlo. Lleva la misma marca de versión que la pública para
+ * que reemplazar el archivo no muestre el anterior. */
+export function urlArchivoAdmin(idRecurso: string, archivo: ArchivoRecurso): string {
+  const version = new URL(archivo.url, 'http://x').searchParams.get('v')
+  return `${BASE_URL}/api/admin/recursos/${encodeURIComponent(idRecurso)}/archivo${
+    version ? `?v=${version}` : ''
+  }`
+}
+
 // ---- Público ----
 
 function aQuery(consulta: ConsultaRecursos): string {

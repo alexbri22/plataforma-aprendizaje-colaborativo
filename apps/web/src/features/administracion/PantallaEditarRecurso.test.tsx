@@ -163,4 +163,18 @@ describe('PantallaEditarRecurso', () => {
     await user.click(within(resumen).getByRole('button', { name: 'Licencia o derechos de uso' }))
     expect(screen.getByLabelText('Licencia o derechos de uso')).toHaveFocus()
   })
+
+  it('el PDF de un borrador se abre con la descarga del panel, no con la pública', async () => {
+    vi.mocked(obtenerRecursoAdmin).mockResolvedValue({
+      ...RECURSO,
+      tipoRecurso: 'pdf',
+      estatus: 'borrador',
+      archivo: { nombre: 'guia.pdf', tamano: 2048, url: '/api/recursos/r1/archivo?v=123' },
+    })
+    renderEn('/admin/contenido/r1')
+
+    const enlace = await screen.findByRole('link', { name: 'guia.pdf' })
+    expect(enlace.getAttribute('href')).toMatch(/\/api\/admin\/recursos\/r1\/archivo\?v=123$/)
+    expect(screen.getByText(/el público lo verá al publicar/)).toBeInTheDocument()
+  })
 })

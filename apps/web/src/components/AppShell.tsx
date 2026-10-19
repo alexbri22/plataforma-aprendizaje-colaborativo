@@ -1,6 +1,7 @@
-import { useId, useState, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useCerrarSesionMutation, useSesion } from '../features/cuentas'
+import { GrupoNav } from './GrupoNav'
 import { Avatar } from './ui'
 import styles from './AppShell.module.css'
 
@@ -101,21 +102,6 @@ function IconoParticipo() {
   )
 }
 
-function IconoInsignias() {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-      <circle cx="10" cy="8" r="5.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <path
-        d="M7 12.5 5.5 18l4.5-2.3 4.5 2.3-1.5-5.5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
 function IconoRecursos() {
   return (
     <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
@@ -182,21 +168,6 @@ function IconoAdministracion() {
   )
 }
 
-function IconoChevron({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-      <path
-        d="m8 5.5 4.5 4.5L8 14.5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
 function IconoSalir() {
   return (
     <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
@@ -232,8 +203,9 @@ const ITEMS_NAV_ACTIVIDADES: ItemNav[] = [
   },
 ]
 
+// Mi perfil no es un ítem de la navegación: se abre desde el nombre de la
+// cuenta, al pie del menú, que es donde se busca lo que es de uno.
 const ITEMS_NAV: ItemNav[] = [
-  { id: 'perfil', etiqueta: 'Mi perfil', to: '/perfil', Icono: IconoInsignias },
   { id: 'recursos', etiqueta: 'Recursos', to: '/recursos', Icono: IconoRecursos },
 ]
 
@@ -245,25 +217,6 @@ const ITEMS_NAV_ADMIN: ItemNav[] = [
   { id: 'contenido', etiqueta: 'Contenido', to: '/admin/contenido', Icono: IconoRecursos },
 ]
 
-// Preferencia de la persona (abierto/cerrado) por grupo plegable. Es una
-// comodidad por navegador: si el almacenamiento no está disponible, el grupo
-// simplemente arranca abierto.
-function leerGrupoAbierto(clave: string): boolean {
-  try {
-    return localStorage.getItem(clave) !== 'false'
-  } catch {
-    return true
-  }
-}
-
-function guardarGrupoAbierto(clave: string, abierto: boolean) {
-  try {
-    localStorage.setItem(clave, String(abierto))
-  } catch {
-    // Sin almacenamiento el grupo solo no recuerda su estado entre pantallas.
-  }
-}
-
 function ItemNavLink({ item, activo }: { item: ItemNav; activo: boolean }) {
   return (
     <Link
@@ -274,89 +227,6 @@ function ItemNavLink({ item, activo }: { item: ItemNav; activo: boolean }) {
       <item.Icono />
       {item.etiqueta}
     </Link>
-  )
-}
-
-interface GrupoNavProps {
-  claveAlmacenamiento: string
-  etiqueta: string
-  Icono: () => ReactNode
-  items: ItemNav[]
-  seccionActiva: SeccionApp
-  /** Valores de seccionActiva, además de los ids de `items`, que cuentan como
-   * "dentro de este grupo" (p. ej. las pantallas de una actividad puntual,
-   * que no pertenecen ni a Organizo ni a Participo). */
-  tambienActivoEn?: SeccionApp[]
-  /** 'principal': un ítem más de la navegación de todos (Actividades), mismo
-   * tamaño que el resto y sin separador. 'seccion': grupo de rol aparte,
-   * separado por línea y en versalitas (Administración). */
-  variante: 'principal' | 'seccion'
-}
-
-// Grupo plegable de navegación: un encabezado que alterna un panel con sus
-// ítems. Estando en una de sus pantallas se abre siempre, para que el ítem
-// activo nunca quede oculto.
-function GrupoNav({
-  claveAlmacenamiento,
-  etiqueta,
-  Icono,
-  items,
-  seccionActiva,
-  tambienActivoEn = [],
-  variante,
-}: GrupoNavProps) {
-  const idPanel = useId()
-  const contieneActiva =
-    items.some((item) => item.id === seccionActiva) || tambienActivoEn.includes(seccionActiva)
-  const [abierto, setAbierto] = useState(
-    () => contieneActiva || leerGrupoAbierto(claveAlmacenamiento),
-  )
-
-  function alternar() {
-    const siguiente = !abierto
-    setAbierto(siguiente)
-    guardarGrupoAbierto(claveAlmacenamiento, siguiente)
-  }
-
-  const esPrincipal = variante === 'principal'
-
-  return (
-    <div className={esPrincipal ? styles.grupoPrincipal : styles.grupo}>
-      <button
-        type="button"
-        className={[
-          esPrincipal ? styles.grupoEncabezadoPrincipal : styles.grupoEncabezado,
-          contieneActiva ? styles.grupoEncabezadoActivo : null,
-        ]
-          .filter(Boolean)
-          .join(' ')}
-        aria-expanded={abierto}
-        aria-controls={idPanel}
-        onClick={alternar}
-      >
-        <Icono />
-        <span className={styles.grupoEtiqueta}>{etiqueta}</span>
-        <IconoChevron className={styles.grupoChevron} />
-      </button>
-
-      <div
-        id={idPanel}
-        className={[styles.grupoPanel, abierto ? styles.grupoPanelAbierto : null]
-          .filter(Boolean)
-          .join(' ')}
-        inert={!abierto}
-      >
-        <div
-          className={[styles.grupoItems, esPrincipal ? styles.grupoItemsPrincipal : null]
-            .filter(Boolean)
-            .join(' ')}
-        >
-          {items.map((item) => (
-            <ItemNavLink key={item.id} item={item} activo={item.id === seccionActiva} />
-          ))}
-        </div>
-      </div>
-    </div>
   )
 }
 
@@ -401,11 +271,16 @@ export function AppShell({ seccionActiva, titulo, volverA, acciones, children }:
             claveAlmacenamiento="co3.nav.actividades.abierto"
             etiqueta="Actividades"
             Icono={IconoActividades}
-            items={ITEMS_NAV_ACTIVIDADES}
-            seccionActiva={seccionActiva}
-            tambienActivoEn={['actividades']}
+            contieneActivo={
+              ITEMS_NAV_ACTIVIDADES.some((item) => item.id === seccionActiva) ||
+              seccionActiva === 'actividades'
+            }
             variante="principal"
-          />
+          >
+            {ITEMS_NAV_ACTIVIDADES.map((item) => (
+              <ItemNavLink key={item.id} item={item} activo={item.id === seccionActiva} />
+            ))}
+          </GrupoNav>
 
           {ITEMS_NAV.map((item) => (
             <ItemNavLink key={item.id} item={item} activo={item.id === seccionActiva} />
@@ -416,16 +291,29 @@ export function AppShell({ seccionActiva, titulo, volverA, acciones, children }:
               claveAlmacenamiento="co3.nav.administracion.abierto"
               etiqueta="Administración"
               Icono={IconoAdministracion}
-              items={ITEMS_NAV_ADMIN}
-              seccionActiva={seccionActiva}
+              contieneActivo={ITEMS_NAV_ADMIN.some((item) => item.id === seccionActiva)}
               variante="seccion"
-            />
+            >
+              {ITEMS_NAV_ADMIN.map((item) => (
+                <ItemNavLink key={item.id} item={item} activo={item.id === seccionActiva} />
+              ))}
+            </GrupoNav>
           ) : null}
         </nav>
 
         <div className={styles.cuenta}>
           {usuario ? (
-            <Link to="/perfil" className={styles.cuentaInfo}>
+            <Link
+              to="/perfil"
+              className={[
+                styles.cuentaInfo,
+                seccionActiva === 'perfil' ? styles.cuentaActiva : null,
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              aria-label={`${usuario.nombre} ${usuario.apellidoPaterno}, ver mi perfil`}
+              aria-current={seccionActiva === 'perfil' ? 'page' : undefined}
+            >
               <Avatar
                 nombre={usuario.nombre}
                 apellidoPaterno={usuario.apellidoPaterno}

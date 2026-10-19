@@ -15,6 +15,8 @@ export type RolIntegrante = 'organizador' | 'co-organizador' | 'participante'
 
 export interface IntegranteEquipo {
   idMembresia: string
+  /** Para enlazar al perfil de la persona (/usuarios/:id). */
+  idUsuario: string
   nombre: string
   rol: RolIntegrante
 }
@@ -31,6 +33,8 @@ export interface Equipo {
 /** Persona activa, con rol participante, que aún no tiene equipo. */
 export interface ParticipanteSinEquipo {
   idMembresia: string
+  /** Para enlazar al perfil de la persona (/usuarios/:id). */
+  idUsuario: string
   nombre: string
 }
 

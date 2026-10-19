@@ -101,6 +101,7 @@ describe('rutas administrativas de recursos', () => {
     ['patch', '/api/admin/recursos/x'],
     ['delete', '/api/admin/recursos/x'],
     ['put', '/api/admin/recursos/x/archivo'],
+    ['get', '/api/admin/recursos/x/archivo'],
     ['delete', '/api/admin/recursos/x/archivo'],
   ]
 
@@ -496,5 +497,137 @@ describe('archivo de un recurso', () => {
     expect(respuesta.status).toBe(200)
     expect(respuesta.body.recurso.archivo).toBeNull()
     expect(await prisma.archivoRecurso.count()).toBe(0)
+  })
+})
+
+describe('descarga y caché del PDF', () => {
+  async function pdfPublicado(): Promise<string> {
+    const id = await crear(admin.cookie, {
+      ...ARTICULO_COMPLETO,
+      tipoRecurso: 'pdf',
+      contenido: '',
+    })
+    await request(app)
+      .put(`/api/admin/recursos/${id}/archivo`)
+      .set('Cookie', admin.cookie)
+      .set('Content-Type', 'application/pdf')
+      .send(PDF_MINIMO)
+      .expect(200)
+    return id
+  }
+
+  it('la descarga pública se revalida: 304 si no cambió, 404 en cuanto se retira', async () => {
+    const id = await pdfPublicado()
+    await request(app)
+      .patch(`/api/admin/recursos/${id}`)
+      .set('Cookie', admin.cookie)
+      .send({ estatus: 'publicado' })
+      .expect(200)
+
+    const primera = await request(app).get(`/api/recursos/${id}/archivo`).expect(200)
+    expect(primera.headers['cache-control']).toBe('public, no-cache')
+    const etag = primera.headers.etag as string
+    expect(etag).toBeTruthy()
+
+    await request(app).get(`/api/recursos/${id}/archivo`).set('If-None-Match', etag).expect(304)
+
+    await request(app)
+      .patch(`/api/admin/recursos/${id}`)
+      .set('Cookie', admin.cookie)
+      .send({ estatus: 'retirado' })
+      .expect(200)
+    await request(app).get(`/api/recursos/${id}/archivo`).set('If-None-Match', etag).expect(404)
+  })
+
+  it('el administrador descarga el PDF de un borrador; el público no', async () => {
+    const id = await pdfPublicado()
+
+    const respuesta = await request(app)
+      .get(`/api/admin/recursos/${id}/archivo`)
+      .set('Cookie', admin.cookie)
+      .buffer(true)
+    expect(respuesta.status).toBe(200)
+    expect(respuesta.headers['cache-control']).toBe('private, no-store')
+    expect(Buffer.from(respuesta.body).equals(PDF_MINIMO)).toBe(true)
+
+    await request(app).get(`/api/recursos/${id}/archivo`).expect(404)
+  })
+})
+
+describe('tamaño del cuerpo', () => {
+  it('acepta una transcripción de 50 000 caracteres de varios bytes (más de 100 KB de JSON)', async () => {
+    const transcripcion = '協'.repeat(50_000)
+    const respuesta = await request(app)
+      .post('/api/admin/recursos')
+      .set('Cookie', admin.cookie)
+      .send({
+        seccion: 'como_colaborar',
+        titulo: 'Video largo',
+        tipoRecurso: 'video',
+        contenido: 'https://www.youtube.com/watch?v=abc',
+        transcripcion,
+      })
+    expect(respuesta.status).toBe(201)
+    expect(respuesta.body.recurso.transcripcion).toHaveLength(50_000)
+  })
+
+  it('las demás rutas conservan el límite general', async () => {
+    const respuesta = await request(app)
+      .post('/api/sesion')
+      .send({ correo: 'x@ejemplo.com', contrasena: 'x'.repeat(200_000) })
+    expect(respuesta.status).toBe(413)
+  })
+})
+
+describe('cambios simultáneos sobre un recurso', () => {
+  // Sin el bloqueo por recurso, las dos peticiones leían el borrador completo
+  // y validaban cada una por su lado: podía quedar publicado un artículo sin
+  // contenido o un PDF sin archivo. Con el bloqueo una espera a la otra, y la
+  // segunda valida contra lo que dejó la primera.
+  it('publicar y vaciar el contenido a la vez nunca deja publicado un artículo vacío', async () => {
+    for (let i = 0; i < 10; i++) {
+      const id = await crear(admin.cookie, ARTICULO_COMPLETO)
+      await Promise.all([
+        request(app)
+          .patch(`/api/admin/recursos/${id}`)
+          .set('Cookie', admin.cookie)
+          .send({ estatus: 'publicado' }),
+        request(app)
+          .patch(`/api/admin/recursos/${id}`)
+          .set('Cookie', admin.cookie)
+          .send({ contenido: '' }),
+      ])
+      const final = await prisma.recursoFormativo.findUniqueOrThrow({ where: { idRecurso: id } })
+      expect(final.estatus === 'publicado' && final.contenido === '').toBe(false)
+    }
+  })
+
+  it('publicar un PDF y quitarle el archivo a la vez nunca deja un PDF publicado sin archivo', async () => {
+    for (let i = 0; i < 10; i++) {
+      const id = await crear(admin.cookie, {
+        ...ARTICULO_COMPLETO,
+        tipoRecurso: 'pdf',
+        contenido: '',
+      })
+      await request(app)
+        .put(`/api/admin/recursos/${id}/archivo`)
+        .set('Cookie', admin.cookie)
+        .set('Content-Type', 'application/pdf')
+        .send(PDF_MINIMO)
+        .expect(200)
+
+      await Promise.all([
+        request(app)
+          .patch(`/api/admin/recursos/${id}`)
+          .set('Cookie', admin.cookie)
+          .send({ estatus: 'publicado' }),
+        request(app).delete(`/api/admin/recursos/${id}/archivo`).set('Cookie', admin.cookie),
+      ])
+      const final = await prisma.recursoFormativo.findUniqueOrThrow({
+        where: { idRecurso: id },
+        include: { archivo: { select: { idRecurso: true } } },
+      })
+      expect(final.estatus === 'publicado' && final.archivo === null).toBe(false)
+    }
   })
 })

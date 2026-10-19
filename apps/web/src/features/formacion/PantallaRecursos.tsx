@@ -107,6 +107,28 @@ function CentroFormacion() {
     pagina: paginaBreves,
     porPagina: POR_PAGINA_BREVES,
   })
+  // Si el catálogo se reduce mientras se ve una página que ya no existe (se
+  // retiraron recursos y se volvió a pedir la lista), la API devuelve esa
+  // página vacía y Paginacion se oculta cuando todo cabe en una: sin esto no
+  // habría forma de volver a los resultados. Se lleva a la última página que
+  // sí existe. Solo con una respuesta real (no la anterior que se sigue
+  // mostrando mientras llega la nueva), para no saltar a destiempo. Es un
+  // ajuste de estado durante el render, que React permite y repite antes de
+  // pintar; se detiene en cuanto la página pedida ya es válida.
+  const ajuste = { articulos: paginaArticulos, breves: paginaBreves }
+  for (const [lista, consulta] of [
+    ['articulos', articulos],
+    ['breves', breves],
+  ] as const) {
+    if (consulta.isSuccess && !consulta.isPlaceholderData) {
+      const ultima = Math.max(1, consulta.data.paginacion.totalPaginas)
+      if (ajuste[lista] > ultima) ajuste[lista] = ultima
+    }
+  }
+  if (ajuste.articulos !== paginaArticulos || ajuste.breves !== paginaBreves) {
+    setPaginas({ clave: claveFiltros, ...ajuste })
+  }
+
   // "Empieza por aquí": el primer artículo de Qué es colaborar, sin filtros.
   // Cuando exista el progreso (incremento 3), quien tenga un curso iniciado
   // verá aquí "Continúa aprendiendo".

@@ -200,19 +200,23 @@ describe('foto de perfil', () => {
 })
 
 describe('GET /api/usuarios/:id', () => {
-  it('muestra nombre, foto y rangos de otro usuario, nunca el correo', async () => {
+  it('muestra los datos básicos, la foto y los rangos de otro usuario, y nada más', async () => {
     const r = await request(app).get(`/api/usuarios/${ada.idUsuario}`).set('Cookie', grace.cookie)
 
     expect(r.status).toBe(200)
+    // toEqual y no toMatchObject: un campo de más (contraseña, tipo o estado
+    // de la cuenta) debe romper la prueba.
     expect(r.body.usuario).toEqual({
       idUsuario: ada.idUsuario,
       nombre: 'Ada',
       apellidoPaterno: 'Lovelace',
       apellidoMaterno: 'Byron',
+      correo: ada.correo,
+      nivelEstudios: 'licenciatura',
+      institucionEducativa: 'UNAM',
       fotoUrl: null,
       acumulado: {},
     })
-    expect(r.body.usuario.correo).toBeUndefined()
   })
 
   it('responde 404 si no existe', async () => {

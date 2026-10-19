@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Usuario } from '../cuentas/api'
 import {
   cerrarInscripcion,
+  iniciarCierre,
   obtenerActividad,
   obtenerParticipantes,
   type Participante,
@@ -39,7 +40,18 @@ vi.mock('./actividades.api', async () => {
     ...real,
     obtenerActividad: vi.fn(),
     cerrarInscripcion: vi.fn(),
+    iniciarCierre: vi.fn(),
     obtenerParticipantes: vi.fn().mockResolvedValue([]),
+  }
+})
+
+vi.mock('../historial/historial.api', async () => {
+  const real = await vi.importActual<typeof import('../historial/historial.api')>(
+    '../historial/historial.api',
+  )
+  return {
+    ...real,
+    obtenerHistorial: vi.fn().mockResolvedValue({ eventos: [], cursorSiguiente: null }),
   }
 })
 
@@ -81,6 +93,7 @@ describe('PantallaResumenActividad', () => {
   beforeEach(() => {
     vi.mocked(obtenerActividad).mockReset()
     vi.mocked(cerrarInscripcion).mockReset()
+    vi.mocked(iniciarCierre).mockReset()
     vi.mocked(obtenerParticipantes).mockReset().mockResolvedValue([])
   })
 
@@ -172,6 +185,38 @@ describe('PantallaResumenActividad', () => {
     expect(cerrarInscripcion).not.toHaveBeenCalled()
   })
 
+  it('muestra el botón de iniciar cierre cuando esa capacidad está presente, en vez del de cerrar inscripción', async () => {
+    vi.mocked(obtenerActividad).mockResolvedValueOnce({
+      ...ACTIVIDAD_BASE,
+      fase: 'desarrollo',
+      capacidades: ['iniciar_cierre'],
+    })
+
+    renderPantalla(ACTIVIDAD_BASE.id)
+
+    expect(await screen.findByRole('button', { name: 'Iniciar cierre' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Cerrar inscripción' })).not.toBeInTheDocument()
+  })
+
+  it('pide confirmación y solo inicia el cierre tras confirmar', async () => {
+    const usuario = userEvent.setup()
+    const actividadEnDesarrollo: Actividad = {
+      ...ACTIVIDAD_BASE,
+      fase: 'desarrollo',
+      capacidades: ['iniciar_cierre'],
+    }
+    vi.mocked(obtenerActividad).mockResolvedValue(actividadEnDesarrollo)
+    vi.mocked(iniciarCierre).mockResolvedValueOnce({ ...actividadEnDesarrollo, capacidades: [] })
+
+    renderPantalla(ACTIVIDAD_BASE.id)
+
+    await usuario.click(await screen.findByRole('button', { name: 'Iniciar cierre' }))
+    expect(iniciarCierre).not.toHaveBeenCalled()
+
+    await usuario.click(await screen.findByRole('button', { name: 'Sí, iniciar cierre' }))
+    await waitFor(() => expect(iniciarCierre).toHaveBeenCalledWith(ACTIVIDAD_BASE.id))
+  })
+
   it('muestra el estado vacío de participantes cuando nadie se ha unido', async () => {
     vi.mocked(obtenerActividad).mockResolvedValueOnce(ACTIVIDAD_BASE)
     vi.mocked(obtenerParticipantes).mockResolvedValueOnce([])
@@ -200,7 +245,10 @@ describe('PantallaResumenActividad', () => {
 
     renderPantalla(ACTIVIDAD_BASE.id)
 
-    expect(await screen.findByText('Grace Hopper')).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: 'Grace Hopper' })).toHaveAttribute(
+      'href',
+      '/usuarios/p-1',
+    )
     expect(screen.getByText('Participantes (1)')).toBeInTheDocument()
   })
 
@@ -319,5 +367,19 @@ describe('PantallaResumenActividad', () => {
 
     await screen.findByRole('button', { name: 'Cerrar inscripción' })
     expect(screen.getByRole('link', { name: 'Equipos' })).toBeInTheDocument()
+  })
+
+  it('Historial abre un panel lateral, no navega a otra pantalla', async () => {
+    vi.mocked(obtenerActividad).mockResolvedValueOnce(ACTIVIDAD_BASE)
+    const usuario = userEvent.setup()
+    renderPantalla(ACTIVIDAD_BASE.id)
+
+    const botonHistorial = await screen.findByRole('button', { name: 'Historial' })
+    expect(botonHistorial).toBeInTheDocument()
+    await usuario.click(botonHistorial)
+
+    const panel = await screen.findByRole('dialog')
+    expect(panel).toHaveTextContent('Historial')
+    expect(screen.queryByRole('link', { name: 'Historial' })).not.toBeInTheDocument()
   })
 })

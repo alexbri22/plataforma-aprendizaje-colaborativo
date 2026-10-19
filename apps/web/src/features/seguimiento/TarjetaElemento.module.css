@@ -1,0 +1,36 @@
+.tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.contenido {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  white-space: pre-wrap;
+}
+
+.pie {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.autoria {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.acciones {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}

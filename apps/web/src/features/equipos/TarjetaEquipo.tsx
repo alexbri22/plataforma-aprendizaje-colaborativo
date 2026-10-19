@@ -5,6 +5,8 @@ import {
   type LimitesEquipo,
   type RolIntegrante,
 } from '@plataforma/shared'
+import { Link } from 'react-router-dom'
+import { EnlacePerfil } from '../../components/EnlacePerfil'
 import { Badge, Button, Card } from '../../components/ui'
 import styles from './TarjetaEquipo.module.css'
 
@@ -62,14 +64,41 @@ export function TarjetaEquipo({
   const bajoMinimoConfigurado =
     !bajoMinimoObligatorio && limites.minimo !== null && cantidad < limites.minimo
 
-  // Durante la formación autogestionada, cada persona también puede
-  // retirarse de su propio equipo.
-  const mostrarUnirme = !soyIntegrante && puedeMoverme
+  // Lleno no se muestra como botón deshabilitado "Equipo lleno": la insignia
+  // de "X de Y integrantes" de arriba ya lo dice, y repetirlo como acción sin
+  // acción es ruido. Durante la formación autogestionada, cada persona
+  // también puede retirarse de su propio equipo (antes solo quien organiza o
+  // co-organiza podía "salir" de un equipo del que era integrante).
+  const mostrarUnirme = !soyIntegrante && puedeMoverme && !lleno
   const mostrarSalir = soyIntegrante && puedeMoverme
   const mostrarEditar = puede('editar_equipo') && (miRol !== 'participante' || soyIntegrante)
+  // Espacio de equipo (nucleo §9.1, general §7.3): un participante solo entra
+  // al suyo; quien organiza o co-organiza entra a cualquiera, a revisarlo.
+  const mostrarEspacio = miRol !== 'participante' || soyIntegrante
 
   return (
-    <Card className={styles.tarjeta}>
+    <Card
+      className={[styles.tarjeta, mostrarEspacio ? styles.tarjetaClicable : null]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      {mostrarEspacio ? (
+        // Enlace superpuesto ("stretched link") y no la tarjeta entera con
+        // role="link": la tarjeta contiene botones reales (Unirme, Salir,
+        // Editar), y un control con role="link" no puede contener otros
+        // controles enfocables sin romper la semántica de accesibilidad ni
+        // confundir la navegación por teclado/lector de pantalla. Este
+        // enlace es hermano del resto del contenido, no su contenedor:
+        // cubre toda la tarjeta (position: absolute, TarjetaEquipo.module.css)
+        // y los botones, que vienen después en el documento, se elevan por
+        // encima (z-index) para seguir siendo clicables por su cuenta — sin
+        // necesitar detener la propagación del clic.
+        <Link
+          to={`/equipos/${equipo.id}`}
+          className={styles.enlaceSuperpuesto}
+          aria-label={`Entrar al espacio de ${equipo.nombre}`}
+        />
+      ) : null}
       <div className={styles.encabezado}>
         <h2 className={styles.nombre}>{equipo.nombre}</h2>
         <Badge variant="neutral">
@@ -119,7 +148,7 @@ export function TarjetaEquipo({
           {equipo.integrantes.map((integrante) => (
             <li key={integrante.idMembresia} className={styles.integrante}>
               <span>
-                {integrante.nombre}
+                <EnlacePerfil idUsuario={integrante.idUsuario}>{integrante.nombre}</EnlacePerfil>
                 {integrante.idMembresia === idMiMembresia ? ' (tú)' : ''}
               </span>
               {ETIQUETA_ROL[integrante.rol] ? (
@@ -133,8 +162,8 @@ export function TarjetaEquipo({
       {mostrarUnirme || mostrarSalir || mostrarEditar ? (
         <div className={styles.acciones}>
           {mostrarUnirme ? (
-            <Button size="sm" disabled={ocupado || lleno} onClick={() => onUnirme(equipo.id)}>
-              {lleno ? 'Equipo lleno' : 'Unirme'}
+            <Button size="sm" disabled={ocupado} onClick={() => onUnirme(equipo.id)}>
+              Unirme
             </Button>
           ) : null}
           {mostrarSalir ? (

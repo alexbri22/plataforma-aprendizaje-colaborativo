@@ -58,6 +58,7 @@ function renderPantalla() {
       </MemoryRouter>
     </QueryClientProvider>,
   )
+  return queryClient
 }
 
 // Servidor de mentira: filtra y pagina como lo hace GET /api/recursos.
@@ -172,5 +173,26 @@ describe('PantallaRecursos', () => {
 
     await user.click(screen.getByRole('button', { name: 'Comunicación' }))
     expect(await within(articulos).findByText('Artículo 1')).toBeInTheDocument()
+  })
+
+  it('si el catálogo se reduce estando en una página que ya no existe, vuelve a la última', async () => {
+    const user = userEvent.setup()
+    const ocho = Array.from({ length: 8 }, (_, i) =>
+      recurso({ idRecurso: `a${i}`, titulo: `Artículo ${i + 1}` }),
+    )
+    vi.mocked(listarRecursos).mockImplementation(servidor(ocho))
+    const queryClient = renderPantalla()
+
+    const articulos = await screen.findByRole('region', { name: 'Artículos' })
+    await user.click(within(articulos).getByRole('button', { name: 'Siguiente' }))
+    expect(await within(articulos).findByText('Artículo 7')).toBeInTheDocument()
+
+    // Se retiran dos artículos y la lista se vuelve a pedir: ya solo hay una
+    // página, y la 2 llegaría vacía.
+    vi.mocked(listarRecursos).mockImplementation(servidor(ocho.slice(0, 6)))
+    await queryClient.invalidateQueries()
+
+    expect(await within(articulos).findByText('Artículo 1')).toBeInTheDocument()
+    expect(within(articulos).getAllByRole('heading', { level: 3 })).toHaveLength(6)
   })
 })

@@ -134,9 +134,48 @@ export function PantallaPerfil() {
         </div>
       </Card>
 
-      <section className={styles.seccion} aria-labelledby="titulo-insignias">
-        <h2 id="titulo-insignias" className={styles.tituloSeccion}>
-          Tus insignias
+      {/* Dos grupos: lo que es de la cuenta (datos y contraseña) y lo que es del
+          reconocimiento (insignias). */}
+      <section className={styles.grupo} aria-labelledby="titulo-datos-generales">
+        <h2 id="titulo-datos-generales" className={styles.tituloGrupo}>
+          Datos generales
+        </h2>
+
+        <section className={styles.seccion} aria-labelledby="titulo-datos">
+          <h3 id="titulo-datos" className={styles.tituloSeccion}>
+            Tus datos
+          </h3>
+          <Card>
+            {/* La key remonta el formulario cuando el servidor devuelve datos
+                nuevos, en vez de sincronizar el estado con un efecto. */}
+            <FormularioDatosPerfil
+              key={`${usuario.nombre}|${usuario.apellidoPaterno}|${usuario.apellidoMaterno}`}
+              inicial={{
+                nombre: usuario.nombre,
+                apellidoPaterno: usuario.apellidoPaterno,
+                apellidoMaterno: usuario.apellidoMaterno,
+              }}
+            />
+            <p className={styles.nota}>
+              El correo no se puede cambiar: es con el que inicias sesión y con el que te encuentran
+              para invitarte. Otras personas con sesión pueden verlo en tu perfil básico.
+            </p>
+          </Card>
+        </section>
+
+        <section className={styles.seccion} aria-labelledby="titulo-contrasena">
+          <h3 id="titulo-contrasena" className={styles.tituloSeccion}>
+            Contraseña
+          </h3>
+          <Card>
+            <FormularioContrasena />
+          </Card>
+        </section>
+      </section>
+
+      <section className={styles.grupo} aria-labelledby="titulo-insignias">
+        <h2 id="titulo-insignias" className={styles.tituloGrupo}>
+          Insignias
         </h2>
         <Card>
           <p className={styles.texto}>
@@ -162,37 +201,6 @@ export function PantallaPerfil() {
               />
             )
           ) : null}
-        </Card>
-      </section>
-
-      <section className={styles.seccion} aria-labelledby="titulo-datos">
-        <h2 id="titulo-datos" className={styles.tituloSeccion}>
-          Tus datos
-        </h2>
-        <Card>
-          {/* La key remonta el formulario cuando el servidor devuelve datos
-              nuevos, en vez de sincronizar el estado con un efecto. */}
-          <FormularioDatosPerfil
-            key={`${usuario.nombre}|${usuario.apellidoPaterno}|${usuario.apellidoMaterno}`}
-            inicial={{
-              nombre: usuario.nombre,
-              apellidoPaterno: usuario.apellidoPaterno,
-              apellidoMaterno: usuario.apellidoMaterno,
-            }}
-          />
-          <p className={styles.nota}>
-            El correo no se puede cambiar: es con el que inicias sesión y con el que te encuentran
-            para invitarte. Nunca se muestra a otras personas.
-          </p>
-        </Card>
-      </section>
-
-      <section className={styles.seccion} aria-labelledby="titulo-contrasena">
-        <h2 id="titulo-contrasena" className={styles.tituloSeccion}>
-          Contraseña
-        </h2>
-        <Card>
-          <FormularioContrasena />
         </Card>
       </section>
     </AppShell>
