@@ -158,7 +158,7 @@ export function PantallaPerfil() {
             />
             <p className={styles.nota}>
               El correo no se puede cambiar: es con el que inicias sesión y con el que te encuentran
-              para invitarte. Nunca se muestra a otras personas.
+              para invitarte. Otras personas con sesión pueden verlo en tu perfil básico.
             </p>
           </Card>
         </section>
