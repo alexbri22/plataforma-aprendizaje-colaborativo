@@ -8,14 +8,14 @@ detalle por insignia, y perfil ajeno con nombre, foto y rangos.
 
 ## Qué hay aquí
 
-| Pieza                     | Para qué                                                                                    |
-| ------------------------- | ------------------------------------------------------------------------------------------- |
-| `PantallaPerfil`          | `/perfil`. Foto, datos, insignias con `DetalleInsignia` al elegir una, y contraseña.        |
-| `PantallaPerfilDeUsuario` | `/usuarios/:id`. Nombre, foto y vitrina de solo lectura. El propio id redirige a `/perfil`. |
-| `FormularioDatosPerfil`   | Nombre y apellidos. Recibe `inicial` y una `key` ligada a él: cambia el dato, se remonta.   |
-| `FormularioContrasena`    | Actual, nueva y confirmación. Avisa que las demás sesiones se cierran.                      |
-| `foto.ts`                 | `prepararFoto`: recorta, reduce a 256 px y codifica en WebP/JPEG antes de subir.            |
-| `usePerfil.ts`            | Queries bajo `['usuarios', ...]` y mutaciones que actualizan también `CLAVE_SESION`.        |
+| Pieza                     | Para qué                                                                                               |
+| ------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `PantallaPerfil`          | `/perfil`, desde el nombre del menú. Cabecera; Datos generales (datos y contraseña); Insignias.        |
+| `PantallaPerfilDeUsuario` | `/usuarios/:id`. Cabecera con foto y nombre, e Insignias de solo lectura. El propio id va a `/perfil`. |
+| `FormularioDatosPerfil`   | Nombre y apellidos. Recibe `inicial` y una `key` ligada a él: cambia el dato, se remonta.              |
+| `FormularioContrasena`    | Actual, nueva y confirmación. Avisa que las demás sesiones se cierran.                                 |
+| `foto.ts`                 | `prepararFoto`: recorta, reduce a 256 px y codifica en WebP/JPEG antes de subir.                       |
+| `usePerfil.ts`            | Queries bajo `['usuarios', ...]` y mutaciones que actualizan también `CLAVE_SESION`.                   |
 
 ## Por qué es una feature aparte
 

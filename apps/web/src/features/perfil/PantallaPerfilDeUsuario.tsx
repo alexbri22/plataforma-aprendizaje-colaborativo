@@ -53,8 +53,11 @@ export function PantallaPerfilDeUsuario() {
         </h2>
       </Card>
 
-      <section className={styles.seccion} aria-labelledby="titulo-insignias">
-        <h2 id="titulo-insignias" className={styles.tituloSeccion}>
+      {/* Misma estructura que Mi perfil: cabecera con foto y nombre, y el grupo
+          de insignias. Los datos generales no aparecen: de otra persona solo
+          se ven nombre, foto y rangos (docs/diseno-desarrollo-nucleo.md §6.3). */}
+      <section className={styles.grupo} aria-labelledby="titulo-insignias">
+        <h2 id="titulo-insignias" className={styles.tituloGrupo}>
           Insignias
         </h2>
         <Card>

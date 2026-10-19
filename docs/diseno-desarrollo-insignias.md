@@ -264,16 +264,16 @@ Una insignia son dos capas: el marco del nivel (cinco PNG en `assets/marcos/`) y
 
 # **8\. El perfil**
 
-Es la pantalla de Mi perfil de 6.6 del núcleo, con las insignias como contenido central.
+Es la pantalla de Mi perfil de 6.6 del núcleo. No es un ítem de la navegación: se abre desde el nombre de la cuenta, al pie del menú. Debajo de la cabecera se divide en dos grupos, Datos generales e Insignias.
 
-| Sección       | Contenido                                                                                        |
-| :------------ | :----------------------------------------------------------------------------------------------- |
-| Identidad     | Foto o iniciales, nombre completo, correo (solo lo ve su dueño), nivel de estudios e institución |
-| Tus insignias | Vitrina interactiva; al elegir una, `DetalleInsignia` con nivel, avance y frases recibidas       |
-| Tus datos     | Nombre y apellidos. El correo no es editable (6.3 del núcleo)                                    |
-| Contraseña    | Actual, nueva y confirmación. Al cambiarla se cierran las demás sesiones (3.2 del núcleo)        |
+| Grupo           | Sección    | Contenido                                                                                        |
+| :-------------- | :--------- | :----------------------------------------------------------------------------------------------- |
+| Cabecera        | Identidad  | Foto o iniciales, nombre completo, correo (solo lo ve su dueño), nivel de estudios e institución |
+| Datos generales | Tus datos  | Nombre y apellidos. El correo no es editable (6.3 del núcleo)                                    |
+| Datos generales | Contraseña | Actual, nueva y confirmación. Al cambiarla se cierran las demás sesiones (3.2 del núcleo)        |
+| Insignias       | —          | Vitrina interactiva; al elegir una, `DetalleInsignia` con nivel, avance y frases recibidas       |
 
-El perfil de otra persona muestra nombre, foto y la vitrina de solo lectura, y se abre desde la lista de participantes. Abrir el propio identificador redirige a /perfil.
+El perfil de otra persona sigue la misma estructura sin el grupo de datos generales: cabecera con foto y nombre, y el grupo Insignias con la vitrina de solo lectura. Se abre desde la lista de participantes. Abrir el propio identificador redirige a /perfil.
 
 **La foto se prepara en el navegador.** `prepararFoto` recorta al centro en cuadrado, respeta la orientación EXIF, reduce a 256 px y codifica en WebP, o en JPEG donde el navegador no sepa producir WebP. Mientras se prepara y se sube, los controles de foto quedan deshabilitados para que una segunda elección o "Quitar foto" no compitan con la primera.
 
