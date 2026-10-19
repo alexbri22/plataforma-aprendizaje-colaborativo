@@ -33,6 +33,8 @@ export type CodigoError =
   | 'intercambio_invalido'
   | 'foto_invalida'
   | 'elemento_no_encontrado'
+  | 'recurso_no_encontrado'
+  | 'archivo_invalido'
 
 export abstract class ErrorDominio extends Error {
   abstract readonly codigo: CodigoError
@@ -365,6 +367,30 @@ export class ErrorElementoNoEncontrado extends ErrorDominio {
 // convierte antes de subirla; llegar aquí es un cliente que no lo hizo.
 export class ErrorFotoInvalida extends ErrorDominio {
   readonly codigo = 'foto_invalida' as const
+  readonly status = 400
+
+  constructor(mensaje: string) {
+    super(mensaje)
+  }
+}
+
+// Mismo 404 si el recurso no existe que si existe pero no está publicado: el
+// público no debe poder distinguir un borrador de un id inventado.
+export class ErrorRecursoNoEncontrado extends ErrorDominio {
+  readonly codigo = 'recurso_no_encontrado' as const
+  readonly status = 404
+
+  constructor() {
+    super('No encontramos este recurso.')
+  }
+}
+
+// El archivo de un recurso no cumple el contrato
+// (docs/diseno-desarrollo-formacion.md §6.2 y §10.3): tipo no admitido,
+// contenido que no corresponde al tipo, tamaño fuera de límite o recurso de un
+// tipo que no admite archivo.
+export class ErrorArchivoInvalido extends ErrorDominio {
+  readonly codigo = 'archivo_invalido' as const
   readonly status = 400
 
   constructor(mensaje: string) {

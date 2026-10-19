@@ -15,6 +15,7 @@ import { cuentasRouter } from './routes/cuentas.js'
 import { healthRouter } from './routes/health.js'
 import { periodosRouter } from './routes/periodos.js'
 import { tareasRouter } from './routes/tareas.js'
+import { LIMITE_JSON_RECURSOS, adminRecursosRouter, recursosRouter } from './routes/recursos.js'
 
 // Cada preview de Vercel vive en un subdominio *.vercel.app distinto e
 // impredecible (uno por rama/PR) — no se puede precargar en WEB_ORIGIN.
@@ -52,6 +53,10 @@ export function createApp(): Express {
       credentials: true,
     }),
   )
+  // Antes del parser general: las rutas de recursos aceptan cuerpos más
+  // grandes (ver LIMITE_JSON_RECURSOS). Un cuerpo ya leído aquí no se vuelve a
+  // leer abajo.
+  app.use('/api/admin/recursos', express.json({ limit: LIMITE_JSON_RECURSOS }))
   app.use(express.json())
   app.use(cookieParser())
   app.use(resolverSesion)
@@ -63,6 +68,7 @@ export function createApp(): Express {
   app.use('/api/health', healthRouter)
   app.use('/api', cuentasRouter)
   app.use('/api/admin', adminRouter)
+  app.use('/api/admin', adminRecursosRouter)
   app.use('/api', actividadesRouter)
   app.use('/api', clavesRouter)
   app.use('/api', periodosRouter)
@@ -71,6 +77,7 @@ export function createApp(): Express {
   app.use('/api', tareasRouter)
   app.use('/api', insigniasRouter)
   app.use('/api', historialRouter)
+  app.use('/api', recursosRouter)
 
   app.use(manejadorErrores)
 

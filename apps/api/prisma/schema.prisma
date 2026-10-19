@@ -160,6 +160,8 @@ model Usuario {
   eventosHistorial Historial[]
   foto             FotoDePerfil?
 
+  recursosFormativos RecursoFormativo[]
+
   @@map("usuarios")
 }
 
@@ -459,4 +461,93 @@ model InsigniaOtorgada {
   @@unique([categoria, idMembresiaOtorgante, idMembresiaReceptor])
   @@index([idMembresiaReceptor])
   @@map("insignias_otorgadas")
+}
+
+// Contenido formativo (docs/diseno-desarrollo-formacion.md §6 y §9;
+// docs/diseno-desarrollo-general.md §5.5). Sin llave foránea hacia
+// actividades, equipos ni evaluaciones: aislamiento deliberado (concepto §7).
+
+enum SeccionFormativa {
+  que_es_colaborar
+  como_colaborar
+
+  @@map("seccion_formativa")
+}
+
+enum TipoRecurso {
+  texto
+  pdf
+  video
+  enlace
+  plantilla
+
+  @@map("tipo_recurso")
+}
+
+// El estatus que el documento general reservaba (§4.4) se activa con tres
+// valores: el administrador prepara un borrador, lo publica y puede retirarlo.
+// Los estados de revisión de la autoría abierta se añadirían aquí.
+enum EstatusRecurso {
+  borrador
+  publicado
+  retirado
+
+  @@map("estatus_recurso")
+}
+
+// `area` y `elementos` se guardan como texto, igual que la categoría de
+// insignias: el catálogo vive en packages/shared (AREAS_HABILIDAD,
+// ELEMENTOS_COLABORACION) y el servicio valida contra él antes de escribir.
+//
+// `contenido` depende del tipo: markdown para texto y plantilla, URL https
+// para video y enlace, vacío para pdf (el archivo va en archivos_recurso).
+// Un borrador puede estar incompleto; los mínimos de publicación (§6.4) los
+// exige el servicio al pasar a publicado.
+model RecursoFormativo {
+  idRecurso          String           @id @default(uuid()) @map("id_recurso")
+  seccion            SeccionFormativa
+  titulo             String
+  resumen            String           @default("")
+  tipoRecurso        TipoRecurso      @map("tipo_recurso")
+  contenido          String           @default("")
+  transcripcion      String           @default("")
+  area               String?
+  elementos          String[]         @default([])
+  duracionMin        Int?             @map("duracion_min")
+  fuente             String           @default("")
+  licencia           String           @default("")
+  orden              Int              @default(0)
+  estatus            EstatusRecurso   @default(borrador)
+  // Título, resumen, área y elementos en minúsculas y sin acentos, para que
+  // la búsqueda del catálogo encuentre "comunicacion" en "Comunicación" sin
+  // depender de la extensión unaccent. Lo calcula el servicio al guardar.
+  textoBusqueda      String           @default("") @map("texto_busqueda")
+  // Nulo solo si la cuenta del autor desaparece: las cuentas no se eliminan
+  // en el producto, pero así borrar un usuario nunca arrastra contenido
+  // público.
+  idUsuarioAutor     String?          @map("id_usuario_autor")
+  fechaCreacion      DateTime         @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime         @updatedAt @map("fecha_actualizacion")
+
+  autor   Usuario?        @relation(fields: [idUsuarioAutor], references: [idUsuario], onDelete: SetNull)
+  archivo ArchivoRecurso?
+
+  @@index([estatus, orden])
+  @@map("recursos_formativos")
+}
+
+// Archivo adjunto de un recurso (PDF). Tabla aparte por la misma razón que
+// fotos_de_perfil: el contenido pesa hasta 4 MB y no debe viajar cada vez que
+// se lista el catálogo.
+model ArchivoRecurso {
+  idRecurso     String   @id @map("id_recurso")
+  contenido     Bytes
+  tipo          String
+  nombre        String
+  tamano        Int
+  actualizadoEn DateTime @default(now()) @map("actualizado_en")
+
+  recurso RecursoFormativo @relation(fields: [idRecurso], references: [idRecurso], onDelete: Cascade)
+
+  @@map("archivos_recurso")
 }

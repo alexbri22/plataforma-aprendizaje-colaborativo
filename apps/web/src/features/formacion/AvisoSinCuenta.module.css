@@ -1,0 +1,116 @@
+/* Banda informativa bajo el encabezado público: tono Study Ink suave, nunca
+   el ámbar (reservado a insignias) ni el rojo (no es un error). */
+.aviso {
+  border-bottom: 1px solid var(--color-primary-border);
+  background: var(--color-primary-subtle);
+  color: var(--color-text);
+}
+
+.interior {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  max-width: var(--layout-content-max);
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-6);
+  box-sizing: border-box;
+}
+
+.icono {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--color-primary);
+}
+
+.icono svg {
+  width: var(--space-6);
+  height: var(--space-6);
+}
+
+.texto {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+}
+
+.texto p {
+  margin: 0;
+  color: var(--color-text-muted);
+  text-wrap: pretty;
+}
+
+.texto .titulo {
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.acciones {
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--space-2);
+}
+
+.cerrar {
+  flex: 0 0 auto;
+  width: var(--space-8);
+  height: var(--space-8);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xl);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.cerrar:hover {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.cerrar:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 42rem) {
+  /* Ícono, texto y cierre en la primera fila; los botones debajo del texto. */
+  .interior {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'icono texto cerrar'
+      '. acciones acciones';
+    align-items: start;
+    gap: var(--space-3);
+    padding: var(--space-4);
+  }
+
+  .icono {
+    grid-area: icono;
+  }
+
+  .texto {
+    grid-area: texto;
+  }
+
+  .cerrar {
+    grid-area: cerrar;
+    margin: calc(var(--space-1) * -1);
+  }
+
+  .acciones {
+    grid-area: acciones;
+    flex-wrap: wrap;
+  }
+}

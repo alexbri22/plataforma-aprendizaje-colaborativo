@@ -1,6 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
-import { PantallaProximamente } from '../components/PantallaProximamente'
 import {
   PantallaConfiguracion,
   PantallaCrearActividad,
@@ -8,10 +7,16 @@ import {
   PantallaResumenActividad,
   PantallaUnirseConClave,
 } from '../features/actividades'
-import { PantallaCuentas, RutaAdmin } from '../features/administracion'
+import {
+  PantallaContenido,
+  PantallaCuentas,
+  PantallaEditarRecurso,
+  RutaAdmin,
+} from '../features/administracion'
 import { PantallaInicio } from '../features/contenido-publico/PantallaInicio.tsx'
 import { PantallaIngresar, PantallaRegistrarse } from '../features/cuentas'
 import { PantallaEquipos } from '../features/equipos'
+import { PantallaRecurso, PantallaRecursos } from '../features/formacion'
 import {
   PantallaMisReconocimientos,
   PantallaMuestraInsignias,
@@ -194,21 +199,34 @@ export function App() {
               </RutaAdmin>
             }
           />
-          {/* Pública, sin RutaProtegida (docs/diseno-desarrollo-nucleo.md §4.1:
-              "contenido formativo" no exige sesión). Entrypoint para el
-              módulo de Contenido formativo — lo construye e implementa su
-              responsable, no este módulo. */}
           <Route
-            path="/recursos"
+            path="/admin/contenido"
             element={
-              <PantallaProximamente
-                publica
-                seccionActiva="recursos"
-                titulo="Recursos"
-                descripcion="Todavía no está construido. Aquí vivirá el contenido formativo sobre qué es colaborar y cómo colaborar."
-              />
+              <RutaAdmin>
+                <PantallaContenido />
+              </RutaAdmin>
             }
           />
+          <Route
+            path="/admin/contenido/nuevo"
+            element={
+              <RutaAdmin>
+                <PantallaEditarRecurso />
+              </RutaAdmin>
+            }
+          />
+          <Route
+            path="/admin/contenido/:id"
+            element={
+              <RutaAdmin>
+                <PantallaEditarRecurso />
+              </RutaAdmin>
+            }
+          />
+          {/* Públicas, sin RutaProtegida (docs/diseno-desarrollo-nucleo.md §4.1:
+              "contenido formativo" no exige sesión). */}
+          <Route path="/recursos" element={<PantallaRecursos />} />
+          <Route path="/recursos/:id" element={<PantallaRecurso />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

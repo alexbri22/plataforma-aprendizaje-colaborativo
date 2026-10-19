@@ -31,9 +31,8 @@ describe('PantallaInicio', () => {
     expect(screen.getByRole('link', { name: 'Registrarse' })).toBeInTheDocument()
     expect(screen.getByRole('navigation', { name: 'Principal' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Insignias' })).toBeInTheDocument()
-    // Recursos sigue siendo un botón inerte: el contenido formativo público
-    // todavía no existe, así que no hay destino al que enlazarlo.
-    expect(screen.getByRole('button', { name: 'Recursos' })).toBeInTheDocument()
+    // El contenido formativo es público: Recursos enlaza sin pedir sesión.
+    expect(screen.getByRole('link', { name: 'Recursos' })).toHaveAttribute('href', '/recursos')
     expect(
       screen.getByRole('heading', { level: 2, name: 'Características de Co3' }),
     ).toBeInTheDocument()
