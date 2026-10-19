@@ -96,6 +96,23 @@ describe('PantallaPerfil', () => {
     expect(screen.getAllByRole('button', { name: /sin nivel todavía/ })).toHaveLength(5)
   })
 
+  it('agrupa tus datos y la contraseña en Datos generales, y las insignias después', async () => {
+    renderPantalla()
+    await screen.findByRole('heading', { name: 'Ana García López' })
+
+    const titulos = screen
+      .getAllByRole('heading')
+      .map((titulo) => `${titulo.tagName}:${titulo.textContent}`)
+      .filter((titulo) => !titulo.startsWith('H1'))
+    expect(titulos).toEqual([
+      'H2:Ana García López',
+      'H2:Datos generales',
+      'H3:Tus datos',
+      'H3:Contraseña',
+      'H2:Insignias',
+    ])
+  })
+
   it('al abrir una insignia enseña las frases con su actividad y cuánto falta', async () => {
     const { usuario } = renderPantalla()
 

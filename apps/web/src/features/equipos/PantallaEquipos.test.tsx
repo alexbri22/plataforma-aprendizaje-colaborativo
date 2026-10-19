@@ -109,12 +109,22 @@ function equipo(id: string, nombre: string, integrantes: Equipo['integrantes'] =
   return { id, nombre, descripcionActividad: null, formaDeTrabajo: null, integrantes }
 }
 
+// El nombre es un enlace al perfil y "(tú)" queda fuera de él, así que el texto
+// completo está repartido entre dos nodos: se compara el del elemento que lo
+// contiene sin que un hijo lo contenga ya entero.
+function textoCompleto(texto: string) {
+  return (_: string, elemento: Element | null) =>
+    elemento?.textContent === texto &&
+    !Array.from(elemento.children).some((hijo) => hijo.textContent === texto)
+}
+
 const persona = (
   idMembresia: string,
   nombre: string,
   rol: 'participante' | 'organizador' = 'participante',
 ) => ({
   idMembresia,
+  idUsuario: `u-${idMembresia}`,
   nombre,
   rol,
 })
@@ -156,7 +166,7 @@ describe('PantallaEquipos', () => {
             equipo('e1', 'Alfa', [persona('m2', 'Luis Pérez'), persona('m3', 'Eva Ruiz')]),
             equipo('e2', 'Beta'),
           ],
-          [{ idMembresia: YO, nombre: 'Ana García' }],
+          [{ idMembresia: YO, idUsuario: `u-${YO}`, nombre: 'Ana García' }],
         ),
       )
     })
@@ -166,7 +176,21 @@ describe('PantallaEquipos', () => {
 
       expect(await screen.findByText('Autogestionada')).toBeInTheDocument()
       expect(screen.getByText('Sin equipo (1)')).toBeInTheDocument()
-      expect(screen.getByText('Ana García (tú)')).toBeInTheDocument()
+      expect(screen.getByText(textoCompleto('Ana García (tú)'))).toBeInTheDocument()
+      // Cada nombre lleva al perfil de esa persona. El menú lateral también
+      // nombra a quien tiene la sesión, así que se miran solo los enlaces a
+      // perfiles.
+      const perfiles = screen
+        .getAllByRole('link')
+        .filter((enlace) => enlace.getAttribute('href')?.startsWith('/usuarios/'))
+        .map((enlace) => [enlace.textContent, enlace.getAttribute('href')])
+      expect(perfiles).toEqual(
+        expect.arrayContaining([
+          ['Ana García', `/usuarios/u-${YO}`],
+          ['Luis Pérez', '/usuarios/u-m2'],
+          ['Eva Ruiz', '/usuarios/u-m3'],
+        ]),
+      )
     })
 
     it('ofrece unirse a un equipo y crear uno; no ofrece acciones de quien organiza', async () => {
@@ -233,7 +257,7 @@ describe('PantallaEquipos', () => {
     const usuario = userEvent.setup()
     renderPantalla()
 
-    await screen.findByText('Ana García (tú)')
+    await screen.findByText(textoCompleto('Ana García (tú)'))
     // Solo el equipo propio es editable.
     expect(screen.getAllByRole('button', { name: 'Editar' })).toHaveLength(1)
     expect(screen.getAllByRole('button', { name: 'Unirme' })).toHaveLength(1)
@@ -253,7 +277,7 @@ describe('PantallaEquipos', () => {
     vi.mocked(obtenerEquipos).mockResolvedValue(
       lista(
         [equipo('e1', 'Alfa', [persona('m2', 'Luis Pérez')])],
-        [{ idMembresia: YO, nombre: 'Ana García' }],
+        [{ idMembresia: YO, idUsuario: `u-${YO}`, nombre: 'Ana García' }],
       ),
     )
     renderPantalla()
@@ -286,7 +310,7 @@ describe('PantallaEquipos', () => {
       vi.mocked(obtenerEquipos).mockResolvedValue(
         lista(
           [equipo('e1', 'Alfa', [persona('m2', 'Luis Pérez')]), equipo('e2', 'Beta')],
-          [{ idMembresia: 'm3', nombre: 'Eva Ruiz' }],
+          [{ idMembresia: 'm3', idUsuario: 'u-m3', nombre: 'Eva Ruiz' }],
         ),
       )
       vi.mocked(asignarIntegrante).mockResolvedValue(equipo('e2', 'Beta'))
@@ -326,8 +350,8 @@ describe('PantallaEquipos', () => {
         lista(
           [equipo('e1', 'Alfa', [persona('m2', 'Luis Pérez')])],
           [
-            { idMembresia: 'm3', nombre: 'Eva Ruiz' },
-            { idMembresia: 'm4', nombre: 'Tomás Gil' },
+            { idMembresia: 'm3', idUsuario: 'u-m3', nombre: 'Eva Ruiz' },
+            { idMembresia: 'm4', idUsuario: 'u-m4', nombre: 'Tomás Gil' },
           ],
         ),
       )
@@ -399,7 +423,7 @@ describe('PantallaEquipos', () => {
       vi.mocked(obtenerEquipos).mockResolvedValue(
         lista(
           [equipo('e1', 'Alfa', [persona('m2', 'Luis Pérez'), persona('m3', 'Eva Ruiz')])],
-          [{ idMembresia: 'm9', nombre: 'Tomás Gil' }],
+          [{ idMembresia: 'm9', idUsuario: 'u-m9', nombre: 'Tomás Gil' }],
         ),
       )
       vi.mocked(asignarIntegrante).mockResolvedValue(equipo('e1', 'Alfa'))
@@ -420,7 +444,10 @@ describe('PantallaEquipos', () => {
 
     it('el panel muestra el error del servidor dentro del panel', async () => {
       vi.mocked(obtenerEquipos).mockResolvedValue(
-        lista([equipo('e1', 'Alfa')], [{ idMembresia: 'm9', nombre: 'Tomás Gil' }]),
+        lista(
+          [equipo('e1', 'Alfa')],
+          [{ idMembresia: 'm9', idUsuario: 'u-m9', nombre: 'Tomás Gil' }],
+        ),
       )
       vi.mocked(asignarIntegrante).mockRejectedValue(
         new ErrorEquipos('Este equipo ya tiene el máximo de 1 integrante.'),
@@ -545,7 +572,7 @@ describe('PantallaEquipos', () => {
       const usuario = userEvent.setup()
       renderPantalla()
 
-      expect(await screen.findByText('Olga Prueba (tú)')).toBeInTheDocument()
+      expect(await screen.findByText(textoCompleto('Olga Prueba (tú)'))).toBeInTheDocument()
       expect(screen.getByText('Organiza')).toBeInTheDocument()
       expect(screen.getAllByRole('button', { name: 'Unirme' })).toHaveLength(1)
       await usuario.click(screen.getByRole('button', { name: 'Salir del equipo' }))
@@ -743,7 +770,7 @@ describe('PantallaEquipos', () => {
             ]),
             equipo('e2', 'Pareja', [persona('m4', 'Dan D'), persona('m5', 'Eli E')]),
           ],
-          [{ idMembresia: YO, nombre: 'Yo Mismo' }],
+          [{ idMembresia: YO, idUsuario: `u-${YO}`, nombre: 'Yo Mismo' }],
         ),
         limites: { minimo: 3, maximo: 3 },
       })
@@ -809,9 +836,9 @@ describe('PantallaEquipos', () => {
             equipo('e2', 'Beta', [persona('m4', 'D D')]),
           ],
           [
-            { idMembresia: 'm5', nombre: 'E E' },
-            { idMembresia: 'm6', nombre: 'F F' },
-            { idMembresia: 'm7', nombre: 'G G' },
+            { idMembresia: 'm5', idUsuario: 'u-m5', nombre: 'E E' },
+            { idMembresia: 'm6', idUsuario: 'u-m6', nombre: 'F F' },
+            { idMembresia: 'm7', idUsuario: 'u-m7', nombre: 'G G' },
           ],
         ),
       )
@@ -901,6 +928,7 @@ describe('PantallaEquipos', () => {
   describe('listas largas de personas', () => {
     const muchas = Array.from({ length: 25 }, (_, n) => ({
       idMembresia: `m${n + 1}`,
+      idUsuario: `u-m${n + 1}`,
       nombre: `Persona ${String(n + 1).padStart(2, '0')}`,
     }))
 

@@ -1042,6 +1042,7 @@ export async function buscarMembresiaConPermisos(
 
 export interface MiembroDeActividad {
   idMembresia: string
+  idUsuario: string
   nombre: string
   rol: RolActividad
   activa: boolean
@@ -1061,6 +1062,7 @@ export async function listarMiembros(
   })
   return membresias.map((m) => ({
     idMembresia: m.idMembresia,
+    idUsuario: m.idUsuario,
     nombre: `${m.usuario.nombre} ${m.usuario.apellidoPaterno}`.trim(),
     rol: ROL_POR_ROL_MEMBRESIA[m.rol],
     activa: m.estado === 'activa',

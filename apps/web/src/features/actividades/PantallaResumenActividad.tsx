@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { UseMutationResult } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
 import { AppShell } from '../../components/AppShell'
+import { EnlacePerfil } from '../../components/EnlacePerfil'
 import {
   AvisoError,
   Badge,
@@ -209,7 +210,12 @@ function AccionDeAvance({ actividad }: { actividad: Actividad }) {
     return (
       <AccionConfirmable
         titulo="En desarrollo"
-        descripcion="Inicia el cierre cuando el periodo de trabajo haya terminado. A partir de ese momento ya no se podrán modificar las aportaciones del equipo."
+        // "Abre el reconocimiento" es cierto de verdad: ventana() en
+        // insignias.service.ts abre con estado === 'cierre' o con
+        // fechaTermino, lo que ocurra primero (docs/diseno-desarrollo-insignias.md
+        // §1.4) — iniciar el cierre a mano, antes de la fecha, sí adelanta esa
+        // apertura.
+        descripcion="Inicia el cierre cuando el periodo de trabajo haya terminado. Cierra las aportaciones del equipo y abre el reconocimiento entre compañeros."
         textoBoton="Iniciar cierre"
         textoConfirmacion="Una vez iniciado, el cierre no tiene vuelta atrás. ¿Confirmas que quieres iniciar el periodo de cierre?"
         textoBotonConfirmar="Sí, iniciar cierre"
@@ -263,7 +269,11 @@ function SeccionParticipantes({ id }: { id: string }) {
               <ul className={styles.listaParticipantes}>
                 {visibles.map((participante) => (
                   <li key={participante.idUsuario} className={styles.filaParticipante}>
-                    <span className={styles.nombreParticipante}>{participante.nombre}</span>
+                    <span className={styles.nombreParticipante}>
+                      <EnlacePerfil idUsuario={participante.idUsuario}>
+                        {participante.nombre}
+                      </EnlacePerfil>
+                    </span>
                     <span className={styles.fechaParticipante}>
                       Se unió el {formatearFechaHora(participante.fechaUnion)}
                     </span>
@@ -330,11 +340,12 @@ export function PantallaResumenActividad() {
       // .navItem): icono solo se leía como un bloque de botones anónimos,
       // sin relación visual con el resto de la navegación de la app.
       // Reconocer al equipo y Mis reconocimientos se movieron al espacio de
-      // equipo (AppShellEquipo, sección Honoramiento): son del equipo del
-      // actor, no de la actividad completa. Participantes no está aquí: es
-      // parte de la sección de reconocimientos (features/insignias), cuya
-      // presentación le toca decidir a su responsable — no se improvisa un
-      // lugar para ella.
+      // equipo (AppShellEquipo, sección Honoramiento, con la misma condición
+      // abierto/aplicados que AccionesReconocimiento usa aquí): son del
+      // equipo del actor, no de la actividad completa. Participantes sí vive
+      // aquí (solo organiza): a diferencia de los otros dos, no es por
+      // equipo — ve lo recibido de cualquier participante de la actividad
+      // (insignias.service.ts, listarRecibidosDeParticipante).
       acciones={
         <>
           {
@@ -356,6 +367,11 @@ export function PantallaResumenActividad() {
             <IconoEquipos />
             Equipos
           </Button>
+          {organiza ? (
+            <Button variant="ghost" size="sm" to={`/actividades/${actividad.id}/participantes`}>
+              Participantes
+            </Button>
+          ) : null}
           {/* Panel lateral, no una pantalla propia (decisión de producto):
               no saca a quien organiza de donde está, igual que Configurar lo
               hace desde Equipos. */}

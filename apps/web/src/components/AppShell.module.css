@@ -126,6 +126,13 @@
   background: var(--color-surface-hover);
 }
 
+/* En Mi perfil, el nombre hace de ítem activo: es la única entrada a esa
+   pantalla, con el mismo tratamiento que .navItemActivo. */
+.cuentaActiva,
+.cuentaActiva:hover {
+  background: var(--color-primary-subtle);
+}
+
 .nombreUsuario {
   min-width: 0;
   font-size: var(--font-size-sm);

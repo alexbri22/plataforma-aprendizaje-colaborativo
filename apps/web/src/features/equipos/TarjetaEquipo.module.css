@@ -73,6 +73,11 @@
 }
 
 .integrantes {
+  /* Por encima de .enlaceSuperpuesto, mismo motivo que .acciones: cada
+     nombre es ahora un EnlacePerfil real (enlace al perfil de esa persona),
+     y sin esto el enlace superpuesto de la tarjeta se lo robaría. */
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   margin: 0;

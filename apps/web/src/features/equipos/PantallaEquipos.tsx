@@ -7,6 +7,7 @@ import {
 import { useState, type FormEvent } from 'react'
 import { useParams } from 'react-router-dom'
 import { AppShell } from '../../components/AppShell'
+import { EnlacePerfil } from '../../components/EnlacePerfil'
 import {
   AvisoError,
   Button,
@@ -264,7 +265,7 @@ export function PantallaEquipos() {
             <ul className={styles.lista}>
               {sinEquipoPagina.visibles.map((persona) => (
                 <li key={persona.idMembresia} className={styles.persona}>
-                  {persona.nombre}
+                  <EnlacePerfil idUsuario={persona.idUsuario}>{persona.nombre}</EnlacePerfil>
                   {persona.idMembresia === idMiMembresia ? ' (tú)' : ''}
                 </li>
               ))}

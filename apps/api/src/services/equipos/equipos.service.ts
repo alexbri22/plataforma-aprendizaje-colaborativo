@@ -107,11 +107,16 @@ async function cargarEquipos(
     if (idEquipo) {
       porId.get(idEquipo)?.integrantes.push({
         idMembresia: miembro.idMembresia,
+        idUsuario: miembro.idUsuario,
         nombre: miembro.nombre,
         rol: miembro.rol,
       })
     } else if (miembro.rol === 'participante') {
-      sinEquipo.push({ idMembresia: miembro.idMembresia, nombre: miembro.nombre })
+      sinEquipo.push({
+        idMembresia: miembro.idMembresia,
+        idUsuario: miembro.idUsuario,
+        nombre: miembro.nombre,
+      })
     }
   }
 
@@ -411,7 +416,12 @@ export async function listarIntegrantesDeEquipo(
   return [...idsDelEquipo]
     .map((id) => porId.get(id))
     .filter((m): m is MiembroDeActividad => m !== undefined && m.activa)
-    .map((m) => ({ idMembresia: m.idMembresia, nombre: m.nombre, rol: m.rol }))
+    .map((m) => ({
+      idMembresia: m.idMembresia,
+      idUsuario: m.idUsuario,
+      nombre: m.nombre,
+      rol: m.rol,
+    }))
 }
 
 // ---------------------------------------------------------------------------

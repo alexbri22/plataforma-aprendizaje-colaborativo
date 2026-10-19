@@ -101,21 +101,6 @@ function IconoParticipo() {
   )
 }
 
-function IconoInsignias() {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-      <circle cx="10" cy="8" r="5.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <path
-        d="M7 12.5 5.5 18l4.5-2.3 4.5 2.3-1.5-5.5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
 function IconoRecursos() {
   return (
     <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
@@ -217,8 +202,9 @@ const ITEMS_NAV_ACTIVIDADES: ItemNav[] = [
   },
 ]
 
+// Mi perfil no es un ítem de la navegación: se abre desde el nombre de la
+// cuenta, al pie del menú, que es donde se busca lo que es de uno.
 const ITEMS_NAV: ItemNav[] = [
-  { id: 'perfil', etiqueta: 'Mi perfil', to: '/perfil', Icono: IconoInsignias },
   { id: 'recursos', etiqueta: 'Recursos', to: '/recursos', Icono: IconoRecursos },
 ]
 
@@ -315,7 +301,17 @@ export function AppShell({ seccionActiva, titulo, volverA, acciones, children }:
 
         <div className={styles.cuenta}>
           {usuario ? (
-            <Link to="/perfil" className={styles.cuentaInfo}>
+            <Link
+              to="/perfil"
+              className={[
+                styles.cuentaInfo,
+                seccionActiva === 'perfil' ? styles.cuentaActiva : null,
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              aria-label={`${usuario.nombre} ${usuario.apellidoPaterno}, ver mi perfil`}
+              aria-current={seccionActiva === 'perfil' ? 'page' : undefined}
+            >
               <Avatar
                 nombre={usuario.nombre}
                 apellidoPaterno={usuario.apellidoPaterno}

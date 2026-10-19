@@ -388,6 +388,47 @@ describe('PUT /api/actividades/:id/reconocimientos', () => {
       .send({ reconocimientos: [reconocer(cerrada.participantes[1].idMembresia)] })
     expect(despues.status).toBe(409)
   })
+
+  it('abre en cuanto la actividad pasa a cierre, aunque no haya llegado la fecha de término', async () => {
+    const adelantada = await montarActividad(3, -5) // termina en 5 días
+    await prisma.actividad.update({
+      where: { idActividad: adelantada.id },
+      data: { estado: 'cierre' },
+    })
+    const [yo, a] = adelantada.participantes
+
+    const contexto = await request(app)
+      .get(`/api/actividades/${adelantada.id}/reconocimientos`)
+      .set('Cookie', yo.cookie)
+    expect(contexto.body.contexto).toMatchObject({ abierto: true, aplicados: false })
+
+    await request(app)
+      .put(`/api/actividades/${adelantada.id}/reconocimientos`)
+      .set('Cookie', yo.cookie)
+      .send({ reconocimientos: [reconocer(a.idMembresia)] })
+      .expect(200)
+  })
+
+  it('una actividad archivada da lo guardado por aplicado aunque el plazo no haya vencido', async () => {
+    const { id, participantes } = await montarActividad(3) // ventana abierta por fechas
+    const [yo, a] = participantes
+    await request(app)
+      .put(`/api/actividades/${id}/reconocimientos`)
+      .set('Cookie', yo.cookie)
+      .send({ reconocimientos: [reconocer(a.idMembresia)] })
+      .expect(200)
+    await prisma.actividad.update({ where: { idActividad: id }, data: { estado: 'archivada' } })
+
+    const contexto = await request(app)
+      .get(`/api/actividades/${id}/reconocimientos`)
+      .set('Cookie', yo.cookie)
+    expect(contexto.body.contexto).toMatchObject({ abierto: false, aplicados: true })
+
+    const recibidos = await request(app)
+      .get(`/api/actividades/${id}/reconocimientos/recibidos`)
+      .set('Cookie', a.cookie)
+    expect(recibidos.body.reconocimientos).toHaveLength(1)
+  })
 })
 
 describe('visibilidad de lo recibido', () => {
@@ -444,6 +485,11 @@ describe('visibilidad de lo recibido', () => {
       .get(`/api/actividades/${id}/participantes/${a.idMembresia}/reconocimientos`)
       .set('Cookie', organizador.cookie)
     expect(org.status).toBe(200)
+    expect(org.body.participante).toEqual({
+      idMembresia: a.idMembresia,
+      idUsuario: a.idUsuario,
+      nombre: a.nombre + ' Lovelace',
+    })
     expect(org.body.reconocimientos[0].otorgadoPor).toBe('P0 Lovelace')
 
     const par = await request(app)

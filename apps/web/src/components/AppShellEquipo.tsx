@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { formatearFecha, useActividad, type Actividad } from '../features/actividades'
 import { useEquipo } from '../features/equipos/useEquipos'
 import { useCerrarSesionMutation, useSesion } from '../features/cuentas'
+import { useRitual } from '../features/insignias'
 import { Avatar, IconoCargando } from './ui'
 import { GrupoNav } from './GrupoNav'
 import styles from './AppShellEquipo.module.css'
@@ -229,6 +230,12 @@ export function AppShellEquipo({
   const soyIntegrante = equipoQuery.data
     ? equipoQuery.data.integrantes.some((i) => i.idMembresia === equipoQuery.data.idMiMembresia)
     : false
+  // "Reconocer al equipo" y "Mis reconocimientos" no están abiertos siempre
+  // (docs/diseno-desarrollo-insignias.md §3.5): mismo contexto del ritual que
+  // AccionesReconocimiento usa en el resumen de la actividad para decidir lo
+  // mismo, para que las dos ubicaciones coincidan.
+  const ritualQuery = useRitual(idActividad ?? '', { enabled: Boolean(idActividad) })
+  const ritual = ritualQuery.data?.contexto
   const { usuario } = useSesion()
   const cerrarSesionMutacion = useCerrarSesionMutation()
   const navigate = useNavigate()
@@ -328,16 +335,18 @@ export function AppShellEquipo({
                   ))}
                 </GrupoNav>
 
-                {soyIntegrante ? (
+                {soyIntegrante && ritual && (ritual.abierto || ritual.aplicados) ? (
                   <GrupoNav
                     claveAlmacenamiento="co3.navEquipo.honoramiento.abierto"
                     etiqueta="Honoramiento"
                     Icono={IconoHonoramiento}
                   >
-                    <ItemHonoramiento
-                      to={`/actividades/${idActividad}/reconocer`}
-                      etiqueta="Reconocer al equipo"
-                    />
+                    {ritual.abierto ? (
+                      <ItemHonoramiento
+                        to={`/actividades/${idActividad}/reconocer`}
+                        etiqueta="Reconocer al equipo"
+                      />
+                    ) : null}
                     <ItemHonoramiento
                       to={`/actividades/${idActividad}/insignias`}
                       etiqueta="Mis reconocimientos"

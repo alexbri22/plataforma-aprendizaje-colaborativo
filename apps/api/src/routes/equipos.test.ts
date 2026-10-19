@@ -45,11 +45,22 @@ describe('GET /api/actividades/:id/equipos', () => {
         nombre: 'Alfa',
         descripcionActividad: null,
         formaDeTrabajo: null,
-        integrantes: [{ idMembresia: e.participantes[0].idMembresia, rol: 'participante' }],
+        integrantes: [
+          {
+            idMembresia: e.participantes[0].idMembresia,
+            idUsuario: e.participantes[0].idUsuario,
+            rol: 'participante',
+          },
+        ],
       })
       expect(respuesta.body.sinEquipo.map((p: { nombre: string }) => p.nombre)).toEqual([
         'Pablo2 Prueba',
         'Pablo3 Prueba',
+      ])
+      // El id de la cuenta viaja para enlazar al perfil de cada persona.
+      expect(respuesta.body.sinEquipo.map((p: { idUsuario: string }) => p.idUsuario)).toEqual([
+        e.participantes[1].idUsuario,
+        e.participantes[2].idUsuario,
       ])
     }
   })
@@ -103,7 +114,12 @@ describe('POST /api/actividades/:id/equipos', () => {
 
     expect(respuesta.status).toBe(201)
     expect(respuesta.body.equipo.integrantes).toEqual([
-      { idMembresia: e.participantes[0].idMembresia, nombre: 'Pablo1 Prueba', rol: 'participante' },
+      {
+        idMembresia: e.participantes[0].idMembresia,
+        idUsuario: e.participantes[0].idUsuario,
+        nombre: 'Pablo1 Prueba',
+        rol: 'participante',
+      },
     ])
     expect(await eventos(e.id, 'equipo_creado')).toHaveLength(1)
     expect(await eventos(e.id, 'integrante_asignado')).toHaveLength(1)
@@ -293,7 +309,12 @@ describe('PUT /api/equipos/:id/integrantes/:idMembresia', () => {
     const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
     const respuesta = await asignar(idA, e.organizador.idMembresia, e.organizador.cookie)
     expect(respuesta.body.equipo.integrantes).toEqual([
-      { idMembresia: e.organizador.idMembresia, nombre: 'Olga Prueba', rol: 'organizador' },
+      {
+        idMembresia: e.organizador.idMembresia,
+        idUsuario: e.organizador.idUsuario,
+        nombre: 'Olga Prueba',
+        rol: 'organizador',
+      },
     ])
     // El organizador no cuenta como "sin equipo" y los participantes siguen pendientes.
     const lista = (await listar(e.id, e.organizador.cookie)).body

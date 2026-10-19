@@ -103,7 +103,9 @@ function equipo(sobrescribir: Partial<EquipoConActividad> = {}): EquipoConActivi
     nombre: 'Alfa',
     descripcionActividad: null,
     formaDeTrabajo: null,
-    integrantes: [{ idMembresia: 'yo', nombre: 'Ana García', rol: 'participante' }],
+    integrantes: [
+      { idMembresia: 'yo', idUsuario: 'u1', nombre: 'Ana García', rol: 'participante' },
+    ],
     idActividad: 'act-1',
     idMiMembresia: 'yo',
     ...sobrescribir,
@@ -205,7 +207,9 @@ describe('PantallaEspacioEquipo', () => {
     vi.mocked(obtenerEquipoConActividad).mockResolvedValue(
       equipo({
         idMiMembresia: 'organizador-1',
-        integrantes: [{ idMembresia: 'otra', nombre: 'Luis', rol: 'participante' }],
+        integrantes: [
+          { idMembresia: 'otra', idUsuario: 'u2', nombre: 'Luis', rol: 'participante' },
+        ],
       }),
     )
     vi.mocked(obtenerActividad).mockResolvedValue(

@@ -14,6 +14,7 @@ export {
   type FaltanteDeArte,
   type MotivoIgnorado,
 } from './arteInsignias'
+export { AccionesReconocimiento, type AccionesReconocimientoProps } from './AccionesReconocimiento'
 export { DetalleInsignia, type DetalleInsigniaProps } from './DetalleInsignia'
 export { IconoCategoria, type IconoCategoriaProps } from './IconoCategoria'
 export { descripcionDeInsignia } from './descripcionDeInsignia'
@@ -30,7 +31,7 @@ export {
   type ReconocimientoBorrador,
   type RitualReconocimientoProps,
 } from './RitualReconocimiento'
-export { useRecibidosEnPerfil } from './useReconocimientos'
+export { useRecibidosEnPerfil, useRitual } from './useReconocimientos'
 export type { ReconocimientoEnPerfil } from './insignias.api'
 export {
   VitrinaInsignias,

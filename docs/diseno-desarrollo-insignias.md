@@ -57,13 +57,13 @@ Cinco partes del contrato todavía no se cumplen. Tres dependen de piezas del n�
 
 Resuelta: "se reconoce solo dentro del propio equipo" (concepto §6, 4.6 del general). Equipo ya existe; `companerosDe` (insignias.service.ts) acota compañeros, presupuesto y receptores válidos al equipo del actor cuando es participante — quien organiza o co-organiza sigue viendo toda la actividad, por el motivo que explica el comentario de ese módulo. Ni esquema ni forma de la API cambiaron.
 
-| Contrato                                                                                                                                                    | Hoy                                                                                                        | Al llegar la pieza                                                                                            |
-| :---------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------ |
-| El otorgamiento ocurre en el periodo de cierre (6.1)                                                                                                        | La ventana se calcula con fechas: de `fecha_termino` a `fecha_termino + plazo_cierre_dias`                 | La verificación lee el estado `cierre`; el intervalo deja de calcularse aquí                                  |
-| El otorgamiento emite un evento de evaluación (8.3)                                                                                                         | No se emite                                                                                                | Se emite al aplicarse, no al guardar (3.6)                                                                    |
-| Validación ligera del organizador (concepto §6)                                                                                                             | El organizador ve todo con autoría, pero no hay alerta de reciprocidad ni descarte                         | Incremento propio (10.2)                                                                                      |
-| Solo se otorga si la función `insignias` está habilitada y según su modo (6.2 del general); el co-organizador necesita el permiso `otorgar_insignias` (7.3) | El servicio no lee la configuración ni los permisos: basta ser miembro activo y estar dentro de la ventana | Se verifica con la función de autorización del núcleo (2.2 del núcleo), como especifica 6.1 de este documento |
-| Requisitos mínimos de la actividad: 4 participantes y 4 semanas (concepto §6)                                                                               | No se validan                                                                                              | Se evalúan al abrir el ritual (P-33)                                                                          |
+| Contrato                                                                                                                                                    | Hoy                                                                                                                                    | Al llegar la pieza                                                                                            |
+| :---------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------ |
+| El otorgamiento ocurre en el periodo de cierre (6.1)                                                                                                        | La ventana abre con el estado `cierre` o con `fecha_termino`, lo que ocurra primero, porque la transición automática no existe todavía | La apertura depende solo del estado; las fechas quedan como salvaguarda del fin                               |
+| El otorgamiento emite un evento de evaluación (8.3)                                                                                                         | No se emite                                                                                                                            | Se emite al aplicarse, no al guardar (3.6)                                                                    |
+| Validación ligera del organizador (concepto §6)                                                                                                             | El organizador ve todo con autoría, pero no hay alerta de reciprocidad ni descarte                                                     | Incremento propio (10.2)                                                                                      |
+| Solo se otorga si la función `insignias` está habilitada y según su modo (6.2 del general); el co-organizador necesita el permiso `otorgar_insignias` (7.3) | El servicio no lee la configuración ni los permisos: basta ser miembro activo y estar dentro de la ventana                             | Se verifica con la función de autorización del núcleo (2.2 del núcleo), como especifica 6.1 de este documento |
+| Requisitos mínimos de la actividad: 4 participantes y 4 semanas (concepto §6)                                                                               | No se validan                                                                                                                          | Se evalúan al abrir el ritual (P-33)                                                                          |
 
 # **2\. Modelo del dominio**
 
@@ -140,11 +140,11 @@ Cada reconocimiento es persona, insignia y una frase de 1 a 140 caracteres. `FRA
 
 ## **3.5 La ventana y la revelación diferida**
 
-| Momento                                      | Guardar         | Quien recibe ve    | Quien organiza ve |
-| :------------------------------------------- | :-------------- | :----------------- | :---------------- |
-| Antes de `fecha_termino`                     | 409             | Nada               | Nada que ver      |
-| De `fecha_termino` a `fecha_termino + plazo` | Permitido       | Nada               | Todo, con autoría |
-| A partir del día siguiente al límite         | 409 (aplicados) | Lo suyo, sin autor | Todo, con autoría |
+| Momento                                                                  | Guardar         | Quien recibe ve    | Quien organiza ve |
+| :----------------------------------------------------------------------- | :-------------- | :----------------- | :---------------- |
+| Antes del cierre (ni estado `cierre` ni `fecha_termino`)                 | 409             | Nada               | Nada que ver      |
+| Desde el estado `cierre` o `fecha_termino` hasta `fecha_termino + plazo` | Permitido       | Nada               | Todo, con autoría |
+| A partir del día siguiente al límite, o con la actividad archivada       | 409 (aplicados) | Lo suyo, sin autor | Todo, con autoría |
 
 Las fechas de la actividad son de calendario; el término cuenta desde el inicio de su día y el límite hasta el final del suyo, para que "cierra el 14" incluya el 14.
 
@@ -164,13 +164,13 @@ Las fechas de la actividad son de calendario; el término cuenta desde el inicio
 
 Resuelve P-09 del general en el sentido de su propuesta por defecto: anónimo hacia quien recibe entre pares, atribuido hacia quien organiza.
 
-| Quién                        | Qué ve                                                                                | Desde cuándo         |
-| :--------------------------- | :------------------------------------------------------------------------------------ | :------------------- |
-| Quien recibe                 | Categoría, frase, puntos y si vino de quien organiza. Nunca el autor par              | Cuando se aplica     |
-| Quien reconoció              | Su propio borrador, editable                                                          | Durante la ventana   |
-| Organizador y co-organizador | Lo recibido por cada participante, con el nombre de quien lo dio                      | En cualquier momento |
-| Otro participante            | Nada de lo que recibió un compañero. Un intento directo responde 403                  | —                    |
-| Cualquier usuario con sesión | Nombre, foto y nivel por categoría de otra persona. Ni frases, ni correo, ni progreso | Cuando se aplica     |
+| Quién                        | Qué ve                                                                           | Desde cuándo         |
+| :--------------------------- | :------------------------------------------------------------------------------- | :------------------- |
+| Quien recibe                 | Categoría, frase, puntos y si vino de quien organiza. Nunca el autor par         | Cuando se aplica     |
+| Quien reconoció              | Su propio borrador, editable                                                     | Durante la ventana   |
+| Organizador y co-organizador | Lo recibido por cada participante, con el nombre de quien lo dio                 | En cualquier momento |
+| Otro participante            | Nada de lo que recibió un compañero. Un intento directo responde 403             | —                    |
+| Cualquier usuario con sesión | Datos básicos, foto y nivel por categoría de otra persona. Ni frases ni progreso | Cuando se aplica     |
 
 **Lo que recibió alguien de quien organiza sí lleva atribución**, aunque no su nombre: la fuente `organizador` se muestra como "de quien organiza". El concepto lo quiere así porque el doble peso solo se entiende si se sabe de dónde vino.
 
@@ -219,7 +219,7 @@ Fuera de la ventana nadie otorga (409). Con la función deshabilitada, o sin el 
 | PATCH /api/usuarios/yo                                                | Usuario                      | Nombre y apellidos, o contraseña; nunca ambos en la misma petición (Cuentas)                      |
 | PUT y DELETE /api/usuarios/yo/foto                                    | Usuario                      | Sube la imagen como cuerpo crudo o la quita (Cuentas)                                             |
 | GET /api/usuarios/{id}/foto                                           | Usuario                      | La imagen, cacheable sin plazo: la URL lleva la fecha de la foto (Cuentas)                        |
-| GET /api/usuarios/{id}                                                | Usuario                      | Nombre, foto y acumulado de otra persona. Nunca el correo (Cuentas)                               |
+| GET /api/usuarios/{id}                                                | Usuario                      | Datos básicos, foto y acumulado de otra persona (Cuentas)                                         |
 
 **Errores.** 400 con detalle por campo cuando falla una validación del ritual, con la llave `reconocimientos[i].campo` para que el cliente marque la fila exacta, y `reconocimientos` para el presupuesto. 409 `fuera_de_plazo` fuera de la ventana. 403 `sin_permiso` cuando un participante pide lo de otro. Un receptor inválido produce un solo mensaje ("no es un compañero al que puedas reconocer") para tres casos distintos: no es de la actividad, no es participante o es el propio actor. Distinguirlos no ayuda a quien usa la interfaz y sí revela membresías ajenas.
 
@@ -261,20 +261,22 @@ Una insignia son dos capas: el marco del nivel (cinco PNG en `assets/marcos/`) y
 
 **Invalidación.** Guardar el ritual invalida todo lo de la actividad (`['actividades', id]`) y todo lo global de insignias (`['insignias']`). Editar datos o foto actualiza la sesión, que es la que pinta el avatar del menú, e invalida `['usuarios']`.
 
+**Los accesos al ritual siguen a la ventana.** En el resumen de la actividad, "Reconocer al equipo" solo aparece mientras el ritual está abierto, y "Mis reconocimientos" mientras está abierto o ya se aplicó. `AccionesReconocimiento` lo decide con `abierto` y `aplicados` del contexto del ritual, de modo que la pantalla no repite la regla de fechas y estado.
+
 **La interfaz oculta, el servidor decide.** El enlace a lo recibido por un participante solo aparece para quien organiza, pero la barrera es el 403 del servidor (7.4 del general).
 
 # **8\. El perfil**
 
-Es la pantalla de Mi perfil de 6.6 del núcleo, con las insignias como contenido central.
+Es la pantalla de Mi perfil de 6.6 del núcleo. No es un ítem de la navegación: se abre desde el nombre de la cuenta, al pie del menú. Debajo de la cabecera se divide en dos grupos, Datos generales e Insignias.
 
-| Sección       | Contenido                                                                                        |
-| :------------ | :----------------------------------------------------------------------------------------------- |
-| Identidad     | Foto o iniciales, nombre completo, correo (solo lo ve su dueño), nivel de estudios e institución |
-| Tus insignias | Vitrina interactiva; al elegir una, `DetalleInsignia` con nivel, avance y frases recibidas       |
-| Tus datos     | Nombre y apellidos. El correo no es editable (6.3 del núcleo)                                    |
-| Contraseña    | Actual, nueva y confirmación. Al cambiarla se cierran las demás sesiones (3.2 del núcleo)        |
+| Grupo           | Sección    | Contenido                                                                                        |
+| :-------------- | :--------- | :----------------------------------------------------------------------------------------------- |
+| Cabecera        | Identidad  | Foto o iniciales, nombre completo, correo (solo lo ve su dueño), nivel de estudios e institución |
+| Datos generales | Tus datos  | Nombre y apellidos. El correo no es editable (6.3 del núcleo)                                    |
+| Datos generales | Contraseña | Actual, nueva y confirmación. Al cambiarla se cierran las demás sesiones (3.2 del núcleo)        |
+| Insignias       | —          | Vitrina interactiva; al elegir una, `DetalleInsignia` con nivel, avance y frases recibidas       |
 
-El perfil de otra persona muestra nombre, foto y la vitrina de solo lectura, y se abre desde la lista de participantes. Abrir el propio identificador redirige a /perfil.
+El perfil de otra persona sigue la misma estructura, de solo lectura y sin el grupo de datos generales: cabecera con foto, nombre, correo, nivel de estudios e institución, y el grupo Insignias con la vitrina sin detalle. Se abre desde la lista de participantes. Abrir el propio identificador redirige a /perfil.
 
 **La foto se prepara en el navegador.** `prepararFoto` recorta al centro en cuadrado, respeta la orientación EXIF, reduce a 256 px y codifica en WebP, o en JPEG donde el navegador no sepa producir WebP. Mientras se prepara y se sube, los controles de foto quedan deshabilitados para que una segunda elección o "Quitar foto" no compitan con la primera.
 
