@@ -135,6 +135,25 @@ describe('validarActualizacionPerfil', () => {
     ).toThrow(ErrorValidacion)
   })
 
+  it('con solo correoPublico, es un cambio de visibilidad del correo', () => {
+    expect(validarActualizacionPerfil({ correoPublico: true })).toEqual({
+      tipo: 'visibilidad',
+      correoPublico: true,
+    })
+  })
+
+  it('rechaza una visibilidad que no es booleana o que viene con otros campos', () => {
+    expect(() => validarActualizacionPerfil({ correoPublico: 'si' })).toThrow(ErrorValidacion)
+    expect(() =>
+      validarActualizacionPerfil({
+        correoPublico: true,
+        nombre: 'Ada',
+        apellidoPaterno: 'Lovelace',
+        apellidoMaterno: 'Byron',
+      }),
+    ).toThrow(ErrorValidacion)
+  })
+
   it('exige la actual, ocho caracteres y que la nueva sea distinta', () => {
     for (const [cuerpo, campo] of [
       [{ contrasenaNueva: 'otra-contrasena-larga' }, 'contrasenaActual'],

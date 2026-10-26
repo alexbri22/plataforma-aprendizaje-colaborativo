@@ -5,6 +5,7 @@ export {
   ErrorPerfil,
   actualizarDatosPerfil,
   cambiarContrasena,
+  cambiarVisibilidadCorreo,
   obtenerPerfilDeUsuario,
   obtenerPerfilPropio,
   quitarFoto,

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   actualizarDatosPerfil,
   cambiarContrasena,
+  cambiarVisibilidadCorreo,
   obtenerPerfilDeUsuario,
   obtenerPerfilPropio,
   quitarFoto,
@@ -50,6 +51,19 @@ export function useSubirFoto() {
 
 export function useQuitarFoto() {
   return useMutacionDeUsuario(() => quitarFoto())
+}
+
+// El interruptor pinta `variables` mientras la mutación está pendiente. Por eso
+// onSettled devuelve la invalidación: la mutación no termina hasta que el
+// perfil releído trae el valor nuevo, y el interruptor no regresa un instante
+// a la posición anterior.
+export function useCambiarVisibilidadCorreo() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (correoPublico: boolean) => cambiarVisibilidadCorreo(correoPublico),
+    onSuccess: (usuario) => queryClient.setQueryData(CLAVE_SESION, usuario),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: CLAVE_PERFIL_PROPIO }),
+  })
 }
 
 export function useCambiarContrasena() {

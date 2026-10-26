@@ -14,6 +14,7 @@ import {
 import {
   actualizarDatosPerfil,
   cambiarContrasena,
+  cambiarVisibilidadCorreo,
   guardarFoto,
   obtenerFoto,
   obtenerPerfilBasico,
@@ -73,8 +74,9 @@ cuentasRouter.get('/usuarios/yo', exigirSesion, async (req, res) => {
   res.status(200).json({ usuario })
 })
 
-// PATCH /api/usuarios/yo: edita nombre y apellidos, o cambia la contraseña.
-// Cambiarla cierra las demás sesiones (§3.2); la actual sigue viva.
+// PATCH /api/usuarios/yo: edita nombre y apellidos, cambia la contraseña o
+// cambia la visibilidad del correo. Cambiar la contraseña cierra las demás
+// sesiones (§3.2); la actual sigue viva.
 cuentasRouter.patch('/usuarios/yo', exigirSesion, async (req, res) => {
   const actor = req.actor as UsuarioPublico
   const actualizacion = validarActualizacionPerfil(req.body)
@@ -82,6 +84,12 @@ cuentasRouter.patch('/usuarios/yo', exigirSesion, async (req, res) => {
   if (actualizacion.tipo === 'contrasena') {
     await cambiarContrasena(actor.idUsuario, req.idSesion as string, actualizacion.cambio)
     res.status(204).end()
+    return
+  }
+
+  if (actualizacion.tipo === 'visibilidad') {
+    const usuario = await cambiarVisibilidadCorreo(actor.idUsuario, actualizacion.correoPublico)
+    res.status(200).json({ usuario })
     return
   }
 
@@ -126,8 +134,9 @@ cuentasRouter.get('/usuarios/:id/foto', exigirSesion, async (req, res) => {
 })
 
 // GET /api/usuarios/{id}: perfil básico de otro usuario, con sus datos
-// básicos, foto y rangos (§6.3). Nunca la contraseña ni el estado de la cuenta.
+// básicos, foto y rangos (§6.3). El correo solo si lo hizo público, salvo para
+// un administrador. Nunca la contraseña ni el estado de la cuenta.
 cuentasRouter.get('/usuarios/:id', exigirSesion, async (req, res) => {
-  const usuario = await obtenerPerfilBasico(req.params.id as string)
+  const usuario = await obtenerPerfilBasico(req.params.id as string, req.actor as UsuarioPublico)
   res.status(200).json({ usuario })
 })

@@ -90,3 +90,14 @@
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
 }
+
+.visibilidadCorreo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-4);
+}
+
+.visibilidadCorreo .nota {
+  margin: 0;
+}
