@@ -53,7 +53,8 @@ export function PantallaPerfilDeUsuario() {
           <h2 className={styles.nombre}>
             {usuario.nombre} {usuario.apellidoPaterno} {usuario.apellidoMaterno}
           </h2>
-          <p className={styles.correo}>{usuario.correo}</p>
+          {/* null cuando la persona mantiene su correo privado. */}
+          {usuario.correo ? <p className={styles.correo}>{usuario.correo}</p> : null}
           <p className={styles.estudios}>
             {ETIQUETAS_NIVEL_ESTUDIOS[usuario.nivelEstudios]} · {usuario.institucionEducativa}
           </p>

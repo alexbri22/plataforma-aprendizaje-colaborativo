@@ -150,6 +150,9 @@ model Usuario {
   // Único sin distinguir mayúsculas (docs/diseno-desarrollo-nucleo.md §2.5 y
   // §6.2): citext en lugar de un índice funcional sobre lower(correo).
   correo               String        @unique @db.Citext
+  // Si otras personas ven el correo en el perfil básico. Privado por defecto
+  // (docs/diseno-desarrollo-nucleo.md §6.3); el administrador lo ve siempre.
+  correoPublico        Boolean       @default(false) @map("correo_publico")
   contrasena           String
   tipoCuenta           TipoCuenta    @default(usuario) @map("tipo_cuenta")
   estadoCuenta         EstadoCuenta  @default(activa) @map("estado_cuenta")

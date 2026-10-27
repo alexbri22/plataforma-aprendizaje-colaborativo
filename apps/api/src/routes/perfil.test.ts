@@ -49,6 +49,8 @@ let ada: Cuenta
 let grace: Cuenta
 let linus: Cuenta
 let margaret: Cuenta
+let barbara: Cuenta
+let edsger: Cuenta
 
 beforeAll(async () => {
   await prisma.sesion.deleteMany()
@@ -57,6 +59,8 @@ beforeAll(async () => {
   grace = await registrar('Grace')
   linus = await registrar('Linus')
   margaret = await registrar('Margaret')
+  barbara = await registrar('Barbara')
+  edsger = await registrar('Edsger')
 })
 
 afterAll(async () => {
@@ -74,6 +78,7 @@ describe('GET /api/usuarios/yo', () => {
       correo: ada.correo,
       nivelEstudios: 'licenciatura',
       institucionEducativa: 'UNAM',
+      correoPublico: false,
       fotoUrl: null,
       acumulado: {},
     })
@@ -211,12 +216,49 @@ describe('GET /api/usuarios/:id', () => {
       nombre: 'Ada',
       apellidoPaterno: 'Lovelace',
       apellidoMaterno: 'Byron',
-      correo: ada.correo,
+      // Privado por defecto.
+      correo: null,
       nivelEstudios: 'licenciatura',
       institucionEducativa: 'UNAM',
       fotoUrl: null,
       acumulado: {},
     })
+  })
+
+  it('muestra el correo cuando la persona lo hace público y lo oculta al volver a privado', async () => {
+    const publico = await request(app)
+      .patch('/api/usuarios/yo')
+      .set('Cookie', barbara.cookie)
+      .send({ correoPublico: true })
+    expect(publico.status).toBe(200)
+
+    const visto = await request(app)
+      .get(`/api/usuarios/${barbara.idUsuario}`)
+      .set('Cookie', grace.cookie)
+    expect(visto.body.usuario.correo).toBe(barbara.correo)
+
+    const propio = await request(app).get('/api/usuarios/yo').set('Cookie', barbara.cookie)
+    expect(propio.body.usuario.correoPublico).toBe(true)
+
+    await request(app)
+      .patch('/api/usuarios/yo')
+      .set('Cookie', barbara.cookie)
+      .send({ correoPublico: false })
+      .expect(200)
+    const oculto = await request(app)
+      .get(`/api/usuarios/${barbara.idUsuario}`)
+      .set('Cookie', grace.cookie)
+    expect(oculto.body.usuario.correo).toBeNull()
+  })
+
+  it('un administrador ve el correo aunque sea privado', async () => {
+    await prisma.usuario.update({
+      where: { idUsuario: edsger.idUsuario },
+      data: { tipoCuenta: 'administrador' },
+    })
+
+    const r = await request(app).get(`/api/usuarios/${ada.idUsuario}`).set('Cookie', edsger.cookie)
+    expect(r.body.usuario.correo).toBe(ada.correo)
   })
 
   it('responde 404 si no existe', async () => {

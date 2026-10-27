@@ -436,11 +436,11 @@ El registro pide nombre, apellido paterno, apellido materno, nivel de estudios, 
 
 ## **6.3 Perfil y visibilidad entre usuarios**
 
-El perfil propio permite editar nombre y apellidos, y cambiar la contraseña exigiendo la anterior. El correo no es editable en el alcance actual: es el identificador de acceso y la llave con la que se busca a alguien para invitarlo, y cambiarlo sin verificación permitiría apropiarse de una dirección ajena. El nivel de estudios y la institución se muestran pero no se editan desde el perfil en este alcance.
+El perfil propio permite editar nombre y apellidos, y cambiar la contraseña exigiendo la anterior. El correo no es editable en el alcance actual: es el identificador de acceso y la llave con la que se busca a alguien para invitarlo, y cambiarlo sin verificación permitiría apropiarse de una dirección ajena. El nivel de estudios y la institución se muestran pero no se editan desde el perfil en este alcance. Desde el perfil propio se decide además si el correo es público o privado; es privado por defecto, también para las cuentas creadas antes de que existiera la opción, porque nadie aceptó mostrarlo.
 
 **Foto de perfil.** Es opcional: sin ella, la interfaz muestra las iniciales. El cliente recorta la imagen elegida a un cuadrado, la reduce a 256 px y la codifica en WebP (o JPEG donde el navegador no produzca WebP) antes de subirla; el servidor solo admite JPEG, PNG o WebP hasta 512 KB, comprueba que los primeros bytes correspondan al tipo declarado y la guarda en la relación fotos\_de\_perfil (4.4 del general). Se guarda en la base y no en disco porque el API se despliega como función sin sistema de archivos persistente, y reducirla en el cliente evita decodificar imágenes en el servidor. La foto se sirve con sesión, como el resto del perfil, y su URL lleva la fecha de la última subida para poder cachearla sin plazo. Los límites viven en `packages/shared` para que cliente y servidor no discrepen.
 
-De otro usuario se ven sus datos básicos —nombre, correo, nivel de estudios e institución—, la foto y sus rangos de insignia (7.2 del general). Nunca la contraseña, el tipo ni el estado de la cuenta. Mostrar el correo no abre una vía de enumeración: al perfil ajeno se llega desde la lista de participantes o desde la búsqueda al invitar, y la búsqueda por correo sigue siendo de coincidencia exacta (6.4). Los rangos los calcula el subsistema de recompensas (1.3): el perfil propio incluye además, al abrir cada insignia, las frases recibidas con la actividad de la que salió cada una y el avance hacia el siguiente nivel, que se comparan solo contra el propio historial (concepto, sección 6).
+De otro usuario se ven sus datos básicos —nombre, nivel de estudios, institución y el correo si lo hizo público—, la foto y sus rangos de insignia (7.2 del general). Nunca la contraseña, el tipo ni el estado de la cuenta. El administrador ve el correo aunque sea privado, porque ya lo tiene en el panel de cuentas y lo necesita para identificar a quien pide soporte. Mostrar un correo público no abre una vía de enumeración: al perfil ajeno se llega desde la lista de participantes o desde la búsqueda al invitar, y la búsqueda por correo sigue siendo de coincidencia exacta (6.4). Los rangos los calcula el subsistema de recompensas (1.3): el perfil propio incluye además, al abrir cada insignia, las frases recibidas con la actividad de la que salió cada una y el avance hacia el siguiente nivel, que se comparan solo contra el propio historial (concepto, sección 6).
 
 ## **6.4 Búsqueda de usuarios**
 
@@ -459,10 +459,10 @@ La propuesta por defecto de P-11 limita la búsqueda al flujo de invitación y a
 | DELETE /api/sesion                       | Usuario       | Cierra la sesión y elimina el registro en servidor               |
 | GET /api/sesion                          | Usuario       | Devuelve el actor actual y su tipo de cuenta                     |
 | GET /api/usuarios/yo                     | Usuario       | Perfil propio completo, con rangos                               |
-| PATCH /api/usuarios/yo                   | Usuario       | Edita nombre y apellidos, o cambia la contraseña                 |
+| PATCH /api/usuarios/yo                   | Usuario       | Edita datos, cambia la contraseña o la visibilidad del correo    |
 | PUT /api/usuarios/yo/foto                | Usuario       | Sube o reemplaza la foto; el cuerpo es la imagen (6.3)           |
 | DELETE /api/usuarios/yo/foto             | Usuario       | Quita la foto                                                    |
-| GET /api/usuarios/{id}                   | Usuario       | Perfil básico de otro: datos, foto y rangos                      |
+| GET /api/usuarios/{id}                   | Usuario       | Perfil básico de otro; el correo, solo si es público             |
 | GET /api/usuarios/{id}/foto              | Usuario       | La imagen de la foto de perfil                                   |
 | GET /api/actividades/{id}/candidatos     | Organizador   | Busca usuarios para invitar (6.4)                                |
 | POST /api/verificaciones/{token}         | Público       | Confirma la dirección de correo                                  |

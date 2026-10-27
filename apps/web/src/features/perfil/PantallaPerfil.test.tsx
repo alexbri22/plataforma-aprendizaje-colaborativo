@@ -1,10 +1,14 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PerfilPropio, Usuario } from '../cuentas/api'
-import { actualizarDatosPerfil, obtenerPerfilPropio } from '../cuentas/api'
+import {
+  actualizarDatosPerfil,
+  cambiarVisibilidadCorreo,
+  obtenerPerfilPropio,
+} from '../cuentas/api'
 import type { ReconocimientoEnPerfil } from '../insignias/insignias.api'
 import { obtenerRecibidosEnPerfil } from '../insignias/insignias.api'
 import { PantallaPerfil } from './PantallaPerfil'
@@ -24,6 +28,7 @@ const PERFIL: PerfilPropio = {
   ...USUARIO,
   nivelEstudios: 'licenciatura',
   institucionEducativa: 'UNAM',
+  correoPublico: false,
   acumulado: { ideas: 3 },
 }
 
@@ -54,6 +59,7 @@ vi.mock('../cuentas/api', async () => {
     cerrarSesion: vi.fn().mockResolvedValue(undefined),
     obtenerPerfilPropio: vi.fn(),
     actualizarDatosPerfil: vi.fn(),
+    cambiarVisibilidadCorreo: vi.fn(),
   }
 })
 
@@ -84,6 +90,42 @@ describe('PantallaPerfil', () => {
     vi.mocked(obtenerPerfilPropio).mockResolvedValue(PERFIL)
     vi.mocked(obtenerRecibidosEnPerfil).mockResolvedValue(RECIBIDOS)
     vi.mocked(actualizarDatosPerfil).mockReset()
+    vi.mocked(cambiarVisibilidadCorreo).mockReset()
+  })
+
+  it('el correo es privado hasta que lo hago público con el interruptor', async () => {
+    const { usuario } = renderPantalla()
+
+    const interruptor = await screen.findByRole('switch', {
+      name: 'Mostrar mi correo en mi perfil',
+    })
+    expect(interruptor).not.toBeChecked()
+    expect(screen.getByText(/Solo tú lo ves/)).toBeInTheDocument()
+
+    vi.mocked(cambiarVisibilidadCorreo).mockResolvedValue(USUARIO)
+    vi.mocked(obtenerPerfilPropio).mockResolvedValue({ ...PERFIL, correoPublico: true })
+    await usuario.click(interruptor)
+
+    expect(cambiarVisibilidadCorreo).toHaveBeenCalledWith(true)
+    await waitFor(() => expect(interruptor).toBeChecked())
+    expect(screen.getByText('Otras personas con sesión lo ven en tu perfil.')).toBeInTheDocument()
+  })
+
+  it('si no se pudo guardar, el interruptor regresa y avisa', async () => {
+    const { usuario } = renderPantalla()
+
+    const interruptor = await screen.findByRole('switch', {
+      name: 'Mostrar mi correo en mi perfil',
+    })
+    vi.mocked(cambiarVisibilidadCorreo).mockRejectedValue(
+      new Error('No pudimos cambiar la visibilidad de tu correo.'),
+    )
+    await usuario.click(interruptor)
+
+    expect(
+      await screen.findByText('No pudimos cambiar la visibilidad de tu correo.'),
+    ).toBeInTheDocument()
+    expect(interruptor).not.toBeChecked()
   })
 
   it('muestra quién soy, mis estudios y las seis insignias', async () => {
