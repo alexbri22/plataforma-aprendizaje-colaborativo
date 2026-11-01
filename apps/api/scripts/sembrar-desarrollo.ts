@@ -26,8 +26,22 @@ import { hashContrasena } from '../src/services/cuentas/contrasena.js'
 const CONTRASENA = 'contrasena-larga'
 const DOMINIO = '@seed.local'
 
-if (process.env.NODE_ENV === 'production' || !/localhost|127\.0\.0\.1/.test(config.databaseUrl)) {
-  throw new Error('El sembrado es solo para una base de datos local de desarrollo.')
+// Fuera de localhost (p. ej. producción) hace falta un permiso explícito:
+// las cuentas semilla comparten una contraseña conocida y limpiar() borra
+// cualquier @seed.local que encuentre cada vez que se corre, así que
+// apuntar esto a una base con usuarios reales por accidente sería grave.
+// PERMITIR_SEMBRAR_PRODUCCION=si es ese permiso explícito, no un
+// descuido: quien lo pasa ya decidió que esa base no tiene nada que
+// proteger de esto todavía.
+const permitido = process.env.PERMITIR_SEMBRAR_PRODUCCION === 'si'
+if (
+  !permitido &&
+  (process.env.NODE_ENV === 'production' || !/localhost|127\.0\.0\.1/.test(config.databaseUrl))
+) {
+  throw new Error(
+    'El sembrado es solo para una base de datos local de desarrollo. ' +
+      'Para correrlo contra otra base a propósito, pasa PERMITIR_SEMBRAR_PRODUCCION=si.',
+  )
 }
 
 const NOMBRES = [
