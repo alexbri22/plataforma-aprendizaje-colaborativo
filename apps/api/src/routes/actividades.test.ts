@@ -241,7 +241,13 @@ describe('GET /api/actividades/:id', () => {
     expect(respuesta.body.actividad.configuracion.formacion_equipos).toBe('autogestionado')
     expect(respuesta.body.actividad.configuracion.bitacora_individual).toBe('deshabilitada')
     const espacioEquipo = JSON.parse(respuesta.body.actividad.configuracion.espacio_equipo)
-    expect(espacioEquipo).toEqual({ metas: 'opcional', avances: 'opcional', recursos: 'opcional' })
+    expect(espacioEquipo).toEqual({
+      metas: 'opcional',
+      planeacion: 'opcional',
+      avances: 'opcional',
+      recursos: 'opcional',
+      producto: 'opcional',
+    })
   })
 
   it('responde 404 a quien no es miembro, sin distinguir de una actividad inexistente', async () => {
@@ -384,13 +390,21 @@ describe('PUT /api/actividades/:id/configuracion/:funcion', () => {
     const respuesta = await request(app)
       .put(`/api/actividades/${id}/configuracion/espacio_equipo`)
       .set('Cookie', cookieOrganizador)
-      .send({ metas: 'obligatorio', avances: 'opcional', recursos: 'obligatorio' })
+      .send({
+        metas: 'obligatorio',
+        planeacion: 'opcional',
+        avances: 'opcional',
+        recursos: 'obligatorio',
+        producto: 'opcional',
+      })
 
     expect(respuesta.status).toBe(200)
     expect(JSON.parse(respuesta.body.actividad.configuracion.espacio_equipo)).toEqual({
       metas: 'obligatorio',
+      planeacion: 'opcional',
       avances: 'opcional',
       recursos: 'obligatorio',
+      producto: 'opcional',
     })
   })
 
@@ -875,8 +889,10 @@ describe('PUT /api/actividades/:id/configuracion/:funcion durante el desarrollo 
     const { cookie, id } = await actividadEn('desarrollo')
     const respuesta = await configurar(id, cookie, 'espacio_equipo', {
       metas: 'obligatorio',
+      planeacion: 'opcional',
       avances: 'deshabilitado',
       recursos: 'opcional',
+      producto: 'opcional',
     })
     expect(respuesta.status).toBe(200)
   })

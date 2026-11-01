@@ -220,8 +220,10 @@ describe('PantallaConfiguracion', () => {
       await waitFor(() =>
         expect(configurarFuncion).toHaveBeenCalledWith(ACTIVIDAD_BASE.id, 'espacio_equipo', {
           metas: 'obligatorio',
+          planeacion: 'opcional',
           avances: 'opcional',
           recursos: 'opcional',
+          producto: 'opcional',
         }),
       )
     })
@@ -241,8 +243,10 @@ describe('PantallaConfiguracion', () => {
       await waitFor(() =>
         expect(configurarFuncion).toHaveBeenCalledWith(ACTIVIDAD_BASE.id, 'espacio_equipo', {
           metas: 'opcional',
+          planeacion: 'opcional',
           avances: 'opcional',
           recursos: 'deshabilitado',
+          producto: 'opcional',
         }),
       )
     })
@@ -271,13 +275,17 @@ describe('PantallaConfiguracion', () => {
       await waitFor(() => expect(configurarFuncion).toHaveBeenCalledTimes(2))
       expect(configurarFuncion).toHaveBeenNthCalledWith(1, ACTIVIDAD_BASE.id, 'espacio_equipo', {
         metas: 'obligatorio',
+        planeacion: 'opcional',
         avances: 'opcional',
         recursos: 'opcional',
+        producto: 'opcional',
       })
       expect(configurarFuncion).toHaveBeenNthCalledWith(2, ACTIVIDAD_BASE.id, 'espacio_equipo', {
         metas: 'obligatorio',
+        planeacion: 'opcional',
         avances: 'opcional',
         recursos: 'deshabilitado',
+        producto: 'opcional',
       })
     })
 
@@ -298,8 +306,10 @@ describe('PantallaConfiguracion', () => {
       // así que guardar Recursos no debe persistirlo a escondidas.
       expect(configurarFuncion).toHaveBeenNthCalledWith(2, ACTIVIDAD_BASE.id, 'espacio_equipo', {
         metas: 'opcional',
+        planeacion: 'opcional',
         avances: 'opcional',
         recursos: 'deshabilitado',
+        producto: 'opcional',
       })
     })
 
@@ -324,8 +334,10 @@ describe('PantallaConfiguracion', () => {
           ...ACTIVIDAD_BASE.configuracion,
           espacio_equipo: JSON.stringify({
             metas: 'opcional',
+            planeacion: 'opcional',
             avances: 'deshabilitado',
             recursos: 'opcional',
+            producto: 'opcional',
           }),
         },
       })

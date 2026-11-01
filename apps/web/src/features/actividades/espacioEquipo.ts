@@ -5,8 +5,10 @@ import type { Actividad } from './tipos'
 // ELEMENTOS_ESPACIO_EQUIPO los declara.
 export const SECCIONES_ESPACIO_EQUIPO: readonly ElementoEspacioEquipo[] = [
   'metas',
+  'planeacion',
   'avances',
   'recursos',
+  'producto',
 ]
 
 // Un valor ilegible se trata como habilitado: lo conservador para no ocultar

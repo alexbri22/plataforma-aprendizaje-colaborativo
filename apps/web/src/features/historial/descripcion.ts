@@ -63,8 +63,10 @@ function etiquetaEntidadComentada(valor: unknown): string {
 
 function etiquetaTipo(valor: unknown): string {
   if (valor === 'metas') return 'una meta'
+  if (valor === 'planeacion') return 'una entrada de la planeación'
   if (valor === 'avances') return 'un avance'
   if (valor === 'recursos') return 'un material'
+  if (valor === 'producto') return 'una entrada del producto'
   return 'un elemento'
 }
 

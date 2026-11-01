@@ -683,15 +683,48 @@ export async function cerrarInscripcion(
   return obtenerActividadPorId(idActividad, membresiaActor)
 }
 
-// Tarea programada de nucleo §7.5: recorre las actividades con la fecha
-// límite de inscripción vencida y las hace avanzar, con el sistema como
-// actor. Un disparo atrasado no deja abierta la inscripción: la búsqueda por
-// clave (actividadJoinablePorClave) aplica la misma condición al leer. Uno
-// duplicado no repite la transición: el UPDATE de escribirCierreInscripcion
-// solo actúa sobre una actividad aún en inscripción.
-export async function transicionarActividadesVencidas(
-  ahora: Date = new Date(),
-): Promise<{ procesadas: number; omitidasPorSinParticipantes: number }> {
+const DIA_EN_MS = 24 * 60 * 60 * 1000
+
+// Último instante del día de término (CDMX): el trabajo en equipo incluye
+// ese día completo, y el cierre empieza al terminar.
+function terminoVencido(actividad: { fechaTermino: Date }, ahora: Date): boolean {
+  return finDeDiaEnCDMX(actividad.fechaTermino) <= ahora
+}
+
+// Último instante del plazo de cierre: fecha de término + plazo_cierre_dias,
+// la misma fecha que insignias.service usa para cerrar el ritual.
+function plazoDeCierreVencido(
+  actividad: { fechaTermino: Date; plazoCierreDias: number },
+  ahora: Date,
+): boolean {
+  const ultimoDia = new Date(
+    actividad.fechaTermino.getTime() + actividad.plazoCierreDias * DIA_EN_MS,
+  )
+  return finDeDiaEnCDMX(ultimoDia) <= ahora
+}
+
+// Tarea programada de nucleo §7.5: recorre las actividades con una
+// transición por fecha vencida y las hace avanzar, con el sistema como
+// actor (tabla de nucleo §7.4):
+// - Inscripción → Formación, al vencer la fecha límite de inscripción.
+// - Desarrollo → Cierre, al terminar el día de término.
+// - Cierre → Archivada, al vencer el plazo de cierre.
+// Formación → Desarrollo no tiene fecha: la decide quien organiza al
+// confirmar los equipos, o pasa sola en formación autogestionada
+// (equipos.service, cerrarSiNadieQuedaSinEquipo).
+//
+// Un disparo atrasado no deja abierta la inscripción: la búsqueda por clave
+// (actividadJoinablePorClave) aplica la misma condición al leer. Uno
+// duplicado no repite ninguna transición: cada UPDATE solo actúa sobre una
+// actividad aún en la etapa de origen. Se procesan en orden, así que una
+// actividad atrasada varios días (desarrollo con el plazo de cierre ya
+// vencido) avanza las dos etapas en la misma corrida.
+export async function transicionarActividadesVencidas(ahora: Date = new Date()): Promise<{
+  procesadas: number
+  omitidasPorSinParticipantes: number
+  cierresIniciados: number
+  archivadas: number
+}> {
   const candidatas = await prisma.actividad.findMany({
     where: { estado: 'inscripcion' },
     include: { membresias: { select: { rol: true } } },
@@ -720,13 +753,69 @@ export async function transicionarActividadesVencidas(
     if (cerrada) procesadas += 1
   }
 
-  return { procesadas, omitidasPorSinParticipantes }
+  let cierresIniciados = 0
+  const enDesarrollo = await prisma.actividad.findMany({
+    where: { estado: 'desarrollo' },
+    select: { idActividad: true, fechaTermino: true },
+  })
+  for (const actividad of enDesarrollo.filter((a) => terminoVencido(a, ahora))) {
+    const iniciado = await prisma.$transaction((tx) =>
+      escribirInicioDeCierre(tx, actividad.idActividad, { tipo: 'sistema' }),
+    )
+    if (iniciado) cierresIniciados += 1
+  }
+
+  let archivadas = 0
+  const enCierre = await prisma.actividad.findMany({
+    where: { estado: 'cierre' },
+    select: { idActividad: true, fechaTermino: true, plazoCierreDias: true },
+  })
+  for (const actividad of enCierre.filter((a) => plazoDeCierreVencido(a, ahora))) {
+    const archivada = await prisma.$transaction((tx) =>
+      escribirArchivado(tx, actividad.idActividad, { tipo: 'sistema' }),
+    )
+    if (archivada) archivadas += 1
+  }
+
+  return { procesadas, omitidasPorSinParticipantes, cierresIniciados, archivadas }
+}
+
+// Escritura y evento de Cierre → Archivada, mismo patrón condicional que las
+// otras dos. Desde aquí la actividad es de solo lectura para todos (general
+// §7.4): las capacidades de una archivada ya llegan sin acciones de
+// escritura, no hace falta nada más.
+async function escribirArchivado(
+  tx: Prisma.TransactionClient,
+  idActividad: string,
+  actor: ActorTransicion,
+): Promise<boolean> {
+  const { count } = await tx.actividad.updateMany({
+    where: { idActividad, estado: 'cierre' },
+    data: { estado: 'archivada' },
+  })
+  if (count === 0) return false
+
+  await registrarEvento(tx, {
+    idActividad,
+    tipoActor: actor.tipo,
+    idUsuarioActor: actor.tipo === 'usuario' ? actor.idUsuario : null,
+    tipoEvento: 'fase_avanzada',
+    tipoEntidad: 'actividad',
+    idEntidad: idActividad,
+    datos: {
+      faseOrigen: 'cierre',
+      faseDestino: 'archivada',
+      disparadoPor: actor.tipo,
+    },
+    categoria: 'estructura',
+  })
+  return true
 }
 
 // Escritura y evento de Desarrollo → Cierre, mismo patrón que
 // escribirCierreInscripcion: condicional al estado de origen, para que un
-// disparo manual tardío (la actividad ya avanzó, por ejemplo por la futura
-// tarea de vencimiento) no repita la transición ni el evento.
+// disparo manual tardío (la actividad ya avanzó, por ejemplo por la tarea
+// de vencimiento) no repita la transición ni el evento.
 async function escribirInicioDeCierre(
   tx: Prisma.TransactionClient,
   idActividad: string,
@@ -762,9 +851,9 @@ async function escribirInicioDeCierre(
 // y caducar invitaciones pendientes (nucleo §7.4) no tienen qué hacer
 // todavía porque esos módulos no existen; el otorgamiento de insignias ya
 // no depende de este estado sino de la fecha de término
-// (insignias.service.ts, función ventana()). La transición automática por
-// llegada de la fecha de término (nucleo §7.5) queda fuera de este
-// incremento: hoy solo existe el disparo manual.
+// (insignias.service.ts, función ventana()). La misma transición ocurre sola
+// al terminar el día de término (transicionarActividadesVencidas); este
+// disparo manual la adelanta.
 export async function iniciarCierre(
   idActividad: string,
   idUsuarioActor: string,

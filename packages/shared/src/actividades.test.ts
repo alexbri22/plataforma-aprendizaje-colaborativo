@@ -36,7 +36,13 @@ describe('catálogo de funciones de seguimiento', () => {
 
 describe('estado compuesto de espacio_equipo', () => {
   it('serializa y parsea de vuelta al mismo valor', () => {
-    const estado = { metas: 'obligatorio', avances: 'opcional', recursos: 'opcional' } as const
+    const estado = {
+      metas: 'obligatorio',
+      planeacion: 'opcional',
+      avances: 'opcional',
+      recursos: 'opcional',
+      producto: 'opcional',
+    } as const
     expect(parsearEstadoEspacioEquipo(serializarEstadoEspacioEquipo(estado))).toEqual(estado)
   })
 
@@ -51,8 +57,10 @@ describe('estado compuesto de espacio_equipo', () => {
   it('admite deshabilitado en cualquiera de los tres elementos', () => {
     const estado = {
       metas: 'deshabilitado',
+      planeacion: 'opcional',
       avances: 'opcional',
       recursos: 'deshabilitado',
+      producto: 'opcional',
     } as const
     expect(parsearEstadoEspacioEquipo(serializarEstadoEspacioEquipo(estado))).toEqual(estado)
   })

@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type UIEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useCerrarSesionMutation, useSesion } from '../features/cuentas'
+import { Bienvenida, BotonAyuda, usePistas, type PistaDePantalla } from '../features/ayuda'
 import { PanelHistorial } from '../features/historial'
 import { GrupoNav } from './GrupoNav'
 import type {
@@ -389,6 +390,8 @@ export interface AppShellProps {
   /** La actividad (o el equipo) en que se está: la barra lateral muestra ese
    * nivel y la barra superior agrega el Historial. */
   contexto?: ContextoNav
+  /** El "?" junto al título, con la ayuda de esta pantalla (features/ayuda). */
+  ayuda?: PistaDePantalla
   acciones?: ReactNode
   children: ReactNode
 }
@@ -404,6 +407,7 @@ export function AppShell({
   volverA,
   volverEtiqueta,
   contexto,
+  ayuda,
   acciones,
   children,
 }: AppShellProps) {
@@ -411,6 +415,7 @@ export function AppShell({
   const { usuario } = useSesion()
   const cerrarSesionMutacion = useCerrarSesionMutation()
   const navActividad = useNavActividad(contexto)
+  const pistas = usePistas()
   // Si la actividad no se pudo cargar, vuelve la navegación general: mejor
   // eso que una barra vacía.
   const nivelVisible = Boolean(contexto) && (navActividad.nav !== null || navActividad.cargando)
@@ -556,6 +561,16 @@ export function AppShell({
               </Link>
             ) : null}
             <h1 className={styles.titulo}>{titulo}</h1>
+            {/* Espera a saber el rol en la actividad: el texto cambia según
+                se organice o se participe. */}
+            {ayuda && !(contexto && navActividad.cargando) ? (
+              <BotonAyuda
+                key={ayuda}
+                idPista={ayuda}
+                organiza={navActividad.nav?.rama !== 'participo'}
+                enPausa={pistas.pendiente('bienvenida')}
+              />
+            ) : null}
           </div>
           {acciones || navActividad.idActividad ? (
             <div className={styles.acciones}>
@@ -577,6 +592,8 @@ export function AppShell({
           {children}
         </main>
       </div>
+
+      <Bienvenida />
 
       {navActividad.idActividad ? (
         <PanelHistorial

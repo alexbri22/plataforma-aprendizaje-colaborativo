@@ -105,12 +105,18 @@ export const ESTADOS_POR_FUNCION: Readonly<Record<FuncionSeguimiento, readonly s
   insignias: ['deshabilitado', 'solo_organizador', 'organizador_y_participantes'],
 }
 
-/** `espacio_equipo` empaqueta tres sub-estados en una sola fila de las
+/** `espacio_equipo` empaqueta un sub-estado por elemento en una sola fila de las
  * ocho (general §6.2: "Por elemento: Deshabilitado / Opcional /
  * Obligatorio"), porque nucleo §7.1 inserta una fila de configuración por
  * función y no una por elemento. Se serializa como JSON en
  * ConfiguracionFuncion.estado. */
-export const ELEMENTOS_ESPACIO_EQUIPO = ['metas', 'avances', 'recursos'] as const
+export const ELEMENTOS_ESPACIO_EQUIPO = [
+  'metas',
+  'planeacion',
+  'avances',
+  'recursos',
+  'producto',
+] as const
 export type ElementoEspacioEquipo = (typeof ELEMENTOS_ESPACIO_EQUIPO)[number]
 
 export const ESTADOS_ELEMENTO_ESPACIO_EQUIPO = ['deshabilitado', 'opcional', 'obligatorio'] as const
@@ -124,9 +130,14 @@ export function serializarEstadoEspacioEquipo(estado: EstadoEspacioEquipo): stri
   return JSON.stringify(estado)
 }
 
-/** Devuelve null si el texto no es un JSON con exactamente los tres
- * elementos y valores válidos, en lugar de lanzar: quien llama decide si
- * eso es un error de validación (petición) o un dato corrupto (lectura). */
+/** Devuelve null si el texto no es un JSON de elementos conocidos con
+ * valores válidos, en lugar de lanzar: quien llama decide si eso es un error
+ * de validación (petición) o un dato corrupto (lectura).
+ *
+ * Un elemento que falta toma el estado por defecto ('opcional'): las
+ * actividades creadas antes de agregar Planeación y Producto (modelo ABPCL)
+ * guardaron solo tres, y así los reciben como cualquier actividad nueva en
+ * vez de leerse como dato corrupto. */
 export function parsearEstadoEspacioEquipo(texto: string): EstadoEspacioEquipo | null {
   let valor: unknown
   try {
@@ -137,20 +148,27 @@ export function parsearEstadoEspacioEquipo(texto: string): EstadoEspacioEquipo |
   if (!valor || typeof valor !== 'object') return null
 
   const objeto = valor as Record<string, unknown>
-  const claves = Object.keys(objeto)
-  if (claves.length !== ELEMENTOS_ESPACIO_EQUIPO.length) return null
+  if (
+    Object.keys(objeto).some(
+      (clave) => !(ELEMENTOS_ESPACIO_EQUIPO as readonly string[]).includes(clave),
+    )
+  ) {
+    return null
+  }
 
+  const estado = {} as Record<ElementoEspacioEquipo, EstadoElementoEspacioEquipo>
   for (const elemento of ELEMENTOS_ESPACIO_EQUIPO) {
-    const estadoElemento = objeto[elemento]
+    const estadoElemento = objeto[elemento] ?? 'opcional'
     if (
       typeof estadoElemento !== 'string' ||
       !ESTADOS_ELEMENTO_ESPACIO_EQUIPO.includes(estadoElemento as EstadoElementoEspacioEquipo)
     ) {
       return null
     }
+    estado[elemento] = estadoElemento as EstadoElementoEspacioEquipo
   }
 
-  return objeto as unknown as EstadoEspacioEquipo
+  return estado
 }
 
 /** P-25 (nucleo §7.9): configuración con la que nace toda actividad nueva.
@@ -165,8 +183,10 @@ export const CONFIGURACION_POR_DEFECTO: Readonly<Record<FuncionSeguimiento, stri
   evaluacion_pares: 'deshabilitada',
   espacio_equipo: serializarEstadoEspacioEquipo({
     metas: 'opcional',
+    planeacion: 'opcional',
     avances: 'opcional',
     recursos: 'opcional',
+    producto: 'opcional',
   }),
   insignias: 'deshabilitado',
 }

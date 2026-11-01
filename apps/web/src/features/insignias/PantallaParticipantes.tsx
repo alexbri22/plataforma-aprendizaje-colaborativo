@@ -1,7 +1,8 @@
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { AppShell } from '../../components/AppShell'
-import { AvisoError, Card, IconoCargando } from '../../components/ui'
-import { useActividad, useParticipantes } from '../actividades'
+import { AvisoError, Card, IconoCargando, Paginacion, rebanar } from '../../components/ui'
+import { formatearFechaHora, useActividad, useParticipantes } from '../actividades'
 import styles from './PantallaParticipantes.module.css'
 
 /**
@@ -10,8 +11,11 @@ import styles from './PantallaParticipantes.module.css'
  * detalle de otro; aquí solo se oculta el enlace por conveniencia de interfaz,
  * nunca como barrera (docs/diseno-desarrollo-general.md §7.4).
  */
+const PARTICIPANTES_POR_PAGINA = 10
+
 export function PantallaParticipantes() {
   const { id = '' } = useParams<{ id: string }>()
+  const [pagina, setPagina] = useState(0)
   const actividad = useActividad(id)
   const participantes = useParticipantes(id)
 
@@ -53,23 +57,46 @@ export function PantallaParticipantes() {
         {participantes.data.length === 0 ? (
           <p className={styles.texto}>Todavía nadie se ha unido a esta actividad.</p>
         ) : (
-          <ul className={styles.lista}>
-            {participantes.data.map((p) => (
-              <li key={p.idMembresia} className={styles.participante}>
-                <Link to={`/usuarios/${p.idUsuario}`} className={styles.nombre}>
-                  {p.nombre}
-                </Link>
-                {organiza ? (
-                  <Link
-                    to={`/actividades/${id}/participantes/${p.idMembresia}`}
-                    className={styles.enlace}
-                  >
-                    Ver reconocimientos
-                  </Link>
-                ) : null}
-              </li>
-            ))}
-          </ul>
+          (() => {
+            const { visibles, pagina: paginaActual } = rebanar(
+              participantes.data,
+              pagina,
+              PARTICIPANTES_POR_PAGINA,
+            )
+            return (
+              <>
+                <ul className={styles.lista}>
+                  {visibles.map((p) => (
+                    <li key={p.idMembresia} className={styles.participante}>
+                      <span className={styles.datos}>
+                        <Link to={`/usuarios/${p.idUsuario}`} className={styles.nombre}>
+                          {p.nombre}
+                        </Link>
+                        <span className={styles.fecha}>
+                          Se unió el {formatearFechaHora(p.fechaUnion)}
+                        </span>
+                      </span>
+                      {organiza ? (
+                        <Link
+                          to={`/actividades/${id}/participantes/${p.idMembresia}`}
+                          className={styles.enlace}
+                        >
+                          Ver reconocimientos
+                        </Link>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+                <Paginacion
+                  total={participantes.data.length}
+                  tamano={PARTICIPANTES_POR_PAGINA}
+                  pagina={paginaActual}
+                  onCambiar={setPagina}
+                  etiqueta="Participantes"
+                />
+              </>
+            )
+          })()
         )}
       </Card>
     </AppShell>

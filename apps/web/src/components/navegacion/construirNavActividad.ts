@@ -17,8 +17,10 @@ export type SeccionActividad =
   | 'reconocer'
   | 'insignias'
   | 'metas'
+  | 'planeacion'
   | 'avances'
   | 'recursos'
+  | 'producto'
   | 'bitacora'
   | 'bitacoras'
   | 'bitacora-integrante'
@@ -81,8 +83,10 @@ interface Datos {
 
 const ETIQUETAS_SECCION_EQUIPO = {
   metas: 'Metas',
+  planeacion: 'Planeación',
   avances: 'Avances',
   recursos: 'Materiales',
+  producto: 'Producto',
 } as const
 
 const CAPACIDADES_PLANIFICAR = ['configurar_funciones', 'ajustar_funciones', 'ajustar_periodos']
@@ -232,6 +236,12 @@ export function construirNavActividad({
       entradas: [
         item('resumen', 'Resumen', `/actividades/${id}/resumen`, seccion === 'resumen'),
         item('equipos', 'Equipos', `/actividades/${id}/equipos`, seccion === 'equipos'),
+        item(
+          'participantes',
+          'Participantes',
+          `/actividades/${id}/participantes`,
+          seccion === 'participantes',
+        ),
       ],
     },
   ]

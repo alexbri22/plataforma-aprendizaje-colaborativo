@@ -59,7 +59,12 @@ export function PantallaBitacorasDeEquipo() {
   const equipoQuery = useEquipo(idEquipo)
 
   return (
-    <AppShellEquipo idEquipo={idEquipo} seccionActiva="bitacoras" titulo="Bitácoras">
+    <AppShellEquipo
+      idEquipo={idEquipo}
+      seccionActiva="bitacoras"
+      titulo="Bitácoras"
+      ayuda="bitacora"
+    >
       {equipoQuery.isPending ? (
         <div className={styles.cargando} role="status" aria-label="Cargando el equipo">
           <IconoCargando size={24} />

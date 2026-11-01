@@ -16,6 +16,10 @@ interface TarjetaEquipoProps {
   miRol: RolIntegrante
   capacidades: readonly AccionActividad[]
   limites: LimitesEquipo
+  enFormacion: boolean
+  /** Con la bitácora individual habilitada, quien organiza abre la de cada
+   * participante desde su nombre. */
+  bitacorasHabilitadas: boolean
   ocupado: boolean
   onUnirme: (idEquipo: string) => void
   onSalir: (idEquipo: string) => void
@@ -39,6 +43,8 @@ export function TarjetaEquipo({
   miRol,
   capacidades,
   limites,
+  enFormacion,
+  bitacorasHabilitadas,
   ocupado,
   onUnirme,
   onSalir,
@@ -47,6 +53,7 @@ export function TarjetaEquipo({
   const puede = (accion: AccionActividad) => capacidades.includes(accion)
 
   const soyIntegrante = equipo.integrantes.some((i) => i.idMembresia === idMiMembresia)
+  const organiza = miRol !== 'participante'
   const puedeMoverme = puede('elegir_equipo') || puede('asignar_integrantes')
 
   const cantidad = equipo.integrantes.length
@@ -69,8 +76,12 @@ export function TarjetaEquipo({
   // acción es ruido. Durante la formación autogestionada, cada persona
   // también puede retirarse de su propio equipo (antes solo quien organiza o
   // co-organiza podía "salir" de un equipo del que era integrante).
-  const mostrarUnirme = !soyIntegrante && puedeMoverme && !lleno
-  const mostrarSalir = soyIntegrante && puedeMoverme
+  // Quien organiza puede integrar un equipo, pero en desarrollo lo que hace
+  // con los equipos es consultarlos (observación de las coordinadoras): ahí
+  // "Unirme" competía con "Consultar". Solo se le ofrece en formación.
+  const puedeMovermeAqui = puedeMoverme && (!organiza || enFormacion)
+  const mostrarUnirme = !soyIntegrante && puedeMovermeAqui && !lleno
+  const mostrarSalir = soyIntegrante && puedeMovermeAqui
   const mostrarEditar = puede('editar_equipo') && (miRol !== 'participante' || soyIntegrante)
   // Espacio de equipo (nucleo §9.1, general §7.3): un participante solo entra
   // al suyo; quien organiza o co-organiza entra a cualquiera, a revisarlo.
@@ -96,7 +107,9 @@ export function TarjetaEquipo({
         <Link
           to={`/equipos/${equipo.id}`}
           className={styles.enlaceSuperpuesto}
-          aria-label={`Entrar al espacio de ${equipo.nombre}`}
+          aria-label={
+            organiza ? `Consultar el espacio de ${equipo.nombre}` : `Entrar a ${equipo.nombre}`
+          }
         />
       ) : null}
       <div className={styles.encabezado}>
@@ -148,7 +161,21 @@ export function TarjetaEquipo({
           {equipo.integrantes.map((integrante) => (
             <li key={integrante.idMembresia} className={styles.integrante}>
               <span>
-                <EnlacePerfil idUsuario={integrante.idUsuario}>{integrante.nombre}</EnlacePerfil>
+                {/* Quien organiza va al proceso de cada participante (hoy, su
+                    bitácora; cuando exista, su proceso colaborativo). Los
+                    demás, al perfil. */}
+                {organiza && bitacorasHabilitadas && integrante.rol === 'participante' ? (
+                  <Link
+                    to={`/equipos/${equipo.id}/participantes/${integrante.idMembresia}/bitacora`}
+                    className={styles.enlaceNombre}
+                    aria-label={`Bitácora de ${integrante.nombre}`}
+                    title="Ver su bitácora"
+                  >
+                    {integrante.nombre}
+                  </Link>
+                ) : (
+                  <EnlacePerfil idUsuario={integrante.idUsuario}>{integrante.nombre}</EnlacePerfil>
+                )}
                 {integrante.idMembresia === idMiMembresia ? ' (tú)' : ''}
               </span>
               {ETIQUETA_ROL[integrante.rol] ? (
@@ -195,10 +222,7 @@ export function TarjetaEquipo({
               aria-hidden: el enlace ya lleva el mismo nombre accesible. */}
           {mostrarEspacio ? (
             <span className={styles.entrar} aria-hidden="true">
-              {soyIntegrante && miRol === 'participante'
-                ? 'Entrar a mi equipo'
-                : 'Entrar al espacio'}{' '}
-              →
+              {organiza ? 'Consultar' : 'Entrar a mi equipo'} →
             </span>
           ) : null}
         </div>

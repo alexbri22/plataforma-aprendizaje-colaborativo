@@ -247,6 +247,8 @@
 }
 
 .encabezadoTitulo {
+  /* Ancla del globo de ayuda (BotonAyuda): se alinea con el título. */
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-3);

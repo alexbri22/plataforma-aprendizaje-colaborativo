@@ -105,6 +105,11 @@ export const ELEMENTOS_ESPACIO_EQUIPO_UI: {
 }[] = [
   { elemento: 'metas', etiqueta: 'Metas', descripcion: 'Lo que el equipo se propone lograr.' },
   {
+    elemento: 'planeacion',
+    etiqueta: 'Planeación',
+    descripcion: 'Cómo se organiza el equipo para lograr sus metas.',
+  },
+  {
     elemento: 'avances',
     etiqueta: 'Avances',
     descripcion: 'Entregas periódicas del trabajo, con su propio calendario.',
@@ -113,6 +118,11 @@ export const ELEMENTOS_ESPACIO_EQUIPO_UI: {
     elemento: 'recursos',
     etiqueta: 'Materiales',
     descripcion: 'Enlaces y archivos que el equipo comparte.',
+  },
+  {
+    elemento: 'producto',
+    etiqueta: 'Producto',
+    descripcion: 'Lo que el equipo entrega como resultado final.',
   },
 ]
 

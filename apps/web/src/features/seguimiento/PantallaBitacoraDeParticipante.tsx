@@ -89,6 +89,7 @@ export function PantallaBitacoraDeParticipante() {
       titulo={titulo}
       volverA={`/equipos/${idEquipo}/bitacoras`}
       volverEtiqueta="Bitácoras"
+      ayuda="bitacora"
     >
       <div className={styles.contenido}>
         {entradasQuery.isPending ? (

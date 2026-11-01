@@ -68,6 +68,7 @@ export function PantallaReconocer() {
       seccionActiva="actividades"
       titulo="Reconoce el trabajo de tu equipo"
       contexto={{ idActividad: id, seccion: 'reconocer' }}
+      ayuda="reconocer"
     >
       <div className={styles.encabezado}>
         <Badge variant="accent">Periodo de cierre</Badge>

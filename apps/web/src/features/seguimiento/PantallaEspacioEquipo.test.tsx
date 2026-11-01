@@ -89,8 +89,10 @@ function actividad(sobrescribir: Partial<Actividad> = {}): Actividad {
     configuracion: {
       espacio_equipo: serializarEstadoEspacioEquipo({
         metas: 'opcional',
+        planeacion: 'opcional',
         avances: 'opcional',
         recursos: 'opcional',
+        producto: 'opcional',
       }),
     },
     ...sobrescribir,
@@ -117,6 +119,8 @@ function elemento(sobrescribir: Partial<ElementoDeEspacioEquipo> = {}): Elemento
     id: 'el-1',
     tipo: 'metas',
     contenido: 'Entregar el reporte final',
+    enlace: null,
+    archivo: null,
     idMembresiaAutor: 'yo',
     autor: 'Ana García',
     fechaCreacion: '2026-10-01T10:00:00.000Z',
@@ -236,8 +240,10 @@ describe('PantallaEspacioEquipo', () => {
         configuracion: {
           espacio_equipo: serializarEstadoEspacioEquipo({
             metas: 'deshabilitado',
+            planeacion: 'opcional',
             avances: 'opcional',
             recursos: 'opcional',
+            producto: 'opcional',
           }),
         },
       }),

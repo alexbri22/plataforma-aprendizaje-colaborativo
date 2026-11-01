@@ -161,8 +161,24 @@ model Usuario {
   foto             FotoDePerfil?
 
   recursosFormativos RecursoFormativo[]
+  pistasVistas       PistaVista[]
 
   @@map("usuarios")
+}
+
+// Ayudas de primera vez que la persona ya vio: la bienvenida y el "?" de
+// cada pantalla (@plataforma/shared, IDS_PISTA). En el servidor y no en el
+// navegador para que no reaparezcan en otro dispositivo. id_pista es texto
+// libre y no un enum: agregar una ayuda nueva no requiere migración.
+model PistaVista {
+  idUsuario String   @map("id_usuario")
+  idPista   String   @map("id_pista")
+  vistaEn   DateTime @default(now()) @map("vista_en")
+
+  usuario Usuario @relation(fields: [idUsuario], references: [idUsuario], onDelete: Cascade)
+
+  @@id([idUsuario, idPista])
+  @@map("pistas_vistas")
 }
 
 // Foto de perfil (docs/diseno-desarrollo-nucleo.md §6.3). Va en su propia
@@ -371,15 +387,35 @@ model ElementoEspacioEquipo {
   idEquipo           String       @map("id_equipo")
   tipoElemento       TipoElemento @map("tipo_elemento")
   contenido          String
+  // Opcional, uno por elemento: un enlace https (Drive, un documento en
+  // línea) además del texto.
+  enlace             String?
   idMembresiaAutor   String       @map("id_membresia_autor")
   fechaCreacion      DateTime     @default(now()) @map("fecha_creacion")
   fechaActualizacion DateTime     @updatedAt @map("fecha_actualizacion")
 
-  equipo Equipo    @relation(fields: [idEquipo], references: [idEquipo], onDelete: Cascade)
-  autor  Membresia @relation(fields: [idMembresiaAutor], references: [idMembresia], onDelete: Cascade)
+  equipo  Equipo           @relation(fields: [idEquipo], references: [idEquipo], onDelete: Cascade)
+  autor   Membresia        @relation(fields: [idMembresiaAutor], references: [idMembresia], onDelete: Cascade)
+  archivo ArchivoElemento?
 
   @@index([idEquipo, tipoElemento])
   @@map("elementos_espacio_equipo")
+}
+
+// El archivo adjunto de un elemento (uno a lo más). En su propia tabla, como
+// ArchivoRecurso y FotoDePerfil, para que listar el espacio de equipo no
+// arrastre los bytes de cada archivo.
+model ArchivoElemento {
+  idElemento String   @id @map("id_elemento")
+  contenido  Bytes
+  tipo       String
+  nombre     String
+  tamano     Int
+  subidoEn   DateTime @default(now()) @map("subido_en")
+
+  elemento ElementoEspacioEquipo @relation(fields: [idElemento], references: [idElemento], onDelete: Cascade)
+
+  @@map("archivos_elemento")
 }
 
 // Mismos tres valores y el mismo plural que ELEMENTOS_ESPACIO_EQUIPO de
@@ -389,8 +425,10 @@ model ElementoEspacioEquipo {
 // datos del general (§5.2) lo describa en singular.
 enum TipoElemento {
   metas
+  planeacion
   avances
   recursos
+  producto
 
   @@map("tipo_elemento")
 }
@@ -428,13 +466,13 @@ enum TipoEntidadComentario {
 // visibilidad no es un atributo propio: la hereda la entidad referida
 // (concepto §5.3).
 model Comentario {
-  idComentario       String                 @id @default(uuid()) @map("id_comentario")
-  idMembresiaAutor   String                 @map("id_membresia_autor")
-  tipoEntidad        TipoEntidadComentario  @map("tipo_entidad")
-  idEntidad          String                 @map("id_entidad")
+  idComentario       String                @id @default(uuid()) @map("id_comentario")
+  idMembresiaAutor   String                @map("id_membresia_autor")
+  tipoEntidad        TipoEntidadComentario @map("tipo_entidad")
+  idEntidad          String                @map("id_entidad")
   contenido          String
-  fechaCreacion      DateTime               @default(now()) @map("fecha_creacion")
-  fechaActualizacion DateTime               @updatedAt @map("fecha_actualizacion")
+  fechaCreacion      DateTime              @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime              @updatedAt @map("fecha_actualizacion")
 
   autor Membresia @relation(fields: [idMembresiaAutor], references: [idMembresia], onDelete: Cascade)
 

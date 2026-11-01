@@ -1,5 +1,6 @@
 import type { ElementoEspacioEquipo } from '@plataforma/shared'
 import type { ReactNode } from 'react'
+import type { PistaDePantalla } from '../features/ayuda'
 import { AppShell } from './AppShell'
 
 export type SeccionEquipo = ElementoEspacioEquipo | 'bitacora' | 'bitacoras' | 'bitacora-integrante'
@@ -14,6 +15,7 @@ export interface AppShellEquipoProps {
    * del título y cómo se llama ese lugar. */
   volverA?: string
   volverEtiqueta?: string
+  ayuda?: PistaDePantalla
   acciones?: ReactNode
   children: ReactNode
 }
@@ -29,6 +31,7 @@ export function AppShellEquipo({
   titulo,
   volverA,
   volverEtiqueta,
+  ayuda,
   acciones,
   children,
 }: AppShellEquipoProps) {
@@ -38,6 +41,7 @@ export function AppShellEquipo({
       titulo={titulo}
       volverA={volverA}
       volverEtiqueta={volverEtiqueta}
+      ayuda={ayuda}
       acciones={acciones}
       contexto={{ idEquipo, seccion: seccionActiva, idMembresia }}
     >

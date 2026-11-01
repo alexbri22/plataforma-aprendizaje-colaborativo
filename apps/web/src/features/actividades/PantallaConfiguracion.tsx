@@ -27,8 +27,10 @@ const FUNCIONES_ORDENADAS = [
 ]
 const ESPACIO_EQUIPO_POR_DEFECTO: EstadoEspacioEquipo = {
   metas: 'opcional',
+  planeacion: 'opcional',
   avances: 'opcional',
   recursos: 'opcional',
+  producto: 'opcional',
 }
 
 export function PantallaConfiguracion() {
@@ -107,6 +109,7 @@ export function PantallaConfiguracion() {
       seccionActiva="actividades"
       titulo="Planificar"
       contexto={{ idActividad: id, seccion: 'planificar' }}
+      ayuda="planificar"
     >
       {!puedeConfigurar && !puedeAjustarPeriodos ? (
         <Card className={styles.seccionCard}>

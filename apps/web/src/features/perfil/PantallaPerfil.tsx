@@ -2,6 +2,7 @@ import { useRef, useState, type ChangeEvent } from 'react'
 import { ETIQUETAS_NIVEL_ESTUDIOS, type CategoriaInsignia } from '@plataforma/shared'
 import { AppShell } from '../../components/AppShell'
 import { Avatar, AvisoError, Button, Card, IconoCargando } from '../../components/ui'
+import { usePistas } from '../ayuda'
 import { DetalleInsignia, VitrinaInsignias, useRecibidosEnPerfil } from '../insignias'
 import { FormularioContrasena } from './FormularioContrasena'
 import { FormularioDatosPerfil } from './FormularioDatosPerfil'
@@ -15,6 +16,43 @@ import styles from './PantallaPerfil.module.css'
  * aquí de las insignias —frases, progreso— es solo para uno mismo; a otra
  * persona se le enseña únicamente el rango (concepto §6, "El perfil").
  */
+// Las ayudas de primera vez (el "?" de cada pantalla y la bienvenida) se
+// abren solas una vez; aquí se pueden recuperar todas.
+function VolverAVerAyudas() {
+  const pistas = usePistas()
+  const [listo, setListo] = useState(false)
+  const [error, setError] = useState(false)
+
+  async function reiniciar() {
+    setError(false)
+    try {
+      await pistas.reiniciar()
+      setListo(true)
+    } catch {
+      setError(true)
+    }
+  }
+
+  return (
+    <div className={styles.ayudas}>
+      <p className={styles.texto}>
+        Cada pantalla explica para qué sirve la primera vez que entras. Si quieres volver a verlo:
+      </p>
+      {error ? <AvisoError mensaje="No pudimos reiniciar las ayudas. Intenta de nuevo." /> : null}
+      <div className={styles.ayudasAccion}>
+        <Button variant="secondary" size="sm" onClick={reiniciar} disabled={pistas.reiniciando}>
+          Volver a ver las ayudas
+        </Button>
+        {listo ? (
+          <span className={styles.nota} role="status">
+            Listo: volverán a aparecer.
+          </span>
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
 export function PantallaPerfil() {
   const perfil = usePerfilPropio()
   const recibidos = useRecibidosEnPerfil()
@@ -157,8 +195,8 @@ export function PantallaPerfil() {
               }}
             />
             <p className={styles.nota}>
-              El correo no se puede cambiar: es con el que inicias sesión y con el que te encuentran
-              para invitarte. Otras personas con sesión pueden verlo en tu perfil básico.
+              El correo no se puede cambiar: es con el que ingresas. Otras personas con cuenta
+              pueden verlo en tu perfil básico.
             </p>
           </Card>
         </section>
@@ -169,6 +207,15 @@ export function PantallaPerfil() {
           </h3>
           <Card>
             <FormularioContrasena />
+          </Card>
+        </section>
+
+        <section className={styles.seccion} aria-labelledby="titulo-ayudas">
+          <h3 id="titulo-ayudas" className={styles.tituloSeccion}>
+            Ayudas
+          </h3>
+          <Card>
+            <VolverAVerAyudas />
           </Card>
         </section>
       </section>

@@ -17,6 +17,11 @@ import {
   type UsuarioPublico,
 } from '../services/cuentas/cuentas.service.js'
 import {
+  listarPistasVistas,
+  marcarPistaVista,
+  reiniciarPistas,
+} from '../services/cuentas/pistas.service.js'
+import {
   actualizarDatosPerfil,
   cambiarContrasena,
   guardarFoto,
@@ -112,6 +117,25 @@ cuentasRouter.patch('/usuarios/yo', exigirSesion, async (req, res) => {
 
   const usuario = await actualizarDatosPerfil(actor.idUsuario, actualizacion.datos)
   res.status(200).json({ usuario })
+})
+
+// Ayudas de primera vez ya vistas (PistaVista): el cliente las lee una vez
+// por sesión y marca cada una al cerrarla.
+cuentasRouter.get('/usuarios/yo/pistas', exigirSesion, async (req, res) => {
+  const actor = req.actor as UsuarioPublico
+  res.status(200).json({ pistas: await listarPistasVistas(actor.idUsuario) })
+})
+
+cuentasRouter.put('/usuarios/yo/pistas/:idPista', exigirSesion, async (req, res) => {
+  const actor = req.actor as UsuarioPublico
+  await marcarPistaVista(actor.idUsuario, String(req.params.idPista))
+  res.status(204).end()
+})
+
+cuentasRouter.delete('/usuarios/yo/pistas', exigirSesion, async (req, res) => {
+  const actor = req.actor as UsuarioPublico
+  await reiniciarPistas(actor.idUsuario)
+  res.status(204).end()
 })
 
 // PUT /api/usuarios/yo/foto: el cuerpo es la imagen tal cual, con su tipo en

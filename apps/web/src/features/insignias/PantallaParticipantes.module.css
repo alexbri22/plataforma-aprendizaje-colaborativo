@@ -30,6 +30,18 @@
   border-bottom: 0;
 }
 
+.datos {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.fecha {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
 .nombre {
   font-weight: var(--font-weight-medium);
   color: var(--color-text);

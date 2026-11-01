@@ -150,6 +150,22 @@ export function App() {
               </RutaProtegida>
             }
           />
+          <Route
+            path="/equipos/:idEquipo/planeacion"
+            element={
+              <RutaProtegida>
+                <PantallaEspacioEquipo tipo="planeacion" />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="/equipos/:idEquipo/producto"
+            element={
+              <RutaProtegida>
+                <PantallaEspacioEquipo tipo="producto" />
+              </RutaProtegida>
+            }
+          />
           {/* Bitácora individual (nucleo §9.3, §9.5): vinculada a la propia
               membresía, no al equipo, pero vive bajo /equipos (decisión de
               producto): se llega aquí desde el espacio de equipo y el
