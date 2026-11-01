@@ -511,8 +511,8 @@ async function sembrarEnDesarrolloConContenido(idPorCorreo: IdPorCorreo) {
 }
 
 // "Seed · En desarrollo, equipo grande con historial": un solo equipo de
-// seis, con más de diez avances y diez entradas de bitácora (a propósito,
-// para ver la paginación en acción), y un comentario ya puesto.
+// seis, con doce avances y doce entradas de bitácora, todas comentadas.
+// Con páginas de 20 no llega a paginar: eso lo cubre "Bitácora muy cargada".
 async function sembrarEnDesarrolloEquipoGrande(idPorCorreo: IdPorCorreo) {
   const participantes = ['alumno10', 'alumno11', 'alumno12', 'alumno13', 'alumno14', 'alumno15']
   const idUsuario = (correoLocal: string) => idPorCorreo.get(correoLocal)!.id
@@ -593,8 +593,8 @@ async function sembrarEnDesarrolloEquipoGrande(idPorCorreo: IdPorCorreo) {
     'Se nota la mejora en coordinación del equipo.',
   ]
 
-  // Dos avances y dos entradas por persona (12 de cada uno): supera el
-  // tamaño de página de ambas listas (10) a propósito. Profe comenta todo
+  // Dos avances y dos entradas por persona (12 de cada uno). Con páginas de
+  // 20 no se pagina aquí (eso lo cubre "Bitácora muy cargada"). Profe comenta todo
   // lo que se agrega, para la demo de "qué tanto puede comentar quien
   // organiza o co-organiza" (nucleo §10.4); org además comenta una entrada,
   // para que no todo venga de la misma cuenta.
@@ -652,7 +652,7 @@ async function sembrarEnDesarrolloEquipoGrande(idPorCorreo: IdPorCorreo) {
     }
   }
 
-  console.log('    equipo de 6, 12 avances, 12 entradas de bitácora (para probar la paginación)')
+  console.log('    equipo de 6, 12 avances, 12 entradas de bitácora, todas comentadas')
 }
 
 // "Seed · Bitácora muy cargada (ejemplo de densidad)": el caso que motivó

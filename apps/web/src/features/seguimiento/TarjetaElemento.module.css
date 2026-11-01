@@ -5,10 +5,10 @@
 
 /* Encabezado fijo: igual colapsado o expandido (mismo criterio que
    .grupoEncabezado en components/GrupoNav.module.css — la fila que ya se ve
-   no cambia de forma). El margen negativo cancela el padding de Card
-   (espacio normal del sistema de diseño) para que el botón llene la
-   tarjeta de borde a borde, sin depender del orden de las hojas de estilo
-   frente a Card.module.css. */
+   no cambia de forma). .tarjeta anula el padding de Card (padding: 0)
+   para que el botón llene la tarjeta de borde a borde; el espacio interior
+   lo ponen .encabezado y .panel. Depende de que esta hoja cargue después
+   de Card.module.css (misma especificidad). */
 .encabezado {
   display: flex;
   align-items: center;
