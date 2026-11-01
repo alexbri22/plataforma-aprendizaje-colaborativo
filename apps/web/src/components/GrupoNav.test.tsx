@@ -1,0 +1,59 @@
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { GrupoNav } from './GrupoNav'
+
+describe('GrupoNav', () => {
+  beforeEach(() => localStorage.clear())
+
+  it('plegadoPorDefecto arranca cerrado y recuerda lo que la persona elige', async () => {
+    const usuario = userEvent.setup()
+    const { unmount } = render(
+      <GrupoNav
+        claveAlmacenamiento="prueba.grupo"
+        etiqueta="Proceso colaborativo"
+        plegadoPorDefecto
+      >
+        <span>Interacción</span>
+      </GrupoNav>,
+    )
+    const encabezado = screen.getByRole('button', { name: 'Proceso colaborativo' })
+    expect(encabezado).toHaveAttribute('aria-expanded', 'false')
+
+    await usuario.click(encabezado)
+    expect(encabezado).toHaveAttribute('aria-expanded', 'true')
+    unmount()
+
+    render(
+      <GrupoNav
+        claveAlmacenamiento="prueba.grupo"
+        etiqueta="Proceso colaborativo"
+        plegadoPorDefecto
+      >
+        <span>Interacción</span>
+      </GrupoNav>,
+    )
+    expect(screen.getByRole('button', { name: 'Proceso colaborativo' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    )
+  })
+
+  it('se abre si la pantalla actual aparece dentro después de montar', () => {
+    localStorage.setItem('prueba.grupo', 'false')
+    const { rerender } = render(
+      <GrupoNav claveAlmacenamiento="prueba.grupo" etiqueta="Proyecto colaborativo">
+        <span>Metas</span>
+      </GrupoNav>,
+    )
+    const encabezado = screen.getByRole('button', { name: 'Proyecto colaborativo' })
+    expect(encabezado).toHaveAttribute('aria-expanded', 'false')
+
+    rerender(
+      <GrupoNav claveAlmacenamiento="prueba.grupo" etiqueta="Proyecto colaborativo" contieneActivo>
+        <span>Metas</span>
+      </GrupoNav>,
+    )
+    expect(encabezado).toHaveAttribute('aria-expanded', 'true')
+  })
+})

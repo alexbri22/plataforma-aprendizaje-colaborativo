@@ -9,7 +9,6 @@ import {
   iniciarCierre,
   obtenerActividad,
   obtenerParticipantes,
-  type Participante,
 } from './actividades.api'
 import { PantallaResumenActividad } from './PantallaResumenActividad'
 import type { Actividad } from './tipos'
@@ -54,6 +53,28 @@ vi.mock('../historial/historial.api', async () => {
     obtenerHistorial: vi.fn().mockResolvedValue({ eventos: [], cursorSiguiente: null }),
   }
 })
+
+// Con las rutas del espacio de equipo y de /resumen, para probar a dónde
+// lleva abrir la actividad.
+function renderConRutas(ruta: string) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[ruta]}>
+        <Routes>
+          <Route path="/actividades/:id" element={<PantallaResumenActividad />} />
+          <Route
+            path="/actividades/:id/resumen"
+            element={<PantallaResumenActividad soloResumen />}
+          />
+          <Route path="/equipos/:idEquipo/:seccion" element={<p>Espacio del equipo</p>} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  )
+}
 
 function renderPantalla(id: string) {
   const queryClient = new QueryClient({
@@ -129,7 +150,9 @@ describe('PantallaResumenActividad', () => {
 
     renderPantalla(actividad.id)
 
-    expect(await screen.findByText('Inscripción')).toBeInTheDocument()
+    expect(await screen.findByRole('listitem', { current: 'step' })).toHaveTextContent(
+      'Inscripción',
+    )
     expect(screen.getByText('Clave de ingreso')).toBeInTheDocument()
     expect(screen.getByText(actividad.claveIngreso as string)).toBeInTheDocument()
   })
@@ -139,7 +162,9 @@ describe('PantallaResumenActividad', () => {
 
     renderPantalla(ACTIVIDAD_BASE.id)
 
-    expect(await screen.findByRole('button', { name: 'Cerrar inscripción' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('button', { name: 'Cerrar inscripción ahora' }),
+    ).toBeInTheDocument()
   })
 
   it('no muestra ninguna acción de avance para un participante sin esa capacidad', async () => {
@@ -151,8 +176,8 @@ describe('PantallaResumenActividad', () => {
 
     renderPantalla(ACTIVIDAD_BASE.id)
 
-    await screen.findByText('Inscripción')
-    expect(screen.queryByRole('button', { name: 'Cerrar inscripción' })).not.toBeInTheDocument()
+    await screen.findByRole('listitem', { current: 'step' })
+    expect(screen.queryByRole('button', { name: /Cerrar inscripción/ })).not.toBeInTheDocument()
   })
 
   it('pide confirmación y solo cierra la inscripción tras confirmar', async () => {
@@ -165,7 +190,7 @@ describe('PantallaResumenActividad', () => {
 
     renderPantalla(ACTIVIDAD_BASE.id)
 
-    await usuario.click(await screen.findByRole('button', { name: 'Cerrar inscripción' }))
+    await usuario.click(await screen.findByRole('button', { name: 'Cerrar inscripción ahora' }))
     expect(cerrarInscripcion).not.toHaveBeenCalled()
 
     await usuario.click(await screen.findByRole('button', { name: 'Sí, cerrar inscripción' }))
@@ -178,10 +203,12 @@ describe('PantallaResumenActividad', () => {
 
     renderPantalla(ACTIVIDAD_BASE.id)
 
-    await usuario.click(await screen.findByRole('button', { name: 'Cerrar inscripción' }))
+    await usuario.click(await screen.findByRole('button', { name: 'Cerrar inscripción ahora' }))
     await usuario.click(await screen.findByRole('button', { name: 'Cancelar' }))
 
-    expect(await screen.findByRole('button', { name: 'Cerrar inscripción' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('button', { name: 'Cerrar inscripción ahora' }),
+    ).toBeInTheDocument()
     expect(cerrarInscripcion).not.toHaveBeenCalled()
   })
 
@@ -194,8 +221,10 @@ describe('PantallaResumenActividad', () => {
 
     renderPantalla(ACTIVIDAD_BASE.id)
 
-    expect(await screen.findByRole('button', { name: 'Iniciar cierre' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Cerrar inscripción' })).not.toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Iniciar cierre ahora' })).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Cerrar inscripción ahora' }),
+    ).not.toBeInTheDocument()
   })
 
   it('pide confirmación y solo inicia el cierre tras confirmar', async () => {
@@ -210,87 +239,42 @@ describe('PantallaResumenActividad', () => {
 
     renderPantalla(ACTIVIDAD_BASE.id)
 
-    await usuario.click(await screen.findByRole('button', { name: 'Iniciar cierre' }))
+    await usuario.click(await screen.findByRole('button', { name: 'Iniciar cierre ahora' }))
     expect(iniciarCierre).not.toHaveBeenCalled()
 
     await usuario.click(await screen.findByRole('button', { name: 'Sí, iniciar cierre' }))
     await waitFor(() => expect(iniciarCierre).toHaveBeenCalledWith(ACTIVIDAD_BASE.id))
   })
 
-  it('muestra el estado vacío de participantes cuando nadie se ha unido', async () => {
-    vi.mocked(obtenerActividad).mockResolvedValueOnce(ACTIVIDAD_BASE)
-    vi.mocked(obtenerParticipantes).mockResolvedValueOnce([])
+  it('en Detalles dice cuántos se han unido; la lista está en Participantes', async () => {
+    vi.mocked(obtenerActividad).mockResolvedValueOnce({ ...ACTIVIDAD_BASE, numParticipantes: 0 })
 
     renderPantalla(ACTIVIDAD_BASE.id)
 
-    expect(
-      await screen.findByText(
-        'Nadie se ha unido todavía. Comparte la clave de ingreso para que empiecen a llegar.',
-      ),
-    ).toBeInTheDocument()
+    expect(await screen.findByText('Nadie se ha unido todavía')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /Participantes/ })).not.toBeInTheDocument()
   })
 
-  it('lista a los participantes que se han unido, con su fecha de unión', async () => {
-    vi.mocked(obtenerActividad).mockResolvedValueOnce(ACTIVIDAD_BASE)
-    const participantes: Participante[] = [
-      {
-        idMembresia: 'm-1',
-        idUsuario: 'p-1',
-        nombre: 'Grace Hopper',
-        rol: 'participante',
-        fechaUnion: '2026-08-02T12:00:00.000Z',
-      },
-    ]
-    vi.mocked(obtenerParticipantes).mockResolvedValueOnce(participantes)
+  it('cuenta en singular y plural a quienes se han unido', async () => {
+    vi.mocked(obtenerActividad).mockResolvedValueOnce({ ...ACTIVIDAD_BASE, numParticipantes: 6 })
 
     renderPantalla(ACTIVIDAD_BASE.id)
 
-    expect(await screen.findByRole('link', { name: 'Grace Hopper' })).toHaveAttribute(
-      'href',
-      '/usuarios/p-1',
-    )
-    expect(screen.getByText('Participantes (1)')).toBeInTheDocument()
+    expect(await screen.findByText('6 se han unido')).toBeInTheDocument()
   })
 
-  describe('con muchos participantes', () => {
-    const muchos: Participante[] = Array.from({ length: 12 }, (_, i) => ({
-      idMembresia: `m-${i + 1}`,
-      idUsuario: `p-${i + 1}`,
-      nombre: `Persona ${i + 1}`,
-      rol: 'participante',
-      fechaUnion: '2026-08-02T12:00:00.000Z',
-    }))
+  it('explica las fechas con lo que pasa en ellas', async () => {
+    vi.mocked(obtenerActividad).mockResolvedValueOnce(ACTIVIDAD_BASE)
 
-    it('pagina de 10 en 10 y el título cuenta a todos', async () => {
-      vi.mocked(obtenerActividad).mockResolvedValueOnce(ACTIVIDAD_BASE)
-      vi.mocked(obtenerParticipantes).mockResolvedValueOnce(muchos)
+    renderPantalla(ACTIVIDAD_BASE.id)
 
-      renderPantalla(ACTIVIDAD_BASE.id)
-
-      expect(await screen.findByText('Persona 10')).toBeInTheDocument()
-      expect(screen.queryByText('Persona 11')).not.toBeInTheDocument()
-      expect(screen.getByText('Participantes (12)')).toBeInTheDocument()
-      expect(screen.getByText('1–10 de 12')).toBeInTheDocument()
-
-      await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
-
-      expect(screen.getByText('Persona 12')).toBeInTheDocument()
-      expect(screen.queryByText('Persona 1')).not.toBeInTheDocument()
-      expect(screen.getByText('11–12 de 12')).toBeInTheDocument()
-    })
-
-    it('no muestra la paginación cuando caben todos', async () => {
-      vi.mocked(obtenerActividad).mockResolvedValueOnce(ACTIVIDAD_BASE)
-      vi.mocked(obtenerParticipantes).mockResolvedValueOnce(muchos.slice(0, 10))
-
-      renderPantalla(ACTIVIDAD_BASE.id)
-
-      expect(await screen.findByText('Persona 10')).toBeInTheDocument()
-      expect(screen.queryByRole('navigation', { name: 'Participantes' })).not.toBeInTheDocument()
-    })
+    // Término 1 nov + 10 días de plazo.
+    expect(await screen.findByText(/Del 1 nov 2026 al 11 nov 2026/)).toBeInTheDocument()
+    expect(screen.getByText('Hasta el 5 sep 2026')).toBeInTheDocument()
+    expect(screen.getByText('Compártela para que se unan.')).toBeInTheDocument()
   })
 
-  it('muestra Configurar si solo puede ajustar el calendario, como en desarrollo', async () => {
+  it('la barra ofrece Planificar si solo puede ajustar el calendario, como en desarrollo', async () => {
     vi.mocked(obtenerActividad).mockResolvedValueOnce({
       ...ACTIVIDAD_BASE,
       fase: 'desarrollo',
@@ -299,10 +283,13 @@ describe('PantallaResumenActividad', () => {
 
     renderPantalla(ACTIVIDAD_BASE.id)
 
-    expect(await screen.findByRole('link', { name: 'Configurar' })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: 'Planificar' })).toHaveAttribute(
+      'href',
+      `/actividades/${ACTIVIDAD_BASE.id}/configuracion`,
+    )
   })
 
-  it('muestra Configurar si solo puede ajustar funciones, como en cierre', async () => {
+  it('la barra ofrece Planificar si solo puede ajustar funciones, como en cierre', async () => {
     vi.mocked(obtenerActividad).mockResolvedValueOnce({
       ...ACTIVIDAD_BASE,
       fase: 'cierre',
@@ -311,10 +298,13 @@ describe('PantallaResumenActividad', () => {
 
     renderPantalla(ACTIVIDAD_BASE.id)
 
-    expect(await screen.findByRole('link', { name: 'Configurar' })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: 'Planificar' })).toHaveAttribute(
+      'href',
+      `/actividades/${ACTIVIDAD_BASE.id}/configuracion`,
+    )
   })
 
-  it('en formación de equipos no repite el acceso a Equipos en una tarjeta: ya está en el encabezado', async () => {
+  it('en formación dice qué se hace y dónde, sin botones que lleven ahí', async () => {
     vi.mocked(obtenerActividad).mockResolvedValueOnce({
       ...ACTIVIDAD_BASE,
       fase: 'formacion_equipos',
@@ -323,28 +313,20 @@ describe('PantallaResumenActividad', () => {
 
     renderPantalla(ACTIVIDAD_BASE.id)
 
-    await screen.findByText('Formación de equipos')
+    expect(await screen.findByRole('listitem', { current: 'step' })).toHaveTextContent(
+      'Formación de equipos',
+    )
+    expect(screen.getByRole('heading', { name: 'Qué se hace en esta etapa' })).toBeInTheDocument()
+    expect(screen.getByText(/Revisa que todos tengan equipo/)).toBeInTheDocument()
+    // Informativo: nombra la sección de la barra, no da un atajo.
+    expect(screen.queryByRole('link', { name: /Revisa/ })).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Equipos' })).toHaveAttribute(
       'href',
       `/actividades/${ACTIVIDAD_BASE.id}/equipos`,
     )
-    expect(screen.queryByRole('link', { name: 'Ir a los equipos' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'Formación de equipos' })).not.toBeInTheDocument()
   })
 
-  it('la flecha para volver lleva a Organizo para quien organiza', async () => {
-    vi.mocked(obtenerActividad).mockResolvedValueOnce(ACTIVIDAD_BASE)
-
-    renderPantalla(ACTIVIDAD_BASE.id)
-
-    await screen.findByText(ACTIVIDAD_BASE.nombre)
-    expect(screen.getByRole('link', { name: 'Volver' })).toHaveAttribute(
-      'href',
-      '/actividades/organizo',
-    )
-  })
-
-  it('la flecha para volver lleva a Participo para un participante', async () => {
+  it('a quien participa le dice qué hacer con sus palabras', async () => {
     vi.mocked(obtenerActividad).mockResolvedValueOnce({
       ...ACTIVIDAD_BASE,
       rol: 'participante',
@@ -353,8 +335,32 @@ describe('PantallaResumenActividad', () => {
 
     renderPantalla(ACTIVIDAD_BASE.id)
 
-    await screen.findByText(ACTIVIDAD_BASE.nombre)
-    expect(screen.getByRole('link', { name: 'Volver' })).toHaveAttribute(
+    expect(
+      await screen.findByText(/Espera a que cierre la inscripción, el 5 sep 2026/),
+    ).toBeInTheDocument()
+  })
+
+  it('la flecha de la barra lleva a Organizo para quien organiza', async () => {
+    vi.mocked(obtenerActividad).mockResolvedValueOnce(ACTIVIDAD_BASE)
+
+    renderPantalla(ACTIVIDAD_BASE.id)
+
+    expect(await screen.findByRole('link', { name: 'Volver a Organizo' })).toHaveAttribute(
+      'href',
+      '/actividades/organizo',
+    )
+  })
+
+  it('la flecha de la barra lleva a Participo para un participante', async () => {
+    vi.mocked(obtenerActividad).mockResolvedValueOnce({
+      ...ACTIVIDAD_BASE,
+      rol: 'participante',
+      capacidades: [],
+    })
+
+    renderPantalla(ACTIVIDAD_BASE.id)
+
+    expect(await screen.findByRole('link', { name: 'Volver a Participo' })).toHaveAttribute(
       'href',
       '/actividades/participo',
     )
@@ -365,8 +371,45 @@ describe('PantallaResumenActividad', () => {
 
     renderPantalla(ACTIVIDAD_BASE.id)
 
-    await screen.findByRole('button', { name: 'Cerrar inscripción' })
+    await screen.findByRole('button', { name: 'Cerrar inscripción ahora' })
     expect(screen.getByRole('link', { name: 'Equipos' })).toBeInTheDocument()
+  })
+
+  describe('quien participa en desarrollo', () => {
+    const enDesarrollo: Actividad = {
+      ...ACTIVIDAD_BASE,
+      rol: 'participante',
+      fase: 'desarrollo',
+      capacidades: [],
+      idMiEquipo: 'eq-1',
+    }
+
+    it('al abrir la actividad entra directo a su equipo', async () => {
+      vi.mocked(obtenerActividad).mockResolvedValue(enDesarrollo)
+
+      renderConRutas(`/actividades/${ACTIVIDAD_BASE.id}`)
+
+      expect(await screen.findByText('Espacio del equipo')).toBeInTheDocument()
+    })
+
+    it('desde Resumen en la barra se queda en el resumen', async () => {
+      vi.mocked(obtenerActividad).mockResolvedValue(enDesarrollo)
+
+      renderConRutas(`/actividades/${ACTIVIDAD_BASE.id}/resumen`)
+
+      expect(await screen.findByRole('heading', { name: 'Resumen', level: 1 })).toBeInTheDocument()
+      expect(screen.queryByText('Espacio del equipo')).not.toBeInTheDocument()
+    })
+
+    it('sin equipo se queda en el resumen', async () => {
+      vi.mocked(obtenerActividad).mockResolvedValue({ ...enDesarrollo, idMiEquipo: null })
+
+      renderConRutas(`/actividades/${ACTIVIDAD_BASE.id}`)
+
+      expect(
+        await screen.findByText(/Pide a quien organiza que te asigne un equipo/),
+      ).toBeInTheDocument()
+    })
   })
 
   it('Historial abre un panel lateral, no navega a otra pantalla', async () => {

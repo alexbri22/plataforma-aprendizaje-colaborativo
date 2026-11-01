@@ -127,7 +127,7 @@ describe('PantallaConfiguracion', () => {
     renderPantalla(ACTIVIDAD_BASE.id)
 
     expect(
-      await screen.findByText('No tienes permiso para configurar esta actividad.'),
+      await screen.findByText('No tienes permiso para planificar esta actividad.'),
     ).toBeInTheDocument()
     expect(screen.queryByLabelText('Bitácora individual')).not.toBeInTheDocument()
   })
@@ -146,7 +146,7 @@ describe('PantallaConfiguracion', () => {
     expect(within(general).queryByLabelText('Estado de Metas')).not.toBeInTheDocument()
     expect(within(proyecto).getByLabelText('Estado de Metas')).toBeInTheDocument()
     expect(within(proyecto).getByLabelText('Estado de Avances')).toBeInTheDocument()
-    expect(within(proyecto).getByLabelText('Estado de Recursos')).toBeInTheDocument()
+    expect(within(proyecto).getByLabelText('Estado de Materiales')).toBeInTheDocument()
   })
 
   it('el reporte de trabajo ya no es una función aparte: no aparece en General', async () => {
@@ -236,7 +236,7 @@ describe('PantallaConfiguracion', () => {
       renderPantalla(ACTIVIDAD_BASE.id)
 
       await usuario.selectOptions(
-        await screen.findByLabelText('Estado de Recursos'),
+        await screen.findByLabelText('Estado de Materiales'),
         'Deshabilitado',
       )
 
@@ -265,7 +265,7 @@ describe('PantallaConfiguracion', () => {
       renderPantalla(ACTIVIDAD_BASE.id)
 
       await usuario.selectOptions(await screen.findByLabelText('Estado de Metas'), 'Obligatorio')
-      await usuario.selectOptions(screen.getByLabelText('Estado de Recursos'), 'Deshabilitado')
+      await usuario.selectOptions(screen.getByLabelText('Estado de Materiales'), 'Deshabilitado')
 
       // El segundo espera a que el primero termine: en paralelo podrían
       // llegar al servidor en cualquier orden.
@@ -299,7 +299,7 @@ describe('PantallaConfiguracion', () => {
       renderPantalla(ACTIVIDAD_BASE.id)
 
       await usuario.selectOptions(await screen.findByLabelText('Estado de Metas'), 'Obligatorio')
-      await usuario.selectOptions(screen.getByLabelText('Estado de Recursos'), 'Deshabilitado')
+      await usuario.selectOptions(screen.getByLabelText('Estado de Materiales'), 'Deshabilitado')
 
       await waitFor(() => expect(configurarFuncion).toHaveBeenCalledTimes(2))
       // Metas sigue como estaba en el servidor: su indicador muestra el error,
@@ -318,7 +318,7 @@ describe('PantallaConfiguracion', () => {
 
       renderPantalla(ACTIVIDAD_BASE.id)
 
-      await screen.findByLabelText('Periodicidad de Avances')
+      await screen.findByLabelText('Periodicidad de las entregas')
       // Acotado a Proyecto colaborativo: Proceso colaborativo (vista previa,
       // sin guardar) también trae un selector "Periodicidad de ..." por cada
       // una de sus tareas.
@@ -347,7 +347,7 @@ describe('PantallaConfiguracion', () => {
       expect(
         await screen.findByText('Habilita Avances para definir su calendario.'),
       ).toBeInTheDocument()
-      expect(screen.queryByLabelText('Periodicidad de Avances')).not.toBeInTheDocument()
+      expect(screen.queryByLabelText('Periodicidad de las entregas')).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Editar calendario' })).not.toBeInTheDocument()
     })
   })
@@ -358,7 +358,9 @@ describe('PantallaConfiguracion', () => {
 
       renderPantalla(ACTIVIDAD_BASE.id)
 
-      const select = (await screen.findByLabelText('Periodicidad de Avances')) as HTMLSelectElement
+      const select = (await screen.findByLabelText(
+        'Periodicidad de las entregas',
+      )) as HTMLSelectElement
       await waitFor(() => expect(select.value).toBe('ninguna'))
       expect(screen.getByRole('button', { name: 'Editar calendario' })).toBeDisabled()
     })
@@ -369,7 +371,9 @@ describe('PantallaConfiguracion', () => {
 
       renderPantalla(ACTIVIDAD_BASE.id)
 
-      const select = (await screen.findByLabelText('Periodicidad de Avances')) as HTMLSelectElement
+      const select = (await screen.findByLabelText(
+        'Periodicidad de las entregas',
+      )) as HTMLSelectElement
       await waitFor(() => expect(select.value).toBe('semanal'))
       expect(screen.getByText(formatearFecha('2026-09-10'))).toBeInTheDocument()
       expect(screen.getByText(formatearFecha('2026-10-03'))).toBeInTheDocument()
@@ -384,7 +388,7 @@ describe('PantallaConfiguracion', () => {
       renderPantalla(ACTIVIDAD_BASE.id)
 
       await usuario.selectOptions(
-        await screen.findByLabelText('Periodicidad de Avances'),
+        await screen.findByLabelText('Periodicidad de las entregas'),
         'Semanal',
       )
 
@@ -401,7 +405,7 @@ describe('PantallaConfiguracion', () => {
 
       renderPantalla(ACTIVIDAD_BASE.id)
 
-      const select = await screen.findByLabelText('Periodicidad de Avances')
+      const select = await screen.findByLabelText('Periodicidad de las entregas')
       await waitFor(() => expect(select).toHaveValue('semanal'))
       await usuario.selectOptions(select, 'Mensual')
 
@@ -426,7 +430,7 @@ describe('PantallaConfiguracion', () => {
 
       renderPantalla(ACTIVIDAD_BASE.id)
 
-      const select = await screen.findByLabelText('Periodicidad de Avances')
+      const select = await screen.findByLabelText('Periodicidad de las entregas')
       await waitFor(() => expect(select).toHaveValue('semanal'))
       await usuario.selectOptions(select, 'Quincenal')
       await usuario.click(screen.getByRole('button', { name: 'Mantener el actual' }))
@@ -445,7 +449,7 @@ describe('PantallaConfiguracion', () => {
 
       renderPantalla(ACTIVIDAD_BASE.id)
 
-      const select = await screen.findByLabelText('Periodicidad de Avances')
+      const select = await screen.findByLabelText('Periodicidad de las entregas')
       await waitFor(() => expect(select).toHaveValue('semanal'))
       await usuario.selectOptions(select, 'Sin calendario')
 
@@ -468,7 +472,7 @@ describe('PantallaConfiguracion', () => {
       renderPantalla(ACTIVIDAD_BASE.id)
 
       await usuario.selectOptions(
-        await screen.findByLabelText('Periodicidad de Avances'),
+        await screen.findByLabelText('Periodicidad de las entregas'),
         'Semanal',
       )
 
@@ -490,14 +494,14 @@ describe('PantallaConfiguracion', () => {
       await usuario.click(boton)
       return {
         usuario,
-        panel: await screen.findByRole('dialog', { name: 'Calendario de avances' }),
+        panel: await screen.findByRole('dialog', { name: 'Calendario de entregas' }),
       }
     }
 
     it('lista cada avance con sus fechas', async () => {
       const { panel } = await abrirPanel()
 
-      const avance2 = within(panel).getByRole('group', { name: 'Avance 2' })
+      const avance2 = within(panel).getByRole('group', { name: 'Entrega 2' })
       expect(within(avance2).getByLabelText('Inicio')).toHaveValue('2026-09-17')
       expect(within(avance2).getByLabelText('Fin')).toHaveValue('2026-09-23')
       expect(within(panel).getAllByRole('group')).toHaveLength(4)
@@ -513,19 +517,19 @@ describe('PantallaConfiguracion', () => {
         periodo(3, '2026-09-24', '2026-09-30', 'cancelado'),
       )
 
-      const avance2 = within(panel).getByRole('group', { name: 'Avance 2' })
-      expect(within(avance2).getByText('Cancelado')).toBeInTheDocument()
+      const avance2 = within(panel).getByRole('group', { name: 'Entrega 2' })
+      expect(within(avance2).getByText('Cancelada')).toBeInTheDocument()
       expect(within(avance2).getByLabelText('Inicio')).toBeDisabled()
 
-      await usuario.click(within(avance2).getByRole('button', { name: 'Reactivar avance 2' }))
+      await usuario.click(within(avance2).getByRole('button', { name: 'Reactivar la entrega 2' }))
       await waitFor(() =>
         expect(actualizarPeriodo).toHaveBeenCalledWith(ACTIVIDAD_BASE.id, 'per-2', {
           estado: 'activo',
         }),
       )
 
-      const avance3 = within(panel).getByRole('group', { name: 'Avance 3' })
-      await usuario.click(within(avance3).getByRole('button', { name: 'Cancelar avance 3' }))
+      const avance3 = within(panel).getByRole('group', { name: 'Entrega 3' })
+      await usuario.click(within(avance3).getByRole('button', { name: 'Cancelar la entrega 3' }))
       await waitFor(() =>
         expect(actualizarPeriodo).toHaveBeenCalledWith(ACTIVIDAD_BASE.id, 'per-3', {
           estado: 'cancelado',
@@ -537,8 +541,10 @@ describe('PantallaConfiguracion', () => {
       const { usuario, panel } = await abrirPanel()
       vi.mocked(actualizarPeriodo).mockResolvedValue(CALENDARIO_SEMANAL[0])
 
-      const avance1 = within(panel).getByRole('group', { name: 'Avance 1' })
-      const guardar = within(avance1).getByRole('button', { name: 'Guardar fechas del avance 1' })
+      const avance1 = within(panel).getByRole('group', { name: 'Entrega 1' })
+      const guardar = within(avance1).getByRole('button', {
+        name: 'Guardar fechas de la entrega 1',
+      })
       expect(guardar).toBeDisabled()
 
       fireEvent.change(within(avance1).getByLabelText('Fin'), { target: { value: '2026-09-01' } })
@@ -563,10 +569,10 @@ describe('PantallaConfiguracion', () => {
         new ErrorActividad('Estas fechas se traslapan con el periodo 2.'),
       )
 
-      const avance1 = within(panel).getByRole('group', { name: 'Avance 1' })
+      const avance1 = within(panel).getByRole('group', { name: 'Entrega 1' })
       fireEvent.change(within(avance1).getByLabelText('Fin'), { target: { value: '2026-09-20' } })
       await usuario.click(
-        within(avance1).getByRole('button', { name: 'Guardar fechas del avance 1' }),
+        within(avance1).getByRole('button', { name: 'Guardar fechas de la entrega 1' }),
       )
 
       expect(
@@ -598,9 +604,9 @@ describe('PantallaConfiguracion', () => {
 
       expect(await screen.findByLabelText('Bitácora individual')).toBeDisabled()
       expect(screen.getByLabelText('Estado de Metas')).toBeDisabled()
-      expect(await screen.findByLabelText('Periodicidad de Avances')).toBeDisabled()
+      expect(await screen.findByLabelText('Periodicidad de las entregas')).toBeDisabled()
       expect(
-        screen.getByText(/Las funciones ya no pueden cambiarse en esta fase/),
+        screen.getByText(/Las funciones ya no pueden cambiarse en esta etapa/),
       ).toBeInTheDocument()
     })
 
@@ -615,7 +621,7 @@ describe('PantallaConfiguracion', () => {
       const boton = await screen.findByRole('button', { name: 'Editar calendario' })
       await waitFor(() => expect(boton).toBeEnabled())
       await usuario.click(boton)
-      await usuario.click(screen.getByRole('button', { name: 'Cancelar avance 3' }))
+      await usuario.click(screen.getByRole('button', { name: 'Cancelar la entrega 3' }))
 
       await waitFor(() =>
         expect(actualizarPeriodo).toHaveBeenCalledWith(ACTIVIDAD_BASE.id, 'per-3', {
@@ -637,14 +643,18 @@ describe('PantallaConfiguracion', () => {
     expect(await screen.findByText(/La actividad ya está en marcha/)).toBeInTheDocument()
     expect(screen.queryByText(/Las funciones ya no pueden cambiarse/)).not.toBeInTheDocument()
     expect(screen.getByLabelText('Bitácora individual')).toBeEnabled()
-    expect(await screen.findByLabelText('Periodicidad de Avances')).toBeDisabled()
+    expect(await screen.findByLabelText('Periodicidad de las entregas')).toBeDisabled()
   })
 
-  it('tiene una flecha para volver al resumen', async () => {
+  it('se ubica con la barra: Planificar marcado y Resumen a un clic', async () => {
     vi.mocked(obtenerActividad).mockResolvedValueOnce(ACTIVIDAD_BASE)
     renderPantalla(ACTIVIDAD_BASE.id)
 
-    expect(await screen.findByRole('link', { name: 'Volver' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: 'Planificar' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    expect(screen.getByRole('link', { name: 'Resumen' })).toHaveAttribute(
       'href',
       `/actividades/${ACTIVIDAD_BASE.id}`,
     )

@@ -153,12 +153,15 @@ describe('PantallaEspacioEquipo', () => {
 
     expect(await screen.findByText('Entregar el reporte final')).toBeInTheDocument()
     expect(screen.getByText('Club de robótica')).toBeInTheDocument()
-    expect(screen.getByText('Alfa')).toBeInTheDocument()
+    // El equipo es un bloque con título en la barra lateral.
+    expect(screen.getByText(/equipo: Alfa$/i)).toBeInTheDocument()
 
     await usuario.type(screen.getByLabelText('Agregar a metas'), 'Nueva meta')
     await usuario.click(screen.getByRole('button', { name: 'Agregar' }))
 
-    await waitFor(() => expect(crearElemento).toHaveBeenCalledWith('e1', 'metas', 'Nueva meta'))
+    await waitFor(() =>
+      expect(crearElemento).toHaveBeenCalledWith('e1', 'metas', 'Nueva meta', null),
+    )
   })
 
   it('cualquier integrante puede editar o eliminar un elemento ajeno', async () => {
@@ -174,6 +177,9 @@ describe('PantallaEspacioEquipo', () => {
     await usuario.click(await screen.findByText('Entregar el reporte final'))
     expect(screen.getByRole('button', { name: 'Editar' })).toBeInTheDocument()
     await usuario.click(screen.getByRole('button', { name: 'Eliminar' }))
+    // Pide confirmación antes de borrarlo para todo el equipo.
+    expect(eliminarElemento).not.toHaveBeenCalled()
+    await usuario.click(screen.getByRole('button', { name: 'Sí, eliminar' }))
 
     await waitFor(() => expect(eliminarElemento).toHaveBeenCalledWith('el-1'))
   })
@@ -203,6 +209,7 @@ describe('PantallaEspacioEquipo', () => {
     // La tarjeta nace colapsada: hay que expandirla para llegar a Eliminar.
     await usuario.click(screen.getByText('Meta 41'))
     await usuario.click(screen.getByRole('button', { name: 'Eliminar' }))
+    await usuario.click(screen.getByRole('button', { name: 'Sí, eliminar' }))
     await waitFor(() => expect(eliminarElemento).toHaveBeenCalledWith('el-41'))
 
     // rebanar corrigió la página (ya no existe la 3ª, con un solo elemento
@@ -251,9 +258,7 @@ describe('PantallaEspacioEquipo', () => {
     vi.mocked(obtenerElementos).mockResolvedValue([])
     renderPantalla()
 
-    expect(
-      await screen.findByText('Metas no está habilitado en esta actividad.'),
-    ).toBeInTheDocument()
+    expect(await screen.findByText('Esta sección no se usa en esta actividad.')).toBeInTheDocument()
     expect(screen.queryByLabelText('Agregar a metas')).not.toBeInTheDocument()
   })
 

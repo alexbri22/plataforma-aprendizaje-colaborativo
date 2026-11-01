@@ -9,8 +9,15 @@ function actividad(
   return { id: 'a1', nombre: 'Taller', rol, configuracion } as Actividad
 }
 
-const espacio = (metas: string, avances: string, recursos: string) =>
-  JSON.stringify({ metas, avances, recursos })
+// Planeación y Producto siguen a Metas y a Materiales; por defecto,
+// deshabilitados para que cada caso pruebe solo los tres de siempre.
+const espacio = (
+  metas: string,
+  avances: string,
+  recursos: string,
+  planeacion = 'deshabilitado',
+  producto = 'deshabilitado',
+) => JSON.stringify({ metas, planeacion, avances, recursos, producto })
 
 describe('primeraSeccionHabilitada', () => {
   it('entra a metas cuando está habilitada', () => {
@@ -36,6 +43,25 @@ describe('primeraSeccionHabilitada', () => {
     }
     expect(primeraSeccionHabilitada(actividad(config))).toBe('bitacora')
     expect(primeraSeccionHabilitada(actividad(config, 'organizador'))).toBeNull()
+  })
+
+  it('Planeación va después de Metas y antes de Avances', () => {
+    expect(
+      primeraSeccionHabilitada(
+        actividad({
+          espacio_equipo: espacio('deshabilitado', 'opcional', 'opcional', 'opcional'),
+        }),
+      ),
+    ).toBe('planeacion')
+  })
+
+  it('una configuración guardada antes de Planeación y Producto los toma como opcionales', () => {
+    const antigua = JSON.stringify({
+      metas: 'deshabilitado',
+      avances: 'deshabilitado',
+      recursos: 'deshabilitado',
+    })
+    expect(primeraSeccionHabilitada(actividad({ espacio_equipo: antigua }))).toBe('planeacion')
   })
 
   it('sin configuración legible, trata las secciones como habilitadas', () => {
