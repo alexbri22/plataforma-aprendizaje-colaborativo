@@ -598,6 +598,11 @@ model Curso {
   orden              Int            @default(0)
   estatus            EstatusRecurso @default(borrador)
   textoBusqueda      String         @default("") @map("texto_busqueda")
+  // Sube con cada guardado de la ficha. El editor manda la que leyó y el
+  // servidor rechaza el guardado si cambió: así un administrador no pisa sin
+  // saberlo lo que otro guardó mientras tanto. Las lecciones no la mueven,
+  // porque se guardan una por una y no reescriben nada ajeno.
+  versionFicha       Int            @default(0) @map("version_ficha")
   idUsuarioAutor     String?        @map("id_usuario_autor")
   fechaCreacion      DateTime       @default(now()) @map("fecha_creacion")
   fechaActualizacion DateTime       @updatedAt @map("fecha_actualizacion")

@@ -225,3 +225,17 @@ export function validarFiltrosCursos(query: Record<string, unknown>): FiltrosCur
   if (Object.keys(detalle).length > 0) throw new ErrorValidacion(detalle)
   return filtros
 }
+
+/** La versión de la ficha que el editor leyó, si la manda (ver versionFicha
+ * en el esquema). */
+export function validarVersionFicha(cuerpo: unknown): number | undefined {
+  const { versionFicha } = (cuerpo && typeof cuerpo === 'object' ? cuerpo : {}) as Record<
+    string,
+    unknown
+  >
+  if (versionFicha === undefined) return undefined
+  if (typeof versionFicha === 'number' && Number.isInteger(versionFicha) && versionFicha >= 0) {
+    return versionFicha
+  }
+  throw new ErrorValidacion({ versionFicha: 'La versión no es válida.' })
+}

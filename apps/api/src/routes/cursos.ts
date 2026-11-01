@@ -21,6 +21,7 @@ import {
   validarDatosLeccion,
   validarFiltrosCursos,
   validarOrdenLecciones,
+  validarVersionFicha,
 } from '../services/formacion/cursos.validacion.js'
 import { validarPaginacion } from '../services/formacion/validacion.js'
 
@@ -78,7 +79,11 @@ adminCursosRouter.post('/cursos', exigirAdministrador, async (req, res) => {
 
 // PATCH /api/admin/cursos/:id: editar la ficha, publicar o retirar.
 adminCursosRouter.patch('/cursos/:id', exigirAdministrador, async (req, res) => {
-  const curso = await actualizarCurso(req.params.id as string, validarDatosCurso(req.body, true))
+  const curso = await actualizarCurso(
+    req.params.id as string,
+    validarDatosCurso(req.body, true),
+    validarVersionFicha(req.body),
+  )
   res.status(200).json({ curso })
 })
 

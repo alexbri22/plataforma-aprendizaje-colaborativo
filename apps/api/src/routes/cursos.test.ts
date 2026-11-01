@@ -606,3 +606,93 @@ describe('API pública de cursos', () => {
     expect(respuesta.body.codigo).toBe('leccion_no_encontrada')
   })
 })
+
+describe('edición simultánea de la ficha', () => {
+  it('rechaza guardar sobre una versión vieja y no toca lo que guardó el otro', async () => {
+    const idCurso = await crearCurso()
+    const { body } = await comoAdmin.get(`/api/admin/cursos/${idCurso}`).expect(200)
+    const leida = body.curso.versionFicha
+
+    // Otro administrador guarda primero.
+    const otro = await comoAdmin
+      .patch(`/api/admin/cursos/${idCurso}`, { resumen: 'Lo del otro', versionFicha: leida })
+      .expect(200)
+    expect(otro.body.curso.versionFicha).toBe(leida + 1)
+
+    const respuesta = await comoAdmin.patch(`/api/admin/cursos/${idCurso}`, {
+      resumen: 'Lo mío, con datos viejos',
+      versionFicha: leida,
+    })
+    expect(respuesta.status).toBe(409)
+    expect(respuesta.body.codigo).toBe('curso_desactualizado')
+
+    const final = await comoAdmin.get(`/api/admin/cursos/${idCurso}`)
+    expect(final.body.curso.resumen).toBe('Lo del otro')
+  })
+
+  it('de dos guardados simultáneos con la misma versión solo pasa uno', async () => {
+    const idCurso = await crearCurso()
+    const { body } = await comoAdmin.get(`/api/admin/cursos/${idCurso}`)
+    const respuestas = await Promise.all(
+      ['Uno', 'Dos'].map((resumen) =>
+        comoAdmin
+          .patch(`/api/admin/cursos/${idCurso}`, {
+            resumen,
+            versionFicha: body.curso.versionFicha,
+          })
+          .then((r) => r),
+      ),
+    )
+    expect(respuestas.map((r) => r.status).sort()).toEqual([200, 409])
+  })
+
+  it('agregar lecciones no invalida la ficha que se está editando', async () => {
+    const idCurso = await crearCurso()
+    const { body } = await comoAdmin.get(`/api/admin/cursos/${idCurso}`)
+    await agregar(idCurso, PRACTICA).expect(201)
+
+    await comoAdmin
+      .patch(`/api/admin/cursos/${idCurso}`, {
+        resumen: 'Sigo editando',
+        versionFicha: body.curso.versionFicha,
+      })
+      .expect(200)
+  })
+})
+
+describe('búsqueda por etiquetas visibles', () => {
+  it('encuentra un curso por el nombre visible de su elemento', async () => {
+    const idCurso = await crearCurso({
+      titulo: 'Retrospectivas',
+      elementos: ['procesamiento_grupal'],
+    })
+    await agregar(idCurso, PRACTICA).expect(201)
+    await agregar(idCurso, REFLEXION).expect(201)
+    await comoAdmin
+      .patch(`/api/admin/cursos/${idCurso}`, { ...FICHA_COMPLETA, titulo: 'Retrospectivas' })
+      .expect(200)
+    await comoAdmin
+      .patch(`/api/admin/cursos/${idCurso}`, {
+        elementos: ['procesamiento_grupal'],
+        estatus: 'publicado',
+      })
+      .expect(200)
+
+    const { body } = await request(app)
+      .get(`/api/cursos?q=${encodeURIComponent('Procesamiento del grupo')}`)
+      .expect(200)
+    expect(body.cursos.map((c: { idCurso: string }) => c.idCurso)).toEqual([idCurso])
+  })
+
+  it('una lección propia entrega su contenido en la API pública', async () => {
+    const { idCurso } = await cursoCompleto()
+    await comoAdmin.patch(`/api/admin/cursos/${idCurso}`, { estatus: 'publicado' }).expect(200)
+    const ficha = await request(app).get(`/api/cursos/${idCurso}`)
+    const practica = ficha.body.curso.lecciones[1]
+
+    const { body } = await request(app)
+      .get(`/api/cursos/${idCurso}/lecciones/${practica.idLeccion}`)
+      .expect(200)
+    expect(body.leccion.contenido).toBe(PRACTICA.contenido)
+  })
+})

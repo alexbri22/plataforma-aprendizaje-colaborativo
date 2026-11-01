@@ -158,6 +158,19 @@
   padding-top: var(--space-8);
 }
 
+.creditos {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.creditos p {
+  margin: 0;
+}
+
+.creditos p + p {
+  margin-top: var(--space-1);
+}
+
 .reflexion {
   padding: var(--space-6);
   border: 1px solid var(--color-primary-border);

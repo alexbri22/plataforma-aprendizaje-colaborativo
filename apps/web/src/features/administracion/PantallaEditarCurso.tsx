@@ -119,7 +119,10 @@ type Confirmacion =
   | { tipo: 'quitarLeccion'; leccion: LeccionAdmin }
   | null
 
-type ModalAbierto = { tipo: 'recurso' } | { tipo: 'leccion'; leccion: LeccionAdmin | null } | null
+type ModalAbierto =
+  | { tipo: 'recurso'; reemplazar: LeccionAdmin | null }
+  | { tipo: 'leccion'; leccion: LeccionAdmin | null }
+  | null
 
 // Alta y edición de un curso (§2.4 y §12.3 de
 // docs/diseno-desarrollo-formacion.md): la ficha a la izquierda con sus
@@ -129,8 +132,11 @@ type ModalAbierto = { tipo: 'recurso' } | { tipo: 'leccion'; leccion: LeccionAdm
 export function PantallaEditarCurso() {
   const { id } = useParams()
   const consulta = useCursoAdmin(id)
+  const [recargas, setRecargas] = useState(0)
 
-  if (id && consulta.isPending) {
+  // El formulario se llena una sola vez, así que no debe nacer de la copia en
+  // caché mientras llega la actual: se espera a la lectura de esta visita.
+  if (id && !consulta.isFetchedAfterMount && !consulta.isError) {
     return (
       <AppShell seccionActiva="cursos" titulo="Editar curso" volverA="/admin/cursos">
         <div role="status" aria-label="Cargando curso">
@@ -140,7 +146,9 @@ export function PantallaEditarCurso() {
     )
   }
 
-  if (id && consulta.isError) {
+  // Con datos en pantalla, un fallo al refrescar en segundo plano no debe
+  // tirar lo que se está editando.
+  if (id && consulta.isError && !consulta.data) {
     return (
       <AppShell seccionActiva="cursos" titulo="Editar curso" volverA="/admin/cursos">
         <AvisoError mensaje={consulta.error.message} />
@@ -148,11 +156,27 @@ export function PantallaEditarCurso() {
     )
   }
 
-  // key: al pasar de "nuevo" al curso ya creado, el editor remonta con él.
-  return <Editor key={consulta.data?.idCurso ?? 'nuevo'} curso={consulta.data ?? null} />
+  // key: al pasar de "nuevo" al curso ya creado, o al cargar la versión actual
+  // tras un conflicto, el editor remonta con los datos frescos.
+  return (
+    <Editor
+      key={`${consulta.data?.idCurso ?? 'nuevo'}-${recargas}`}
+      curso={consulta.data ?? null}
+      onRecargar={async () => {
+        await consulta.refetch()
+        setRecargas((n) => n + 1)
+      }}
+    />
+  )
 }
 
-function Editor({ curso }: { curso: CursoAdmin | null }) {
+function Editor({
+  curso,
+  onRecargar,
+}: {
+  curso: CursoAdmin | null
+  onRecargar: () => Promise<void>
+}) {
   const navigate = useNavigate()
   const location = useLocation()
   const [ficha, setFicha] = useState<Ficha>(() => (curso ? aFicha(curso) : FICHA_VACIA))
@@ -177,6 +201,11 @@ function Editor({ curso }: { curso: CursoAdmin | null }) {
   const [intentoFallido, setIntentoFallido] = useState(0)
   const [confirmar, setConfirmar] = useState<Confirmacion>(null)
   const [modal, setModal] = useState<ModalAbierto>(null)
+  const [desactualizado, setDesactualizado] = useState(false)
+  // La versión con la que se llenó el formulario, no la del curso en pantalla:
+  // un refresco en segundo plano no debe hacer pasar por actual lo que el
+  // formulario aún tiene viejo.
+  const [versionLeida] = useState(curso?.versionFicha)
   const resumenRef = useRef<HTMLDivElement>(null)
 
   const idCurso = curso?.idCurso ?? ''
@@ -245,6 +274,11 @@ function Editor({ curso }: { curso: CursoAdmin | null }) {
   }
 
   function manejarError(error: unknown, quiso?: EstatusCurso) {
+    if (error instanceof ErrorFormacion && error.codigo === 'curso_desactualizado') {
+      setDesactualizado(true)
+      window.scrollTo({ top: 0 })
+      return
+    }
     if (error instanceof ErrorFormacion) {
       setErrores(error.detallePorCampo ?? {})
       setMensaje(
@@ -266,8 +300,9 @@ function Editor({ curso }: { curso: CursoAdmin | null }) {
 
   async function guardar(nuevoEstatus?: EstatusCurso) {
     limpiarMensajes()
-    const datos: Partial<DatosCurso> = { ...ficha }
+    const datos: Partial<DatosCurso> & { versionFicha?: number } = { ...ficha }
     if (nuevoEstatus) datos.estatus = nuevoEstatus
+    if (versionLeida !== undefined) datos.versionFicha = versionLeida
     try {
       if (!curso) {
         // Se queda en el editor: lo siguiente es agregar las lecciones.
@@ -315,7 +350,19 @@ function Editor({ curso }: { curso: CursoAdmin | null }) {
   }
 
   async function alElegirRecurso(idRecurso: string) {
+    const reemplazar = modal?.tipo === 'recurso' ? modal.reemplazar : null
     setModal(null)
+    if (reemplazar) {
+      await operarLeccion(
+        () =>
+          actualizarLeccion.mutateAsync({
+            idLeccion: reemplazar.idLeccion,
+            cambios: { idRecurso },
+          }),
+        'Recurso de la lección actualizado.',
+      )
+      return
+    }
     await operarLeccion(
       () => agregarLeccion.mutateAsync({ tipo: 'recurso', idRecurso }),
       'Recurso agregado como lección.',
@@ -378,6 +425,21 @@ function Editor({ curso }: { curso: CursoAdmin | null }) {
     >
       <div className={styles.layout}>
         <div className={styles.principal}>
+          {desactualizado ? (
+            <div className={styles.resumenErrores} role="alert">
+              <p className={styles.resumenErroresTitulo}>
+                Otro administrador modificó este curso mientras lo editabas.
+              </p>
+              <p className={styles.conflictoDetalle}>
+                Tus cambios en la ficha no se guardaron, para no borrar los suyos. Al cargar la
+                versión actual se pierde lo que escribiste aquí.
+              </p>
+              <Button variant="secondary" size="sm" onClick={() => void onRecargar()}>
+                Cargar la versión actual
+              </Button>
+            </div>
+          ) : null}
+
           {mensaje ? (
             <div ref={resumenRef} tabIndex={-1} className={styles.resumenErrores} role="alert">
               <p className={styles.resumenErroresTitulo}>{mensaje}</p>
@@ -502,7 +564,7 @@ function Editor({ curso }: { curso: CursoAdmin | null }) {
                     size="sm"
                     variant="secondary"
                     disabled={lleno || ocupado}
-                    onClick={() => setModal({ tipo: 'recurso' })}
+                    onClick={() => setModal({ tipo: 'recurso', reemplazar: null })}
                   >
                     Agregar recurso
                   </Button>
@@ -566,7 +628,15 @@ function Editor({ curso }: { curso: CursoAdmin | null }) {
                             <span className={styles.errorCampo}>
                               El recurso está{' '}
                               {ETIQUETAS_ESTATUS_RECURSO[l.recurso!.estatus].toLowerCase()}: esta
-                              lección se ve como no disponible.
+                              lección se ve como no disponible.{' '}
+                              <button
+                                type="button"
+                                className={styles.enlaceAccion}
+                                disabled={ocupado}
+                                onClick={() => setModal({ tipo: 'recurso', reemplazar: l })}
+                              >
+                                Cambiar recurso
+                              </button>
                             </span>
                           ) : null}
                           {error ? <span className={styles.errorCampo}>{error}</span> : null}
@@ -706,6 +776,7 @@ function Editor({ curso }: { curso: CursoAdmin | null }) {
       {modal?.tipo === 'recurso' ? (
         <ModalElegirRecurso
           idsEnCurso={lecciones.flatMap((l) => (l.recurso ? [l.recurso.idRecurso] : []))}
+          reemplazo={modal.reemplazar !== null}
           onElegir={(id) => void alElegirRecurso(id)}
           onCerrar={() => setModal(null)}
         />
@@ -716,6 +787,7 @@ function Editor({ curso }: { curso: CursoAdmin | null }) {
           leccion={modal.leccion}
           onGuardar={alGuardarLeccion}
           onCerrar={() => setModal(null)}
+          onCambiarRecurso={() => setModal({ tipo: 'recurso', reemplazar: modal.leccion })}
         />
       ) : null}
 

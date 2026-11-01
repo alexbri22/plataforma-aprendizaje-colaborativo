@@ -250,6 +250,8 @@ describe('catálogo público', () => {
     expect(await ids('q=ESCUCHA')).toEqual([otro])
     // Sin acentos ni mayúsculas, y también por el área.
     expect(await ids('q=comunicacion')).toEqual([otro])
+    // Por la etiqueta visible del elemento, no solo por su identificador.
+    expect((await ids(`q=${encodeURIComponent('Responsabilidades claras')}`)).length).toBe(2)
     expect(await ids(`q=${encodeURIComponent('ÉSCUCHÁ')}`)).toEqual([otro])
     expect(await ids('tipo=pdf')).toEqual([])
     expect((await ids('tipo=pdf,texto')).length).toBe(2)

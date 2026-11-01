@@ -140,6 +140,7 @@ export {
   esTipoRecurso,
   esUrlSegura,
   normalizarBusqueda,
+  textoDeBusquedaCatalogo,
 } from './formacion.js'
 
 export type {

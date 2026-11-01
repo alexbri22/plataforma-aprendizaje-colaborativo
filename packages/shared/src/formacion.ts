@@ -226,3 +226,21 @@ export function normalizarBusqueda(texto: string): string {
     .toLowerCase()
     .replace(/_/g, ' ')
 }
+
+/** Texto contra el que busca el catálogo: lo escrito más el área y los
+ * elementos con su etiqueta visible. Con el identificador, buscar "Procesamiento
+ * del grupo" no encontraría `procesamiento_grupal`. Lo usan los servicios de
+ * recursos y cursos y los scripts de semilla, para que la regla sea una sola. */
+export function textoDeBusquedaCatalogo(
+  textos: string[],
+  area: AreaHabilidad | null,
+  elementos: ElementoColaboracion[],
+): string {
+  return normalizarBusqueda(
+    [
+      ...textos,
+      area ? ETIQUETAS_AREA[area] : '',
+      ...elementos.map((e) => ETIQUETAS_ELEMENTO[e]),
+    ].join(' '),
+  )
+}

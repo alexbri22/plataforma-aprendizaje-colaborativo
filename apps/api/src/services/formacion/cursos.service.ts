@@ -4,6 +4,7 @@ import {
   MAX_LECCIONES_CURSO,
   MIN_LECCIONES_CURSO,
   normalizarBusqueda,
+  textoDeBusquedaCatalogo,
   type AreaHabilidad,
   type ElementoColaboracion,
   type EstatusCurso,
@@ -15,6 +16,7 @@ import {
 } from '@plataforma/shared'
 import { prisma } from '../../data/prisma.js'
 import {
+  ErrorCursoDesactualizado,
   ErrorCursoNoEncontrado,
   ErrorLeccionNoEncontrada,
   ErrorRecursoNoEncontrado,
@@ -75,6 +77,7 @@ export interface ResumenCursoAdmin {
 }
 
 export interface CursoAdmin extends ResumenCursoAdmin {
+  versionFicha: number
   objetivo: string
   elementos: ElementoColaboracion[]
   practicaFinal: string
@@ -106,8 +109,39 @@ const INCLUIR_CURSO = {
   },
 } satisfies Prisma.CursoInclude
 
+// Dos lecturas más ligeras: el contenido de una lección llega a 20 000
+// caracteres y son hasta 5 por curso, así que traerlo para un listado o para el
+// índice sería leer millones de caracteres que se descartan.
+const SELECT_RECURSO_DE_LECCION = {
+  idRecurso: true,
+  titulo: true,
+  tipoRecurso: true,
+  estatus: true,
+  duracionMin: true,
+} satisfies Prisma.RecursoFormativoSelect
+
+/** Para los listados: solo lo que hace falta para contar y sumar la duración. */
+const INCLUIR_RESUMEN = {
+  lecciones: {
+    select: { duracionMin: true, recurso: { select: { duracionMin: true } } },
+  },
+} satisfies Prisma.CursoInclude
+
+/** Para la ficha pública y el visor: el índice, sin el contenido. */
+const INCLUIR_INDICE = {
+  autor: { select: { nombre: true, apellidoPaterno: true } },
+  lecciones: {
+    orderBy: { orden: 'asc' },
+    omit: { contenido: true },
+    include: { recurso: { select: SELECT_RECURSO_DE_LECCION } },
+  },
+} satisfies Prisma.CursoInclude
+
 type FilaCurso = Prisma.CursoGetPayload<{ include: typeof INCLUIR_CURSO }>
 type FilaLeccion = FilaCurso['lecciones'][number]
+type FilaResumen = Prisma.CursoGetPayload<{ include: typeof INCLUIR_RESUMEN }>
+type FilaIndice = Prisma.CursoGetPayload<{ include: typeof INCLUIR_INDICE }>
+type LeccionDeIndice = FilaIndice['lecciones'][number]
 type Cliente = Prisma.TransactionClient | typeof prisma
 
 const ORDEN_CURSOS = [
@@ -116,7 +150,7 @@ const ORDEN_CURSOS = [
   { idCurso: 'asc' },
 ] satisfies Prisma.CursoOrderByWithRelationInput[]
 
-function duracionDe(leccion: FilaLeccion): number | null {
+function duracionDe(leccion: FilaResumen['lecciones'][number]): number | null {
   return leccion.duracionMin ?? leccion.recurso?.duracionMin ?? null
 }
 
@@ -134,7 +168,7 @@ function aLeccion(fila: FilaLeccion): LeccionAdmin {
   }
 }
 
-function aResumen(fila: FilaCurso): ResumenCursoAdmin {
+function aResumen(fila: FilaResumen): ResumenCursoAdmin {
   return {
     idCurso: fila.idCurso,
     titulo: fila.titulo,
@@ -152,6 +186,7 @@ function aResumen(fila: FilaCurso): ResumenCursoAdmin {
 function aAdmin(fila: FilaCurso): CursoAdmin {
   return {
     ...aResumen(fila),
+    versionFicha: fila.versionFicha,
     objetivo: fila.objetivo,
     elementos: fila.elementos as ElementoColaboracion[],
     practicaFinal: fila.practicaFinal,
@@ -170,9 +205,7 @@ function aAdmin(fila: FilaCurso): CursoAdmin {
 function textoDeBusqueda(
   c: Pick<DatosCurso, 'titulo' | 'resumen' | 'objetivo' | 'area' | 'elementos'>,
 ): string {
-  return normalizarBusqueda(
-    [c.titulo, c.resumen, c.objetivo, c.area ?? '', ...c.elementos].join(' '),
-  )
+  return textoDeBusquedaCatalogo([c.titulo, c.resumen, c.objetivo], c.area, c.elementos)
 }
 
 async function leerCurso(cliente: Cliente, idCurso: string): Promise<FilaCurso> {
@@ -310,7 +343,7 @@ export async function listarCursosAdmin({
   const [total, filas] = await prisma.$transaction([
     prisma.curso.count(),
     prisma.curso.findMany({
-      include: INCLUIR_CURSO,
+      include: INCLUIR_RESUMEN,
       orderBy: ORDEN_CURSOS,
       skip: (pagina - 1) * porPagina,
       take: porPagina,
@@ -359,9 +392,16 @@ export async function crearCurso(
 export async function actualizarCurso(
   idCurso: string,
   cambios: Partial<DatosCurso>,
+  versionLeida?: number,
 ): Promise<CursoAdmin> {
   const fila = await conCursoBloqueado(idCurso, async (tx) => {
     const actual = await leerCurso(tx, idCurso)
+
+    // Con la fila ya bloqueada: dos guardados simultáneos con la misma versión
+    // no pueden pasar los dos.
+    if (versionLeida !== undefined && versionLeida !== actual.versionFicha) {
+      throw new ErrorCursoDesactualizado()
+    }
 
     if (cambios.estatus && !TRANSICIONES[actual.estatus].includes(cambios.estatus)) {
       throw new ErrorValidacion({
@@ -381,7 +421,11 @@ export async function actualizarCurso(
 
     return tx.curso.update({
       where: { idCurso },
-      data: { ...cambios, textoBusqueda: textoDeBusqueda(final) },
+      data: {
+        ...cambios,
+        textoBusqueda: textoDeBusqueda(final),
+        versionFicha: { increment: 1 },
+      },
       include: INCLUIR_CURSO,
     })
   })
@@ -576,7 +620,7 @@ export interface PaginaDeCursosPublicos {
   paginacion: Paginacion
 }
 
-function aIndice(fila: FilaLeccion): LeccionEnIndice {
+function aIndice(fila: LeccionDeIndice): LeccionEnIndice {
   const disponible = fila.tipo !== 'recurso' || fila.recurso?.estatus === 'publicado'
   return {
     idLeccion: fila.idLeccion,
@@ -592,7 +636,7 @@ function aIndice(fila: FilaLeccion): LeccionEnIndice {
   }
 }
 
-function aResumenPublico(fila: FilaCurso): ResumenCursoPublico {
+function aResumenPublico(fila: FilaResumen): ResumenCursoPublico {
   const { idCurso, titulo, resumen, area, nivel, numLecciones, duracionMin, fechaActualizacion } =
     aResumen(fila)
   return {
@@ -622,7 +666,7 @@ export async function listarCursosPublicados(
     prisma.curso.count({ where }),
     prisma.curso.findMany({
       where,
-      include: INCLUIR_CURSO,
+      include: INCLUIR_RESUMEN,
       orderBy: ORDEN_CURSOS,
       skip: (pagina - 1) * porPagina,
       take: porPagina,
@@ -636,10 +680,10 @@ export async function listarCursosPublicados(
 
 // Mismo 404 si el curso no existe que si no está publicado: un borrador no
 // se distingue de un id inventado.
-async function leerCursoPublicado(idCurso: string): Promise<FilaCurso> {
+async function leerCursoPublicado(idCurso: string): Promise<FilaIndice> {
   const fila = await prisma.curso.findFirst({
     where: { idCurso, estatus: 'publicado' },
-    include: INCLUIR_CURSO,
+    include: INCLUIR_INDICE,
   })
   if (!fila) throw new ErrorCursoNoEncontrado()
   return fila
@@ -666,12 +710,17 @@ export async function obtenerLeccionPublica(
 
   const fila = curso.lecciones[posicion]
   const indice = aIndice(fila)
-  const vecina = (l: FilaLeccion | undefined) =>
+  // El contenido se pide aparte y solo de esta lección.
+  const { contenido } = await prisma.leccionCurso.findUniqueOrThrow({
+    where: { idLeccion },
+    select: { contenido: true },
+  })
+  const vecina = (l: LeccionDeIndice | undefined) =>
     l ? { idLeccion: l.idLeccion, titulo: aIndice(l).titulo } : null
 
   return {
     ...indice,
-    contenido: fila.contenido,
+    contenido,
     recurso:
       indice.disponible && fila.idRecurso ? await obtenerRecursoPublicado(fila.idRecurso) : null,
     anterior: vecina(curso.lecciones[posicion - 1]),

@@ -97,7 +97,15 @@ function CuerpoLeccion({ leccion }: { leccion: LeccionPublica }) {
   return (
     <>
       {leccion.contenido ? <Markdown fuente={leccion.contenido} /> : null}
-      {leccion.recurso ? <CuerpoRecurso recurso={leccion.recurso} /> : null}
+      {leccion.recurso ? (
+        <>
+          <CuerpoRecurso recurso={leccion.recurso} />
+          <footer className={styles.creditos}>
+            {leccion.recurso.fuente ? <p>Fuente: {leccion.recurso.fuente}</p> : null}
+            {leccion.recurso.licencia ? <p>Derechos de uso: {leccion.recurso.licencia}</p> : null}
+          </footer>
+        </>
+      ) : null}
     </>
   )
 }

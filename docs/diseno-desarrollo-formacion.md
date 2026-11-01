@@ -615,6 +615,9 @@ Panel para armar cursos y parte pública: catálogo, ficha y visor.
 - **Filtros del catálogo:** área y texto aplican a cursos y recursos; nivel y elemento solo a cursos. Elegir una sección oculta los cursos, que no pertenecen a ninguna. El filtro por duración de CAT-01 queda pendiente: la duración se calcula y no se puede filtrar en la consulta.
 - **Reflexión:** solo muestra la pregunta; guardar la respuesta llega con el progreso.
 
+- **Edición simultánea:** el editor de cursos espera una lectura fresca antes de llenar el formulario y guarda con `versionFicha`; si otro administrador guardó mientras tanto, el servidor responde 409 `curso_desactualizado` y el editor ofrece cargar la versión actual. Las lecciones no mueven la versión, porque se guardan una por una. El editor de recursos también espera la lectura fresca, pero todavía no tiene versión.
+- **Búsqueda:** `texto_busqueda` guarda las etiquetas visibles de los elementos, no sus identificadores (`textoDeBusquedaCatalogo` en `packages/shared`).
+
 ### API pública implementada
 
 | Método | Ruta                                               | Propósito                                             |

@@ -133,6 +133,10 @@ function Contenido({ curso }: { curso: CursoPublico }) {
 function FichaCurso() {
   const { id = '' } = useParams()
   const consulta = useCursoPublico(id)
+  const Titulo = useDentroDeApp() ? 'h2' : 'h1'
+  // Tras un 404 la consulta conserva los datos de antes: el curso ya no existe
+  // para el público y no se debe seguir mostrando.
+  const noExiste = consulta.error instanceof ErrorFormacion && consulta.error.status === 404
 
   return (
     <div className={styles.pagina}>
@@ -148,9 +152,9 @@ function FichaCurso() {
 
       {consulta.isError ? (
         <div className={styles.estado}>
-          {consulta.error instanceof ErrorFormacion && consulta.error.status === 404 ? (
+          {noExiste ? (
             <>
-              <h1 className={styles.titulo}>No encontramos este curso</h1>
+              <Titulo className={styles.titulo}>No encontramos este curso</Titulo>
               <p className={styles.resumen}>
                 Puede que se haya retirado o que el enlace esté incompleto.
               </p>
@@ -169,7 +173,7 @@ function FichaCurso() {
         </div>
       ) : null}
 
-      {consulta.data ? <Contenido curso={consulta.data} /> : null}
+      {consulta.data && !noExiste ? <Contenido curso={consulta.data} /> : null}
     </div>
   )
 }

@@ -128,6 +128,7 @@ export interface ResumenCursoAdmin {
 }
 
 export interface CursoAdmin extends ResumenCursoAdmin {
+  versionFicha: number
   objetivo: string
   elementos: ElementoColaboracion[]
   practicaFinal: string
@@ -210,11 +211,19 @@ export interface ConsultaCursos {
 export class ErrorFormacion extends Error {
   readonly status?: number
   readonly detallePorCampo?: Record<string, string>
+  /** Código estable del servidor, para distinguir un error de otro. */
+  readonly codigo?: string
 
-  constructor(mensaje: string, status?: number, detallePorCampo?: Record<string, string>) {
+  constructor(
+    mensaje: string,
+    status?: number,
+    detallePorCampo?: Record<string, string>,
+    codigo?: string,
+  ) {
     super(mensaje)
     this.status = status
     this.detallePorCampo = detallePorCampo
+    this.codigo = codigo
   }
 }
 
@@ -223,14 +232,19 @@ const MENSAJE_SIN_CONEXION =
 
 async function leerError(respuesta: Response, porDefecto: string): Promise<ErrorFormacion> {
   try {
-    const cuerpo = (await respuesta.json()) as { mensaje?: unknown; detallePorCampo?: unknown }
+    const cuerpo = (await respuesta.json()) as {
+      mensaje?: unknown
+      detallePorCampo?: unknown
+      codigo?: unknown
+    }
     const mensaje =
       typeof cuerpo.mensaje === 'string' && cuerpo.mensaje.trim() ? cuerpo.mensaje : porDefecto
     const detalle =
       cuerpo.detallePorCampo && typeof cuerpo.detallePorCampo === 'object'
         ? (cuerpo.detallePorCampo as Record<string, string>)
         : undefined
-    return new ErrorFormacion(mensaje, respuesta.status, detalle)
+    const codigo = typeof cuerpo.codigo === 'string' ? cuerpo.codigo : undefined
+    return new ErrorFormacion(mensaje, respuesta.status, detalle, codigo)
   } catch {
     return new ErrorFormacion(porDefecto, respuesta.status)
   }
@@ -451,7 +465,7 @@ export function crearCurso(datos: Partial<DatosCurso>): Promise<CursoAdmin> {
 
 export function actualizarCurso(
   idCurso: string,
-  cambios: Partial<DatosCurso>,
+  cambios: Partial<DatosCurso> & { versionFicha?: number },
 ): Promise<CursoAdmin> {
   return pedirCurso(
     rutaCursoAdmin(idCurso),

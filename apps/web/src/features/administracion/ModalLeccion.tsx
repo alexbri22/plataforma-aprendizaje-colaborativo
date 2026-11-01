@@ -18,11 +18,23 @@ export interface ModalLeccionProps {
   leccion: LeccionAdmin | null
   onGuardar: (datos: Partial<DatosLeccion>) => Promise<void>
   onCerrar: () => void
+  /** Solo en lecciones de recurso: abre la biblioteca para elegir otro. */
+  onCambiarRecurso?: () => void
 }
+
+// Los errores que tienen un control en este formulario. El resto (los
+// mínimos de un curso publicado: `lecciones`, `lecciones.<id>`) no tiene dónde
+// mostrarse junto a un campo y va en el aviso de arriba.
+const CAMPOS_DEL_MODAL = ['tipo', 'titulo', 'contenido', 'duracionMin']
 
 // Se monta solo cuando está abierto: cada apertura empieza con el formulario
 // limpio o con los datos de la lección.
-export function ModalLeccion({ leccion, onGuardar, onCerrar }: ModalLeccionProps) {
+export function ModalLeccion({
+  leccion,
+  onGuardar,
+  onCerrar,
+  onCambiarRecurso,
+}: ModalLeccionProps) {
   const esRecurso = leccion?.tipo === 'recurso'
   const [tipo, setTipo] = useState<TipoLeccion>(leccion?.tipo ?? 'lectura')
   const [titulo, setTitulo] = useState(leccion?.titulo ?? '')
@@ -54,6 +66,10 @@ export function ModalLeccion({ leccion, onGuardar, onCerrar }: ModalLeccionProps
     } catch (error) {
       if (error instanceof ErrorFormacion && error.detallePorCampo) {
         setErrores(error.detallePorCampo)
+        const sinControl = Object.entries(error.detallePorCampo)
+          .filter(([campo]) => !CAMPOS_DEL_MODAL.includes(campo))
+          .map(([, texto]) => texto)
+        if (sinControl.length > 0) setMensaje(sinControl.join(' '))
       } else {
         setMensaje(error instanceof Error ? error.message : 'Ocurrió un error inesperado.')
       }
@@ -69,12 +85,28 @@ export function ModalLeccion({ leccion, onGuardar, onCerrar }: ModalLeccionProps
       titulo={leccion ? 'Editar lección' : 'Escribir lección'}
       descripcion={
         esRecurso
-          ? `Usa el recurso «${leccion?.recurso?.titulo}». El título y la duración son opcionales: si los dejas vacíos, se usan los del recurso.`
+          ? 'El título y la duración son opcionales: si los dejas vacíos, se usan los del recurso.'
           : 'Contenido propio de este curso. No aparece en la biblioteca de recursos.'
       }
     >
       <form className={styles.formulario} onSubmit={(e) => void alEnviar(e)} noValidate>
         {mensaje ? <AvisoError mensaje={mensaje} /> : null}
+
+        {esRecurso ? (
+          <div className={styles.recurso}>
+            <div>
+              <p className={styles.recursoTitulo}>{leccion?.recurso?.titulo}</p>
+              {leccion?.recurso?.estatus !== 'publicado' ? (
+                <p className={styles.recursoAviso}>
+                  Este recurso ya no está publicado: elige otro para reparar la lección.
+                </p>
+              ) : null}
+            </div>
+            <Button variant="secondary" size="sm" onClick={onCambiarRecurso}>
+              Cambiar recurso
+            </Button>
+          </div>
+        ) : null}
 
         {esRecurso ? null : (
           <Select

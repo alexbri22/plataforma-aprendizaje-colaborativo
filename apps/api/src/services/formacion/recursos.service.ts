@@ -6,6 +6,7 @@ import {
   esTipoArchivoRecurso,
   esUrlSegura,
   normalizarBusqueda,
+  textoDeBusquedaCatalogo,
   type AreaHabilidad,
   type ElementoColaboracion,
   type EstatusRecurso,
@@ -263,7 +264,7 @@ type RecursoCombinado = DatosRecurso & { tieneArchivo: boolean }
 function textoDeBusqueda(
   r: Pick<DatosRecurso, 'titulo' | 'resumen' | 'area' | 'elementos'>,
 ): string {
-  return normalizarBusqueda([r.titulo, r.resumen, r.area ?? '', ...r.elementos].join(' '))
+  return textoDeBusquedaCatalogo([r.titulo, r.resumen], r.area, r.elementos)
 }
 
 /**
@@ -449,8 +450,6 @@ export async function actualizarRecurso(
   return conUso(aAdmin(fila))
 }
 
-/** Borra el recurso y, en cascada, su archivo. No hay vuelta atrás: para
- * ocultarlo de forma reversible está retirar. */
 /** Borra el recurso y su archivo, salvo que algún curso lo use: entonces
  * hay que quitarlo de esos cursos primero, o retirarlo. La llave RESTRICT de
  * lecciones_curso lo garantiza en la base; aquí se comprueba antes para dar

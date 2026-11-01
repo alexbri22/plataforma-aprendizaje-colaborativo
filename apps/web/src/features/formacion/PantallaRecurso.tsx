@@ -23,6 +23,9 @@ function DetalleRecurso() {
   const Titulo = useDentroDeApp() ? 'h2' : 'h1'
   const { id = '' } = useParams()
   const consulta = useRecursoPublico(id)
+  // Tras un 404 la consulta conserva los datos de antes: el recurso ya no
+  // existe para el público y no se debe seguir mostrando.
+  const noExiste = consulta.error instanceof ErrorFormacion && consulta.error.status === 404
 
   return (
     <div className={styles.pagina}>
@@ -38,7 +41,7 @@ function DetalleRecurso() {
 
       {consulta.isError ? (
         <div className={styles.estado}>
-          {consulta.error instanceof ErrorFormacion && consulta.error.status === 404 ? (
+          {noExiste ? (
             <>
               <Titulo className={styles.titulo}>No encontramos este recurso</Titulo>
               <p className={styles.resumen}>
@@ -59,7 +62,7 @@ function DetalleRecurso() {
         </div>
       ) : null}
 
-      {consulta.data ? (
+      {consulta.data && !noExiste ? (
         <article className={styles.articulo}>
           <header className={styles.cabecera}>
             <p className={styles.eyebrow}>

@@ -139,6 +139,47 @@ describe('PantallaCurso', () => {
   })
 })
 
+describe('PantallaCurso sin el curso', () => {
+  it('deja de mostrar la ficha en caché cuando el servidor confirma un 404', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/cursos/c1']}>
+          <Routes>
+            <Route path="/cursos/:id" element={<PantallaCurso />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    expect(await screen.findByRole('link', { name: 'Empezar curso' })).toBeInTheDocument()
+
+    vi.mocked(obtenerCurso).mockRejectedValue(new ErrorFormacion('No encontramos.', 404))
+    await queryClient.invalidateQueries()
+
+    expect(await screen.findByText('No encontramos este curso')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Empezar curso' })).not.toBeInTheDocument()
+  })
+
+  it('con sesión usa h2: el h1 de la página ya lo pone el AppShell', async () => {
+    vi.mocked(obtenerSesionActual).mockResolvedValue({
+      idUsuario: 'u1',
+      nombre: 'Ana',
+      apellidoPaterno: 'García',
+      apellidoMaterno: 'López',
+      correo: 'ana@example.com',
+      tipoCuenta: 'usuario',
+      fotoUrl: null,
+    })
+    vi.mocked(obtenerCurso).mockRejectedValue(new ErrorFormacion('No encontramos.', 404))
+    renderEn('/cursos/c1')
+
+    expect(
+      await screen.findByRole('heading', { level: 2, name: 'No encontramos este curso' }),
+    ).toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
+  })
+})
+
 describe('PantallaLeccion', () => {
   it('marca la lección actual y navega a la siguiente', async () => {
     vi.mocked(obtenerLeccion).mockResolvedValue(
@@ -182,6 +223,34 @@ describe('PantallaLeccion', () => {
     renderEn('/cursos/c1/lecciones/l2')
 
     expect(await screen.findByText(/no está disponible por ahora/)).toBeInTheDocument()
+  })
+
+  it('un recurso reutilizado conserva su fuente y derechos de uso', async () => {
+    vi.mocked(obtenerLeccion).mockResolvedValue(
+      leccion({
+        recurso: {
+          idRecurso: 'r1',
+          seccion: 'como_colaborar',
+          titulo: 'Plantilla',
+          resumen: '',
+          tipoRecurso: 'texto',
+          area: null,
+          elementos: [],
+          duracionMin: 4,
+          orden: 0,
+          fechaActualizacion: '2026-09-01T00:00:00.000Z',
+          archivo: null,
+          contenido: 'Cuerpo del recurso',
+          transcripcion: '',
+          fuente: 'Equipo Co3',
+          licencia: 'CC BY 4.0',
+        },
+      }),
+    )
+    renderEn('/cursos/c1/lecciones/l1')
+
+    expect(await screen.findByText('Fuente: Equipo Co3')).toBeInTheDocument()
+    expect(screen.getByText('Derechos de uso: CC BY 4.0')).toBeInTheDocument()
   })
 
   it('explica cuando la lección no existe', async () => {

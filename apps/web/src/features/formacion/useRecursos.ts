@@ -55,6 +55,9 @@ export function useRecursoAdmin(idRecurso: string | undefined) {
     queryFn: () => obtenerRecursoAdmin(idRecurso as string),
     enabled: Boolean(idRecurso),
     retry: false,
+    // El editor espera esta lectura para llenar su formulario: siempre debe
+    // ocurrir, aunque haya una copia en caché.
+    refetchOnMount: 'always',
   })
 }
 

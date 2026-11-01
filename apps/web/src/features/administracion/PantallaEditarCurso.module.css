@@ -81,6 +81,28 @@
   font-weight: var(--font-weight-semibold);
 }
 
+.conflictoDetalle {
+  margin: var(--space-1) 0 var(--space-3);
+}
+
+.enlaceAccion {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: var(--font-weight-semibold);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.enlaceAccion:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
 .resumenErrores ul {
   margin: var(--space-2) 0 0;
   padding-left: var(--space-5);

@@ -7,6 +7,7 @@ import { obtenerSesionActual, type Usuario } from '../cuentas/api'
 import {
   ErrorFormacion,
   actualizarCurso,
+  actualizarLeccion,
   agregarLeccion,
   crearCurso,
   eliminarLeccion,
@@ -33,6 +34,7 @@ vi.mock('../formacion/formacion.api', async () => {
   return {
     ...real,
     actualizarCurso: vi.fn(),
+    actualizarLeccion: vi.fn(),
     agregarLeccion: vi.fn(),
     crearCurso: vi.fn(),
     eliminarLeccion: vi.fn(),
@@ -96,16 +98,14 @@ const CURSO: CursoAdmin = {
   orden: 0,
   numLecciones: 2,
   duracionMin: 14,
+  versionFicha: 3,
   fechaCreacion: '2026-09-01T00:00:00.000Z',
   fechaActualizacion: '2026-09-01T00:00:00.000Z',
   autor: null,
   lecciones: [PRACTICA, DE_RECURSO],
 }
 
-function renderEn(ruta: string) {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  })
+function renderEn(ruta: string, queryClient = clienteDePrueba()) {
   render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[ruta]}>
@@ -117,6 +117,12 @@ function renderEn(ruta: string) {
       </MemoryRouter>
     </QueryClientProvider>,
   )
+}
+
+function clienteDePrueba() {
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
 }
 
 beforeAll(() => {
@@ -255,5 +261,81 @@ describe('PantallaEditarCurso', () => {
     renderEn('/admin/cursos/c1')
 
     expect(await screen.findByText(/se ve como no disponible/)).toBeInTheDocument()
+  })
+
+  it('llena el formulario con la lectura fresca, no con la copia en caché', async () => {
+    const queryClient = clienteDePrueba()
+    queryClient.setQueryData(['cursos', 'admin', 'detalle', 'c1'], {
+      ...CURSO,
+      resumen: 'Copia vieja',
+    })
+    vi.mocked(obtenerCursoAdmin).mockResolvedValue({ ...CURSO, resumen: 'Versión actual' })
+    renderEn('/admin/cursos/c1', queryClient)
+
+    expect(await screen.findByLabelText('Resumen')).toHaveValue('Versión actual')
+  })
+
+  it('guarda con la versión que leyó y explica si otro modificó el curso', async () => {
+    const user = userEvent.setup()
+    vi.mocked(actualizarCurso).mockRejectedValue(
+      new ErrorFormacion('Otro modificó.', 409, undefined, 'curso_desactualizado'),
+    )
+    renderEn('/admin/cursos/c1')
+
+    await user.click(await screen.findByRole('button', { name: 'Guardar borrador' }))
+
+    expect(await screen.findByText(/Otro administrador modificó este curso/)).toBeInTheDocument()
+    expect(actualizarCurso).toHaveBeenCalledWith('c1', expect.objectContaining({ versionFicha: 3 }))
+
+    vi.mocked(obtenerCursoAdmin).mockResolvedValue({ ...CURSO, resumen: 'Lo del otro' })
+    await user.click(screen.getByRole('button', { name: 'Cargar la versión actual' }))
+
+    await waitFor(() => expect(screen.getByLabelText('Resumen')).toHaveValue('Lo del otro'))
+    expect(screen.queryByText(/Otro administrador modificó/)).not.toBeInTheDocument()
+  })
+
+  it('el modal muestra los errores que no corresponden a un campo', async () => {
+    const user = userEvent.setup()
+    vi.mocked(actualizarLeccion).mockRejectedValue(
+      new ErrorFormacion('La petición no es válida.', 400, {
+        lecciones: 'El curso necesita una lección de reflexión.',
+      }),
+    )
+    renderEn('/admin/cursos/c1')
+
+    await user.click(await screen.findByRole('button', { name: 'Editar lección 1' }))
+    const dialogo = await screen.findByRole('dialog')
+    await user.click(within(dialogo).getByRole('button', { name: 'Guardar lección' }))
+
+    expect(await within(dialogo).findByRole('alert')).toHaveTextContent(
+      'El curso necesita una lección de reflexión.',
+    )
+  })
+
+  it('cambia el recurso de una lección existente sin agregar otra', async () => {
+    const user = userEvent.setup()
+    vi.mocked(listarRecursosAdmin).mockResolvedValue({
+      recursos: [
+        { idRecurso: 'r2', titulo: 'Escucha activa', tipoRecurso: 'texto' } as RecursoAdmin,
+      ],
+      paginacion: { pagina: 1, porPagina: 6, total: 1, totalPaginas: 1 },
+    })
+    vi.mocked(actualizarLeccion).mockResolvedValue(CURSO)
+    vi.mocked(obtenerCursoAdmin).mockResolvedValue({
+      ...CURSO,
+      lecciones: [
+        PRACTICA,
+        { ...DE_RECURSO, recurso: { ...DE_RECURSO.recurso!, estatus: 'retirado' } },
+      ],
+    })
+    renderEn('/admin/cursos/c1')
+
+    await user.click(await screen.findByRole('button', { name: 'Cambiar recurso' }))
+    await user.click(await screen.findByRole('button', { name: 'Usar Escucha activa' }))
+
+    await waitFor(() =>
+      expect(actualizarLeccion).toHaveBeenCalledWith('c1', 'l2', { idRecurso: 'r2' }),
+    )
+    expect(agregarLeccion).not.toHaveBeenCalled()
   })
 })

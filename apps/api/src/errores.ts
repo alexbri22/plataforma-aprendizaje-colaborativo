@@ -38,6 +38,7 @@ export type CodigoError =
   | 'curso_no_encontrado'
   | 'leccion_no_encontrada'
   | 'recurso_en_uso'
+  | 'curso_desactualizado'
 
 export abstract class ErrorDominio extends Error {
   abstract readonly codigo: CodigoError
@@ -433,5 +434,16 @@ export class ErrorRecursoEnUso extends ErrorDominio {
         cursos.length === 1 ? 'el curso' : 'los cursos'
       } ${nombres}. Quítalo de ${cursos.length === 1 ? 'ese curso' : 'esos cursos'} primero, o retíralo.`,
     )
+  }
+}
+
+// La ficha cambió desde que el editor la leyó: otro administrador guardó
+// mientras tanto. Se rechaza en lugar de sobrescribir lo que guardó.
+export class ErrorCursoDesactualizado extends ErrorDominio {
+  readonly codigo = 'curso_desactualizado' as const
+  readonly status = 409
+
+  constructor() {
+    super('Otro administrador modificó este curso mientras lo editabas.')
   }
 }

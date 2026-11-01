@@ -152,7 +152,9 @@ export function PantallaEditarRecurso() {
   const { id } = useParams()
   const consulta = useRecursoAdmin(id)
 
-  if (id && consulta.isPending) {
+  // El formulario se llena una sola vez: no debe nacer de la copia en caché
+  // mientras llega la actual, o se guardarían datos viejos.
+  if (id && !consulta.isFetchedAfterMount && !consulta.isError) {
     return (
       <AppShell seccionActiva="contenido" titulo="Editar recurso">
         <div role="status" aria-label="Cargando recurso">
@@ -162,7 +164,7 @@ export function PantallaEditarRecurso() {
     )
   }
 
-  if (id && consulta.isError) {
+  if (id && consulta.isError && !consulta.data) {
     return (
       <AppShell seccionActiva="contenido" titulo="Editar recurso">
         <AvisoError mensaje={consulta.error.message} />
@@ -188,8 +190,6 @@ function Editor({ recurso }: { recurso: RecursoAdminDetalle | null }) {
     const estado = location.state as { avisoEditor?: unknown } | null
     return typeof estado?.avisoEditor === 'string' ? estado.avisoEditor : null
   })
-  // Cada intento fallido incrementa este contador; el efecto de abajo lleva
-  // el foco al primer campo con error una vez que el DOM ya los muestra.
   // El aviso ya se copió: se quita del historial para que no reaparezca al
   // recargar, conservando a qué página de la lista volver.
   useEffect(() => {
@@ -198,6 +198,8 @@ function Editor({ recurso }: { recurso: RecursoAdminDetalle | null }) {
     navigate(location.pathname, { replace: true, state: { volverA: estado.volverA } })
   }, [location.state, location.pathname, navigate])
 
+  // Cada intento fallido incrementa este contador; el efecto de abajo lleva
+  // el foco al primer campo con error una vez que el DOM ya los muestra.
   const [intentoFallido, setIntentoFallido] = useState(0)
   // Página de la lista de la que se llegó (?pagina=N), para volver a ella.
   const [volverA] = useState(() => {

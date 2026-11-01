@@ -63,6 +63,9 @@ export function useCursoAdmin(idCurso: string | undefined) {
     queryFn: () => obtenerCursoAdmin(idCurso as string),
     enabled: Boolean(idCurso),
     retry: false,
+    // El editor espera esta lectura para llenar su formulario: siempre debe
+    // ocurrir, aunque haya una copia en caché.
+    refetchOnMount: 'always',
   })
 }
 
@@ -82,7 +85,9 @@ export function useCrearCurso() {
 }
 
 export function useActualizarCurso(idCurso: string) {
-  return useMutacionCurso((cambios: Partial<DatosCurso>) => actualizarCurso(idCurso, cambios))
+  return useMutacionCurso((cambios: Partial<DatosCurso> & { versionFicha?: number }) =>
+    actualizarCurso(idCurso, cambios),
+  )
 }
 
 export function useAgregarLeccion(idCurso: string) {

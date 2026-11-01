@@ -1,7 +1,7 @@
 import 'dotenv/config'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { PrismaClient } from '@prisma/client'
-import { normalizarBusqueda } from '@plataforma/shared'
+import { textoDeBusquedaCatalogo } from '@plataforma/shared'
 
 // Carga tres cursos de ejemplo (docs/diseno-desarrollo-formacion.md §4) que
 // reutilizan los recursos de `npm run sembrar-recursos`, así que hay que correr
@@ -151,10 +151,11 @@ try {
           orden,
           estatus: 'publicado',
           idUsuarioAutor: admin?.idUsuario ?? null,
-          // create no pasa por crearCurso: el texto de búsqueda se arma aquí
-          // con la misma regla (textoDeBusqueda en cursos.service.ts).
-          textoBusqueda: normalizarBusqueda(
-            [ficha.titulo, ficha.resumen, ficha.objetivo, ficha.area, ...ficha.elementos].join(' '),
+          // create no pasa por crearCurso: el texto de búsqueda se arma aquí.
+          textoBusqueda: textoDeBusquedaCatalogo(
+            [ficha.titulo, ficha.resumen, ficha.objetivo],
+            ficha.area,
+            ficha.elementos,
           ),
           lecciones: {
             create: lecciones.map(({ recurso, ...leccion }, i) => ({

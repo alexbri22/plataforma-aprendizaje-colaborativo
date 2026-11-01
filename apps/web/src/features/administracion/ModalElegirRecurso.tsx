@@ -11,12 +11,19 @@ export interface ModalElegirRecursoProps {
   idsEnCurso: string[]
   onElegir: (idRecurso: string) => void
   onCerrar: () => void
+  /** Elige el recurso de una lección que ya existe, en vez de agregar una. */
+  reemplazo?: boolean
 }
 
 // Busca en la biblioteca el recurso que será una lección. Solo ofrece los
 // publicados: un curso publicado no puede usar otros, así que elegir un
 // borrador solo aplazaría el problema.
-export function ModalElegirRecurso({ idsEnCurso, onElegir, onCerrar }: ModalElegirRecursoProps) {
+export function ModalElegirRecurso({
+  idsEnCurso,
+  onElegir,
+  onCerrar,
+  reemplazo = false,
+}: ModalElegirRecursoProps) {
   const [busqueda, setBusqueda] = useState('')
   const texto = useValorDiferido(busqueda.trim())
   const [paginaElegida, setPaginaElegida] = useState({ texto, pagina: 1 })
@@ -34,8 +41,12 @@ export function ModalElegirRecurso({ idsEnCurso, onElegir, onCerrar }: ModalEleg
       abierto
       amplio
       onCerrar={onCerrar}
-      titulo="Agregar recurso de la biblioteca"
-      descripcion="La lección usará el recurso tal como está en la biblioteca. Si después lo editas, el curso muestra los cambios."
+      titulo={reemplazo ? 'Cambiar el recurso de la lección' : 'Agregar recurso de la biblioteca'}
+      descripcion={
+        reemplazo
+          ? 'La lección conserva su lugar en el curso, su título y su introducción; solo cambia el recurso.'
+          : 'La lección usará el recurso tal como está en la biblioteca. Si después lo editas, el curso muestra los cambios.'
+      }
     >
       <Input
         label="Buscar en la biblioteca"
@@ -81,10 +92,10 @@ export function ModalElegirRecurso({ idsEnCurso, onElegir, onCerrar }: ModalEleg
                   <Button
                     size="sm"
                     variant="secondary"
-                    aria-label={`Agregar ${r.titulo}`}
+                    aria-label={`${reemplazo ? 'Usar' : 'Agregar'} ${r.titulo}`}
                     onClick={() => onElegir(r.idRecurso)}
                   >
-                    Agregar
+                    {reemplazo ? 'Usar este' : 'Agregar'}
                   </Button>
                 )}
               </li>
