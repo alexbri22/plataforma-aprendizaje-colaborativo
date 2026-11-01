@@ -42,6 +42,9 @@ export function Encabezado() {
                 <NavLink to="/admin/contenido" className={styles.navLink}>
                   Contenido
                 </NavLink>
+                <NavLink to="/admin/cursos" className={styles.navLink}>
+                  Cursos
+                </NavLink>
               </>
             ) : null}
             <NavLink to="/recursos" className={styles.navLink}>

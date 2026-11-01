@@ -34,10 +34,9 @@ const DOMINIO = '@seed.local'
 // descuido: quien lo pasa ya decidió que esa base no tiene nada que
 // proteger de esto todavía.
 const permitido = process.env.PERMITIR_SEMBRAR_PRODUCCION === 'si'
-if (
-  !permitido &&
-  (process.env.NODE_ENV === 'production' || !/localhost|127\.0\.0\.1/.test(config.databaseUrl))
-) {
+const esBaseLocal =
+  process.env.NODE_ENV !== 'production' && /localhost|127\.0\.0\.1/.test(config.databaseUrl)
+if (!permitido && !esBaseLocal) {
   throw new Error(
     'El sembrado es solo para una base de datos local de desarrollo. ' +
       'Para correrlo contra otra base a propósito, pasa PERMITIR_SEMBRAR_PRODUCCION=si.',
@@ -125,8 +124,25 @@ async function limpiar() {
     where: { idUsuario: { in: ids }, rol: 'organizador' },
     select: { idActividad: true },
   })
+  const idsActividades = propias.map((m) => m.idActividad)
+  // Borrar una actividad semilla arrastra en cascada todo lo que cuelga de
+  // ella. Fuera de localhost, si alguien real ya se unió a una, eso incluye
+  // su trabajo: mejor no refrescar que borrarlo.
+  if (!esBaseLocal) {
+    const ajenas = await prisma.membresia.findMany({
+      where: { idActividad: { in: idsActividades }, idUsuario: { notIn: ids } },
+      select: { idActividad: true },
+      distinct: ['idActividad'],
+    })
+    if (ajenas.length > 0) {
+      throw new Error(
+        `No se refresca el sembrado: ${ajenas.length} actividad(es) semilla tienen ` +
+          'miembros que no son @seed.local y se borraría su trabajo.',
+      )
+    }
+  }
   await prisma.actividad.deleteMany({
-    where: { idActividad: { in: propias.map((m) => m.idActividad) } },
+    where: { idActividad: { in: idsActividades } },
   })
   await prisma.usuario.deleteMany({ where: { idUsuario: { in: ids } } })
 }
@@ -495,8 +511,8 @@ async function sembrarEnDesarrolloConContenido(idPorCorreo: IdPorCorreo) {
 }
 
 // "Seed · En desarrollo, equipo grande con historial": un solo equipo de
-// seis, con más de diez avances y diez entradas de bitácora (a propósito,
-// para ver la paginación en acción), y un comentario ya puesto.
+// seis, con doce avances y doce entradas de bitácora, todas comentadas.
+// Con páginas de 20 no llega a paginar: eso lo cubre "Bitácora muy cargada".
 async function sembrarEnDesarrolloEquipoGrande(idPorCorreo: IdPorCorreo) {
   const participantes = ['alumno10', 'alumno11', 'alumno12', 'alumno13', 'alumno14', 'alumno15']
   const idUsuario = (correoLocal: string) => idPorCorreo.get(correoLocal)!.id
@@ -577,8 +593,8 @@ async function sembrarEnDesarrolloEquipoGrande(idPorCorreo: IdPorCorreo) {
     'Se nota la mejora en coordinación del equipo.',
   ]
 
-  // Dos avances y dos entradas por persona (12 de cada uno): supera el
-  // tamaño de página de ambas listas (10) a propósito. Profe comenta todo
+  // Dos avances y dos entradas por persona (12 de cada uno). Con páginas de
+  // 20 no se pagina aquí (eso lo cubre "Bitácora muy cargada"). Profe comenta todo
   // lo que se agrega, para la demo de "qué tanto puede comentar quien
   // organiza o co-organiza" (nucleo §10.4); org además comenta una entrada,
   // para que no todo venga de la misma cuenta.
@@ -636,7 +652,7 @@ async function sembrarEnDesarrolloEquipoGrande(idPorCorreo: IdPorCorreo) {
     }
   }
 
-  console.log('    equipo de 6, 12 avances, 12 entradas de bitácora (para probar la paginación)')
+  console.log('    equipo de 6, 12 avances, 12 entradas de bitácora, todas comentadas')
 }
 
 // "Seed · Bitácora muy cargada (ejemplo de densidad)": el caso que motivó

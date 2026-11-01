@@ -66,14 +66,12 @@ export const ELEMENTOS_COLABORACION = [
 ] as const
 export type ElementoColaboracion = (typeof ELEMENTOS_COLABORACION)[number]
 
-/** Única redacción de los cinco elementos en toda la plataforma (la de
- * Planificar › Proceso colaborativo, que es la que ven quienes organizan). */
 export const ETIQUETAS_ELEMENTO: Readonly<Record<ElementoColaboracion, string>> = {
-  responsabilidades: 'Definición de responsabilidades',
+  responsabilidades: 'Responsabilidades claras',
   interdependencia_positiva: 'Interdependencia positiva',
   responsabilidad_individual_grupal: 'Responsabilidad individual y grupal',
-  interaccion_promotora: 'Interacción',
-  procesamiento_grupal: 'Evaluación de grupo y habilidades sociales',
+  interaccion_promotora: 'Interacción promotora',
+  procesamiento_grupal: 'Procesamiento del grupo',
 }
 
 /** Estado editorial de un recurso. Solo el administrador crea contenido en
@@ -132,6 +130,58 @@ export interface Paginacion {
   totalPaginas: number
 }
 
+// ---- Cursos (docs/diseno-desarrollo-formacion.md §2.4, §5 y §9) ----
+
+/** Un curso usa el mismo ciclo editorial que un recurso (borrador →
+ * publicado → retirado → publicado); el tipo se comparte. */
+export type EstatusCurso = EstatusRecurso
+
+export const NIVELES_CURSO = ['inicial', 'intermedio', 'avanzado'] as const
+export type NivelCurso = (typeof NIVELES_CURSO)[number]
+
+export const ETIQUETAS_NIVEL_CURSO: Readonly<Record<NivelCurso, string>> = {
+  inicial: 'Inicial',
+  intermedio: 'Intermedio',
+  avanzado: 'Avanzado',
+}
+
+/** Una lección o reutiliza un recurso de la biblioteca (`recurso`) o es
+ * contenido propio del curso: lectura, práctica guiada o reflexión (§5.2). */
+export const TIPOS_LECCION = ['recurso', 'lectura', 'practica', 'reflexion'] as const
+export type TipoLeccion = (typeof TIPOS_LECCION)[number]
+
+export const ETIQUETAS_TIPO_LECCION: Readonly<Record<TipoLeccion, string>> = {
+  recurso: 'Recurso de la biblioteca',
+  lectura: 'Lectura',
+  practica: 'Práctica',
+  reflexion: 'Reflexión',
+}
+
+/** Un curso del MVP tiene entre dos y cinco lecciones (§2.4). El máximo se
+ * aplica siempre; el mínimo, al publicar. */
+export const MIN_LECCIONES_CURSO = 2
+export const MAX_LECCIONES_CURSO = 5
+
+export const LARGO_MAXIMO_CURSO = {
+  titulo: 120,
+  resumen: 300,
+  objetivo: 600,
+  practicaFinal: 600,
+} as const
+
+export const LARGO_MAXIMO_LECCION = {
+  titulo: 120,
+  contenido: 20_000,
+} as const
+
+export function esNivelCurso(valor: string): valor is NivelCurso {
+  return (NIVELES_CURSO as readonly string[]).includes(valor)
+}
+
+export function esTipoLeccion(valor: string): valor is TipoLeccion {
+  return (TIPOS_LECCION as readonly string[]).includes(valor)
+}
+
 export function esSeccionFormativa(valor: string): valor is SeccionFormativa {
   return (SECCIONES_FORMATIVAS as readonly string[]).includes(valor)
 }
@@ -175,4 +225,22 @@ export function normalizarBusqueda(texto: string): string {
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/_/g, ' ')
+}
+
+/** Texto contra el que busca el catálogo: lo escrito más el área y los
+ * elementos con su etiqueta visible. Con el identificador, buscar "Procesamiento
+ * del grupo" no encontraría `procesamiento_grupal`. Lo usan los servicios de
+ * recursos y cursos y los scripts de semilla, para que la regla sea una sola. */
+export function textoDeBusquedaCatalogo(
+  textos: string[],
+  area: AreaHabilidad | null,
+  elementos: ElementoColaboracion[],
+): string {
+  return normalizarBusqueda(
+    [
+      ...textos,
+      area ? ETIQUETAS_AREA[area] : '',
+      ...elementos.map((e) => ETIQUETAS_ELEMENTO[e]),
+    ].join(' '),
+  )
 }

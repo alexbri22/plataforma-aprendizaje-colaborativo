@@ -1,8 +1,4 @@
-import {
-  ETIQUETAS_ELEMENTO,
-  type ElementoEspacioEquipo,
-  type FuncionSeguimiento,
-} from '@plataforma/shared'
+import type { ElementoEspacioEquipo, FuncionSeguimiento } from '@plataforma/shared'
 
 // Copy en español para las funciones de seguimiento y sus estados
 // (docs/diseno-desarrollo-general.md §6.2). Vive en el cliente y no en
@@ -184,29 +180,29 @@ export const TAREAS_PROCESO_COLABORATIVO: {
 }[] = [
   {
     tarea: 'definicion_responsabilidades',
-    etiqueta: ETIQUETAS_ELEMENTO.responsabilidades,
+    etiqueta: 'Definición de responsabilidades',
     descripcion: 'Qué rol o tarea le corresponde a cada integrante del equipo.',
   },
   {
     tarea: 'interdependencia_positiva',
-    etiqueta: ETIQUETAS_ELEMENTO.interdependencia_positiva,
+    etiqueta: 'Interdependencia positiva',
     descripcion: 'Que el resultado de cada integrante dependa del trabajo de todo el equipo.',
   },
   {
     tarea: 'responsabilidad_individual_grupal',
-    etiqueta: ETIQUETAS_ELEMENTO.responsabilidad_individual_grupal,
+    etiqueta: 'Responsabilidad individual y grupal',
     descripcion:
       'Que se distinga la contribución de cada integrante dentro del resultado del equipo.',
   },
   {
     tarea: 'interaccion',
-    etiqueta: ETIQUETAS_ELEMENTO.interaccion_promotora,
+    etiqueta: 'Interacción',
     descripcion:
       'Que los integrantes se ayuden y se den retroalimentación mientras trabajan juntos.',
   },
   {
     tarea: 'evaluacion_grupo_habilidades_sociales',
-    etiqueta: ETIQUETAS_ELEMENTO.procesamiento_grupal,
+    etiqueta: 'Evaluación de grupo y habilidades sociales',
     descripcion:
       'Cómo el equipo reflexiona sobre su funcionamiento y las habilidades sociales que practicó.',
   },

@@ -19,11 +19,13 @@ export type Acumulado = Partial<Record<CategoriaInsignia, number>>
 export interface PerfilPropio extends UsuarioPublico {
   nivelEstudios: NivelEstudios
   institucionEducativa: string
+  /** Si otras personas ven el correo en el perfil básico. */
+  correoPublico: boolean
   acumulado: Acumulado
 }
 
 /** Lo que otro usuario con sesión ve: datos básicos de la cuenta (nombre,
- * correo, nivel de estudios, institución), foto y rangos
+ * correo si lo hizo público, nivel de estudios, institución), foto y rangos
  * (docs/diseno-desarrollo-nucleo.md §6.3). Nunca la contraseña, el tipo ni el
  * estado de la cuenta, ni lo que le dijeron al reconocerlo. */
 export interface PerfilBasico {
@@ -31,7 +33,9 @@ export interface PerfilBasico {
   nombre: string
   apellidoPaterno: string
   apellidoMaterno: string
-  correo: string
+  /** null si la persona lo mantiene privado y quien consulta no es ella
+   * misma ni un administrador. */
+  correo: string | null
   nivelEstudios: NivelEstudios
   institucionEducativa: string
   fotoUrl: string | null
@@ -49,16 +53,33 @@ export async function obtenerPerfilPropio(idUsuario: string): Promise<PerfilProp
     ...aUsuarioPublico(usuario),
     nivelEstudios: usuario.nivelEstudios,
     institucionEducativa: usuario.institucionEducativa,
+    correoPublico: usuario.correoPublico,
     acumulado: await acumuladoDeUsuario(idUsuario),
   }
 }
 
-export async function obtenerPerfilBasico(idUsuario: string): Promise<PerfilBasico> {
+/** Quien consulta el perfil básico: decide si ve un correo privado. */
+export interface Consultante {
+  idUsuario: string
+  tipoCuenta: UsuarioPublico['tipoCuenta']
+}
+
+export async function obtenerPerfilBasico(
+  idUsuario: string,
+  consultante: Consultante,
+): Promise<PerfilBasico> {
   const usuario = await prisma.usuario.findUnique({
     where: { idUsuario },
     include: INCLUIR_FOTO,
   })
   if (!usuario) throw new ErrorUsuarioNoEncontrado()
+
+  // El administrador lo ve siempre: lo necesita para identificar cuentas y
+  // restablecer contraseñas, y ya lo tiene en el panel de cuentas.
+  const veCorreo =
+    usuario.correoPublico ||
+    consultante.idUsuario === idUsuario ||
+    consultante.tipoCuenta === 'administrador'
 
   const publico = aUsuarioPublico(usuario)
   return {
@@ -66,7 +87,7 @@ export async function obtenerPerfilBasico(idUsuario: string): Promise<PerfilBasi
     nombre: publico.nombre,
     apellidoPaterno: publico.apellidoPaterno,
     apellidoMaterno: publico.apellidoMaterno,
-    correo: publico.correo,
+    correo: veCorreo ? publico.correo : null,
     nivelEstudios: usuario.nivelEstudios,
     institucionEducativa: usuario.institucionEducativa,
     fotoUrl: publico.fotoUrl,
@@ -81,6 +102,18 @@ export async function actualizarDatosPerfil(
   const usuario = await prisma.usuario.update({
     where: { idUsuario },
     data: datos,
+    include: INCLUIR_FOTO,
+  })
+  return aUsuarioPublico(usuario)
+}
+
+export async function cambiarVisibilidadCorreo(
+  idUsuario: string,
+  correoPublico: boolean,
+): Promise<UsuarioPublico> {
+  const usuario = await prisma.usuario.update({
+    where: { idUsuario },
+    data: { correoPublico },
     include: INCLUIR_FOTO,
   })
   return aUsuarioPublico(usuario)

@@ -40,8 +40,10 @@ subida mockeada y, del lado del API, el rechazo de tipos y firmas.
 ## Quién ve qué
 
 - **Yo** veo todo: frases con su actividad, avance hacia el siguiente nivel.
-- **Otra persona con sesión** ve mis datos básicos (nombre, correo, estudios e
-  institución), mi foto y mis rangos (§6.3). No ve frases ni avance: eso es de
-  quien recibe y de quien organizó.
+- **Otra persona con sesión** ve mis datos básicos (nombre, estudios e
+  institución), mi foto y mis rangos (§6.3). El correo solo si lo hice público
+  con el interruptor de "Tus datos"; es privado por defecto. No ve frases ni
+  avance: eso es de quien recibe y de quien organizó.
+- **Quien administra** ve además mi correo aunque sea privado.
 - No hay directorio: al perfil ajeno se llega desde la lista de participantes
   (P-11 del general).

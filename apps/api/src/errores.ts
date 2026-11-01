@@ -37,6 +37,10 @@ export type CodigoError =
   | 'comentario_no_encontrado'
   | 'recurso_no_encontrado'
   | 'archivo_invalido'
+  | 'curso_no_encontrado'
+  | 'leccion_no_encontrada'
+  | 'recurso_en_uso'
+  | 'curso_desactualizado'
 
 export abstract class ErrorDominio extends Error {
   abstract readonly codigo: CodigoError
@@ -420,5 +424,51 @@ export class ErrorArchivoInvalido extends ErrorDominio {
 
   constructor(mensaje: string) {
     super(mensaje)
+  }
+}
+
+export class ErrorCursoNoEncontrado extends ErrorDominio {
+  readonly codigo = 'curso_no_encontrado' as const
+  readonly status = 404
+
+  constructor() {
+    super('No encontramos este curso.')
+  }
+}
+
+export class ErrorLeccionNoEncontrada extends ErrorDominio {
+  readonly codigo = 'leccion_no_encontrada' as const
+  readonly status = 404
+
+  constructor() {
+    super('No encontramos esta lección en el curso.')
+  }
+}
+
+// Un recurso que forma parte de algún curso no se puede eliminar
+// (docs/diseno-desarrollo-formacion.md, decisiones del incremento 2). El
+// mensaje nombra los cursos para que el administrador sepa dónde quitarlo.
+export class ErrorRecursoEnUso extends ErrorDominio {
+  readonly codigo = 'recurso_en_uso' as const
+  readonly status = 409
+
+  constructor(readonly cursos: { idCurso: string; titulo: string }[]) {
+    const nombres = cursos.map((c) => `«${c.titulo}»`).join(', ')
+    super(
+      `No se puede eliminar: este recurso forma parte de ${
+        cursos.length === 1 ? 'el curso' : 'los cursos'
+      } ${nombres}. Quítalo de ${cursos.length === 1 ? 'ese curso' : 'esos cursos'} primero, o retíralo.`,
+    )
+  }
+}
+
+// La ficha cambió desde que el editor la leyó: otro administrador guardó
+// mientras tanto. Se rechaza en lugar de sobrescribir lo que guardó.
+export class ErrorCursoDesactualizado extends ErrorDominio {
+  readonly codigo = 'curso_desactualizado' as const
+  readonly status = 409
+
+  constructor() {
+    super('Otro administrador modificó este curso mientras lo editabas.')
   }
 }

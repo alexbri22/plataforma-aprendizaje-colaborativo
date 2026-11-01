@@ -76,6 +76,16 @@ describe('PantallaPerfilDeUsuario', () => {
     ).not.toBeNull()
   })
 
+  it('no muestra el correo si la persona lo mantiene privado', async () => {
+    vi.mocked(obtenerPerfilDeUsuario).mockResolvedValue({ ...OTRA, correo: null })
+
+    renderPantalla('u2')
+
+    expect(await screen.findByRole('heading', { name: 'Bruno Ruiz Mena' })).toBeInTheDocument()
+    expect(screen.queryByText(/@example\.com/)).not.toBeInTheDocument()
+    expect(screen.getByText('Posgrado · IPN')).toBeInTheDocument()
+  })
+
   it('el propio id redirige a Mi perfil', async () => {
     vi.mocked(obtenerPerfilDeUsuario).mockResolvedValue({ ...OTRA, idUsuario: 'u1' })
 

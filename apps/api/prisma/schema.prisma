@@ -150,6 +150,9 @@ model Usuario {
   // Único sin distinguir mayúsculas (docs/diseno-desarrollo-nucleo.md §2.5 y
   // §6.2): citext en lugar de un índice funcional sobre lower(correo).
   correo               String        @unique @db.Citext
+  // Si otras personas ven el correo en el perfil básico. Privado por defecto
+  // (docs/diseno-desarrollo-nucleo.md §6.3); el administrador lo ve siempre.
+  correoPublico        Boolean       @default(false) @map("correo_publico")
   contrasena           String
   tipoCuenta           TipoCuenta    @default(usuario) @map("tipo_cuenta")
   estadoCuenta         EstadoCuenta  @default(activa) @map("estado_cuenta")
@@ -161,6 +164,7 @@ model Usuario {
   foto             FotoDePerfil?
 
   recursosFormativos RecursoFormativo[]
+  cursos             Curso[]
   pistasVistas       PistaVista[]
 
   @@map("usuarios")
@@ -616,8 +620,9 @@ model RecursoFormativo {
   fechaCreacion      DateTime         @default(now()) @map("fecha_creacion")
   fechaActualizacion DateTime         @updatedAt @map("fecha_actualizacion")
 
-  autor   Usuario?        @relation(fields: [idUsuarioAutor], references: [idUsuario], onDelete: SetNull)
-  archivo ArchivoRecurso?
+  autor     Usuario?        @relation(fields: [idUsuarioAutor], references: [idUsuario], onDelete: SetNull)
+  archivo   ArchivoRecurso?
+  lecciones LeccionCurso[]
 
   @@index([estatus, orden])
   @@map("recursos_formativos")
@@ -637,4 +642,87 @@ model ArchivoRecurso {
   recurso RecursoFormativo @relation(fields: [idRecurso], references: [idRecurso], onDelete: Cascade)
 
   @@map("archivos_recurso")
+}
+
+// Cursos (docs/diseno-desarrollo-formacion.md §2.4, §5 y §9.1). Un curso es
+// una secuencia ordenada de lecciones; cada lección reutiliza un recurso de la
+// biblioteca o es contenido propio del curso (lectura, práctica, reflexión).
+//
+// Simplificaciones respecto a §9.1, mientras solo el administrador crea
+// contenido: no hay VersionCurso ni RevisionContenido (el curso se edita en
+// sitio, como los recursos) ni ModuloCurso (con 2-5 lecciones basta el orden).
+
+enum NivelCurso {
+  inicial
+  intermedio
+  avanzado
+
+  @@map("nivel_curso")
+}
+
+enum TipoLeccion {
+  recurso
+  lectura
+  practica
+  reflexion
+
+  @@map("tipo_leccion")
+}
+
+// `estatus` reutiliza el enum de recursos: el ciclo editorial es el mismo.
+// La duración no se guarda: se calcula sumando la de sus lecciones, para que
+// nunca se desfase de lo que el curso contiene. Como en recursos, un borrador
+// puede estar incompleto y los mínimos se exigen al publicar (servicio).
+model Curso {
+  idCurso            String         @id @default(uuid()) @map("id_curso")
+  titulo             String
+  resumen            String         @default("")
+  objetivo           String         @default("")
+  area               String?
+  elementos          String[]       @default([])
+  nivel              NivelCurso?
+  practicaFinal      String         @default("") @map("practica_final")
+  orden              Int            @default(0)
+  estatus            EstatusRecurso @default(borrador)
+  textoBusqueda      String         @default("") @map("texto_busqueda")
+  // Sube con cada guardado de la ficha. El editor manda la que leyó y el
+  // servidor rechaza el guardado si cambió: así un administrador no pisa sin
+  // saberlo lo que otro guardó mientras tanto. Las lecciones no la mueven,
+  // porque se guardan una por una y no reescriben nada ajeno.
+  versionFicha       Int            @default(0) @map("version_ficha")
+  idUsuarioAutor     String?        @map("id_usuario_autor")
+  fechaCreacion      DateTime       @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime       @updatedAt @map("fecha_actualizacion")
+
+  autor     Usuario?       @relation(fields: [idUsuarioAutor], references: [idUsuario], onDelete: SetNull)
+  lecciones LeccionCurso[]
+
+  @@index([estatus, orden])
+  @@map("cursos")
+}
+
+// `id_recurso` solo en lecciones de tipo recurso; las demás llevan su propio
+// `contenido`. RESTRICT en la llave hacia el recurso: un recurso que forma
+// parte de algún curso no se puede borrar (decisión de producto); el servicio
+// lo comprueba antes para dar un error claro, y la base lo garantiza.
+//
+// La unicidad (curso, orden) obliga a reordenar en dos pasos dentro de una
+// transacción (ver reordenarLecciones en cursos.service.ts).
+model LeccionCurso {
+  idLeccion   String      @id @default(uuid()) @map("id_leccion")
+  idCurso     String      @map("id_curso")
+  orden       Int
+  titulo      String      @default("")
+  tipo        TipoLeccion
+  idRecurso   String?     @map("id_recurso")
+  contenido   String      @default("")
+  obligatoria Boolean     @default(true)
+  duracionMin Int?        @map("duracion_min")
+
+  curso   Curso             @relation(fields: [idCurso], references: [idCurso], onDelete: Cascade)
+  recurso RecursoFormativo? @relation(fields: [idRecurso], references: [idRecurso], onDelete: Restrict)
+
+  @@unique([idCurso, orden])
+  @@index([idRecurso])
+  @@map("lecciones_curso")
 }

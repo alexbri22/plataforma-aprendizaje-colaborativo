@@ -223,3 +223,11 @@ export function validarPaginacion(
   if (Object.keys(detalle).length > 0) throw new ErrorValidacion(detalle)
   return { pagina, porPagina }
 }
+
+/** ?estatus del listado del panel. */
+export function validarFiltroEstatus(query: Record<string, unknown>): EstatusRecurso | undefined {
+  const { estatus } = query
+  if (typeof estatus !== 'string' || !estatus) return undefined
+  if (esEstatusRecurso(estatus)) return estatus
+  throw new ErrorValidacion({ estatus: 'Estatus desconocido.' })
+}

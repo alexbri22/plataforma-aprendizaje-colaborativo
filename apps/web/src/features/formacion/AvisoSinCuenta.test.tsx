@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { obtenerSesionActual, type Usuario } from '../cuentas/api'
-import { listarRecursos } from './formacion.api'
+import { listarCursos, listarRecursos } from './formacion.api'
 import { PantallaRecursos } from './PantallaRecursos'
 
 vi.mock('../cuentas/api', async () => {
@@ -14,7 +14,7 @@ vi.mock('../cuentas/api', async () => {
 
 vi.mock('./formacion.api', async () => {
   const real = await vi.importActual<typeof import('./formacion.api')>('./formacion.api')
-  return { ...real, listarRecursos: vi.fn() }
+  return { ...real, listarRecursos: vi.fn(), listarCursos: vi.fn() }
 })
 
 const ANA: Usuario = {
@@ -44,6 +44,10 @@ describe('AvisoSinCuenta', () => {
     vi.mocked(listarRecursos).mockResolvedValue({
       recursos: [],
       paginacion: { pagina: 1, porPagina: 9, total: 0, totalPaginas: 0 },
+    })
+    vi.mocked(listarCursos).mockResolvedValue({
+      cursos: [],
+      paginacion: { pagina: 1, porPagina: 6, total: 0, totalPaginas: 0 },
     })
   })
 

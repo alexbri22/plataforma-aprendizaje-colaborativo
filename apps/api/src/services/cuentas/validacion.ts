@@ -150,25 +150,35 @@ export interface CambioContrasenaValidado {
 export type ActualizacionPerfilValidada =
   | { tipo: 'datos'; datos: DatosPerfilValidados }
   | { tipo: 'contrasena'; cambio: CambioContrasenaValidado }
+  | { tipo: 'visibilidad'; correoPublico: boolean }
 
 const CAMPOS_DATOS = ['nombre', 'apellidoPaterno', 'apellidoMaterno'] as const
 const CAMPOS_CONTRASENA = ['contrasenaActual', 'contrasenaNueva'] as const
 
-// PATCH /api/usuarios/yo hace dos cosas distintas según lo que traiga el
-// cuerpo (docs/diseno-desarrollo-nucleo.md §6.5: "edita nombre y apellidos,
-// o cambia la contraseña"). Son excluyentes: un cuerpo con campos de ambas
-// se rechaza entero, porque aplicar solo una parte y responder éxito sería
-// mentirle al cliente sobre la otra.
+// PATCH /api/usuarios/yo hace tres cosas distintas según lo que traiga el
+// cuerpo (docs/diseno-desarrollo-nucleo.md §6.5: edita nombre y apellidos,
+// cambia la contraseña o cambia la visibilidad del correo). Son excluyentes:
+// un cuerpo con campos de más de una se rechaza entero, porque aplicar solo
+// una parte y responder éxito sería mentirle al cliente sobre la otra.
 export function validarActualizacionPerfil(cuerpo: unknown): ActualizacionPerfilValidada {
   const datos = (cuerpo && typeof cuerpo === 'object' ? cuerpo : {}) as Record<string, unknown>
   const detallePorCampo: Record<string, string> = {}
 
   const traeDatos = CAMPOS_DATOS.some((campo) => campo in datos)
   const traeContrasena = CAMPOS_CONTRASENA.some((campo) => campo in datos)
-  if (traeDatos && traeContrasena) {
+  const traeVisibilidad = 'correoPublico' in datos
+  if ([traeDatos, traeContrasena, traeVisibilidad].filter(Boolean).length > 1) {
     throw new ErrorValidacion({
-      cuerpo: 'Edita tus datos o cambia la contraseña, pero no ambos en la misma petición.',
+      cuerpo:
+        'Edita tus datos, cambia la contraseña o la visibilidad del correo, una cosa por petición.',
     })
+  }
+
+  if (traeVisibilidad) {
+    if (typeof datos.correoPublico !== 'boolean') {
+      throw new ErrorValidacion({ correoPublico: 'Indica si tu correo es público o privado.' })
+    }
+    return { tipo: 'visibilidad', correoPublico: datos.correoPublico }
   }
 
   if (traeContrasena) {

@@ -26,6 +26,7 @@ export type SeccionApp =
   | 'recursos'
   | 'cuentas'
   | 'contenido'
+  | 'cursos'
 
 interface ItemNav {
   id: SeccionApp
@@ -119,6 +120,21 @@ function IconoRecursos() {
         fill="none"
         stroke="currentColor"
         strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function IconoCursos() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <path
+        d="m10 4 8 4-8 4-8-4 8-4ZM5.5 10v4c1.2 1.2 2.7 1.8 4.5 1.8s3.3-.6 4.5-1.8v-4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
         strokeLinejoin="round"
       />
     </svg>
@@ -224,6 +240,7 @@ const ITEMS_NAV: ItemNav[] = [
 const ITEMS_NAV_ADMIN: ItemNav[] = [
   { id: 'cuentas', etiqueta: 'Cuentas', to: '/admin/cuentas', Icono: IconoCuentas },
   { id: 'contenido', etiqueta: 'Contenido', to: '/admin/contenido', Icono: IconoRecursos },
+  { id: 'cursos', etiqueta: 'Cursos', to: '/admin/cursos', Icono: IconoCursos },
 ]
 
 function IconoHistorial() {

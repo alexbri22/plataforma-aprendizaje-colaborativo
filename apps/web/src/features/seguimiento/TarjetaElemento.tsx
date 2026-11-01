@@ -62,13 +62,19 @@ export function TarjetaElemento({
   const [confirmandoEliminar, setConfirmandoEliminar] = useState(false)
   const encabezadoRef = useRef<HTMLButtonElement>(null)
 
-  // Solo al montar: expandidaInicial refleja el id pedido por la URL en ese
-  // momento, no algo que deba reabrirse después si la persona la colapsa a
-  // propósito.
+  // expandidaInicial refleja el id pedido por la URL. La tarjeta puede ya
+  // estar montada cuando cambia (enlace del historial a un elemento de la
+  // página actual), así que se reacciona al cambio y no solo al montar;
+  // ajuste durante el render, como en PantallaMiBitacora. Solo al pasar a
+  // true: si la persona la colapsa después, no se reabre sola.
+  const [expandidaInicialPrevia, setExpandidaInicialPrevia] = useState(expandidaInicial)
+  if (expandidaInicial !== expandidaInicialPrevia) {
+    setExpandidaInicialPrevia(expandidaInicial)
+    if (expandidaInicial) setExpandida(true)
+  }
   useEffect(() => {
     if (expandidaInicial) encabezadoRef.current?.scrollIntoView({ block: 'center' })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [expandidaInicial])
 
   // Abre la edición con lo que hay ahora (pudo cambiar por un refetch).
   function empezarEdicion() {

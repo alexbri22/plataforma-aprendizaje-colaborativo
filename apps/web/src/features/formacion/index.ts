@@ -6,10 +6,23 @@
  */
 export { PantallaRecursos } from './PantallaRecursos'
 export { PantallaRecurso } from './PantallaRecurso'
+export { PantallaCurso } from './PantallaCurso'
+export { PantallaLeccion } from './PantallaLeccion'
 export { Markdown } from './Markdown'
-export { formatoTamano } from './formato'
+export { etiquetaLeccion, formatoTamano } from './formato'
 export { ErrorFormacion, urlArchivo, urlArchivoAdmin } from './formacion.api'
-export type { DatosRecurso, RecursoAdmin, RecursoPublico, ResumenRecurso } from './formacion.api'
+export type {
+  CursoAdmin,
+  DatosCurso,
+  DatosLeccion,
+  DatosRecurso,
+  LeccionAdmin,
+  RecursoAdmin,
+  RecursoAdminDetalle,
+  RecursoPublico,
+  ResumenCursoAdmin,
+  ResumenRecurso,
+} from './formacion.api'
 export {
   useActualizarRecurso,
   useCrearRecurso,
@@ -21,3 +34,15 @@ export {
   useRecursosPublicos,
   useSubirArchivoRecurso,
 } from './useRecursos'
+export {
+  useActualizarCurso,
+  useActualizarLeccion,
+  useAgregarLeccion,
+  useCrearCurso,
+  useCursoAdmin,
+  useCursosAdmin,
+  useEliminarCurso,
+  useEliminarLeccion,
+  useReordenarLecciones,
+} from './useCursos'
+export { useValorDiferido } from './useValorDiferido'
