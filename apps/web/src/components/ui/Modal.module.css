@@ -25,6 +25,12 @@
   text-align: left;
 }
 
+.amplio {
+  max-width: 40rem;
+  max-height: calc(100vh - var(--space-8));
+  overflow-y: auto;
+}
+
 .dialogo:focus-visible {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;

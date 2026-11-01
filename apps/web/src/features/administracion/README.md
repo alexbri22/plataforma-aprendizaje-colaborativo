@@ -54,7 +54,13 @@ otras desde… todavía no: por ahora la promoción es solo por este script.
   (`docs/diseno-desarrollo-formacion.md` §6.4) y sus errores se muestran junto
   a cada campo.
 
-Ambas consumen los hooks de `features/formacion`, dueña del módulo.
+- `PantallaCursos` (`/admin/cursos`) y `PantallaEditarCurso`
+  (`/admin/cursos/nuevo` y `/admin/cursos/:id`) — ficha, lecciones (de la
+  biblioteca con `ModalElegirRecurso` o propias con `ModalLeccion`), orden con
+  flechas y requisitos para publicar en vivo (`requisitosCurso.ts`, una ayuda:
+  quien decide es el servidor).
+
+Todas consumen los hooks de `features/formacion`, dueña del módulo.
 
 **Fuera de este incremento:** activar/desactivar cuenta
 (`PATCH /api/admin/usuarios/{id}`) y umbrales de insignias.

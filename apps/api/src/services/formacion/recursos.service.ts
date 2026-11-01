@@ -6,6 +6,7 @@ import {
   esTipoArchivoRecurso,
   esUrlSegura,
   normalizarBusqueda,
+  textoDeBusquedaCatalogo,
   type AreaHabilidad,
   type ElementoColaboracion,
   type EstatusRecurso,
@@ -14,7 +15,13 @@ import {
   type TipoRecurso,
 } from '@plataforma/shared'
 import { prisma } from '../../data/prisma.js'
-import { ErrorArchivoInvalido, ErrorRecursoNoEncontrado, ErrorValidacion } from '../../errores.js'
+import {
+  ErrorArchivoInvalido,
+  ErrorRecursoEnUso,
+  ErrorRecursoNoEncontrado,
+  ErrorValidacion,
+} from '../../errores.js'
+import { cursosQueUsanRecurso } from './usoDeRecursos.js'
 import type { DatosRecurso, FiltrosRecursos, PeticionPagina } from './validacion.js'
 
 /*
@@ -62,6 +69,22 @@ export interface RecursoAdmin extends RecursoPublico {
   estatus: EstatusRecurso
   fechaCreacion: string
   autor: { idUsuario: string; nombre: string } | null
+}
+
+/** Un recurso visto en su editor: además dice en qué cursos se usa, para
+ * avisar antes de retirarlo y explicar por qué no se puede eliminar. */
+export interface RecursoAdminDetalle extends RecursoAdmin {
+  usadoEn: { idCurso: string; titulo: string; estatus: EstatusRecurso }[]
+}
+
+async function conUso(recurso: RecursoAdmin): Promise<RecursoAdminDetalle> {
+  return { ...recurso, usadoEn: await cursosQueUsanRecurso(recurso.idRecurso) }
+}
+
+export interface FiltrosRecursosAdmin {
+  texto?: string
+  estatus?: EstatusRecurso
+  tiposRecurso?: TipoRecurso[]
 }
 
 // Nunca se selecciona el contenido del archivo al leer recursos: puede pesar
@@ -211,19 +234,26 @@ export async function obtenerArchivoAdmin(
   return archivo
 }
 
+/** Todos los recursos para el panel. Los filtros sirven también al editor de
+ * cursos, que busca en la biblioteca el recurso que quiere usar como lección. */
 export async function listarRecursosAdmin(
   pagina: PeticionPagina = PRIMERA_PAGINA,
+  filtros: FiltrosRecursosAdmin = {},
 ): Promise<PaginaDe<RecursoAdmin>> {
-  return paginar({}, pagina, aAdmin)
+  const where: Prisma.RecursoFormativoWhereInput = {}
+  if (filtros.estatus) where.estatus = filtros.estatus
+  if (filtros.tiposRecurso) where.tipoRecurso = { in: filtros.tiposRecurso }
+  if (filtros.texto) where.textoBusqueda = { contains: normalizarBusqueda(filtros.texto) }
+  return paginar(where, pagina, aAdmin)
 }
 
-export async function obtenerRecursoAdmin(idRecurso: string): Promise<RecursoAdmin> {
+export async function obtenerRecursoAdmin(idRecurso: string): Promise<RecursoAdminDetalle> {
   const fila = await prisma.recursoFormativo.findUnique({
     where: { idRecurso },
     include: INCLUIR_METADATOS,
   })
   if (!fila) throw new ErrorRecursoNoEncontrado()
-  return aAdmin(fila)
+  return conUso(aAdmin(fila))
 }
 
 type RecursoCombinado = DatosRecurso & { tieneArchivo: boolean }
@@ -234,7 +264,7 @@ type RecursoCombinado = DatosRecurso & { tieneArchivo: boolean }
 function textoDeBusqueda(
   r: Pick<DatosRecurso, 'titulo' | 'resumen' | 'area' | 'elementos'>,
 ): string {
-  return normalizarBusqueda([r.titulo, r.resumen, r.area ?? '', ...r.elementos].join(' '))
+  return textoDeBusquedaCatalogo([r.titulo, r.resumen], r.area, r.elementos)
 }
 
 /**
@@ -298,7 +328,7 @@ const TRANSICIONES: Readonly<Record<EstatusRecurso, readonly EstatusRecurso[]>> 
 export async function crearRecurso(
   idUsuarioAutor: string,
   datos: Partial<DatosRecurso>,
-): Promise<RecursoAdmin> {
+): Promise<RecursoAdminDetalle> {
   // El alta ya validó sección, título y tipo como obligatorios.
   const combinado = {
     resumen: '',
@@ -342,7 +372,7 @@ export async function crearRecurso(
     },
     include: INCLUIR_METADATOS,
   })
-  return aAdmin(fila)
+  return { ...aAdmin(fila), usadoEn: [] }
 }
 
 /**
@@ -370,7 +400,7 @@ async function conRecursoBloqueado<T>(
 export async function actualizarRecurso(
   idRecurso: string,
   cambios: Partial<DatosRecurso>,
-): Promise<RecursoAdmin> {
+): Promise<RecursoAdminDetalle> {
   const fila = await conRecursoBloqueado(idRecurso, async (tx) => {
     const actual = await tx.recursoFormativo.findUniqueOrThrow({
       where: { idRecurso },
@@ -417,13 +447,28 @@ export async function actualizarRecurso(
       include: INCLUIR_METADATOS,
     })
   })
-  return aAdmin(fila)
+  return conUso(aAdmin(fila))
 }
 
-/** Borra el recurso y, en cascada, su archivo. No hay vuelta atrás: para
- * ocultarlo de forma reversible está retirar. */
+/** Borra el recurso y su archivo, salvo que algún curso lo use: entonces
+ * hay que quitarlo de esos cursos primero, o retirarlo. La llave RESTRICT de
+ * lecciones_curso lo garantiza en la base; aquí se comprueba antes para dar
+ * un mensaje que nombre los cursos. */
 export async function eliminarRecurso(idRecurso: string): Promise<void> {
-  await conRecursoBloqueado(idRecurso, (tx) => tx.recursoFormativo.delete({ where: { idRecurso } }))
+  await conRecursoBloqueado(idRecurso, async (tx) => {
+    const cursos = await cursosQueUsanRecurso(idRecurso, tx)
+    if (cursos.length > 0) throw new ErrorRecursoEnUso(cursos)
+    try {
+      await tx.recursoFormativo.delete({ where: { idRecurso } })
+    } catch (error) {
+      // Una lección agregada después de la comprobación: la llave foránea
+      // rechaza el borrado (P2003) y se responde igual.
+      if ((error as { code?: string }).code === 'P2003') {
+        throw new ErrorRecursoEnUso(await cursosQueUsanRecurso(idRecurso))
+      }
+      throw error
+    }
+  })
 }
 
 // Firma de un PDF: los primeros bytes son "%PDF-". Se comprueba además del
@@ -435,7 +480,7 @@ export async function guardarArchivoRecurso(
   tipo: string,
   nombre: string,
   contenido: Buffer,
-): Promise<RecursoAdmin> {
+): Promise<RecursoAdminDetalle> {
   // El contenido se valida antes de abrir la transacción: no depende del
   // estado del recurso y así el bloqueo dura lo menos posible.
   if (!esTipoArchivoRecurso(tipo)) throw new ErrorArchivoInvalido('El archivo debe ser PDF.')
@@ -474,7 +519,7 @@ export async function guardarArchivoRecurso(
   return obtenerRecursoAdmin(idRecurso)
 }
 
-export async function quitarArchivoRecurso(idRecurso: string): Promise<RecursoAdmin> {
+export async function quitarArchivoRecurso(idRecurso: string): Promise<RecursoAdminDetalle> {
   await conRecursoBloqueado(idRecurso, async (tx) => {
     const actual = await tx.recursoFormativo.findUniqueOrThrow({
       where: { idRecurso },

@@ -576,7 +576,65 @@ Decisiones tomadas con el equipo antes de construir la biblioteca de recursos. S
 
 Los dos listados responden `{ recursos, paginacion: { pagina, porPagina, total, totalPaginas } }`. Por defecto 9 por página en el catálogo público y 20 en el panel; el máximo es 50. Una página posterior a la última devuelve la lista vacía con el total, no un error. El orden es estable (orden, fecha de creación e id) para que ningún recurso se repita ni se salte entre páginas.
 
+## Nota de implementación: incremento 2, paso 1 (19 de octubre de 2026)
+
+Modelo de cursos y API de administración, sin pantallas todavía.
+
+### Decisiones
+
+- **Lecciones mixtas:** una lección reutiliza un recurso de la biblioteca o es contenido propio del curso (lectura, práctica o reflexión). Así se aprovecha la biblioteca sin perder las partes que solo tienen sentido dentro de un curso.
+- **Un recurso usado en un curso no se puede eliminar**, aunque el curso sea borrador: la API responde 409 y nombra los cursos. Sí se puede retirar; la lección se mostrará como no disponible.
+- **Un recurso puede estar en varios cursos.**
+- **Mínimos para publicar un curso:** ficha completa (resumen, objetivo, área, al menos un elemento, nivel y práctica final); entre 2 y 5 lecciones, con al menos una práctica y una reflexión; cada lección de recurso apunta a un recurso publicado; cada lección propia tiene título, contenido y duración. El máximo de 5 lecciones se aplica siempre; el mínimo, al publicar.
+- **Un curso publicado debe seguir cumpliendo los mínimos** después de cualquier cambio en su ficha o sus lecciones; si un cambio los rompe, se rechaza completo.
+- **Reflexión:** por ahora solo se muestra la pregunta. Guardar la respuesta llega con el progreso (incremento 3) y exigirá sesión.
+- **Sin versiones ni módulos:** como solo el administrador crea contenido, el curso se edita en sitio. La duración del curso se calcula sumando la de sus lecciones.
+
+### API implementada (administrador)
+
+| Método             | Ruta                                       | Propósito                                               |
+| ------------------ | ------------------------------------------ | ------------------------------------------------------- |
+| GET, POST          | /api/admin/cursos?pagina&porPagina         | Listar (paginado) y crear la ficha                      |
+| GET, PATCH, DELETE | /api/admin/cursos/:id                      | Ver con lecciones, editar, publicar o retirar, eliminar |
+| POST               | /api/admin/cursos/:id/lecciones            | Agregar una lección al final                            |
+| PATCH, DELETE      | /api/admin/cursos/:id/lecciones/:idLeccion | Editar o quitar una lección                             |
+| PUT                | /api/admin/cursos/:id/lecciones/orden      | Reordenar con la lista completa de ids                  |
+
+Además, `GET /api/admin/recursos` acepta `q`, `tipo` y `estatus` para buscar en la biblioteca, y `GET /api/admin/recursos/:id` incluye `usadoEn` con los cursos que usan el recurso.
+
+## Nota de implementación: incremento 2, pasos 2 y 3 (30 de octubre de 2026)
+
+Panel para armar cursos y parte pública: catálogo, ficha y visor.
+
+### Decisiones
+
+- **Recurso retirado en un curso publicado:** el curso sigue publicado y la lección se muestra como no disponible, sin exponer el título del recurso. Publicar (o volver a publicar) exige todos los recursos publicados; editar un curso ya publicado solo se lo exige a la lección que se está tocando. Así un recurso retirado no bloquea arreglar el curso ni editar el resto.
+- **Concurrencia:** toda modificación de un curso bloquea su fila (`SELECT … FOR UPDATE`), igual que en recursos. El borrado de un recurso comprueba su uso dentro del bloqueo del recurso, y la llave RESTRICT cubre lo que quede.
+- **Selector de la biblioteca:** el editor de cursos solo ofrece recursos publicados, y no los que ya están en el curso.
+- **Un curso nuevo se queda en el editor** al crearse, porque lo siguiente es agregar lecciones. Las lecciones se guardan al momento; la ficha, con los botones. Al guardar la ficha se vuelve a la lista con confirmación, igual que en recursos.
+- **Filtros del catálogo:** área y texto aplican a cursos y recursos; nivel y elemento solo a cursos. Elegir una sección oculta los cursos, que no pertenecen a ninguna. El filtro por duración de CAT-01 queda pendiente: la duración se calcula y no se puede filtrar en la consulta.
+- **Reflexión:** solo muestra la pregunta; guardar la respuesta llega con el progreso.
+
+- **Edición simultánea:** el editor de cursos espera una lectura fresca antes de llenar el formulario y guarda con `versionFicha`; si otro administrador guardó mientras tanto, el servidor responde 409 `curso_desactualizado` y el editor ofrece cargar la versión actual. Las lecciones no mueven la versión, porque se guardan una por una. El editor de recursos también espera la lectura fresca, pero todavía no tiene versión.
+- **Búsqueda:** `texto_busqueda` guarda las etiquetas visibles de los elementos, no sus identificadores (`textoDeBusquedaCatalogo` en `packages/shared`).
+
+### API pública implementada
+
+| Método | Ruta                                               | Propósito                                             |
+| ------ | -------------------------------------------------- | ----------------------------------------------------- |
+| GET    | /api/cursos?area&nivel&elemento&q&pagina&porPagina | Catálogo publicado                                    |
+| GET    | /api/cursos/:id                                    | Ficha e índice, sin el contenido de las lecciones     |
+| GET    | /api/cursos/:id/lecciones/:idLeccion               | Contenido de la lección, con el recurso y sus vecinas |
+
+Lo que no está publicado responde 404, igual que un id inexistente.
+
+### Pantallas
+
+- Público: cursos en `/recursos`, ficha en `/cursos/:id`, visor en `/cursos/:id/lecciones/:idLeccion`.
+- Panel: `/admin/cursos`, `/admin/cursos/nuevo`, `/admin/cursos/:id`.
+- `npm run sembrar-cursos` carga tres cursos de ejemplo (requiere `sembrar-recursos`).
+
 ### Siguientes incrementos
 
-- **Incremento 2:** cursos, lecciones y rutas, con ficha y visor públicos. Sustituye los datos editoriales de `cursos.fixtures.ts`.
+- **Incremento 2:** cursos, lecciones y rutas, con ficha y visor públicos. Hechos modelo, API, panel, catálogo, ficha y visor. Falta solo la ruta de aprendizaje, que sigue siendo una vista previa fija. Falta sustituir `ruta.fixtures.ts`.
 - **Incremento 3:** inscripción, progreso, "Continúa aprendiendo", Mis cursos y recursos guardados.

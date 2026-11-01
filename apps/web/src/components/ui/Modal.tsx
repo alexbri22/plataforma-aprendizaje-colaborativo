@@ -10,6 +10,9 @@ export interface ModalProps {
   // Descripción opcional bajo el título; si se pasa, se asocia con
   // aria-describedby para que el lector de pantalla la anuncie.
   descripcion?: ReactNode
+  /** Para contenido que no cabe en la confirmación habitual: un formulario
+   * largo o una lista. Más ancho y con desplazamiento propio. */
+  amplio?: boolean
 }
 
 const SELECTOR_ENFOCABLE =
@@ -19,7 +22,7 @@ const SELECTOR_ENFOCABLE =
 // reservada a lo que suspende el resto del contenido). Maneja el foco por
 // requisito de accesibilidad (PRODUCT.md, WCAG 2.1 AA): atrapa Tab dentro del
 // diálogo, cierra con Escape y devuelve el foco al abrir/cerrar.
-export function Modal({ abierto, onCerrar, titulo, children, descripcion }: ModalProps) {
+export function Modal({ abierto, onCerrar, titulo, children, descripcion, amplio }: ModalProps) {
   const dialogoRef = useRef<HTMLDivElement>(null)
   const tituloId = useId()
   const descripcionId = useId()
@@ -88,7 +91,7 @@ export function Modal({ abierto, onCerrar, titulo, children, descripcion }: Moda
         aria-labelledby={tituloId}
         aria-describedby={descripcion ? descripcionId : undefined}
         tabIndex={-1}
-        className={styles.dialogo}
+        className={[styles.dialogo, amplio ? styles.amplio : null].filter(Boolean).join(' ')}
         // Un clic dentro del diálogo no debe cerrarlo; solo el fondo cierra.
         onMouseDown={(evento) => evento.stopPropagation()}
       >

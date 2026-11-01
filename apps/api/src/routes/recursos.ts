@@ -22,6 +22,7 @@ import {
 } from '../services/formacion/recursos.service.js'
 import {
   validarDatosRecurso,
+  validarFiltroEstatus,
   validarFiltrosRecursos,
   validarPaginacion,
 } from '../services/formacion/validacion.js'
@@ -31,7 +32,8 @@ import {
 // formativo es visible sin cuenta); las administrativas exigen sesión de
 // administrador en cada endpoint.
 /**
- * Límite del cuerpo JSON de las rutas de administración de recursos. El de
+ * Límite del cuerpo JSON de las rutas de administración de recursos y cursos
+ * (una lección admite tanto contenido como un artículo). El de
  * express.json() por defecto (100 KB) es menor que lo que la validación
  * permite: los textos de un recurso suman unos 71 000 caracteres (contenido
  * 20 000, transcripción 50 000, más título, resumen, fuente y licencia). En el
@@ -39,7 +41,7 @@ import {
  * \uXXXX: ~425 KB. Con 1 MB todo lo válido cabe y la validación de campos es
  * la que responde; sigue muy por debajo del tope de 4.5 MB de Vercel.
  */
-export const LIMITE_JSON_RECURSOS = '1mb'
+export const LIMITE_JSON_FORMACION = '1mb'
 
 export const recursosRouter = Router()
 export const adminRecursosRouter = Router()
@@ -94,11 +96,16 @@ recursosRouter.get('/recursos/:id/archivo', async (req, res) => {
 
 // ---- Administración (/api/admin) ----
 
-// GET /api/admin/recursos?pagina&porPagina: todos, en cualquier estatus, por
-// páginas. Misma forma de respuesta que el catálogo público.
+// GET /api/admin/recursos?pagina&porPagina&q&tipo&estatus: todos, en
+// cualquier estatus, por páginas. Misma forma de respuesta que el catálogo
+// público. q, tipo y estatus sirven al editor de cursos para buscar en la
+// biblioteca el recurso de una lección.
 adminRecursosRouter.get('/recursos', exigirAdministrador, async (req, res) => {
-  const pagina = validarPaginacion(req.query as Record<string, unknown>, POR_PAGINA_ADMIN)
-  res.status(200).json(await listarRecursosAdmin(pagina))
+  const query = req.query as Record<string, unknown>
+  const pagina = validarPaginacion(query, POR_PAGINA_ADMIN)
+  const { texto, tiposRecurso } = validarFiltrosRecursos(query)
+  const estatus = validarFiltroEstatus(query)
+  res.status(200).json(await listarRecursosAdmin(pagina, { texto, tiposRecurso, estatus }))
 })
 
 adminRecursosRouter.get('/recursos/:id', exigirAdministrador, async (req, res) => {

@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ETIQUETAS_AREA,
   ETIQUETAS_ESTATUS_RECURSO,
   ETIQUETAS_SECCION,
   ETIQUETAS_TIPO_RECURSO,
-  type EstatusRecurso,
 } from '@plataforma/shared'
 import { AppShell } from '../../components/AppShell'
 import {
@@ -19,6 +18,9 @@ import {
   TableRow,
 } from '../../components/ui'
 import { useRecursosAdmin } from '../formacion'
+import { leerPagina } from './leerPagina'
+import { varianteEstatus } from './varianteEstatus'
+import { AvisoConfirmacion } from './AvisoConfirmacion'
 import { esAvisoContenido, mensajeDeAviso, type AvisoContenido } from './avisoContenido'
 import styles from './PantallaContenido.module.css'
 
@@ -28,83 +30,14 @@ const FORMATO_FECHA = new Intl.DateTimeFormat('es-MX', {
   day: 'numeric',
 })
 
-// El estatus siempre se lee como texto; el color solo acompaña (§12.5 de
-// docs/diseno-desarrollo-formacion.md, WCAG: el estado no depende del color).
-const VARIANTE_ESTATUS: Record<EstatusRecurso, 'success' | 'neutral' | 'warning'> = {
-  publicado: 'success',
-  borrador: 'neutral',
-  retirado: 'warning',
-}
-
-function IconoListo() {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-      <circle cx="10" cy="10" r="7.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <path
-        d="m6.75 10.25 2.25 2.25 4.25-4.75"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
-// Confirmación de lo que se acaba de hacer en el editor, con atajos a ver el
-// resultado o a seguir editando.
-function AvisoConfirmacion({ aviso, onCerrar }: { aviso: AvisoContenido; onCerrar: () => void }) {
-  const ref = useRef<HTMLDivElement>(null)
-  const { titulo, detalle } = mensajeDeAviso(aviso)
-
-  // El foco viene del botón del editor, que ya no existe: se pasa al aviso
-  // para que el lector de pantalla lo lea y el teclado siga desde aquí.
-  // La página llega con el desplazamiento del editor: se vuelve arriba para
-  // que el aviso y el título queden a la vista.
-  useEffect(() => {
-    window.scrollTo({ top: 0 })
-    ref.current?.focus({ preventScroll: true })
-  }, [])
-
-  return (
-    <div ref={ref} tabIndex={-1} className={styles.confirmacion} role="status">
-      <span className={styles.confirmacionIcono}>
-        <IconoListo />
-      </span>
-      <div className={styles.confirmacionTexto}>
-        <p className={styles.confirmacionTitulo}>{titulo}</p>
-        <p>{detalle}</p>
-        {aviso.accion !== 'eliminado' ? (
-          <p className={styles.confirmacionEnlaces}>
-            {aviso.estatus === 'publicado' ? (
-              <Link to={`/recursos/${aviso.idRecurso}`}>Ver en Recursos</Link>
-            ) : null}
-            <Link to={`/admin/contenido/${aviso.idRecurso}`}>Seguir editando</Link>
-          </p>
-        ) : null}
-      </div>
-      <button type="button" className={styles.confirmacionCerrar} onClick={onCerrar}>
-        <span aria-hidden="true">×</span>
-        <span className={styles.srOnly}>Cerrar aviso</span>
-      </button>
-    </div>
-  )
-}
-
 // Biblioteca de recursos formativos del panel (§12.3). Superficie densa tipo
 // Linear, igual que Cuentas. La autorización real es del servidor.
-function leerPagina(valor: string | null): number {
-  const n = Number(valor)
-  return Number.isInteger(n) && n >= 1 ? n : 1
-}
-
 export function PantallaContenido() {
   // La página vive en la URL (?pagina=2): sobrevive a recargar, se puede
   // compartir y el editor sabe a cuál volver.
   const [parametros, setParametros] = useSearchParams()
   const pagina = leerPagina(parametros.get('pagina'))
-  const { data, isPending, isError, error, isPlaceholderData } = useRecursosAdmin(pagina)
+  const { data, isPending, isError, error, isPlaceholderData } = useRecursosAdmin({ pagina })
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -143,7 +76,16 @@ export function PantallaContenido() {
           <Link to="/recursos">Recursos</Link>; el orden define cómo se listan.
         </p>
 
-        {aviso ? <AvisoConfirmacion aviso={aviso} onCerrar={() => setAviso(null)} /> : null}
+        {aviso ? (
+          <AvisoConfirmacion
+            {...mensajeDeAviso(aviso)}
+            verEn={aviso.estatus === 'publicado' ? `/recursos/${aviso.idRecurso}` : undefined}
+            seguirEditando={
+              aviso.accion !== 'eliminado' ? `/admin/contenido/${aviso.idRecurso}` : undefined
+            }
+            onCerrar={() => setAviso(null)}
+          />
+        ) : null}
 
         {isPending ? (
           <p role="status" className={styles.estadoTexto}>
@@ -199,7 +141,7 @@ export function PantallaContenido() {
                     <TableCell>{ETIQUETAS_SECCION[r.seccion]}</TableCell>
                     <TableCell>{r.area ? ETIQUETAS_AREA[r.area] : '—'}</TableCell>
                     <TableCell>
-                      <Badge variant={VARIANTE_ESTATUS[r.estatus]}>
+                      <Badge variant={varianteEstatus(r.estatus)}>
                         {ETIQUETAS_ESTATUS_RECURSO[r.estatus]}
                       </Badge>
                     </TableCell>

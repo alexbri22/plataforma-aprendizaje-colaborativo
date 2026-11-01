@@ -10,13 +10,20 @@ import {
 import {
   PantallaContenido,
   PantallaCuentas,
+  PantallaCursos,
+  PantallaEditarCurso,
   PantallaEditarRecurso,
   RutaAdmin,
 } from '../features/administracion'
 import { PantallaInicio } from '../features/contenido-publico/PantallaInicio.tsx'
 import { PantallaIngresar, PantallaRegistrarse } from '../features/cuentas'
 import { PantallaEquipos } from '../features/equipos'
-import { PantallaRecurso, PantallaRecursos } from '../features/formacion'
+import {
+  PantallaCurso,
+  PantallaLeccion,
+  PantallaRecurso,
+  PantallaRecursos,
+} from '../features/formacion'
 import {
   PantallaMisReconocimientos,
   PantallaMuestraInsignias,
@@ -223,10 +230,36 @@ export function App() {
               </RutaAdmin>
             }
           />
+          <Route
+            path="/admin/cursos"
+            element={
+              <RutaAdmin>
+                <PantallaCursos />
+              </RutaAdmin>
+            }
+          />
+          <Route
+            path="/admin/cursos/nuevo"
+            element={
+              <RutaAdmin>
+                <PantallaEditarCurso />
+              </RutaAdmin>
+            }
+          />
+          <Route
+            path="/admin/cursos/:id"
+            element={
+              <RutaAdmin>
+                <PantallaEditarCurso />
+              </RutaAdmin>
+            }
+          />
           {/* Públicas, sin RutaProtegida (docs/diseno-desarrollo-nucleo.md §4.1:
               "contenido formativo" no exige sesión). */}
           <Route path="/recursos" element={<PantallaRecursos />} />
           <Route path="/recursos/:id" element={<PantallaRecurso />} />
+          <Route path="/cursos/:id" element={<PantallaCurso />} />
+          <Route path="/cursos/:id/lecciones/:idLeccion" element={<PantallaLeccion />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
