@@ -1,8 +1,13 @@
 import { MAX_BYTES_FOTO_PERFIL, TIPOS_FOTO_PERFIL } from '@plataforma/shared'
 import express, { Router, type Response } from 'express'
 import { config } from '../config.js'
-import { ErrorUsuarioNoEncontrado } from '../errores.js'
-import { limitadorRegistro, limitadorSesion } from '../middleware/limitadorTasa.js'
+import { ErrorCredencialesInvalidas, ErrorUsuarioNoEncontrado } from '../errores.js'
+import {
+  limitadorRegistro,
+  limitadorSesion,
+  limitadorSesionPorIp,
+  segundosParaReintentar,
+} from '../middleware/limitadorTasa.js'
 import { exigirSesion } from '../middleware/sesion.js'
 import {
   cerrarSesion,
@@ -45,12 +50,32 @@ cuentasRouter.post('/usuarios', limitadorRegistro, async (req, res) => {
   res.status(201).json({ usuario })
 })
 
-// POST /api/sesion: inicia sesión y emite la cookie.
-cuentasRouter.post('/sesion', limitadorSesion, async (req, res) => {
+// POST /api/sesion: inicia sesión y emite la cookie. Con credenciales
+// incorrectas dice cuántos intentos quedan antes de la pausa: el conteo es
+// por IP y correo exista o no la cuenta (limitadorSesion), así que la cifra
+// no revela si el correo está registrado.
+cuentasRouter.post('/sesion', limitadorSesionPorIp, limitadorSesion, async (req, res) => {
   const credenciales = validarCredenciales(req.body)
-  const { usuario, sesion } = await iniciarSesion(credenciales)
-  establecerCookieSesion(res, sesion)
-  res.status(200).json({ usuario })
+  try {
+    const { usuario, sesion } = await iniciarSesion(credenciales)
+    establecerCookieSesion(res, sesion)
+    res.status(200).json({ usuario })
+  } catch (err) {
+    if (err instanceof ErrorCredencialesInvalidas && req.rateLimit) {
+      res.status(err.status).json({
+        codigo: err.codigo,
+        mensaje: err.message,
+        intentosRestantes: req.rateLimit.remaining,
+        // Con el último intento gastado, cuánto esperar: el cliente bloquea
+        // el formulario sin tener que provocar el 429.
+        ...(req.rateLimit.remaining === 0
+          ? { reintentarEnSegundos: segundosParaReintentar(req) }
+          : {}),
+      })
+      return
+    }
+    throw err
+  }
 })
 
 // DELETE /api/sesion: cierra la sesión y elimina el registro en servidor.

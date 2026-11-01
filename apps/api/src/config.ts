@@ -68,6 +68,13 @@ export const config = {
       ventanaMin: numero('RATE_LIMIT_SESION_VENTANA_MIN', 15),
       max: numero('RATE_LIMIT_SESION_MAX', 10),
     },
+    // Tope de intentos fallidos por IP, sin importar el correo (ver
+    // limitadorSesionPorIp): holgado para que un salón detrás de una sola IP
+    // no lo alcance.
+    sesionPorIp: {
+      ventanaMin: numero('RATE_LIMIT_SESION_IP_VENTANA_MIN', 15),
+      max: numero('RATE_LIMIT_SESION_IP_MAX', 100),
+    },
     // Consulta por clave de ingreso (docs/diseno-desarrollo-nucleo.md §3.2 y
     // §3.3): el espacio de claves es grande, pero sin límite de intentos
     // seguiría siendo posible recorrerlo por fuerza bruta.

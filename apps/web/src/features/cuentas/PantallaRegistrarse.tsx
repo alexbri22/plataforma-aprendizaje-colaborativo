@@ -4,6 +4,7 @@ import { AvisoError, Button, IconoCargando, Input, Select } from '../../componen
 import { CampoContrasena } from './CampoContrasena'
 import { PantallaAutenticacion } from './PantallaAutenticacion'
 import { ErrorCuenta } from './api'
+import { describirEspera, formatearCuentaRegresiva, useEsperaReintento } from './useEsperaReintento'
 import { useRegistrarUsuarioMutation } from './useSesion'
 import {
   validarCampoRequerido,
@@ -67,6 +68,12 @@ export function PantallaRegistrarse() {
   const [valores, setValores] = useState<Valores>(VALORES_INICIALES)
   const [errores, setErrores] = useState<Errores>({})
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null)
+  // Mismo criterio que PantallaIngresar: el aviso de espera se retira cuando
+  // la espera termina.
+  const [errorEsDeEspera, setErrorEsDeEspera] = useState(false)
+  const espera = useEsperaReintento()
+
+  const errorVisible = errorEsDeEspera && !espera.esperando ? null : errorEnvio
 
   function actualizarCampo(campo: keyof Valores, valor: string) {
     setValores((actuales) => ({ ...actuales, [campo]: valor }))
@@ -116,6 +123,25 @@ export function PantallaRegistrarse() {
       })
       navigate('/actividades')
     } catch (error) {
+      if (error instanceof ErrorCuenta && error.reintentarEnSegundos) {
+        espera.iniciar(error.reintentarEnSegundos)
+        setErrorEsDeEspera(true)
+        setErrorEnvio(
+          `${error.message} Vuelve a intentarlo en ${describirEspera(error.reintentarEnSegundos)}.`,
+        )
+        return
+      }
+      // El servidor valida lo mismo que el formulario, pero si algo se le
+      // escapa al cliente el detalle va junto al campo, no en un aviso general.
+      const detalle = error instanceof ErrorCuenta ? error.detallePorCampo : undefined
+      if (detalle) {
+        setErrores((actuales) => ({ ...actuales, ...detalle }))
+        const primerCampo = (Object.keys(VALORES_INICIALES) as (keyof Valores)[]).find(
+          (campo) => detalle[campo],
+        )
+        if (primerCampo) document.getElementById(primerCampo)?.focus()
+      }
+      setErrorEsDeEspera(false)
       setErrorEnvio(error instanceof ErrorCuenta ? error.message : MENSAJE_ERROR_GENERICO)
     }
   }
@@ -137,7 +163,7 @@ export function PantallaRegistrarse() {
       }
     >
       <form className={styles.formulario} onSubmit={manejarEnvio} noValidate>
-        {errorEnvio ? <AvisoError mensaje={errorEnvio} /> : null}
+        {errorVisible ? <AvisoError mensaje={errorVisible} /> : null}
 
         <Input
           id="nombre"
@@ -241,12 +267,18 @@ export function PantallaRegistrarse() {
           />
         </div>
 
-        <Button type="submit" disabled={mutacion.isPending} className={styles.enviar}>
+        <Button
+          type="submit"
+          disabled={mutacion.isPending || espera.esperando}
+          className={styles.enviar}
+        >
           {mutacion.isPending ? (
             <>
               <IconoCargando />
               Creando cuenta…
             </>
+          ) : espera.esperando ? (
+            `Espera ${formatearCuentaRegresiva(espera.segundosRestantes)}`
           ) : (
             'Crear cuenta'
           )}
