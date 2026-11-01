@@ -61,7 +61,11 @@ export function PantallaConfiguracion() {
 
   if (actividadQuery.isPending) {
     return (
-      <AppShell seccionActiva="actividades" titulo="Configuración" volverA={`/actividades/${id}`}>
+      <AppShell
+        seccionActiva="actividades"
+        titulo="Planificar"
+        contexto={{ idActividad: id, seccion: 'planificar' }}
+      >
         <div className={styles.cargando} role="status" aria-label="Cargando la configuración">
           <IconoCargando size={24} />
         </div>
@@ -71,11 +75,7 @@ export function PantallaConfiguracion() {
 
   if (actividadQuery.isError || !actividadQuery.data) {
     return (
-      <AppShell
-        seccionActiva="actividades"
-        titulo="Actividad no encontrada"
-        volverA={`/actividades/${id}`}
-      >
+      <AppShell seccionActiva="actividades" titulo="Actividad no encontrada">
         <p className={styles.texto}>No encontramos esta actividad, o ya no formas parte de ella.</p>
       </AppShell>
     )
@@ -105,12 +105,12 @@ export function PantallaConfiguracion() {
   return (
     <AppShell
       seccionActiva="actividades"
-      titulo={`Configuración — ${actividad.nombre}`}
-      volverA={`/actividades/${id}`}
+      titulo="Planificar"
+      contexto={{ idActividad: id, seccion: 'planificar' }}
     >
       {!puedeConfigurar && !puedeAjustarPeriodos ? (
         <Card className={styles.seccionCard}>
-          <p className={styles.texto}>No tienes permiso para configurar esta actividad.</p>
+          <p className={styles.texto}>No tienes permiso para planificar esta actividad.</p>
         </Card>
       ) : (
         <div className={styles.contenido}>

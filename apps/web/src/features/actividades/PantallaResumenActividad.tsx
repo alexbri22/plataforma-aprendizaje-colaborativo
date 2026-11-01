@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { UseMutationResult } from '@tanstack/react-query'
-import { useParams } from 'react-router-dom'
+import { Navigate, useParams } from 'react-router-dom'
 import { AppShell } from '../../components/AppShell'
 import { EnlacePerfil } from '../../components/EnlacePerfil'
 import {
@@ -12,7 +12,7 @@ import {
   Paginacion,
   rebanar,
 } from '../../components/ui'
-import { PanelHistorial } from '../historial'
+import { primeraSeccionHabilitada } from './espacioEquipo'
 import { infoFase } from './fase'
 import { formatearFecha, formatearFechaHora } from './formato'
 import { ErrorActividad } from './actividades.api'
@@ -33,70 +33,6 @@ const PARTICIPANTES_POR_PAGINA = 10
 const MENSAJE_ERROR_CIERRE_INSCRIPCION_GENERICO =
   'No pudimos cerrar la inscripción. Intenta de nuevo.'
 const MENSAJE_ERROR_INICIAR_CIERRE_GENERICO = 'No pudimos iniciar el cierre. Intenta de nuevo.'
-
-// Iconos de los accesos del topbar (Configurar, Equipos, Historial): mismo
-// trazo simple en los tres (viewBox 20x20 o 24x24, stroke ~1.3-1.5, sin
-// relleno). El de Configurar es el contorno de un engranaje de verdad (con
-// dientes) y no un aro con rayas delgadas, que se leía como un sol.
-function IconoConfigurar() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinejoin="round"
-        d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.61l-1.92-3.32a.5.5 0 0 0-.59-.22l-2.39.96a7.3 7.3 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.48-.41h-3.84a.5.5 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96a.5.5 0 0 0-.59.22L2.74 8.87a.5.5 0 0 0 .12.61l2.03 1.58c-.05.3-.07.63-.07.94s.02.64.07.94l-2.03 1.58a.5.5 0 0 0-.12.61l1.92 3.32a.5.5 0 0 0 .59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54a.5.5 0 0 0 .48.41h3.84a.5.5 0 0 0 .48-.41l.36-2.54a7.3 7.3 0 0 0 1.62-.94l2.39.96a.5.5 0 0 0 .59-.22l1.92-3.32a.5.5 0 0 0-.12-.61zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2"
-      />
-    </svg>
-  )
-}
-
-function IconoEquipos() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-      <circle cx="7" cy="7.5" r="2.3" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <circle cx="13.5" cy="8" r="1.9" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <path
-        d="M2.8 16c.5-2.7 2-4.2 4.2-4.2s3.7 1.5 4.2 4.2M12 12.2c1.8 0 3 1.2 3.4 3.4"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-    </svg>
-  )
-}
-
-function IconoHistorial() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-      <path
-        d="M4.5 4.8 3.3 3.5M4.5 4.8 3.2 5.9"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M4.5 4.8A6.5 6.5 0 1 1 3.5 11"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      <path
-        d="M10 7v3.3l2.3 1.6"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
 
 interface InfoAccionConfirmable {
   titulo: string
@@ -295,14 +231,24 @@ function SeccionParticipantes({ id }: { id: string }) {
   )
 }
 
-export function PantallaResumenActividad() {
+// Fases en que quien participa ya trabaja con su equipo: abrir la actividad
+// lo lleva directo ahí en vez de hacerle buscar su equipo entre los demás.
+const FASES_DE_TRABAJO_EN_EQUIPO = ['desarrollo', 'cierre']
+
+export interface PantallaResumenActividadProps {
+  /** /actividades/:id/resumen (Resumen, desde la barra lateral): se queda aquí
+   * siempre, sin llevar al espacio del equipo. */
+  soloResumen?: boolean
+}
+
+export function PantallaResumenActividad({ soloResumen = false }: PantallaResumenActividadProps) {
   const { id = '' } = useParams<{ id: string }>()
   const actividadQuery = useActividad(id)
-  const [historialAbierto, setHistorialAbierto] = useState(false)
+  const contexto = { idActividad: id, seccion: 'resumen' } as const
 
   if (actividadQuery.isPending) {
     return (
-      <AppShell seccionActiva="actividades" titulo="Actividad" volverA={'/actividades'}>
+      <AppShell seccionActiva="actividades" titulo="Resumen" contexto={contexto}>
         <div className={styles.cargando} role="status" aria-label="Cargando la actividad">
           <IconoCargando size={24} />
         </div>
@@ -312,81 +258,34 @@ export function PantallaResumenActividad() {
 
   if (actividadQuery.isError || !actividadQuery.data) {
     return (
-      <AppShell
-        seccionActiva="actividades"
-        titulo="Actividad no encontrada"
-        volverA={'/actividades'}
-      >
+      <AppShell seccionActiva="actividades" titulo="Actividad no encontrada">
         <p className={styles.texto}>No encontramos esta actividad, o ya no formas parte de ella.</p>
       </AppShell>
     )
   }
 
   const actividad = actividadQuery.data
+
+  if (
+    !soloResumen &&
+    actividad.rol === 'participante' &&
+    actividad.idMiEquipo &&
+    FASES_DE_TRABAJO_EN_EQUIPO.includes(actividad.fase)
+  ) {
+    const seccion = primeraSeccionHabilitada(actividad)
+    if (seccion) return <Navigate to={`/equipos/${actividad.idMiEquipo}/${seccion}`} replace />
+  }
+
   const fase = infoFase(actividad.fase)
-  // Destino de la flecha de regreso: Organizo o Participo según el rol, en
-  // vez del alias /actividades que siempre manda a Organizo. La vista
-  // cargada no pasaba volverA a AppShell y la flecha no se mostraba aquí
-  // (el único caso que la prueba cubría era el enlace transitorio del
-  // estado de carga).
-  const organiza = actividad.rol !== 'participante'
 
   return (
-    <AppShell
-      seccionActiva="actividades"
-      titulo={actividad.nombre}
-      volverA={organiza ? '/actividades/organizo' : '/actividades/participo'}
-      // Icono + palabra, igual que la navegación lateral (AppShell.tsx,
-      // .navItem): icono solo se leía como un bloque de botones anónimos,
-      // sin relación visual con el resto de la navegación de la app.
-      // Reconocer al equipo y Mis reconocimientos se movieron al espacio de
-      // equipo (AppShellEquipo, sección Honoramiento, con la misma condición
-      // abierto/aplicados que AccionesReconocimiento usa aquí): son del
-      // equipo del actor, no de la actividad completa. Participantes sí vive
-      // aquí (solo organiza): a diferencia de los otros dos, no es por
-      // equipo — ve lo recibido de cualquier participante de la actividad
-      // (insignias.service.ts, listarRecibidosDeParticipante).
-      acciones={
-        <>
-          {
-            // En desarrollo ya no se pueden cambiar funciones, pero sí el calendario
-            // de avances: la pantalla de configuración sigue siendo el lugar.
-            actividad.capacidades?.some(
-              (capacidad) =>
-                capacidad === 'configurar_funciones' ||
-                capacidad === 'ajustar_funciones' ||
-                capacidad === 'ajustar_periodos',
-            ) ? (
-              <Button variant="ghost" size="sm" to={`/actividades/${actividad.id}/configuracion`}>
-                <IconoConfigurar />
-                Configurar
-              </Button>
-            ) : null
-          }
-          <Button variant="ghost" size="sm" to={`/actividades/${actividad.id}/equipos`}>
-            <IconoEquipos />
-            Equipos
-          </Button>
-          {organiza ? (
-            <Button variant="ghost" size="sm" to={`/actividades/${actividad.id}/participantes`}>
-              Participantes
-            </Button>
-          ) : null}
-          {/* Panel lateral, no una pantalla propia (decisión de producto):
-              no saca a quien organiza de donde está, igual que Configurar lo
-              hace desde Equipos. */}
-          <Button variant="ghost" size="sm" onClick={() => setHistorialAbierto(true)}>
-            <IconoHistorial />
-            Historial
-          </Button>
-        </>
-      }
-    >
+    <AppShell seccionActiva="actividades" titulo="Resumen" contexto={contexto}>
       <div className={styles.contenido}>
         <Card className={styles.seccionCard}>
-          <Badge variant={fase.variant} className={styles.badge}>
-            {fase.etiqueta}
-          </Badge>
+          <div className={styles.encabezadoActividad}>
+            <h2 className={styles.nombreActividad}>{actividad.nombre}</h2>
+            <Badge variant={fase.variant}>{fase.etiqueta}</Badge>
+          </div>
 
           <div className={styles.detalle}>
             <span className={styles.detalleEtiqueta}>Objetivo</span>
@@ -408,6 +307,12 @@ export function PantallaResumenActividad() {
         <Card className={styles.seccionCard}>
           <h2 className={styles.tituloSeccion}>Detalles</h2>
           <dl className={styles.detalles}>
+            {actividad.nombreOrganizador ? (
+              <div className={styles.detalle}>
+                <dt className={styles.detalleEtiqueta}>Organiza</dt>
+                <dd className={styles.detalleValor}>{actividad.nombreOrganizador}</dd>
+              </div>
+            ) : null}
             <div className={styles.detalle}>
               <dt className={styles.detalleEtiqueta}>Clave de ingreso</dt>
               <dd className={`${styles.detalleValor} ${styles.clave}`}>
@@ -445,12 +350,6 @@ export function PantallaResumenActividad() {
           </dl>
         </Card>
       </div>
-      <PanelHistorial
-        idActividad={actividad.id}
-        idMiMembresia={actividad.idMiMembresia}
-        abierto={historialAbierto}
-        onCerrar={() => setHistorialAbierto(false)}
-      />
     </AppShell>
   )
 }

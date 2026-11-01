@@ -94,6 +94,45 @@
   outline-offset: 2px;
 }
 
+/* Subgrupo dentro del nivel de una actividad (Proyecto colaborativo,
+   Proceso colaborativo): mismo tamaño, peso y color que los ítems, para que
+   no parezca otra categoría; solo el chevron dice que se pliega. Los títulos
+   (actividad, equipo) son lo único en negritas. */
+.grupoEncabezadoSubgrupo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  border: none;
+  background: none;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  color: var(--color-text-muted);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.grupoEncabezadoSubgrupo:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.grupoEncabezadoSubgrupo:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.grupoEncabezadoSubgrupo .grupoChevron {
+  color: var(--color-text-muted);
+}
+
 /* Con el grupo cerrado, el encabezado delata que la pantalla actual vive
    dentro de él. */
 .grupoEncabezadoActivo[aria-expanded='false'] {
@@ -112,7 +151,8 @@
 }
 
 .grupoEncabezado[aria-expanded='true'] .grupoChevron,
-.grupoEncabezadoPrincipal[aria-expanded='true'] .grupoChevron {
+.grupoEncabezadoPrincipal[aria-expanded='true'] .grupoChevron,
+.grupoEncabezadoSubgrupo[aria-expanded='true'] .grupoChevron {
   transform: rotate(90deg);
 }
 
@@ -148,6 +188,12 @@
   padding-left: calc(18px + var(--space-3));
 }
 
+/* Sin ícono: la sangría es la del chevron (14px) + su gap, para que los
+   hijos queden alineados con la etiqueta. */
+.grupoItemsSinIcono {
+  padding-left: calc(14px + var(--space-2));
+}
+
 @media (max-width: 860px) {
   .grupo,
   .grupoPrincipal {
@@ -160,7 +206,8 @@
   }
 
   .grupoEncabezado,
-  .grupoEncabezadoPrincipal {
+  .grupoEncabezadoPrincipal,
+  .grupoEncabezadoSubgrupo {
     width: auto;
   }
 

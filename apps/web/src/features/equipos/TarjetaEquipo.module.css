@@ -107,6 +107,28 @@
   margin: 0;
 }
 
+.pie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: auto;
+}
+
+/* Texto del enlace superpuesto: queda debajo de él (no está posicionado),
+   así que el clic aquí también entra al espacio. */
+.entrar {
+  margin-left: auto;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary);
+}
+
+.tarjetaClicable:hover .entrar {
+  text-decoration: underline;
+}
+
 .acciones {
   /* Por encima de .enlaceSuperpuesto (position: absolute, sin z-index
      propio): sin esto, el enlace capturaría el clic antes que estos

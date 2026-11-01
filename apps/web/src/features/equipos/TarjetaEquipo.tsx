@@ -159,32 +159,47 @@ export function TarjetaEquipo({
         </ul>
       ) : null}
 
-      {mostrarUnirme || mostrarSalir || mostrarEditar ? (
-        <div className={styles.acciones}>
-          {mostrarUnirme ? (
-            <Button size="sm" disabled={ocupado} onClick={() => onUnirme(equipo.id)}>
-              Unirme
-            </Button>
+      {mostrarUnirme || mostrarSalir || mostrarEditar || mostrarEspacio ? (
+        <div className={styles.pie}>
+          {mostrarUnirme || mostrarSalir || mostrarEditar ? (
+            <div className={styles.acciones}>
+              {mostrarUnirme ? (
+                <Button size="sm" disabled={ocupado} onClick={() => onUnirme(equipo.id)}>
+                  Unirme
+                </Button>
+              ) : null}
+              {mostrarSalir ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={ocupado}
+                  onClick={() => onSalir(equipo.id)}
+                >
+                  Salir del equipo
+                </Button>
+              ) : null}
+              {mostrarEditar ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={ocupado}
+                  onClick={() => onEditar(equipo)}
+                >
+                  Editar
+                </Button>
+              ) : null}
+            </div>
           ) : null}
-          {mostrarSalir ? (
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={ocupado}
-              onClick={() => onSalir(equipo.id)}
-            >
-              Salir del equipo
-            </Button>
-          ) : null}
-          {mostrarEditar ? (
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={ocupado}
-              onClick={() => onEditar(equipo)}
-            >
-              Editar
-            </Button>
+          {/* La tarjeta entera ya es el enlace (arriba); esto solo lo hace
+              visible, para que nadie tenga que adivinar que se puede entrar.
+              aria-hidden: el enlace ya lleva el mismo nombre accesible. */}
+          {mostrarEspacio ? (
+            <span className={styles.entrar} aria-hidden="true">
+              {soyIntegrante && miRol === 'participante'
+                ? 'Entrar a mi equipo'
+                : 'Entrar al espacio'}{' '}
+              →
+            </span>
           ) : null}
         </div>
       ) : null}

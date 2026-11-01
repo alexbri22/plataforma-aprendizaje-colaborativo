@@ -30,7 +30,7 @@ export function PantallaReconocer() {
       <AppShell
         seccionActiva="actividades"
         titulo="Reconoce el trabajo de tu equipo"
-        volverA={`/actividades/${id}`}
+        contexto={{ idActividad: id, seccion: 'reconocer' }}
       >
         <div className={styles.cargando} role="status" aria-label="Cargando el ritual">
           <IconoCargando size={24} />
@@ -44,7 +44,7 @@ export function PantallaReconocer() {
       <AppShell
         seccionActiva="actividades"
         titulo="Reconoce el trabajo de tu equipo"
-        volverA={`/actividades/${id}`}
+        contexto={{ idActividad: id, seccion: 'reconocer' }}
       >
         <AvisoError mensaje="No encontramos esta actividad, o ya no formas parte de ella." />
       </AppShell>
@@ -67,7 +67,7 @@ export function PantallaReconocer() {
     <AppShell
       seccionActiva="actividades"
       titulo="Reconoce el trabajo de tu equipo"
-      volverA={`/actividades/${id}`}
+      contexto={{ idActividad: id, seccion: 'reconocer' }}
     >
       <div className={styles.encabezado}>
         <Badge variant="accent">Periodo de cierre</Badge>

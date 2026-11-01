@@ -119,7 +119,11 @@ export function PantallaEquipos() {
 
   if (actividadQuery.isPending || equiposQuery.isPending) {
     return (
-      <AppShell seccionActiva="actividades" titulo="Equipos" volverA={`/actividades/${id}`}>
+      <AppShell
+        seccionActiva="actividades"
+        titulo="Equipos"
+        contexto={{ idActividad: id, seccion: 'equipos' }}
+      >
         <div className={styles.cargando} role="status" aria-label="Cargando los equipos">
           <IconoCargando size={24} />
         </div>
@@ -129,11 +133,7 @@ export function PantallaEquipos() {
 
   if (actividadQuery.isError || !actividadQuery.data) {
     return (
-      <AppShell
-        seccionActiva="actividades"
-        titulo="Actividad no encontrada"
-        volverA={`/actividades/${id}`}
-      >
+      <AppShell seccionActiva="actividades" titulo="Actividad no encontrada">
         <p className={styles.texto}>No encontramos esta actividad, o ya no formas parte de ella.</p>
       </AppShell>
     )
@@ -147,8 +147,8 @@ export function PantallaEquipos() {
     return (
       <AppShell
         seccionActiva="actividades"
-        titulo={`Equipos de ${actividad.nombre}`}
-        volverA={`/actividades/${id}`}
+        titulo="Equipos"
+        contexto={{ idActividad: id, seccion: 'equipos' }}
       >
         <AvisoError mensaje="No pudimos cargar los equipos." />
       </AppShell>
@@ -184,8 +184,8 @@ export function PantallaEquipos() {
   return (
     <AppShell
       seccionActiva="actividades"
-      titulo={`Equipos de ${actividad.nombre}`}
-      volverA={`/actividades/${actividad.id}`}
+      titulo="Equipos"
+      contexto={{ idActividad: id, seccion: 'equipos' }}
     >
       <div className={styles.contenido}>
         {fasePrevia ? (

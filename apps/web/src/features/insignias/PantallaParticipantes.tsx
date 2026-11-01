@@ -17,7 +17,11 @@ export function PantallaParticipantes() {
 
   if (actividad.isPending || participantes.isPending) {
     return (
-      <AppShell seccionActiva="actividades" titulo="Participantes" volverA={`/actividades/${id}`}>
+      <AppShell
+        seccionActiva="actividades"
+        titulo="Participantes"
+        contexto={{ idActividad: id, seccion: 'participantes' }}
+      >
         <div className={styles.cargando} role="status" aria-label="Cargando participantes">
           <IconoCargando size={24} />
         </div>
@@ -27,7 +31,11 @@ export function PantallaParticipantes() {
 
   if (actividad.isError || participantes.isError || !actividad.data || !participantes.data) {
     return (
-      <AppShell seccionActiva="actividades" titulo="Participantes" volverA={`/actividades/${id}`}>
+      <AppShell
+        seccionActiva="actividades"
+        titulo="Participantes"
+        contexto={{ idActividad: id, seccion: 'participantes' }}
+      >
         <AvisoError mensaje="No encontramos esta actividad, o ya no formas parte de ella." />
       </AppShell>
     )
@@ -38,8 +46,8 @@ export function PantallaParticipantes() {
   return (
     <AppShell
       seccionActiva="actividades"
-      titulo={`Participantes de ${actividad.data.nombre}`}
-      volverA={`/actividades/${id}`}
+      titulo="Participantes"
+      contexto={{ idActividad: id, seccion: 'participantes' }}
     >
       <Card>
         {participantes.data.length === 0 ? (

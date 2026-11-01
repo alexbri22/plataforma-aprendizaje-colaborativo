@@ -18,12 +18,13 @@ function IconoChevron({ className }: { className?: string }) {
 
 // Preferencia de la persona (abierto/cerrado) por grupo plegable. Es una
 // comodidad por navegador: si el almacenamiento no está disponible, el grupo
-// simplemente arranca abierto.
-function leerGrupoAbierto(clave: string): boolean {
+// simplemente arranca como diga `porDefecto`.
+function leerGrupoAbierto(clave: string, porDefecto: boolean): boolean {
   try {
-    return localStorage.getItem(clave) !== 'false'
+    const guardado = localStorage.getItem(clave)
+    return guardado === null ? porDefecto : guardado === 'true'
   } catch {
-    return true
+    return porDefecto
   }
 }
 
@@ -38,15 +39,21 @@ function guardarGrupoAbierto(clave: string, abierto: boolean) {
 export interface GrupoNavProps {
   claveAlmacenamiento: string
   etiqueta: string
-  Icono: () => ReactNode
+  /** Sin ícono (subgrupos), el chevron ocupa su lugar a la izquierda. */
+  Icono?: () => ReactNode
   /** Si el grupo contiene el ítem activo: se abre siempre, para que nunca
    * quede oculto, sin importar lo que diga la preferencia guardada. */
   contieneActivo?: boolean
   /** 'principal': un ítem más del nivel superior, mismo tamaño que el resto
    * y sin separador (p. ej. Actividades). 'seccion': grupo aparte, separado
    * por línea y en versalitas (p. ej. Administración, Proceso colaborativo).
-   * Ambas variantes indentan a sus hijos por igual. */
-  variante?: 'principal' | 'seccion'
+   * 'subgrupo': encabezado discreto, sin línea ni versalitas, para agrupar
+   * dentro del nivel de una actividad (p. ej. Proyecto colaborativo). Todas
+   * las variantes indentan a sus hijos por igual. */
+  variante?: 'principal' | 'seccion' | 'subgrupo'
+  /** Cómo arranca la primera vez, antes de que la persona lo abra o lo
+   * cierre: abierto, salvo que se pida lo contrario. */
+  plegadoPorDefecto?: boolean
   children: ReactNode
 }
 
@@ -60,12 +67,21 @@ export function GrupoNav({
   Icono,
   contieneActivo = false,
   variante = 'seccion',
+  plegadoPorDefecto = false,
   children,
 }: GrupoNavProps) {
   const idPanel = useId()
   const [abierto, setAbierto] = useState(
-    () => contieneActivo || leerGrupoAbierto(claveAlmacenamiento),
+    () => contieneActivo || leerGrupoAbierto(claveAlmacenamiento, !plegadoPorDefecto),
   )
+  // Si el ítem activo aparece después de montar (p. ej. en un grupo de una
+  // actividad que terminó de cargar), el grupo se abre aunque la preferencia
+  // guardada diga cerrado. Ajuste durante el render, no en un efecto.
+  const [contieneActivoPrevio, setContieneActivoPrevio] = useState(contieneActivo)
+  if (contieneActivo !== contieneActivoPrevio) {
+    setContieneActivoPrevio(contieneActivo)
+    if (contieneActivo) setAbierto(true)
+  }
 
   function alternar() {
     const siguiente = !abierto
@@ -73,25 +89,29 @@ export function GrupoNav({
     guardarGrupoAbierto(claveAlmacenamiento, siguiente)
   }
 
-  const esPrincipal = variante === 'principal'
+  const clasesPorVariante = {
+    principal: [styles.grupoPrincipal, styles.grupoEncabezadoPrincipal],
+    seccion: [styles.grupo, styles.grupoEncabezado],
+    subgrupo: [styles.grupoPrincipal, styles.grupoEncabezadoSubgrupo],
+  } as const
+  const [claseGrupo, claseEncabezado] = clasesPorVariante[variante]
 
   return (
-    <div className={esPrincipal ? styles.grupoPrincipal : styles.grupo}>
+    <div className={claseGrupo}>
       <button
         type="button"
-        className={[
-          esPrincipal ? styles.grupoEncabezadoPrincipal : styles.grupoEncabezado,
-          contieneActivo ? styles.grupoEncabezadoActivo : null,
-        ]
+        className={[claseEncabezado, contieneActivo ? styles.grupoEncabezadoActivo : null]
           .filter(Boolean)
           .join(' ')}
         aria-expanded={abierto}
         aria-controls={idPanel}
         onClick={alternar}
       >
-        <Icono />
+        {/* Sin ícono, el chevron va delante: es lo único que dice que la
+            etiqueta se pliega. */}
+        {Icono ? <Icono /> : <IconoChevron className={styles.grupoChevron} />}
         <span className={styles.grupoEtiqueta}>{etiqueta}</span>
-        <IconoChevron className={styles.grupoChevron} />
+        {Icono ? <IconoChevron className={styles.grupoChevron} /> : null}
       </button>
 
       <div
@@ -101,7 +121,13 @@ export function GrupoNav({
           .join(' ')}
         inert={!abierto}
       >
-        <div className={styles.grupoItems}>{children}</div>
+        <div
+          className={[styles.grupoItems, Icono ? null : styles.grupoItemsSinIcono]
+            .filter(Boolean)
+            .join(' ')}
+        >
+          {children}
+        </div>
       </div>
     </div>
   )

@@ -1,6 +1,7 @@
 import { QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import {
+  EntradaActividades,
   PantallaConfiguracion,
   PantallaCrearActividad,
   PantallaMisActividades,
@@ -27,6 +28,7 @@ import {
 import { PantallaPerfil, PantallaPerfilDeUsuario } from '../features/perfil'
 import {
   PantallaBitacoraDeParticipante,
+  PantallaBitacorasDeEquipo,
   PantallaEspacioEquipo,
   PantallaMiBitacora,
 } from '../features/seguimiento'
@@ -44,8 +46,16 @@ export function App() {
           {/* Organizo y Participo son ramificaciones propias del mapa del sitio
               (barra lateral), no pestañas de una misma pantalla: cada una
               tiene su única acción posible (crear / unirse con clave). La
-              ruta sin ramificación conserva los enlaces y marcadores viejos. */}
-          <Route path="/actividades" element={<Navigate to="/actividades/organizo" replace />} />
+              ruta sin ramificación elige la rama que la persona usa
+              (EntradaActividades). */}
+          <Route
+            path="/actividades"
+            element={
+              <RutaProtegida>
+                <EntradaActividades />
+              </RutaProtegida>
+            }
+          />
           <Route
             path="/actividades/organizo"
             element={
@@ -77,6 +87,22 @@ export function App() {
                 <PantallaResumenActividad />
               </RutaProtegida>
             }
+          />
+          {/* El resumen explícito: "Acerca de la actividad" para quien
+              participa. A diferencia de /actividades/:id, nunca lleva
+              directo al espacio del equipo. */}
+          <Route
+            path="/actividades/:id/resumen"
+            element={
+              <RutaProtegida>
+                <PantallaResumenActividad soloResumen />
+              </RutaProtegida>
+            }
+          />
+          {/* "Planificar" es el nombre visible de Configuración. */}
+          <Route
+            path="/actividades/:id/planificar"
+            element={<Navigate to="../configuracion" relative="path" replace />}
           />
           <Route
             path="/actividades/:id/configuracion"
@@ -137,6 +163,14 @@ export function App() {
             element={
               <RutaProtegida>
                 <PantallaMiBitacora />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="/equipos/:idEquipo/bitacoras"
+            element={
+              <RutaProtegida>
+                <PantallaBitacorasDeEquipo />
               </RutaProtegida>
             }
           />

@@ -18,6 +18,7 @@ import {
   rebanar,
 } from '../../components/ui'
 import { useActividad } from '../actividades'
+import { IntegrantesEquipo } from '../equipos/IntegrantesEquipo'
 import { useEquipo } from '../equipos/useEquipos'
 import { TarjetaElemento } from './TarjetaElemento'
 import {
@@ -31,7 +32,7 @@ import styles from './PantallaEspacioEquipo.module.css'
 const TITULOS: Record<ElementoEspacioEquipo, string> = {
   metas: 'Metas',
   avances: 'Avances',
-  recursos: 'Recursos',
+  recursos: 'Materiales',
 }
 
 const AYUDA: Record<ElementoEspacioEquipo, string> = {
@@ -173,11 +174,8 @@ export function PantallaEspacioEquipo({ tipo }: PantallaEspacioEquipoProps) {
     )
 
   return (
-    <AppShellEquipo
-      idEquipo={id}
-      seccionActiva={tipo}
-      titulo={`${TITULOS[tipo]} de ${equipo.nombre}`}
-    >
+    <AppShellEquipo idEquipo={id} seccionActiva={tipo} titulo={TITULOS[tipo]}>
+      <IntegrantesEquipo integrantes={equipo.integrantes} />
       {estado === 'deshabilitado' ? (
         <p className={styles.ayuda}>{TITULOS[tipo]} no está habilitado en esta actividad.</p>
       ) : (

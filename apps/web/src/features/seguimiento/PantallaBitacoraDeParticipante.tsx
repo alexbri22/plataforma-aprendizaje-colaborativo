@@ -14,9 +14,8 @@ import styles from './PantallaEspacioEquipo.module.css'
 const ENTRADAS_POR_PAGINA = 20
 
 // La bitácora de un participante, vista por quien organiza o co-organiza
-// con `leer_bitacoras` (nucleo §9.3, P-06). Se llega aquí desde el sidebar
-// del espacio de equipo (AppShellEquipo, bajo el nombre de cada integrante),
-// no desde Participantes: esa lista es exclusivamente del ritual de
+// con `leer_bitacoras` (nucleo §9.3, P-06). Se llega aquí desde Bitácoras
+// (PantallaBitacorasDeEquipo), en el espacio de equipo, no desde Participantes: esa lista es exclusivamente del ritual de
 // reconocimiento. Es de solo lectura: aquí no se escriben entradas, solo
 // comentarios sobre las que ya existen (nucleo §10.4). Vive dentro del
 // mismo shell del equipo del que se vino (igual que PantallaMiBitacora):
@@ -49,7 +48,14 @@ export function PantallaBitacoraDeParticipante() {
 
   if (equipoQuery.isPending || (idActividad && actividadQuery.isPending)) {
     return (
-      <AppShellEquipo idEquipo={idEquipo} seccionActiva="bitacora" titulo={titulo}>
+      <AppShellEquipo
+        idEquipo={idEquipo}
+        seccionActiva="bitacora-integrante"
+        idMembresia={idMembresia}
+        titulo={titulo}
+        volverA={`/equipos/${idEquipo}/bitacoras`}
+        volverEtiqueta="Bitácoras"
+      >
         <div className={styles.cargando} role="status" aria-label="Cargando la bitácora">
           <IconoCargando size={24} />
         </div>
@@ -59,7 +65,14 @@ export function PantallaBitacoraDeParticipante() {
 
   if (equipoQuery.isError || !equipoQuery.data || actividadQuery.isError || !actividadQuery.data) {
     return (
-      <AppShellEquipo idEquipo={idEquipo} seccionActiva="bitacora" titulo={titulo}>
+      <AppShellEquipo
+        idEquipo={idEquipo}
+        seccionActiva="bitacora-integrante"
+        idMembresia={idMembresia}
+        titulo={titulo}
+        volverA={`/equipos/${idEquipo}/bitacoras`}
+        volverEtiqueta="Bitácoras"
+      >
         <AvisoError mensaje="No encontramos esta actividad, o ya no formas parte de ella." />
       </AppShellEquipo>
     )
@@ -69,7 +82,14 @@ export function PantallaBitacoraDeParticipante() {
   const puedeComentar = (actividad.capacidades ?? []).includes('comentar')
 
   return (
-    <AppShellEquipo idEquipo={idEquipo} seccionActiva="bitacora" titulo={titulo}>
+    <AppShellEquipo
+      idEquipo={idEquipo}
+      seccionActiva="bitacora-integrante"
+      idMembresia={idMembresia}
+      titulo={titulo}
+      volverA={`/equipos/${idEquipo}/bitacoras`}
+      volverEtiqueta="Bitácoras"
+    >
       <div className={styles.contenido}>
         {entradasQuery.isPending ? (
           <div className={styles.cargando} role="status" aria-label="Cargando la bitácora">
