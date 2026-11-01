@@ -77,3 +77,9 @@
   color: var(--color-text-muted);
   pointer-events: none;
 }
+
+.ayuda {
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-muted);
+}

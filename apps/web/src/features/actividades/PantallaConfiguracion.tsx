@@ -116,13 +116,13 @@ export function PantallaConfiguracion() {
         <div className={styles.contenido}>
           <p className={styles.introduccion}>
             Qué seguimiento y evaluación tendrá la actividad y con qué frecuencia se revisa el
-            trabajo. La formación de equipos se configura en Equipos.
+            trabajo. La formación de equipos se ajusta en Equipos.
           </p>
 
           {!puedeConfigurar ? (
             <p className={styles.aviso}>
-              Las funciones ya no pueden cambiarse en esta fase. Aún puedes ajustar el calendario de
-              avances.
+              Las funciones ya no pueden cambiarse en esta etapa. Aún puedes ajustar el calendario
+              de entregas.
             </p>
           ) : puedeAjustarFunciones ? (
             <p className={styles.aviso}>

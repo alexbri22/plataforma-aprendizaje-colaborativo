@@ -154,7 +154,7 @@ export function PantallaRegistrarse() {
   return (
     <PantallaAutenticacion
       titulo="Crear cuenta"
-      subtitulo="Regístrate para organizar o participar en actividades colaborativas."
+      subtitulo="Crea tu cuenta para organizar o participar en actividades colaborativas."
       anchoCard="amplia"
       pie={
         <>

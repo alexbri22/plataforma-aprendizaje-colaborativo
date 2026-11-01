@@ -1,4 +1,8 @@
-import type { ElementoEspacioEquipo, FuncionSeguimiento } from '@plataforma/shared'
+import {
+  ETIQUETAS_ELEMENTO,
+  type ElementoEspacioEquipo,
+  type FuncionSeguimiento,
+} from '@plataforma/shared'
 
 // Copy en español para las funciones de seguimiento y sus estados
 // (docs/diseno-desarrollo-general.md §6.2). Vive en el cliente y no en
@@ -25,8 +29,8 @@ export const FUNCIONES_SIMPLES: DefinicionFuncion[] = [
     titulo: 'Formación de equipos',
     descripcion: 'Cómo se conforman los equipos al cerrar la inscripción.',
     opciones: [
-      { valor: 'autogestionado', etiqueta: 'Autogestionada' },
-      { valor: 'manual', etiqueta: 'Asignación manual' },
+      { valor: 'autogestionado', etiqueta: 'Cada quien elige su equipo' },
+      { valor: 'manual', etiqueta: 'Tú asignas los equipos' },
     ],
   },
   {
@@ -78,12 +82,12 @@ export const FUNCIONES_SIMPLES: DefinicionFuncion[] = [
   },
   {
     funcion: 'insignias',
-    titulo: 'Insignias',
-    descripcion: 'Quién puede otorgar insignias durante el periodo de cierre.',
+    titulo: 'Reconocimientos',
+    descripcion: 'Quién puede dar reconocimientos durante el cierre.',
     opciones: [
-      { valor: 'deshabilitado', etiqueta: 'Deshabilitado' },
-      { valor: 'solo_organizador', etiqueta: 'Solo tú otorgas' },
-      { valor: 'organizador_y_participantes', etiqueta: 'Tú y los participantes otorgan entre sí' },
+      { valor: 'deshabilitado', etiqueta: 'Deshabilitados' },
+      { valor: 'solo_organizador', etiqueta: 'Solo tú los das' },
+      { valor: 'organizador_y_participantes', etiqueta: 'Tú y los participantes, entre sí' },
     ],
   },
 ]
@@ -107,8 +111,8 @@ export const ELEMENTOS_ESPACIO_EQUIPO_UI: {
   },
   {
     elemento: 'recursos',
-    etiqueta: 'Recursos',
-    descripcion: 'Enlaces y materiales que el equipo comparte.',
+    etiqueta: 'Materiales',
+    descripcion: 'Enlaces y archivos que el equipo comparte.',
   },
 ]
 
@@ -170,29 +174,29 @@ export const TAREAS_PROCESO_COLABORATIVO: {
 }[] = [
   {
     tarea: 'definicion_responsabilidades',
-    etiqueta: 'Definición de responsabilidades',
+    etiqueta: ETIQUETAS_ELEMENTO.responsabilidades,
     descripcion: 'Qué rol o tarea le corresponde a cada integrante del equipo.',
   },
   {
     tarea: 'interdependencia_positiva',
-    etiqueta: 'Interdependencia positiva',
+    etiqueta: ETIQUETAS_ELEMENTO.interdependencia_positiva,
     descripcion: 'Que el resultado de cada integrante dependa del trabajo de todo el equipo.',
   },
   {
     tarea: 'responsabilidad_individual_grupal',
-    etiqueta: 'Responsabilidad individual y grupal',
+    etiqueta: ETIQUETAS_ELEMENTO.responsabilidad_individual_grupal,
     descripcion:
       'Que se distinga la contribución de cada integrante dentro del resultado del equipo.',
   },
   {
     tarea: 'interaccion',
-    etiqueta: 'Interacción',
+    etiqueta: ETIQUETAS_ELEMENTO.interaccion_promotora,
     descripcion:
       'Que los integrantes se ayuden y se den retroalimentación mientras trabajan juntos.',
   },
   {
     tarea: 'evaluacion_grupo_habilidades_sociales',
-    etiqueta: 'Evaluación de grupo y habilidades sociales',
+    etiqueta: ETIQUETAS_ELEMENTO.procesamiento_grupal,
     descripcion:
       'Cómo el equipo reflexiona sobre su funcionamiento y las habilidades sociales que practicó.',
   },

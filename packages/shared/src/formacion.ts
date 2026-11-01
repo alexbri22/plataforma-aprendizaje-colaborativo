@@ -66,12 +66,14 @@ export const ELEMENTOS_COLABORACION = [
 ] as const
 export type ElementoColaboracion = (typeof ELEMENTOS_COLABORACION)[number]
 
+/** Única redacción de los cinco elementos en toda la plataforma (la de
+ * Planificar › Proceso colaborativo, que es la que ven quienes organizan). */
 export const ETIQUETAS_ELEMENTO: Readonly<Record<ElementoColaboracion, string>> = {
-  responsabilidades: 'Responsabilidades claras',
+  responsabilidades: 'Definición de responsabilidades',
   interdependencia_positiva: 'Interdependencia positiva',
   responsabilidad_individual_grupal: 'Responsabilidad individual y grupal',
-  interaccion_promotora: 'Interacción promotora',
-  procesamiento_grupal: 'Procesamiento del grupo',
+  interaccion_promotora: 'Interacción',
+  procesamiento_grupal: 'Evaluación de grupo y habilidades sociales',
 }
 
 /** Estado editorial de un recurso. Solo el administrador crea contenido en

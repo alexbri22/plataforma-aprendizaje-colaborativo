@@ -85,7 +85,7 @@ export function PantallaIngresar() {
       subtitulo="Entra a tu cuenta para continuar con tus actividades."
       pie={
         <>
-          ¿No tienes cuenta? <Link to="/registrarse">Regístrate</Link>
+          ¿No tienes cuenta? <Link to="/registrarse">Crea una</Link>
         </>
       }
     >

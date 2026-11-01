@@ -18,3 +18,5 @@ export {
   primeraSeccionHabilitada,
 } from './espacioEquipo'
 export { TAREAS_PROCESO_COLABORATIVO } from './configuracionFunciones'
+export { FUNCIONES_SIMPLES } from './configuracionFunciones'
+export { infoFase } from './fase'

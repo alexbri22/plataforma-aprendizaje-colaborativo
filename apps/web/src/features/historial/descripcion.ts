@@ -1,4 +1,5 @@
 import type { EventoHistorial } from '@plataforma/shared'
+import { FUNCIONES_SIMPLES, infoFase, type FaseActividad } from '../actividades'
 
 // Una frase breve por tipo de evento (nucleo §5.1: "identificación legible").
 // Los tipos sin entrada aquí se leen con una etiqueta genérica derivada del
@@ -6,8 +7,23 @@ import type { EventoHistorial } from '@plataforma/shared'
 // nuevo al catálogo del servidor no rompe esta pantalla.
 const DESCRIPCIONES: Partial<Record<string, (datos: Record<string, unknown>) => string>> = {
   actividad_creada: () => 'Creó la actividad',
-  fase_avanzada: (d) => `Avanzó de fase: ${d.faseOrigen ?? '?'} → ${d.faseDestino ?? '?'}`,
-  configuracion_modificada: (d) => `Cambió la configuración de ${d.funcion ?? 'una función'}`,
+  fase_avanzada: (d) => `Pasó a la etapa ${etiquetaEtapa(d.faseDestino)}`,
+  configuracion_modificada: (d) =>
+    d.campo === 'limites_de_tamano'
+      ? 'Cambió el tamaño de los equipos'
+      : `Cambió la planificación de ${etiquetaFuncion(d.funcion)}`,
+  propuesta_generada: (d) =>
+    `Sugirió ${d.numeroEquipos ?? 'nuevos'} ${d.numeroEquipos === 1 ? 'equipo' : 'equipos'}`,
+  reparto_automatico: () => 'Repartió en equipos a quienes no tenían uno',
+  integrante_asignado: (d) =>
+    `Asignó a ${d.nombre ?? 'alguien'} al equipo "${nombreDe(d.equipoNuevo)}"`,
+  integrante_retirado: (d) =>
+    `Retiró a ${d.nombre ?? 'alguien'} del equipo "${nombreDe(d.equipo)}"`,
+  integrantes_intercambiados: () => 'Intercambió a dos personas entre equipos',
+  periodos_definidos: (d) =>
+    d.numeroPeriodos ? `Definió ${d.numeroPeriodos} entregas` : 'Quitó el calendario de entregas',
+  periodo_modificado: (d) => `Cambió las fechas de la entrega ${d.orden ?? ''}`.trim(),
+  co_organizador_modificado: () => 'Cambió los permisos de un co-organizador',
   equipo_creado: (d) => `Creó el equipo "${d.nombre ?? ''}"`,
   equipo_modificado: (d) => `Editó el equipo "${d.nombre ?? ''}"`,
   equipo_eliminado: (d) => `Eliminó el equipo "${d.nombre ?? ''}"`,
@@ -22,6 +38,25 @@ const DESCRIPCIONES: Partial<Record<string, (datos: Record<string, unknown>) => 
     `Editó un comentario sobre ${etiquetaEntidadComentada(d.tipoEntidadComentada)}`,
 }
 
+// faseDestino viene del servidor tal cual ('formacion_equipos'): se muestra
+// con la misma etiqueta que la etapa tiene en el resto de la app.
+function etiquetaEtapa(valor: unknown): string {
+  if (typeof valor !== 'string') return 'siguiente'
+  return infoFase(valor as FaseActividad)?.etiqueta ?? valor
+}
+
+function etiquetaFuncion(valor: unknown): string {
+  if (valor === 'espacio_equipo') return 'Proyecto colaborativo'
+  const definicion = FUNCIONES_SIMPLES.find((f) => f.funcion === valor)
+  return definicion ? definicion.titulo : 'una función'
+}
+
+function nombreDe(valor: unknown): string {
+  return typeof valor === 'object' && valor !== null && 'nombre' in valor
+    ? String((valor as { nombre: unknown }).nombre)
+    : ''
+}
+
 function etiquetaEntidadComentada(valor: unknown): string {
   return valor === 'bitacora' ? 'una entrada de bitácora' : 'un elemento del espacio de equipo'
 }
@@ -29,7 +64,7 @@ function etiquetaEntidadComentada(valor: unknown): string {
 function etiquetaTipo(valor: unknown): string {
   if (valor === 'metas') return 'una meta'
   if (valor === 'avances') return 'un avance'
-  if (valor === 'recursos') return 'un recurso'
+  if (valor === 'recursos') return 'un material'
   return 'un elemento'
 }
 

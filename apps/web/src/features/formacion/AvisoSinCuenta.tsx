@@ -70,7 +70,7 @@ export function AvisoSinCuenta() {
           </p>
           <p>
             Puedes consultar y descargar todos los recursos libremente, pero no guardaremos tu
-            progreso. Inicia sesión o crea una cuenta para que tu avance quede guardado.
+            progreso. Ingresa o crea una cuenta para que tu avance quede guardado.
           </p>
         </div>
         <div className={styles.acciones}>

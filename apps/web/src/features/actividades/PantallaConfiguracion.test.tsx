@@ -194,7 +194,7 @@ describe('PantallaConfiguracion', () => {
     const usuario = userEvent.setup()
     vi.mocked(obtenerActividad).mockResolvedValue(ACTIVIDAD_BASE)
     vi.mocked(configurarFuncion).mockRejectedValueOnce(
-      new ErrorActividad('La configuración no puede modificarse en esta fase.'),
+      new ErrorActividad('La planificación no puede modificarse en esta etapa.'),
     )
 
     renderPantalla(ACTIVIDAD_BASE.id)
@@ -203,7 +203,7 @@ describe('PantallaConfiguracion', () => {
     await usuario.click(interruptor)
 
     expect(
-      await screen.findByText('La configuración no puede modificarse en esta fase.'),
+      await screen.findByText('La planificación no puede modificarse en esta etapa.'),
     ).toBeInTheDocument()
   })
 

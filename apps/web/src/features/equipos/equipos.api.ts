@@ -131,7 +131,7 @@ export async function eliminarEquipo(idEquipo: string): Promise<void> {
 export async function cerrarFormacion(idActividad: string): Promise<Actividad> {
   const respuesta = await exigirOk(
     await pedir(`/api/actividades/${idActividadEnRuta(idActividad)}/formacion/cierre`, 'POST'),
-    'No pudimos cerrar la formación de equipos. Intenta de nuevo.',
+    'No pudimos confirmar los equipos. Intenta de nuevo.',
   )
   return ((await respuesta.json()) as { actividad: Actividad }).actividad
 }
@@ -142,7 +142,7 @@ export async function cerrarFormacion(idActividad: string): Promise<Actividad> {
 export async function generarPropuesta(idActividad: string): Promise<PropuestaEquipos> {
   const respuesta = await exigirOk(
     await pedir(`/api/actividades/${idActividadEnRuta(idActividad)}/equipos/propuesta`, 'POST'),
-    'No pudimos generar la propuesta de equipos. Intenta de nuevo.',
+    'No pudimos sugerir equipos. Intenta de nuevo.',
   )
   return (await respuesta.json()) as PropuestaEquipos
 }

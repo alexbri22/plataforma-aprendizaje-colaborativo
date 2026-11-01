@@ -54,7 +54,7 @@ export function PantallaInicio() {
                 </p>
               </div>
               <div className={styles.heroActions}>
-                <Button to="/registrarse">Registrarse</Button>
+                <Button to="/registrarse">Crear cuenta</Button>
                 <Button variant="secondary" to="/ingresar">
                   Ingresar
                 </Button>

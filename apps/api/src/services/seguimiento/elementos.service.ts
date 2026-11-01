@@ -24,7 +24,7 @@ import { registrarEvento } from '../historial/historial.service.js'
 // que expone equipos.service.ts, y de la fase de la actividad solo lo que
 // expone actividades.service.ts (nucleo §1.2).
 
-const MENSAJE_FASE = 'El espacio de equipo no puede editarse en esta fase.'
+const MENSAJE_FASE = 'El espacio de equipo no puede editarse en esta etapa.'
 
 function aRespuesta(fila: FilaElemento, nombreAutor: string): ElementoDeEspacioEquipo {
   return {

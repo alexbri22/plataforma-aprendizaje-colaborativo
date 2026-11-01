@@ -58,7 +58,7 @@ import type { CambiosEquipo } from './validacion.js'
 
 type ClienteBD = Prisma.TransactionClient
 
-const MENSAJE_FORMACION = 'Los equipos no pueden modificarse en esta fase.'
+const MENSAJE_FORMACION = 'Los equipos no pueden modificarse en esta etapa.'
 
 function esNombreDuplicado(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002'
@@ -530,7 +530,7 @@ export async function intercambiarIntegrantes(
       membresiaActor,
       'asignar_integrantes',
       actividad.estado,
-      'Los equipos no pueden modificarse en esta fase.',
+      'Los equipos no pueden modificarse en esta etapa.',
       actividad.formacionEquipos,
     )
 
@@ -674,7 +674,7 @@ export async function editarEquipo(
       membresia,
       'editar_equipo',
       actividad.estado,
-      'El equipo no puede editarse en esta fase.',
+      'El equipo no puede editarse en esta etapa.',
       actividad.formacionEquipos,
     )
 

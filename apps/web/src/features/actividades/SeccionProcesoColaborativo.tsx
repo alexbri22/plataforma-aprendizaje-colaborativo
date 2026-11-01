@@ -140,10 +140,10 @@ export function SeccionProcesoColaborativo({
             <thead>
               <tr>
                 <th scope="col" className={styles.encabezadoColumna}>
-                  Tarea
+                  Aspecto
                 </th>
                 <th scope="col" className={styles.encabezadoColumna}>
-                  Recurso
+                  Instrumento
                 </th>
                 <th scope="col" className={styles.encabezadoColumna}>
                   Periodicidad
@@ -165,7 +165,7 @@ export function SeccionProcesoColaborativo({
                     </th>
                     <td className={styles.celdaControl}>
                       <Select
-                        label={`Recurso de ${etiqueta}`}
+                        label={`Instrumento de ${etiqueta}`}
                         ocultarEtiqueta
                         value={estadoTarea.recurso}
                         onChange={(evento: ChangeEvent<HTMLSelectElement>) =>

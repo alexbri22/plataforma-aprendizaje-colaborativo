@@ -260,7 +260,7 @@ export async function obtenerPeriodos(id: string): Promise<PeriodoReporte[]> {
 
   if (!respuesta.ok) {
     throw new ErrorActividad(
-      await leerMensajeError(respuesta, 'No pudimos cargar el calendario de avances.'),
+      await leerMensajeError(respuesta, 'No pudimos cargar el calendario de entregas.'),
     )
   }
 

@@ -813,7 +813,7 @@ export async function configurarFuncion(
     if (!resultado.concedido) {
       lanzarErrorDeAutorizacion(
         resultado.motivo,
-        'La configuración no puede modificarse en esta fase.',
+        'La planificación no puede modificarse en esta etapa.',
       )
     }
 
@@ -867,7 +867,7 @@ export async function fijarLimitesEquipo(
       membresiaActor,
       'configurar_funciones',
       actividad.estado,
-      'Los límites de los equipos no pueden modificarse en esta fase.',
+      'Los límites de los equipos no pueden modificarse en esta etapa.',
     )
 
     const antes = { minimo: actividad.tamanoMinimoEquipo, maximo: actividad.tamanoMaximoEquipo }
@@ -917,7 +917,7 @@ export async function agregarOPromoverCoorganizador(
     estado: actividad.estado,
   })
   if (!resultado.concedido) {
-    lanzarErrorDeAutorizacion(resultado.motivo, 'No puedes agregar co-organizadores en esta fase.')
+    lanzarErrorDeAutorizacion(resultado.motivo, 'No puedes agregar co-organizadores en esta etapa.')
   }
 
   const usuarioObjetivo = await prisma.usuario.findUnique({

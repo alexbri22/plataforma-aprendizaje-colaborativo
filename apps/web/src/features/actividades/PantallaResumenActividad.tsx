@@ -14,7 +14,7 @@ import {
 } from '../../components/ui'
 import { primeraSeccionHabilitada } from './espacioEquipo'
 import { infoFase } from './fase'
-import { formatearFecha, formatearFechaHora } from './formato'
+import { formatearFecha, formatearFechaHora, sumarDias } from './formato'
 import { ErrorActividad } from './actividades.api'
 import {
   useActividad,
@@ -313,15 +313,20 @@ export function PantallaResumenActividad({ soloResumen = false }: PantallaResume
                 <dd className={styles.detalleValor}>{actividad.nombreOrganizador}</dd>
               </div>
             ) : null}
+            {/* Cada valor dice para qué sirve o qué pasa entonces, en vez
+                de un dato suelto ("10 días") que hay que interpretar. */}
             <div className={styles.detalle}>
               <dt className={styles.detalleEtiqueta}>Clave de ingreso</dt>
-              <dd className={`${styles.detalleValor} ${styles.clave}`}>
-                {actividad.claveIngreso ?? '—'}
+              <dd className={styles.detalleValor}>
+                <span className={styles.clave}>{actividad.claveIngreso ?? '—'}</span>
+                {actividad.claveIngreso && actividad.fase === 'inscripcion' ? (
+                  <span className={styles.detalleNota}>Compártela para que se unan.</span>
+                ) : null}
               </dd>
             </div>
             {actividad.fechaInicio && actividad.fechaTermino ? (
               <div className={styles.detalle}>
-                <dt className={styles.detalleEtiqueta}>Periodo</dt>
+                <dt className={styles.detalleEtiqueta}>Fechas</dt>
                 <dd className={styles.detalleValor}>
                   {formatearFecha(actividad.fechaInicio)} – {formatearFecha(actividad.fechaTermino)}
                 </dd>
@@ -329,16 +334,20 @@ export function PantallaResumenActividad({ soloResumen = false }: PantallaResume
             ) : null}
             {actividad.fechaLimiteInscripcion ? (
               <div className={styles.detalle}>
-                <dt className={styles.detalleEtiqueta}>Fecha límite de inscripción</dt>
+                <dt className={styles.detalleEtiqueta}>Inscripción</dt>
                 <dd className={styles.detalleValor}>
+                  {actividad.fase === 'inscripcion' ? 'Hasta el' : 'Cerró el'}{' '}
                   {formatearFecha(actividad.fechaLimiteInscripcion)}
                 </dd>
               </div>
             ) : null}
-            {actividad.plazoCierreDias != null ? (
+            {actividad.fechaTermino && actividad.plazoCierreDias != null ? (
               <div className={styles.detalle}>
-                <dt className={styles.detalleEtiqueta}>Plazo de reconocimiento</dt>
-                <dd className={styles.detalleValor}>{actividad.plazoCierreDias} días</dd>
+                <dt className={styles.detalleEtiqueta}>Reconocimientos</dt>
+                <dd className={styles.detalleValor}>
+                  Del {formatearFecha(actividad.fechaTermino)} al{' '}
+                  {formatearFecha(sumarDias(actividad.fechaTermino, actividad.plazoCierreDias))}
+                </dd>
               </div>
             ) : null}
             {actividad.numeroEquiposEsperado != null ? (
