@@ -166,7 +166,11 @@ async function contextoDeEntradaPropia(
     idUsuario,
     membresiaDeLaEntrada.idActividad,
   )
-  if (!membresiaActor) throw new ErrorEntradaBitacoraNoEncontrada()
+  // Desactivada cuenta como no miembro (mismo criterio que
+  // cargarContextoActividad): las rutas /bitacora/{id} no pasan por él.
+  if (!membresiaActor || membresiaActor.estado !== 'activa') {
+    throw new ErrorEntradaBitacoraNoEncontrada()
+  }
 
   return { entrada, idActividad: membresiaDeLaEntrada.idActividad, membresiaActor }
 }

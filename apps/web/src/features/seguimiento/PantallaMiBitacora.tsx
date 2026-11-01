@@ -126,7 +126,12 @@ export function PantallaMiBitacora() {
 
   const actividad = actividadQuery.data
   const capacidades = actividad.capacidades ?? []
-  const puedeEscribir = capacidades.includes('escribir_bitacora')
+  // escribir_bitacora no mira el estado de la función (el servidor lo
+  // comprueba aparte al guardar): sin esto, al entrar por URL con la
+  // bitácora deshabilitada se mostraría un formulario que siempre da 409.
+  const puedeEscribir =
+    capacidades.includes('escribir_bitacora') &&
+    actividad.configuracion?.bitacora_individual === 'habilitada'
   const puedeComentar = capacidades.includes('comentar')
 
   const alFallar = (idEntrada: string, error: unknown) =>
