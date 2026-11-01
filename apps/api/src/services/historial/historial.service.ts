@@ -99,14 +99,35 @@ export function limiteHistorialValido(limiteSolicitado: number | undefined): num
 // Eventos de evaluación cuyo `datos.idEquipo` identifica el equipo del
 // elemento comentado (comentarios.service.ts los escribe así desde este
 // incremento): un comentario sobre un elemento es, para efectos del
-// historial de un equipo, tan "de ese equipo" como el elemento mismo. Los
-// comentarios sobre una entrada de bitácora no entran aquí: la bitácora no
-// es del equipo (nucleo §9.3), así que no tienen lugar en una vista acotada
-// a un equipo.
+// historial de un equipo, tan "de ese equipo" como el elemento mismo. Solo
+// los ve quien organiza: ver el comentario en el elemento y ver su evento
+// en el historial son dos cosas distintas (general §7.3, Historial), y el
+// evento lleva lo que el elemento ya no muestra (el texto anterior de un
+// comentario editado).
 const EVENTOS_EVALUACION_DE_EQUIPO: readonly string[] = [
   'comentario_escrito',
   'comentario_modificado',
 ]
+
+// Quién consulta, resuelto por la ruta. idEquipo solo hace falta para un
+// participante (P-10); puedeLeerBitacoras es el mismo criterio que
+// bitacora.service.ts usa para leer la bitácora de otra persona (P-06).
+export interface ActorHistorial {
+  rol: RolMembresia
+  idMembresia: string
+  idEquipo: string | null
+  puedeLeerBitacoras: boolean
+}
+
+// La bitácora es privada (P-06) aunque sus eventos y los comentarios sobre
+// ella lleven datos.idEquipo (el equipo del autor): en la vista de un
+// equipo, quien no puede leer bitácoras ajenas solo ve los eventos de la
+// suya.
+function filtroBitacora(actor: ActorHistorial): Prisma.HistorialWhereInput {
+  return actor.puedeLeerBitacoras
+    ? {}
+    : { datos: { path: ['idMembresia'], equals: actor.idMembresia } }
+}
 
 // GET /api/actividades/{id}/historial: cronológico inverso, paginado por
 // cursor (nucleo §3.1 — ver limiteHistorialValido).
@@ -121,28 +142,26 @@ const EVENTOS_EVALUACION_DE_EQUIPO: readonly string[] = [
 //   mezclador de aportaciones de todos los equipos.
 // - Con idEquipoFiltro (el entrypoint de Historial dentro del espacio de
 //   equipo, AppShellEquipo): lo anterior más lo propio de ese equipo —
-//   estructura del equipo, aportación y comentarios sobre sus elementos.
+//   estructura del equipo, aportación (la bitácora acotada por
+//   filtroBitacora) y, para quien organiza, comentarios sobre sus elementos.
 //   Es la vista de "qué cambió en este equipo", general y específico juntos.
 //
 // Un participante solo puede pedir su propio equipo (P-10): si idEquipoFiltro
-// no es el suyo (idEquipoActor, resuelto por la ruta vía Equipos — nucleo
+// no es el suyo (actor.idEquipo, resuelto por la ruta vía Equipos — nucleo
 // §1.2, "ningún módulo accede a los datos de otro directamente"), las ramas
-// de ese equipo no aplican y solo ve la estructura de la actividad. Ninguna
-// de las dos vistas incluye categoría evaluación salvo los comentarios sobre
-// elementos del equipo pedido: calificaciones e insignias siguen fuera del
-// historial de cualquiera que no sea quien organiza (general §7.3), y esa
-// restricción no ha cambiado aquí.
+// de ese equipo no aplican y solo ve la estructura de la actividad. Un
+// participante no ve ningún evento de categoría evaluación (general §7.3).
 export async function listarHistorial(
   idActividad: string,
-  rolActor: RolMembresia,
-  idEquipoActor: string | null,
+  actor: ActorHistorial,
   paginacion: { cursor?: string; limite?: number } = {},
   idEquipoFiltro?: string,
 ): Promise<PaginaHistorial> {
-  const puedeVerEseEquipo = rolActor !== 'participante' || idEquipoFiltro === idEquipoActor
+  const esParticipante = actor.rol === 'participante'
+  const puedeVerEseEquipo = !esParticipante || idEquipoFiltro === actor.idEquipo
   const generales: Prisma.HistorialWhereInput = {
     categoria: 'estructura',
-    tipoEvento: { in: tiposGenerales(rolActor) },
+    tipoEvento: { in: tiposGenerales(actor.rol) },
   }
 
   const where: Prisma.HistorialWhereInput =
@@ -159,12 +178,30 @@ export async function listarHistorial(
             {
               categoria: 'aportacion' as CategoriaEvento,
               datos: { path: ['idEquipo'], equals: idEquipoFiltro },
+              NOT: { tipoEntidad: 'bitacora' },
             },
             {
-              categoria: 'evaluacion' as CategoriaEvento,
-              tipoEvento: { in: [...EVENTOS_EVALUACION_DE_EQUIPO] },
-              datos: { path: ['idEquipo'], equals: idEquipoFiltro },
+              categoria: 'aportacion' as CategoriaEvento,
+              tipoEntidad: 'bitacora',
+              AND: [
+                { datos: { path: ['idEquipo'], equals: idEquipoFiltro } },
+                filtroBitacora(actor),
+              ],
             },
+            ...(esParticipante
+              ? []
+              : [
+                  {
+                    categoria: 'evaluacion' as CategoriaEvento,
+                    tipoEvento: { in: [...EVENTOS_EVALUACION_DE_EQUIPO] },
+                    datos: { path: ['idEquipo'], equals: idEquipoFiltro },
+                    // Un comentario no es más visible que la entrada que
+                    // comenta (concepto §5.3).
+                    ...(actor.puedeLeerBitacoras
+                      ? {}
+                      : { NOT: { datos: { path: ['tipoEntidadComentada'], equals: 'bitacora' } } }),
+                  },
+                ]),
           ],
         }
       : { idActividad, ...generales }

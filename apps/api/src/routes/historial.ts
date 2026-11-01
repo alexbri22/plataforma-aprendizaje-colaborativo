@@ -3,6 +3,7 @@ import { cargarContextoActividad } from '../middleware/contextoActividad.js'
 import { exigirSesion } from '../middleware/sesion.js'
 import { obtenerIdEquipoDeMembresia } from '../services/equipos/equipos.service.js'
 import { listarHistorial } from '../services/historial/historial.service.js'
+import { puedeLeerBitacorasAjenas } from '../services/seguimiento/bitacora.service.js'
 
 export const historialRouter = Router()
 
@@ -44,8 +45,12 @@ historialRouter.get(
         : null
     const pagina = await listarHistorial(
       req.params.id as string,
-      membresia.rol,
-      idEquipoActor,
+      {
+        rol: membresia.rol,
+        idMembresia: membresia.idMembresia,
+        idEquipo: idEquipoActor,
+        puedeLeerBitacoras: puedeLeerBitacorasAjenas(membresia),
+      },
       {
         cursor: cursorDeQuery(req.query.cursor),
         limite: limiteDeQuery(req.query.limite),

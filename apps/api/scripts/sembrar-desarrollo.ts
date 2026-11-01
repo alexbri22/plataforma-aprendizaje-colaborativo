@@ -34,10 +34,9 @@ const DOMINIO = '@seed.local'
 // descuido: quien lo pasa ya decidió que esa base no tiene nada que
 // proteger de esto todavía.
 const permitido = process.env.PERMITIR_SEMBRAR_PRODUCCION === 'si'
-if (
-  !permitido &&
-  (process.env.NODE_ENV === 'production' || !/localhost|127\.0\.0\.1/.test(config.databaseUrl))
-) {
+const esBaseLocal =
+  process.env.NODE_ENV !== 'production' && /localhost|127\.0\.0\.1/.test(config.databaseUrl)
+if (!permitido && !esBaseLocal) {
   throw new Error(
     'El sembrado es solo para una base de datos local de desarrollo. ' +
       'Para correrlo contra otra base a propósito, pasa PERMITIR_SEMBRAR_PRODUCCION=si.',
@@ -125,8 +124,25 @@ async function limpiar() {
     where: { idUsuario: { in: ids }, rol: 'organizador' },
     select: { idActividad: true },
   })
+  const idsActividades = propias.map((m) => m.idActividad)
+  // Borrar una actividad semilla arrastra en cascada todo lo que cuelga de
+  // ella. Fuera de localhost, si alguien real ya se unió a una, eso incluye
+  // su trabajo: mejor no refrescar que borrarlo.
+  if (!esBaseLocal) {
+    const ajenas = await prisma.membresia.findMany({
+      where: { idActividad: { in: idsActividades }, idUsuario: { notIn: ids } },
+      select: { idActividad: true },
+      distinct: ['idActividad'],
+    })
+    if (ajenas.length > 0) {
+      throw new Error(
+        `No se refresca el sembrado: ${ajenas.length} actividad(es) semilla tienen ` +
+          'miembros que no son @seed.local y se borraría su trabajo.',
+      )
+    }
+  }
   await prisma.actividad.deleteMany({
-    where: { idActividad: { in: propias.map((m) => m.idActividad) } },
+    where: { idActividad: { in: idsActividades } },
   })
   await prisma.usuario.deleteMany({ where: { idUsuario: { in: ids } } })
 }

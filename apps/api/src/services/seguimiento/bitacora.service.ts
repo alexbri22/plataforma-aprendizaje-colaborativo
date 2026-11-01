@@ -45,7 +45,7 @@ export interface ActividadParaBitacora {
 // permiso, no de fase (la lectura no se cierra al archivarse: general §7.4,
 // "solo lectura para todos", no "sin lectura"), así que no pasa por
 // autorizar()/exigirAccion como las escrituras de este módulo.
-function puedeLeerBitacorasAjenas(membresia: MembresiaActor): boolean {
+export function puedeLeerBitacorasAjenas(membresia: MembresiaActor): boolean {
   if (membresia.rol === 'organizador') return true
   if (membresia.rol === 'co_organizador') {
     return membresia.permisos.some((p) => p.permiso === 'leer_bitacoras')
