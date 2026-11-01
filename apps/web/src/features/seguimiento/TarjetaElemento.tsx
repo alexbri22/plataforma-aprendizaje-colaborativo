@@ -59,6 +59,7 @@ export function TarjetaElemento({
   const [archivoNuevo, setArchivoNuevo] = useState<File | null>(null)
   const [quitarArchivo, setQuitarArchivo] = useState(false)
   const [errorEnlace, setErrorEnlace] = useState<string | undefined>()
+  const [confirmandoEliminar, setConfirmandoEliminar] = useState(false)
   const encabezadoRef = useRef<HTMLButtonElement>(null)
 
   // Solo al montar: expandidaInicial refleja el id pedido por la URL en ese
@@ -160,7 +161,38 @@ export function TarjetaElemento({
                 enlace={elemento.enlace}
                 archivo={elemento.archivo}
               />
-              {puedeEscribir ? (
+              {puedeEscribir && confirmandoEliminar ? (
+                // Eliminar no tiene vuelta atrás y es del equipo entero (lo
+                // borra para todos): se confirma en el mismo lugar, con el
+                // patrón "Sí, {verbo}" + Cancelar del resto de la app.
+                <div
+                  className={styles.confirmacion}
+                  role="group"
+                  aria-label="Confirmar eliminación"
+                >
+                  <span className={styles.pregunta}>¿Eliminar esto para todo el equipo?</span>
+                  <div className={styles.acciones}>
+                    <Button
+                      type="button"
+                      variant="danger"
+                      size="sm"
+                      disabled={eliminando}
+                      onClick={onEliminar}
+                    >
+                      {eliminando ? <IconoCargando size={14} /> : 'Sí, eliminar'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={eliminando}
+                      onClick={() => setConfirmandoEliminar(false)}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              ) : puedeEscribir ? (
                 <div className={styles.acciones}>
                   <Button
                     type="button"
@@ -177,10 +209,9 @@ export function TarjetaElemento({
                     type="button"
                     variant="ghost"
                     size="sm"
-                    disabled={eliminando}
-                    onClick={onEliminar}
+                    onClick={() => setConfirmandoEliminar(true)}
                   >
-                    {eliminando ? <IconoCargando size={14} /> : 'Eliminar'}
+                    Eliminar
                   </Button>
                 </div>
               ) : null}

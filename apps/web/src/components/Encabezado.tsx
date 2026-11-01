@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
 import { useSesion } from '../features/cuentas'
 import styles from './Encabezado.module.css'
 
@@ -25,23 +25,28 @@ export function Encabezado() {
             </span>
           </Link>
 
+          {/* NavLink marca aria-current="page" en el enlace de la pantalla
+              actual. La página de muestra de insignias ya no se enlaza: era
+              una vitrina interna y confundía como sección del producto. */}
           <nav className={styles.nav} aria-label="Principal">
-            <Link to="/insignias" className={styles.navLink}>
-              Insignias
-            </Link>
+            {usuario ? (
+              <NavLink to="/actividades" className={styles.navLink}>
+                Mis actividades
+              </NavLink>
+            ) : null}
             {esAdministrador ? (
               <>
-                <Link to="/admin/cuentas" className={styles.navLink}>
+                <NavLink to="/admin/cuentas" className={styles.navLink}>
                   Cuentas
-                </Link>
-                <Link to="/admin/contenido" className={styles.navLink}>
+                </NavLink>
+                <NavLink to="/admin/contenido" className={styles.navLink}>
                   Contenido
-                </Link>
+                </NavLink>
               </>
             ) : null}
-            <Link to="/recursos" className={styles.navLink}>
+            <NavLink to="/recursos" className={styles.navLink}>
               Recursos
-            </Link>
+            </NavLink>
           </nav>
         </div>
       </header>

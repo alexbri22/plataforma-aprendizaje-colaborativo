@@ -264,8 +264,12 @@
   width: 2.25rem;
   height: 2.25rem;
   flex-shrink: 0;
+  padding: 0;
+  border: none;
   border-radius: var(--radius-md);
+  background: none;
   color: var(--color-text);
+  cursor: pointer;
   transition: background-color 0.15s ease;
 }
 

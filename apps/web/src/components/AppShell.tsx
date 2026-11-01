@@ -384,6 +384,9 @@ export interface AppShellProps {
    * (las pantallas raíz) no hay flecha. Dentro de una actividad solo la usan
    * las pantallas de detalle: el resto se ubica con la barra lateral. */
   volverA?: string
+  /** Sin un destino fijo (un perfil se abre desde varios lugares): la flecha
+   * regresa a la pantalla anterior, o a Actividades si se llegó directo. */
+  volverAlAnterior?: boolean
   /** Nombre de la pantalla a la que regresa la flecha, para lectores de
    * pantalla ("Volver a Participantes"). */
   volverEtiqueta?: string
@@ -405,6 +408,7 @@ export function AppShell({
   seccionActiva,
   titulo,
   volverA,
+  volverAlAnterior = false,
   volverEtiqueta,
   contexto,
   ayuda,
@@ -551,6 +555,22 @@ export function AppShell({
       <div className={styles.columna}>
         <header className={styles.topbar}>
           <div className={styles.encabezadoTitulo}>
+            {volverAlAnterior && !volverA ? (
+              <button
+                type="button"
+                className={styles.volver}
+                aria-label="Volver"
+                onClick={() => {
+                  // react-router guarda en history.state el índice de la
+                  // entrada; 0 es la primera de esta pestaña.
+                  const indice = (window.history.state as { idx?: number } | null)?.idx ?? 0
+                  if (indice > 0) navigate(-1)
+                  else navigate('/actividades')
+                }}
+              >
+                <IconoVolver />
+              </button>
+            ) : null}
             {volverA ? (
               <Link
                 to={volverA}
