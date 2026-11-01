@@ -447,6 +447,7 @@ export function PantallaResumenActividad() {
       </div>
       <PanelHistorial
         idActividad={actividad.id}
+        idMiMembresia={actividad.idMiMembresia}
         abierto={historialAbierto}
         onCerrar={() => setHistorialAbierto(false)}
       />

@@ -46,6 +46,18 @@ export const ACCIONES_ACTIVIDAD = [
   // que el equipo sobre el que se actúa sea el propio depende de datos y lo
   // verifica el servicio de Seguimiento, igual que editar_equipo.
   'usar_espacio_equipo',
+  // Bitácora individual (nucleo §9.3): escribir y editar una entrada propia.
+  // A diferencia de usar_espacio_equipo, general §7.3 la marca con "—" fijo
+  // para organizador y co-organizador (no "sin equipo propio": una
+  // exclusión de rol escrita en el documento), así que autorizar() la
+  // resuelve antes de la concesión general al organizador (ver
+  // ACCIONES_EXCLUSIVAS_DE_PARTICIPANTE en capacidades.ts).
+  'escribir_bitacora',
+  // Comentarios (nucleo §10.4): escribir o editar un comentario sobre un
+  // elemento del espacio de equipo o una entrada de bitácora. Organizador y
+  // co-organizador con `calificar_y_comentar`; los participantes no la
+  // tienen (no está en ACCIONES_DE_AUTOSERVICIO).
+  'comentar',
 ] as const
 
 export type AccionActividad = (typeof ACCIONES_ACTIVIDAD)[number]

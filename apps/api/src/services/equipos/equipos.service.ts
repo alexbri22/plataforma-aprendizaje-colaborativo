@@ -335,12 +335,14 @@ async function encontrarMiembro(
 // Resuelve el equipo y la membresía del actor en su actividad. Las rutas
 // /equipos/{id} no pasan por cargarContextoActividad; para quien no es
 // miembro de la actividad del equipo la respuesta es la misma que si el
-// equipo no existiera (nucleo §3.3).
+// equipo no existiera (nucleo §3.3). Una membresía desactivada cuenta como
+// no miembro, igual que en cargarContextoActividad: conserva su fila de
+// integrante, así que sin esto seguiría leyendo el espacio del equipo.
 async function contextoDeEquipo(idEquipo: string, idUsuario: string) {
   const equipo = await prisma.equipo.findUnique({ where: { idEquipo } })
   if (!equipo) throw new ErrorEquipoNoEncontrado()
   const membresia = await buscarMembresiaConPermisos(idUsuario, equipo.idActividad)
-  if (!membresia) throw new ErrorEquipoNoEncontrado()
+  if (!membresia || membresia.estado !== 'activa') throw new ErrorEquipoNoEncontrado()
   return { idActividad: equipo.idActividad, membresia }
 }
 

@@ -21,14 +21,19 @@ async function leerMensajeError(respuesta: Response, mensajePorDefecto: string):
 }
 
 // GET /api/actividades/{id}/historial (nucleo §5.5, §11.2): consulta
-// cronológica mínima de este incremento, sin filtros (Fase B), paginada por
-// cursor (nucleo §3.1). cursor es el id del último evento de la página
-// anterior; sin él, trae la primera página.
+// cronológica mínima de este incremento, paginada por cursor (nucleo §3.1).
+// cursor es el id del último evento de la página anterior; sin él, trae la
+// primera página. idEquipo (opcional) acota la vista a ese equipo —
+// entrypoint de Historial en el espacio de equipo (AppShellEquipo).
 export async function obtenerHistorial(
   idActividad: string,
   cursor?: string,
+  idEquipo?: string,
 ): Promise<PaginaHistorial> {
-  const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''
+  const parametros = new URLSearchParams()
+  if (cursor) parametros.set('cursor', cursor)
+  if (idEquipo) parametros.set('idEquipo', idEquipo)
+  const query = parametros.toString() ? `?${parametros.toString()}` : ''
   let respuesta: Response
   try {
     respuesta = await fetch(

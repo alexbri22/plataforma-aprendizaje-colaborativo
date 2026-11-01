@@ -27,3 +27,49 @@ export interface ElementoDeEspacioEquipo {
   fechaCreacion: string
   fechaActualizacion: string
 }
+
+/*
+ * Bitácora individual (nucleo §9.3): entradas con fecha y contenido libre,
+ * vinculadas a la membresía y no al equipo. Comentarios (nucleo §10.4): un
+ * comentario sobre un elemento del espacio de equipo o sobre una entrada de
+ * bitácora, con visibilidad heredada de lo comentado (concepto §5.3).
+ *
+ * Fuentes: docs/diseno-desarrollo-general.md §4.4, §5.2.
+ *          docs/diseno-desarrollo-nucleo.md §9.3, §9.4, §10.4.
+ */
+
+export const LONGITUD_MAXIMA_CONTENIDO_BITACORA = 4000
+
+/** Una entrada de bitácora (general §5.2: bitacoras). Privada: solo su autor
+ * y quien organiza o co-organiza con `leer_bitacoras` la leen (P-06). */
+export interface EntradaBitacora {
+  id: string
+  idMembresia: string
+  contenido: string
+  fechaCreacion: string
+  fechaActualizacion: string
+}
+
+export const LONGITUD_MAXIMA_CONTENIDO_COMENTARIO = 2000
+
+/** Las dos entidades que puede comentarse hoy (nucleo §10.4): un elemento
+ * del espacio de equipo o una entrada de bitácora. */
+export const TIPOS_ENTIDAD_COMENTARIO = ['elemento_espacio_equipo', 'bitacora'] as const
+export type TipoEntidadComentario = (typeof TIPOS_ENTIDAD_COMENTARIO)[number]
+
+/** Un comentario (general §5.3: comentarios). `idEntidad` es una referencia
+ * polimórfica sin llave foránea, igual que el historial: apunta a
+ * elementos_espacio_equipo o a bitacoras según `tipoEntidad`. Solo el
+ * organizador y los co-organizadores con `calificar_y_comentar` lo
+ * escriben, por eso no hay un campo de "destinatario": la visibilidad de
+ * quién lo lee la hereda la entidad referida, no el comentario mismo. */
+export interface Comentario {
+  id: string
+  idMembresiaAutor: string
+  autor: string
+  tipoEntidad: TipoEntidadComentario
+  idEntidad: string
+  contenido: string
+  fechaCreacion: string
+  fechaActualizacion: string
+}

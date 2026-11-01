@@ -1,4 +1,5 @@
 import type { ElementoDeEspacioEquipo } from '@plataforma/shared'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ComponentProps } from 'react'
@@ -18,18 +19,26 @@ function elemento(sobrescribir: Partial<ElementoDeEspacioEquipo> = {}): Elemento
   }
 }
 
+// Expandir la tarjeta monta ComentariosDeElemento, que usa React Query
+// (useComentariosDeElemento): sin un QueryClient en el árbol, useQuery
+// lanza antes de que la tarjeta llegue a pintarse.
 function tarjeta(props: Partial<ComponentProps<typeof TarjetaElemento>> = {}) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return (
-    <TarjetaElemento
-      elemento={elemento()}
-      puedeEscribir
-      guardando={false}
-      eliminando={false}
-      error={null}
-      onGuardar={vi.fn().mockResolvedValue(undefined)}
-      onEliminar={vi.fn()}
-      {...props}
-    />
+    <QueryClientProvider client={queryClient}>
+      <TarjetaElemento
+        elemento={elemento()}
+        puedeEscribir
+        guardando={false}
+        eliminando={false}
+        error={null}
+        onGuardar={vi.fn().mockResolvedValue(undefined)}
+        onEliminar={vi.fn()}
+        idMiMembresia="yo"
+        puedeComentar={false}
+        {...props}
+      />
+    </QueryClientProvider>
   )
 }
 
@@ -44,6 +53,7 @@ describe('TarjetaElemento', () => {
 
     rerender(tarjeta({ elemento: elemento({ contenido: 'Contenido actualizado por otro' }) }))
 
+    await usuario.click(screen.getByRole('button', { name: /actualizado por otro/ }))
     await usuario.click(screen.getByRole('button', { name: 'Editar' }))
 
     expect(screen.getByLabelText('Contenido')).toHaveValue('Contenido actualizado por otro')
@@ -53,11 +63,15 @@ describe('TarjetaElemento', () => {
     const usuario = userEvent.setup()
     render(tarjeta())
 
+    await usuario.click(screen.getByRole('button', { name: /Contenido original/ }))
     await usuario.click(screen.getByRole('button', { name: 'Editar' }))
     await usuario.clear(screen.getByLabelText('Contenido'))
     await usuario.type(screen.getByLabelText('Contenido'), 'Un cambio sin guardar')
     await usuario.click(screen.getByRole('button', { name: 'Cancelar' }))
 
-    expect(screen.getByText('Contenido original')).toBeInTheDocument()
+    // Aparece dos veces a propósito: una en la vista previa del encabezado
+    // (fija, no cambia al expandir) y otra en el contenido completo del
+    // panel — ver TarjetaElemento.module.css.
+    expect(screen.getAllByText('Contenido original')).toHaveLength(2)
   })
 })

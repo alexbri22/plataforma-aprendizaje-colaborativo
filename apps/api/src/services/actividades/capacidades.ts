@@ -68,6 +68,10 @@ const PERMISO_REQUERIDO_POR_ACCION: Readonly<Record<AccionActividad, PermisoCoor
     // Sin permiso concreto: como elegir_equipo, es sobre el propio equipo y
     // no una facultad de gestión (nucleo §9.1, general §7.3).
     usar_espacio_equipo: null,
+    // Nunca llega a mirar este valor: ACCIONES_EXCLUSIVAS_DE_PARTICIPANTE
+    // decide escribir_bitacora antes de la rama de organizador/co-organizador.
+    escribir_bitacora: null,
+    comentar: 'calificar_y_comentar',
   }
 
 // Acciones abiertas además a los participantes, sobre sí mismos (elegir
@@ -81,6 +85,15 @@ const ACCIONES_DE_AUTOSERVICIO: readonly AccionActividad[] = [
   'editar_equipo',
   'usar_espacio_equipo',
 ]
+
+// Acciones que ni organizador ni co-organizador obtienen nunca, aunque la
+// fase coincida: a diferencia de usar_espacio_equipo —cuyo "—" en general
+// §7.3 es falta de equipo propio, no una exclusión escrita—, la fila de
+// escribir en la bitácora individual propia marca "—" fijo para ambos
+// roles. autorizar() la resuelve aquí, antes de conceder por rol, porque la
+// rama de organizador de más abajo concede cualquier acción de su propia
+// actividad sin pasar por ACCIONES_DE_AUTOSERVICIO.
+const ACCIONES_EXCLUSIVAS_DE_PARTICIPANTE: readonly AccionActividad[] = ['escribir_bitacora']
 
 // Estados de `formacion_equipos` en los que cada acción está abierta.
 // Sin entrada: en cualquiera. Elegir equipo es cosa de los participantes
@@ -143,6 +156,16 @@ const FASES_POR_ACCION: Readonly<Record<AccionActividad, readonly EstadoActivida
   // eliminación destruyendo elementos_espacio_equipo en cascada y sin
   // evento.
   usar_espacio_equipo: ['desarrollo'],
+  // Bitácora individual (nucleo §9.3): mismas fases que el espacio de
+  // equipo, por la misma regla de cierre de general §6.1 ("deshabilita:
+  // nuevos reportes, entradas de bitácora y avances").
+  escribir_bitacora: ['desarrollo'],
+  // Comentarios (nucleo §10.4): continuos a lo largo de desarrollo y
+  // cierre, no un paso exclusivo de este último (concepto §5.3). Al no
+  // incluir 'archivada', exigirAccion también cubre la regla "editable
+  // mientras la actividad no esté archivada" (nucleo §10.4) al reusarse
+  // para la edición.
+  comentar: ['desarrollo', 'cierre'],
 }
 
 // Orden de evaluación de nucleo §2.2: de lo más general y barato a lo más
@@ -165,6 +188,10 @@ export function autorizar(
     (!actividad.formacionEquipos || !estadosFormacion.includes(actividad.formacionEquipos))
   ) {
     return { concedido: false, motivo: 'funcion' }
+  }
+
+  if (ACCIONES_EXCLUSIVAS_DE_PARTICIPANTE.includes(accion)) {
+    return actor.rol === 'participante' ? { concedido: true } : { concedido: false, motivo: 'rol' }
   }
 
   if (actor.rol === 'organizador') return { concedido: true }

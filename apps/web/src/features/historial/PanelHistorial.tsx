@@ -1,7 +1,9 @@
 import { useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import { Avatar, AvisoError, Button, IconoCargando, PanelLateral } from '../../components/ui'
 import { agruparPorDia, formatearHora } from './agrupar'
 import { descripcionEvento } from './descripcion'
+import { destinoDeEvento } from './destino'
 import { useHistorial } from './useHistorial'
 import styles from './PanelHistorial.module.css'
 
@@ -9,6 +11,14 @@ interface PanelHistorialProps {
   idActividad: string
   abierto: boolean
   onCerrar: () => void
+  /** Acota la vista a este equipo (entrypoint de Historial en el espacio de
+   * equipo, AppShellEquipo): "qué pasó en este equipo", no en toda la
+   * actividad. Sin él, la vista completa de siempre (PantallaResumenActividad). */
+  idEquipo?: string
+  /** La propia membresía del actor (actividad.idMiMembresia): para que un
+   * clic en un evento de bitácora distinga "mi bitácora" de la de otra
+   * persona (nucleo §9.4). Sin ella, esos eventos no llevan a ningún lado. */
+  idMiMembresia?: string
 }
 
 // El actor llega como "Nombre ApellidoPaterno" ya unido (historial.service.ts
@@ -30,11 +40,17 @@ function partirNombre(actor: string | null): { nombre: string; apellidoPaterno: 
 // criterio que PanelAjustesFormacion): no saca a quien organiza de donde
 // está. Lista compacta agrupada por día, sin una tarjeta por evento —
 // referencia: el historial de versiones de Google Docs.
-export function PanelHistorial({ idActividad, abierto, onCerrar }: PanelHistorialProps) {
+export function PanelHistorial({
+  idActividad,
+  abierto,
+  onCerrar,
+  idEquipo,
+  idMiMembresia,
+}: PanelHistorialProps) {
   // La consulta solo importa mientras el panel está abierto; TanStack Query
   // mantiene en caché lo ya traído, así que reabrir no vuelve a pedirlo salvo
   // que algo lo invalide (una escritura registrable).
-  const historialQuery = useHistorial(idActividad, { enabled: abierto })
+  const historialQuery = useHistorial(idActividad, { enabled: abierto, idEquipo })
 
   // Páginas ya cargadas, aplanadas: agruparPorDia no distingue de qué página
   // vino cada evento, solo le importa el orden cronológico que el servidor
@@ -61,14 +77,32 @@ export function PanelHistorial({ idActividad, abierto, onCerrar }: PanelHistoria
               <p className={styles.grupoTitulo}>{grupo.dia}</p>
               {grupo.eventos.map((evento) => {
                 const { nombre, apellidoPaterno } = partirNombre(evento.actor)
-                return (
-                  <div key={evento.id} className={styles.fila}>
+                const destino = destinoDeEvento(evento, idMiMembresia)
+                const contenidoFila = (
+                  <>
                     <Avatar nombre={nombre} apellidoPaterno={apellidoPaterno} fotoUrl={null} />
                     <div className={styles.filaTextos}>
                       <span className={styles.filaDescripcion}>{descripcionEvento(evento)}</span>
                       <span className={styles.filaActor}>{evento.actor ?? 'Sistema'}</span>
                     </div>
                     <span className={styles.filaHora}>{formatearHora(evento.fecha)}</span>
+                  </>
+                )
+                // Ir directamente a revisarlo: solo si el tipo de evento
+                // trae lo necesario para construir el destino (destino.ts).
+                // El resto se queda como texto, igual que antes.
+                return destino ? (
+                  <Link
+                    key={evento.id}
+                    to={destino}
+                    className={`${styles.fila} ${styles.filaEnlace}`}
+                    onClick={onCerrar}
+                  >
+                    {contenidoFila}
+                  </Link>
+                ) : (
+                  <div key={evento.id} className={styles.fila}>
+                    {contenidoFila}
                   </div>
                 )
               })}

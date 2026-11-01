@@ -194,11 +194,11 @@ El sistema mantiene un registro de acciones relevantes dentro de una actividad �
 
 Los comentarios del organizador no forman parte del catálogo de funciones configurables de la sección 5.1: son una capacidad siempre disponible para el organizador y los co-organizadores en toda actividad, independientemente de la configuración elegida.
 
-El organizador puede escribir comentarios cualitativos en dos niveles, independientemente de si la actividad tiene habilitada la calificación numérica:
+Un comentario no se dirige a un equipo ni a una persona en abstracto: se escribe sobre un elemento concreto del trabajo — una meta, un avance, un recurso del espacio de equipo, o una entrada de la bitácora individual —, al estilo de un comentario de Google Docs o Classroom sobre un cambio puntual. Es continuo a lo largo del desarrollo y del cierre de la actividad, y no un paso exclusivo del cierre.
 
-**Comentarios por equipo:** observaciones generales dirigidas al equipo como unidad, que pueden abordar tanto el proceso de colaboración como el producto o avance de la actividad.
+**Visibilidad: la hereda el elemento comentado.** No es una regla propia de los comentarios, sino una consecuencia de a quién pertenece lo comentado. Un comentario sobre una meta, un avance o un recurso lo ve todo el equipo, porque el elemento mismo es compartido. Un comentario sobre una entrada de la bitácora individual solo lo ve el autor de esa entrada y quien organiza o co-organiza con el permiso de leer bitácoras: la bitácora sigue siendo privada, y un comentario sobre ella no puede ser más visible que ella.
 
-**Comentarios individuales:** observaciones dirigidas a cada participante de forma privada, que pueden abordar tanto el aspecto cognitivo (comprensión y desarrollo del tema) como el aspecto colaborativo (contribución individual al trabajo del equipo).
+**Quién escribe.** El organizador y los co-organizadores con el permiso correspondiente. Los participantes no escriben comentarios: siguen siendo retroalimentación de quien organiza hacia el trabajo, y no una discusión bidireccional. Si en algún momento conviene que quien recibe un comentario pueda responder, es una decisión nueva y pendiente, no algo que este diseño ya resuelva.
 
 Estos comentarios siempre son cualitativos: el sistema no los convierte en número por sí mismos. Su relación con la calificación numérica depende de cómo esté configurada esa función para la actividad:
 

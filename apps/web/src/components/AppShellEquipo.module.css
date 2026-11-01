@@ -126,15 +126,52 @@
   margin: 0;
 }
 
-/* Nombre de cada integrante, como ítem de un GrupoNav (igual indentación y
-   caja que Metas/Avances/Recursos). Sin enlace todavía: decisión pendiente
-   de a dónde debería llevar un clic en un nombre. */
+/* Cada integrante, como ítem de un GrupoNav (igual indentación y caja que
+   Metas/Avances/Recursos): su nombre, y junto a él, para quien organiza, el
+   acceso a su bitácora. */
 .integrante {
   display: flex;
   align-items: center;
-  padding: var(--space-2) var(--space-3);
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: calc(var(--space-2) / 2) var(--space-3);
+}
+
+.integranteNombre {
+  padding: calc(var(--space-2) / 2) 0;
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.integranteNombre:hover {
+  color: var(--color-text);
+  text-decoration: underline;
+}
+
+.integranteNombre:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.integranteAccion {
+  flex-shrink: 0;
+  padding: calc(var(--space-1) / 2) var(--space-2);
+  margin: calc(var(--space-1) / -2) calc(var(--space-2) * -1);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.integranteAccion:hover {
+  background: var(--color-primary-subtle);
+}
+
+.integranteAccion:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
 }
 
 .nav {
@@ -146,15 +183,28 @@
 .navItem {
   display: flex;
   align-items: center;
+  gap: var(--space-3);
+  width: 100%;
   padding: var(--space-2) var(--space-3);
+  border: none;
   border-radius: var(--radius-md);
+  background: none;
+  font-family: var(--font-family-base);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-muted);
+  text-align: left;
   text-decoration: none;
+  cursor: pointer;
   transition:
     background-color 0.15s ease,
     color 0.15s ease;
+}
+
+.navItem svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
 }
 
 .navItem:hover {

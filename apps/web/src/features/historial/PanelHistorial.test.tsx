@@ -138,6 +138,6 @@ describe('PanelHistorial', () => {
     await within(panel).findByText('8 oct 2026')
     expect(within(panel).getByText('9 oct 2026')).toBeInTheDocument()
     expect(within(panel).queryByRole('button', { name: 'Cargar más' })).not.toBeInTheDocument()
-    expect(obtenerHistorial).toHaveBeenCalledWith('act-1', 'ev-1')
+    expect(obtenerHistorial).toHaveBeenCalledWith('act-1', 'ev-1', undefined)
   })
 })

@@ -32,6 +32,23 @@
   border-bottom: 1px solid var(--color-border);
 }
 
+.filaEnlace {
+  text-decoration: none;
+  color: inherit;
+  border-radius: var(--radius-sm);
+  margin: 0 calc(var(--space-2) * -1);
+  padding: var(--space-2) var(--space-2);
+}
+
+.filaEnlace:hover {
+  background: var(--color-surface-hover);
+}
+
+.filaEnlace:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
 .fila > :first-child {
   flex-shrink: 0;
 }

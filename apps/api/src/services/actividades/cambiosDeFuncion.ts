@@ -83,7 +83,6 @@ export const COMPROBADORES_DE_DATOS: Record<FuncionSeguimiento, ComprobadorDeDat
     'Esta función puede tener reconocimientos otorgados: solo puede habilitarse, no deshabilitarse ni cambiar de modo.',
   // Los módulos dueños de estas funciones aún no existen, así que todavía no
   // puede haber datos.
-  bitacora_individual: SIN_DATOS_POSIBLES,
   calificacion: SIN_DATOS_POSIBLES,
   autoevaluacion_individual: SIN_DATOS_POSIBLES,
   autoevaluacion_grupal: SIN_DATOS_POSIBLES,
@@ -91,6 +90,9 @@ export const COMPROBADORES_DE_DATOS: Record<FuncionSeguimiento, ComprobadorDeDat
   // Sustituido por services/seguimiento/elementos.service.ts al cargarse
   // (nucleo §9.1), ahora que ese módulo existe.
   espacio_equipo: SIN_DATOS_POSIBLES,
+  // Sustituido por services/seguimiento/bitacora.service.ts al cargarse
+  // (nucleo §9.3, P-17), ahora que ese módulo existe.
+  bitacora_individual: SIN_DATOS_POSIBLES,
 }
 
 /** Permite que el módulo dueño de una función sustituya su comprobador sin

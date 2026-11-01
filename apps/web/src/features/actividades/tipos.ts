@@ -38,6 +38,10 @@ export interface Actividad {
   // solo consulta este arreglo.
   capacidades?: AccionActividad[]
   configuracion?: Partial<Record<FuncionSeguimiento, string>>
+  // Solo GET /api/actividades/{id} (como capacidades y configuracion): la
+  // propia membresía del actor, para saber si una fila con autoría (una
+  // entrada de bitácora, un comentario) es suya.
+  idMiMembresia?: string
 }
 
 // Lo mínimo que devuelve GET /api/claves/{clave} para decidir si unirse

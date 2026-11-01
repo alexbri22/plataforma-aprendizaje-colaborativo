@@ -65,6 +65,23 @@ const EVENTOS_ESTRUCTURA_DE_EQUIPO: readonly string[] = [
   'integrantes_intercambiados',
 ]
 
+// reparto_automatico y propuesta_generada listan la composición de TODOS
+// los equipos a la vez en un solo evento: gestión de equipos de quien
+// organiza, no la estructura de un equipo en particular (por eso no están
+// en EVENTOS_ESTRUCTURA_DE_EQUIPO) ni tampoco de la actividad en el sentido
+// de configuración/fase. Cuentan como "generales" solo para quien organiza
+// o co-organiza — un participante nunca los ve, pida el equipo que pida.
+const EVENTOS_DE_FORMACION_DE_EQUIPOS: readonly string[] = [
+  'reparto_automatico',
+  'propuesta_generada',
+]
+
+function tiposGenerales(rolActor: RolMembresia): string[] {
+  return rolActor === 'participante'
+    ? [...EVENTOS_ESTRUCTURA_DE_ACTIVIDAD]
+    : [...EVENTOS_ESTRUCTURA_DE_ACTIVIDAD, ...EVENTOS_DE_FORMACION_DE_EQUIPOS]
+}
+
 // Tope del lado del servidor, no una sugerencia del cliente: nucleo §3.1
 // ("el historial se pagina por cursor, porque es la única relación que
 // crece sin cota"). limite en la query (GET /historial) puede pedir menos,
@@ -79,46 +96,115 @@ export function limiteHistorialValido(limiteSolicitado: number | undefined): num
   return Math.min(limiteSolicitado, LIMITE_HISTORIAL_MAXIMO)
 }
 
+// Eventos de evaluación cuyo `datos.idEquipo` identifica el equipo del
+// elemento comentado (comentarios.service.ts los escribe así desde este
+// incremento): un comentario sobre un elemento es, para efectos del
+// historial de un equipo, tan "de ese equipo" como el elemento mismo. Solo
+// los ve quien organiza: ver el comentario en el elemento y ver su evento
+// en el historial son dos cosas distintas (general §7.3, Historial), y el
+// evento lleva lo que el elemento ya no muestra (el texto anterior de un
+// comentario editado).
+const EVENTOS_EVALUACION_DE_EQUIPO: readonly string[] = [
+  'comentario_escrito',
+  'comentario_modificado',
+]
+
+// Quién consulta, resuelto por la ruta. idEquipo solo hace falta para un
+// participante (P-10); puedeLeerBitacoras es el mismo criterio que
+// bitacora.service.ts usa para leer la bitácora de otra persona (P-06).
+export interface ActorHistorial {
+  rol: RolMembresia
+  idMembresia: string
+  idEquipo: string | null
+  puedeLeerBitacoras: boolean
+}
+
+// La bitácora es privada (P-06) aunque sus eventos y los comentarios sobre
+// ella lleven datos.idEquipo (el equipo del autor): en la vista de un
+// equipo, quien no puede leer bitácoras ajenas solo ve los eventos de la
+// suya.
+function filtroBitacora(actor: ActorHistorial): Prisma.HistorialWhereInput {
+  return actor.puedeLeerBitacoras
+    ? {}
+    : { datos: { path: ['idMembresia'], equals: actor.idMembresia } }
+}
+
 // GET /api/actividades/{id}/historial: cronológico inverso, paginado por
-// cursor (nucleo §3.1 — ver limiteHistorialValido). El organizador y los
-// co-organizadores ven todo (general §7.3); un participante, los eventos de
-// estructura de la actividad completa, los de estructura y aportación de su
-// propio equipo (P-10), y ninguno de evaluación — categoría ausente de las
-// ramas del OR de abajo, no hace falta excluirla aparte. idEquipoActor llega
-// resuelto desde la ruta en vez de resolverse aquí: este servicio no conoce
-// la tabla de integrantes, que es de Equipos (nucleo §1.2, "ningún módulo
-// accede a los datos de otro directamente").
+// cursor (nucleo §3.1 — ver limiteHistorialValido).
+//
+// Dos vistas, no una sola recortada por rol (decisión de producto vigente,
+// distinta de la original de nucleo §5.5):
+//
+// - Sin idEquipoFiltro (el panel del resumen de la actividad,
+//   PantallaResumenActividad): solo estructura de la actividad completa
+//   (cambios de fase, de configuración, de co-organizadores…), para
+//   cualquier rol. Es la vista de "qué cambió en la actividad", no un
+//   mezclador de aportaciones de todos los equipos.
+// - Con idEquipoFiltro (el entrypoint de Historial dentro del espacio de
+//   equipo, AppShellEquipo): lo anterior más lo propio de ese equipo —
+//   estructura del equipo, aportación (la bitácora acotada por
+//   filtroBitacora) y, para quien organiza, comentarios sobre sus elementos.
+//   Es la vista de "qué cambió en este equipo", general y específico juntos.
+//
+// Un participante solo puede pedir su propio equipo (P-10): si idEquipoFiltro
+// no es el suyo (actor.idEquipo, resuelto por la ruta vía Equipos — nucleo
+// §1.2, "ningún módulo accede a los datos de otro directamente"), las ramas
+// de ese equipo no aplican y solo ve la estructura de la actividad. Un
+// participante no ve ningún evento de categoría evaluación (general §7.3).
 export async function listarHistorial(
   idActividad: string,
-  rolActor: RolMembresia,
-  idEquipoActor: string | null,
+  actor: ActorHistorial,
   paginacion: { cursor?: string; limite?: number } = {},
+  idEquipoFiltro?: string,
 ): Promise<PaginaHistorial> {
-  const filtroParticipante: Prisma.HistorialWhereInput | undefined =
-    rolActor === 'participante'
+  const esParticipante = actor.rol === 'participante'
+  const puedeVerEseEquipo = !esParticipante || idEquipoFiltro === actor.idEquipo
+  const generales: Prisma.HistorialWhereInput = {
+    categoria: 'estructura',
+    tipoEvento: { in: tiposGenerales(actor.rol) },
+  }
+
+  const where: Prisma.HistorialWhereInput =
+    idEquipoFiltro && puedeVerEseEquipo
       ? {
+          idActividad,
           OR: [
-            { categoria: 'estructura', tipoEvento: { in: [...EVENTOS_ESTRUCTURA_DE_ACTIVIDAD] } },
-            // Sin equipo (todavía no le asignan uno, o el suyo se eliminó):
-            // ningún evento de equipo ni de aportación es suyo. idEquipo(s)
-            // viven dentro de `datos` y no como columna propia porque el
-            // evento es polimórfico (nucleo §1.2, general §4.4).
-            ...(idEquipoActor
-              ? [
+            generales,
+            {
+              categoria: 'estructura' as CategoriaEvento,
+              tipoEvento: { in: [...EVENTOS_ESTRUCTURA_DE_EQUIPO] },
+              datos: { path: ['equipos'], array_contains: idEquipoFiltro },
+            },
+            {
+              categoria: 'aportacion' as CategoriaEvento,
+              datos: { path: ['idEquipo'], equals: idEquipoFiltro },
+              NOT: { tipoEntidad: 'bitacora' },
+            },
+            {
+              categoria: 'aportacion' as CategoriaEvento,
+              tipoEntidad: 'bitacora',
+              AND: [
+                { datos: { path: ['idEquipo'], equals: idEquipoFiltro } },
+                filtroBitacora(actor),
+              ],
+            },
+            ...(esParticipante
+              ? []
+              : [
                   {
-                    categoria: 'estructura' as CategoriaEvento,
-                    tipoEvento: { in: [...EVENTOS_ESTRUCTURA_DE_EQUIPO] },
-                    datos: { path: ['equipos'], array_contains: idEquipoActor },
+                    categoria: 'evaluacion' as CategoriaEvento,
+                    tipoEvento: { in: [...EVENTOS_EVALUACION_DE_EQUIPO] },
+                    datos: { path: ['idEquipo'], equals: idEquipoFiltro },
+                    // Un comentario no es más visible que la entrada que
+                    // comenta (concepto §5.3).
+                    ...(actor.puedeLeerBitacoras
+                      ? {}
+                      : { NOT: { datos: { path: ['tipoEntidadComentada'], equals: 'bitacora' } } }),
                   },
-                  {
-                    categoria: 'aportacion' as CategoriaEvento,
-                    datos: { path: ['idEquipo'], equals: idEquipoActor },
-                  },
-                ]
-              : []),
+                ]),
           ],
         }
-      : undefined
+      : { idActividad, ...generales }
 
   const limite = limiteHistorialValido(paginacion.limite)
 
@@ -128,7 +214,7 @@ export async function listarHistorial(
   // el cursor de Prisma espera para retomar justo después de la fila ancla)
   // es lo que hace que el cursor no repita ni salte eventos entre páginas.
   const filas = await prisma.historial.findMany({
-    where: { idActividad, ...filtroParticipante },
+    where,
     include: { usuarioActor: { select: { nombre: true, apellidoPaterno: true } } },
     orderBy: [{ fecha: 'desc' }, { idEvento: 'desc' }],
     take: limite + 1,
