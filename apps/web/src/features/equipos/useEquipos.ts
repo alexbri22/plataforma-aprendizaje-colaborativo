@@ -8,6 +8,7 @@ import {
   eliminarEquipo,
   generarPropuesta,
   intercambiarIntegrantes,
+  obtenerEquipoConActividad,
   obtenerEquipos,
   retirarIntegrante,
   type CambiosEquipo,
@@ -23,6 +24,20 @@ export function useEquipos(idActividad: string) {
   return useQuery({
     queryKey: claveEquipos(idActividad),
     queryFn: () => obtenerEquipos(idActividad),
+  })
+}
+
+// docs/diseno-desarrollo-nucleo.md §4.2: ['equipos', idEquipo], "un equipo
+// con su espacio de trabajo". AppShellEquipo la usa para resolver idActividad
+// a partir de idEquipo (lo único que la URL del espacio de equipo conoce).
+export function claveEquipo(idEquipo: string) {
+  return ['equipos', idEquipo] as const
+}
+
+export function useEquipo(idEquipo: string) {
+  return useQuery({
+    queryKey: claveEquipo(idEquipo),
+    queryFn: () => obtenerEquipoConActividad(idEquipo),
   })
 }
 

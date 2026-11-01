@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { AppShell } from '../../components/AppShell'
+import { EnlacePerfil } from '../../components/EnlacePerfil'
 import {
   AvisoError,
   Badge,
@@ -67,7 +68,11 @@ export function PantallaCuentas() {
             <tbody>
               {data.map((cuenta) => (
                 <TableRow key={cuenta.idUsuario}>
-                  <TableCell>{nombreCompleto(cuenta)}</TableCell>
+                  <TableCell>
+                    <EnlacePerfil idUsuario={cuenta.idUsuario}>
+                      {nombreCompleto(cuenta)}
+                    </EnlacePerfil>
+                  </TableCell>
                   <TableCell>{cuenta.correo}</TableCell>
                   <TableCell>
                     {cuenta.tipoCuenta === 'administrador' ? 'Administrador' : 'Usuario'}

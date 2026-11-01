@@ -10,7 +10,7 @@ import {
   crearRecurso,
   listarRecursosAdmin,
   obtenerRecursoAdmin,
-  type RecursoAdmin,
+  type RecursoAdminDetalle,
 } from '../formacion/formacion.api'
 import { PantallaContenido } from './PantallaContenido'
 import { PantallaEditarRecurso } from './PantallaEditarRecurso'
@@ -43,7 +43,7 @@ const ADMIN: Usuario = {
   fotoUrl: null,
 }
 
-const RECURSO: RecursoAdmin = {
+const RECURSO: RecursoAdminDetalle = {
   idRecurso: 'r1',
   seccion: 'como_colaborar',
   titulo: 'Acuerdos que se recuerdan',
@@ -62,6 +62,7 @@ const RECURSO: RecursoAdmin = {
   fechaActualizacion: '2026-09-01T00:00:00.000Z',
   archivo: null,
   autor: null,
+  usadoEn: [],
 }
 
 function renderEn(ruta: string) {
@@ -162,5 +163,33 @@ describe('PantallaEditarRecurso', () => {
 
     await user.click(within(resumen).getByRole('button', { name: 'Licencia o derechos de uso' }))
     expect(screen.getByLabelText('Licencia o derechos de uso')).toHaveFocus()
+  })
+
+  it('el PDF de un borrador se abre con la descarga del panel, no con la pública', async () => {
+    vi.mocked(obtenerRecursoAdmin).mockResolvedValue({
+      ...RECURSO,
+      tipoRecurso: 'pdf',
+      estatus: 'borrador',
+      archivo: { nombre: 'guia.pdf', tamano: 2048, url: '/api/recursos/r1/archivo?v=123' },
+    })
+    renderEn('/admin/contenido/r1')
+
+    const enlace = await screen.findByRole('link', { name: 'guia.pdf' })
+    expect(enlace.getAttribute('href')).toMatch(/\/api\/admin\/recursos\/r1\/archivo\?v=123$/)
+    expect(screen.getByText(/el público lo verá al publicar/)).toBeInTheDocument()
+  })
+
+  it('un recurso usado en un curso avisa dónde y no deja eliminarlo', async () => {
+    vi.mocked(obtenerRecursoAdmin).mockResolvedValue({
+      ...RECURSO,
+      usadoEn: [{ idCurso: 'c1', titulo: 'Acuerdos claros', estatus: 'publicado' }],
+    })
+    renderEn('/admin/contenido/r1')
+
+    expect(await screen.findByRole('link', { name: 'Acuerdos claros' })).toHaveAttribute(
+      'href',
+      '/admin/cursos/c1',
+    )
+    expect(screen.getByRole('button', { name: 'Eliminar' })).toBeDisabled()
   })
 })

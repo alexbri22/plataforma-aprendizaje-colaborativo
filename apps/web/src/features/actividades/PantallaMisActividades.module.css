@@ -16,9 +16,9 @@
   display: flex;
   flex-wrap: wrap;
   /* flex-start y no flex-end: a diferencia del Select que remplazó,
-     SelectorFase trae su propia etiqueta arriba ("Ver actividades en"), así
-     que lo que debe alinearse es esa etiqueta con "Buscar actividades", no
-     las cajas de abajo. */
+     SelectorFase trae su propia etiqueta arriba ("Ver actividades por
+     etapa"), así que lo que debe alinearse es esa etiqueta con "Buscar
+     actividades", no las cajas de abajo. */
   align-items: flex-start;
   gap: var(--space-6);
 }
@@ -26,6 +26,13 @@
 .busqueda {
   width: 280px;
   max-width: 100%;
+  /* SelectorFase va primero en el DOM y se queda pegado al margen
+     izquierdo (igual que el resto del contenido de la pantalla); este
+     margen empuja el buscador al extremo derecho en vez de dejarlo justo
+     después, pegado a la línea del selector. Con flex-wrap, en pantallas
+     angostas donde ya no caben ambos en una fila el margen no alcanza y el
+     buscador simplemente baja a su propio renglón, pegado a la izquierda. */
+  margin-left: auto;
 }
 
 .sinResultados {

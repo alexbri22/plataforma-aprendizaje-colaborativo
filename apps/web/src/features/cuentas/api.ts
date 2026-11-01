@@ -35,16 +35,22 @@ export interface Usuario {
 export interface PerfilPropio extends Usuario {
   nivelEstudios: NivelEstudios
   institucionEducativa: string
+  /** Si otras personas ven el correo en el perfil básico. */
+  correoPublico: boolean
   acumulado: PuntosPorCategoria
 }
 
-/** Lo que se ve de otra persona: nombre, foto y rangos. Nunca su correo
+/** Lo que se ve de otra persona: datos básicos, foto y rangos
  * (docs/diseno-desarrollo-nucleo.md §6.3). */
 export interface PerfilBasico {
   idUsuario: string
   nombre: string
   apellidoPaterno: string
   apellidoMaterno: string
+  /** null si la persona lo mantiene privado. */
+  correo: string | null
+  nivelEstudios: NivelEstudios
+  institucionEducativa: string
   fotoUrl: string | null
   acumulado: PuntosPorCategoria
 }
@@ -210,6 +216,19 @@ export async function actualizarDatosPerfil(datos: DatosPerfil): Promise<Usuario
     body: JSON.stringify(datos),
   })
   if (!respuesta.ok) throw await errorDePerfil(respuesta, 'No pudimos guardar tus datos.')
+  const { usuario } = (await respuesta.json()) as { usuario: Usuario }
+  return conFotoAbsoluta(usuario)
+}
+
+export async function cambiarVisibilidadCorreo(correoPublico: boolean): Promise<Usuario> {
+  const respuesta = await pedir('/api/usuarios/yo', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ correoPublico }),
+  })
+  if (!respuesta.ok) {
+    throw await errorDePerfil(respuesta, 'No pudimos cambiar la visibilidad de tu correo.')
+  }
   const { usuario } = (await respuesta.json()) as { usuario: Usuario }
   return conFotoAbsoluta(usuario)
 }

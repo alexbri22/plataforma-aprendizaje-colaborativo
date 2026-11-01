@@ -12,21 +12,22 @@ porque la transición a `cierre` no existe todavía.
 
 ## Qué hay aquí
 
-| Pieza                                   | Para qué                                                                                     |
-| --------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `arteInsignias`                         | Resuelve el emblema PNG de una categoría y nivel. Tolera los que aún no se han subido.       |
-| `MarcoRango`                            | El marco del nivel. Envuelve cualquier contenido; agnóstico de qué enmarca.                  |
-| `IconoCategoria`                        | Emblema vectorial de una categoría. Suplente del PNG, y titular del estado sin rango.        |
-| `InsigniaCategoria`                     | Marco más emblema. Es la unidad reusable del sistema.                                        |
-| `VitrinaInsignias`                      | Las seis insignias de un usuario, para el perfil. Con `onSeleccionar`, cada una es un botón. |
-| `DetalleInsignia`                       | Lo que se abre al elegir una en el perfil propio: nivel, avance y frases con su actividad.   |
-| `RitualReconocimiento`                  | El reparto de reconocimientos del cierre. Recibe los compañeros y devuelve los borradores.   |
-| `insignias.api` / `useReconocimientos`  | Cliente HTTP y queries de TanStack, con claves bajo `['actividades', id]` e `['insignias']`. |
-| `PantallaReconocer`                     | `/actividades/:id/reconocer`. El ritual conectado; sirve a participantes y a quien organiza. |
-| `PantallaMisReconocimientos`            | `/actividades/:id/insignias`. Lo recibido en la actividad (tras el cierre) y el acumulado.   |
-| `PantallaParticipantes`                 | `/actividades/:id/participantes`. Lista; quien organiza enlaza al detalle de cada uno.       |
-| `PantallaReconocimientosDeParticipante` | `/actividades/:id/participantes/:idMembresia`. Lo recibido con autoría, solo organiza.       |
-| `PantallaMuestraInsignias`              | Ruta `/insignias`. Muestra del arte para revisión, no producto.                              |
+| Pieza                                   | Para qué                                                                                           |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `arteInsignias`                         | Resuelve el emblema PNG de una categoría y nivel. Tolera los que aún no se han subido.             |
+| `MarcoRango`                            | El marco del nivel. Envuelve cualquier contenido; agnóstico de qué enmarca.                        |
+| `IconoCategoria`                        | Emblema vectorial de una categoría. Suplente del PNG, y titular del estado sin rango.              |
+| `InsigniaCategoria`                     | Marco más emblema. Es la unidad reusable del sistema.                                              |
+| `VitrinaInsignias`                      | Las seis insignias de un usuario, para el perfil. Con `onSeleccionar`, cada una es un botón.       |
+| `DetalleInsignia`                       | Lo que se abre al elegir una en el perfil propio: nivel, avance y frases con su actividad.         |
+| `RitualReconocimiento`                  | El reparto de reconocimientos del cierre. Recibe los compañeros y devuelve los borradores.         |
+| `insignias.api` / `useReconocimientos`  | Cliente HTTP y queries de TanStack, con claves bajo `['actividades', id]` e `['insignias']`.       |
+| `AccionesReconocimiento`                | Botones del resumen de la actividad: reconocer durante el cierre; ver lo recibido también después. |
+| `PantallaReconocer`                     | `/actividades/:id/reconocer`. El ritual conectado; sirve a participantes y a quien organiza.       |
+| `PantallaMisReconocimientos`            | `/actividades/:id/insignias`. Lo recibido en la actividad (tras el cierre) y el acumulado.         |
+| `PantallaParticipantes`                 | `/actividades/:id/participantes`. Lista; quien organiza enlaza al detalle de cada uno.             |
+| `PantallaReconocimientosDeParticipante` | `/actividades/:id/participantes/:idMembresia`. Lo recibido con autoría, solo organiza.             |
+| `PantallaMuestraInsignias`              | Ruta `/insignias`. Muestra del arte para revisión, no producto.                                    |
 
 Se importa desde `index.ts`, nunca de un archivo suelto:
 
@@ -123,8 +124,9 @@ de Actividades, sale del cierre de la actividad.
 
 ## Lo que falta
 
-- Acotar los compañeros al equipo cuando exista `equipos`, y leer la fase de la
-  actividad en vez de calcular la ventana con fechas.
+- Acotar los compañeros al equipo cuando exista `equipos`. La ventana ya atiende
+  al estado `cierre` y a las fechas; cuando exista la transición automática a
+  cierre, la apertura dependerá solo del estado.
 - La validación ligera del organizador (alertas de reciprocidad y frases
   vacías) y el descarte de reconocimientos.
 - `PantallaMuestraInsignias` (`/insignias`) era la muestra del arte mientras no

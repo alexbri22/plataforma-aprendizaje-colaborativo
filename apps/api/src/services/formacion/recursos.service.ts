@@ -20,7 +20,7 @@ import {
   ErrorRecursoNoEncontrado,
   ErrorValidacion,
 } from '../../errores.js'
-import { cursosQueUsanRecurso } from './cursos.service.js'
+import { cursosQueUsanRecurso } from './usoDeRecursos.js'
 import type { DatosRecurso, FiltrosRecursos, PeticionPagina } from './validacion.js'
 
 /*
@@ -115,8 +115,9 @@ function aResumen(fila: FilaRecurso): ResumenRecurso {
     duracionMin: fila.duracionMin,
     orden: fila.orden,
     fechaActualizacion: fila.fechaActualizacion.toISOString(),
-    // La URL lleva la fecha del archivo para poder cachearlo sin plazo: un
-    // archivo nuevo es una URL nueva (mismo criterio que la foto de perfil).
+    // La URL lleva la fecha del archivo para que un archivo nuevo sea una URL
+    // nueva. No se cachea sin plazo (ver la ruta de descarga): retirar o
+    // borrar el recurso debe poder cortar el acceso.
     archivo: fila.archivo
       ? {
           nombre: fila.archivo.nombre,
@@ -218,6 +219,19 @@ export async function obtenerArchivoPublicado(
 }
 
 // ---- Administración ----
+
+/** El archivo de un recurso en cualquier estatus, para que el administrador
+ * lo revise antes de publicarlo (§12.3, vista previa). */
+export async function obtenerArchivoAdmin(
+  idRecurso: string,
+): Promise<{ contenido: Uint8Array; tipo: string; nombre: string }> {
+  const archivo = await prisma.archivoRecurso.findUnique({
+    where: { idRecurso },
+    select: { contenido: true, tipo: true, nombre: true },
+  })
+  if (!archivo) throw new ErrorRecursoNoEncontrado()
+  return archivo
+}
 
 /** Todos los recursos para el panel. Los filtros sirven también al editor de
  * cursos, que busca en la biblioteca el recurso que quiere usar como lección. */
@@ -360,50 +374,71 @@ export async function crearRecurso(
   return { ...aAdmin(fila), usadoEn: [] }
 }
 
+/**
+ * Toda modificación de un recurso existente (ficha, estatus, archivo,
+ * borrado) corre dentro de una transacción que primero bloquea su fila con
+ * SELECT … FOR UPDATE. Así la lectura, la validación de los mínimos y la
+ * escritura de una petición no se intercalan con las de otra sobre el mismo
+ * recurso: sin el bloqueo, publicar un borrador completo mientras otra
+ * petición vacía su contenido (o quita su PDF) podía dejar publicado un
+ * recurso que no cumple los mínimos. Las peticiones sobre recursos distintos
+ * no se esperan entre sí.
+ */
+async function conRecursoBloqueado<T>(
+  idRecurso: string,
+  operacion: (tx: Prisma.TransactionClient) => Promise<T>,
+): Promise<T> {
+  return prisma.$transaction(async (tx) => {
+    const bloqueado = await tx.$queryRaw<{ id_recurso: string }[]>`
+      SELECT id_recurso FROM recursos_formativos WHERE id_recurso = ${idRecurso} FOR UPDATE`
+    if (bloqueado.length === 0) throw new ErrorRecursoNoEncontrado()
+    return operacion(tx)
+  })
+}
+
 export async function actualizarRecurso(
   idRecurso: string,
   cambios: Partial<DatosRecurso>,
 ): Promise<RecursoAdminDetalle> {
-  const actual = await prisma.recursoFormativo.findUnique({
-    where: { idRecurso },
-    include: INCLUIR_METADATOS,
-  })
-  if (!actual) throw new ErrorRecursoNoEncontrado()
-
-  if (cambios.estatus && !TRANSICIONES[actual.estatus].includes(cambios.estatus)) {
-    throw new ErrorValidacion({
-      estatus:
-        actual.estatus === 'borrador'
-          ? 'Un borrador solo puede publicarse.'
-          : 'Un recurso publicado no vuelve a borrador; edítalo o retíralo.',
+  const fila = await conRecursoBloqueado(idRecurso, async (tx) => {
+    const actual = await tx.recursoFormativo.findUniqueOrThrow({
+      where: { idRecurso },
+      include: INCLUIR_METADATOS,
     })
-  }
 
-  const tipoFinal = cambios.tipoRecurso ?? actual.tipoRecurso
-  // Cambiar a un tipo que no admite archivo lo descarta: quedaría huérfano,
-  // sin forma de verse ni de quitarse desde la interfaz.
-  const descartarArchivo = actual.archivo !== null && !TIPOS_CON_ARCHIVO.includes(tipoFinal)
+    if (cambios.estatus && !TRANSICIONES[actual.estatus].includes(cambios.estatus)) {
+      throw new ErrorValidacion({
+        estatus:
+          actual.estatus === 'borrador'
+            ? 'Un borrador solo puede publicarse.'
+            : 'Un recurso publicado no vuelve a borrador; edítalo o retíralo.',
+      })
+    }
 
-  const final: RecursoCombinado = {
-    seccion: actual.seccion,
-    titulo: actual.titulo,
-    resumen: actual.resumen,
-    tipoRecurso: actual.tipoRecurso,
-    contenido: actual.contenido,
-    transcripcion: actual.transcripcion,
-    area: actual.area as AreaHabilidad | null,
-    elementos: actual.elementos as ElementoColaboracion[],
-    duracionMin: actual.duracionMin,
-    fuente: actual.fuente,
-    licencia: actual.licencia,
-    orden: actual.orden,
-    estatus: actual.estatus,
-    ...cambios,
-    tieneArchivo: actual.archivo !== null && !descartarArchivo,
-  }
-  validarCoherencia(final)
+    const tipoFinal = cambios.tipoRecurso ?? actual.tipoRecurso
+    // Cambiar a un tipo que no admite archivo lo descarta: quedaría huérfano,
+    // sin forma de verse ni de quitarse desde la interfaz.
+    const descartarArchivo = actual.archivo !== null && !TIPOS_CON_ARCHIVO.includes(tipoFinal)
 
-  const fila = await prisma.$transaction(async (tx) => {
+    const final: RecursoCombinado = {
+      seccion: actual.seccion,
+      titulo: actual.titulo,
+      resumen: actual.resumen,
+      tipoRecurso: actual.tipoRecurso,
+      contenido: actual.contenido,
+      transcripcion: actual.transcripcion,
+      area: actual.area as AreaHabilidad | null,
+      elementos: actual.elementos as ElementoColaboracion[],
+      duracionMin: actual.duracionMin,
+      fuente: actual.fuente,
+      licencia: actual.licencia,
+      orden: actual.orden,
+      estatus: actual.estatus,
+      ...cambios,
+      tieneArchivo: actual.archivo !== null && !descartarArchivo,
+    }
+    validarCoherencia(final)
+
     if (descartarArchivo) await tx.archivoRecurso.delete({ where: { idRecurso } })
     return tx.recursoFormativo.update({
       where: { idRecurso },
@@ -421,19 +456,20 @@ export async function actualizarRecurso(
  * lecciones_curso lo garantiza en la base; aquí se comprueba antes para dar
  * un mensaje que nombre los cursos. */
 export async function eliminarRecurso(idRecurso: string): Promise<void> {
-  const cursos = await cursosQueUsanRecurso(idRecurso)
-  if (cursos.length > 0) throw new ErrorRecursoEnUso(cursos)
-  try {
-    const { count } = await prisma.recursoFormativo.deleteMany({ where: { idRecurso } })
-    if (count === 0) throw new ErrorRecursoNoEncontrado()
-  } catch (error) {
-    // Una lección agregada entre la comprobación y el borrado: la llave
-    // foránea lo rechaza (P2003) y se responde igual.
-    if ((error as { code?: string }).code === 'P2003') {
-      throw new ErrorRecursoEnUso(await cursosQueUsanRecurso(idRecurso))
+  await conRecursoBloqueado(idRecurso, async (tx) => {
+    const cursos = await cursosQueUsanRecurso(idRecurso, tx)
+    if (cursos.length > 0) throw new ErrorRecursoEnUso(cursos)
+    try {
+      await tx.recursoFormativo.delete({ where: { idRecurso } })
+    } catch (error) {
+      // Una lección agregada después de la comprobación: la llave foránea
+      // rechaza el borrado (P2003) y se responde igual.
+      if ((error as { code?: string }).code === 'P2003') {
+        throw new ErrorRecursoEnUso(await cursosQueUsanRecurso(idRecurso))
+      }
+      throw error
     }
-    throw error
-  }
+  })
 }
 
 // Firma de un PDF: los primeros bytes son "%PDF-". Se comprueba además del
@@ -446,14 +482,8 @@ export async function guardarArchivoRecurso(
   nombre: string,
   contenido: Buffer,
 ): Promise<RecursoAdminDetalle> {
-  const actual = await prisma.recursoFormativo.findUnique({
-    where: { idRecurso },
-    select: { tipoRecurso: true },
-  })
-  if (!actual) throw new ErrorRecursoNoEncontrado()
-  if (!TIPOS_CON_ARCHIVO.includes(actual.tipoRecurso)) {
-    throw new ErrorArchivoInvalido('Este tipo de recurso no admite archivo adjunto.')
-  }
+  // El contenido se valida antes de abrir la transacción: no depende del
+  // estado del recurso y así el bloqueo dura lo menos posible.
   if (!esTipoArchivoRecurso(tipo)) throw new ErrorArchivoInvalido('El archivo debe ser PDF.')
   if (contenido.length === 0) throw new ErrorArchivoInvalido('El archivo llegó vacío.')
   if (contenido.length > MAX_BYTES_ARCHIVO_RECURSO) {
@@ -471,30 +501,42 @@ export async function guardarArchivoRecurso(
     tamano: contenido.length,
     actualizadoEn: new Date(),
   }
-  await prisma.archivoRecurso.upsert({
-    where: { idRecurso },
-    create: { idRecurso, ...datos },
-    update: datos,
+  await conRecursoBloqueado(idRecurso, async (tx) => {
+    // El tipo se lee con la fila bloqueada: un cambio de tipo simultáneo no
+    // puede dejar el archivo huérfano en un recurso que no lo admite.
+    const { tipoRecurso } = await tx.recursoFormativo.findUniqueOrThrow({
+      where: { idRecurso },
+      select: { tipoRecurso: true },
+    })
+    if (!TIPOS_CON_ARCHIVO.includes(tipoRecurso)) {
+      throw new ErrorArchivoInvalido('Este tipo de recurso no admite archivo adjunto.')
+    }
+    await tx.archivoRecurso.upsert({
+      where: { idRecurso },
+      create: { idRecurso, ...datos },
+      update: datos,
+    })
   })
   return obtenerRecursoAdmin(idRecurso)
 }
 
 export async function quitarArchivoRecurso(idRecurso: string): Promise<RecursoAdminDetalle> {
-  const actual = await prisma.recursoFormativo.findUnique({
-    where: { idRecurso },
-    select: { estatus: true, tipoRecurso: true, contenido: true },
-  })
-  if (!actual) throw new ErrorRecursoNoEncontrado()
-  // Quitarlo dejaría publicado un recurso que ya no cumple los mínimos.
-  if (
-    actual.estatus === 'publicado' &&
-    (actual.tipoRecurso === 'pdf' || (actual.tipoRecurso === 'plantilla' && !actual.contenido))
-  ) {
-    throw new ErrorValidacion({
-      archivo: 'El recurso publicado depende de este archivo. Sube otro o retira el recurso.',
+  await conRecursoBloqueado(idRecurso, async (tx) => {
+    const actual = await tx.recursoFormativo.findUniqueOrThrow({
+      where: { idRecurso },
+      select: { estatus: true, tipoRecurso: true, contenido: true },
     })
-  }
-  await prisma.archivoRecurso.deleteMany({ where: { idRecurso } })
+    // Quitarlo dejaría publicado un recurso que ya no cumple los mínimos.
+    if (
+      actual.estatus === 'publicado' &&
+      (actual.tipoRecurso === 'pdf' || (actual.tipoRecurso === 'plantilla' && !actual.contenido))
+    ) {
+      throw new ErrorValidacion({
+        archivo: 'El recurso publicado depende de este archivo. Sube otro o retira el recurso.',
+      })
+    }
+    await tx.archivoRecurso.deleteMany({ where: { idRecurso } })
+  })
   return obtenerRecursoAdmin(idRecurso)
 }
 

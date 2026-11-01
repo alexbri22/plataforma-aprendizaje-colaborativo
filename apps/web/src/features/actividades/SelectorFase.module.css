@@ -2,13 +2,14 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  /* width y no solo max-width: .paso usa flex: 1 para repartir el ancho en
-     cinco partes iguales, pero eso solo ocurre cuando .pasos tiene un ancho
-     definido del que repartir sobrante. Con max-width nada más, .selector se
-     mide por el contenido de cada columna (shrink-to-fit) y cada una termina
-     con el ancho mínimo que pide su propia etiqueta, no un quinto parejo —
-     por eso las etiquetas largas como "Formación de equipos" se amontonaban.
-     min() para seguir respetando el espacio disponible en pantallas angostas. */
+  /* width y no solo max-width: .paso usa flex para repartir el ancho en
+     partes proporcionales (1 para cada fase, 0.5 para "todas"), pero eso
+     solo ocurre cuando .pasos tiene un ancho definido del que repartir
+     sobrante. Con max-width nada más, .selector se mide por el contenido de
+     cada columna (shrink-to-fit) y cada una termina con el ancho mínimo que
+     pide su propia etiqueta, no su parte proporcional — por eso las
+     etiquetas largas como "Formación de equipos" se amontonaban. min() para
+     seguir respetando el espacio disponible en pantallas angostas. */
   width: min(640px, 100%);
   /* Comparte fila con "Buscar actividades" (PantallaMisActividades):
      flex-shrink: 0 para que no se vaya aplastando mientras quede espacio; si
@@ -36,6 +37,20 @@
   flex: 1;
 }
 
+/* 'todas' (primer paso) va al ras del borde izquierdo de .pasos, no
+   centrado en su columna: esa columna es la que marca dónde empieza la
+   línea imaginaria del contenido (alineada con "Buscar actividades" y el
+   resto de la pantalla), y un círculo centrado la indentaba unos cuantos
+   píxeles de más. flex: 0.5 (la mitad que los demás, que siguen en flex: 1)
+   achica esta columna a la mitad: así, al quedar el círculo pegado a su
+   borde izquierdo en vez de centrado, el hueco hasta el siguiente círculo
+   coincide con el que hay entre los pasos centrados, en lugar de quedar
+   más ancho. */
+.paso:first-child {
+  align-items: flex-start;
+  flex: 0.5;
+}
+
 /* La línea conecta el centro de este círculo con el centro del anterior
    (right: 50% ancla el borde derecho de la línea al centro de .paso; width:
    100% la extiende un ancho de columna hacia la izquierda, hasta el centro
@@ -55,6 +70,19 @@
      paso anterior; sin esto, además de tapar visualmente ese círculo (ver
      z-index abajo) también le robaría los clics. */
   pointer-events: none;
+}
+
+/* La fórmula de arriba (ancho: 100% = una columna) asume que llega al
+   CENTRO del círculo anterior, cierto para cualquier paso centrado en su
+   columna — pero el primer círculo ya no se centra (ver .paso:first-child)
+   sino que queda al ras del borde izquierdo, a 8px (su radio) de ese borde
+   sin importar cuánto mida la columna. Con esa columna a flex: 0.5 (la
+   mitad que esta, a flex: 1), el borde derecho de esta línea (right: 50%,
+   arriba) cae justo una columna completa después del borde izquierdo de
+   .pasos — así que basta restarle los 8px del radio a un 100% normal para
+   llegar exacto al centro de ese primer círculo. */
+.paso:nth-child(2)::before {
+  width: calc(100% - 8px);
 }
 
 .circulo {

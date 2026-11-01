@@ -8,6 +8,7 @@ import {
   configurarFuncion,
   crearActividad,
   fijarLimitesEquipo,
+  iniciarCierre,
   listarActividadesDeUsuario,
   listarParticipantes,
   nombreCompleto,
@@ -88,6 +89,20 @@ actividadesRouter.post(
     const { membresia } = req.contextoActividad!
     const actor = req.actor as UsuarioPublico
     const actividad = await cerrarInscripcion(req.params.id as string, actor.idUsuario, membresia)
+    res.status(200).json({ actividad })
+  },
+)
+
+// POST /api/actividades/{id}/cierre (docs/diseno-desarrollo-nucleo.md §7.4 y
+// §7.7): inicia el periodo de cierre.
+actividadesRouter.post(
+  '/actividades/:id/cierre',
+  exigirSesion,
+  cargarContextoActividad,
+  async (req, res) => {
+    const { membresia } = req.contextoActividad!
+    const actor = req.actor as UsuarioPublico
+    const actividad = await iniciarCierre(req.params.id as string, actor.idUsuario, membresia)
     res.status(200).json({ actividad })
   },
 )

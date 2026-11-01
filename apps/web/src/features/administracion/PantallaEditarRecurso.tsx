@@ -34,7 +34,7 @@ import {
   ErrorFormacion,
   Markdown,
   formatoTamano,
-  urlArchivo,
+  urlArchivoAdmin,
   useActualizarRecurso,
   useCrearRecurso,
   useEliminarRecurso,
@@ -43,8 +43,10 @@ import {
   useSubirArchivoRecurso,
   type DatosRecurso,
   type RecursoAdmin,
+  type RecursoAdminDetalle,
 } from '../formacion'
-import type { AccionRecurso, AvisoContenido } from './avisoContenido'
+import { accionDe, type AvisoContenido } from './avisoContenido'
+import { llevarA } from './llevarA'
 import styles from './PantallaEditarRecurso.module.css'
 
 type Formulario = Omit<DatosRecurso, 'duracionMin' | 'orden' | 'estatus'> & {
@@ -125,29 +127,16 @@ const CAMPOS: { campo: string; etiqueta: string }[] = [
   { campo: 'estatus', etiqueta: 'Estatus' },
 ]
 
-/** Lleva la vista y el foco a un campo del formulario. Si el campo no tiene
- * control propio (elementos, archivo sin recurso guardado) se enfoca su
- * primer control o su contenedor. Devuelve false si no está en pantalla. */
+/** Lleva la vista y el foco a un campo del formulario. Si no tiene control
+ * propio (archivo sin recurso guardado) va a su contenedor. Devuelve false si
+ * no está en pantalla. */
 function irACampo(campo: string): boolean {
   const destino =
     document.getElementById(`campo-${campo}`) ??
     (campo === 'archivo' ? document.getElementById('seccion-archivo') : null)
   if (!destino) return false
-  const enfocable =
-    destino instanceof HTMLFieldSetElement
-      ? (destino.querySelector<HTMLElement>('input, select, textarea') ?? destino)
-      : destino
-  destino.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  enfocable.focus({ preventScroll: true })
+  llevarA(destino)
   return true
-}
-
-/** Lo que el aviso de la lista debe decir según el estatus antes y después. */
-function accionDe(antes: EstatusRecurso | null, despues: EstatusRecurso): AccionRecurso {
-  if (antes === null) return despues === 'publicado' ? 'publicado' : 'creado'
-  if (antes === despues) return 'guardado'
-  if (despues === 'retirado') return 'retirado'
-  return antes === 'retirado' ? 'republicado' : 'publicado'
 }
 
 function sinCampo(errores: Record<string, string>, campo: string): Record<string, string> {
@@ -188,7 +177,7 @@ export function PantallaEditarRecurso() {
   return <Editor key={consulta.data?.idRecurso ?? 'nuevo'} recurso={consulta.data ?? null} />
 }
 
-function Editor({ recurso }: { recurso: RecursoAdmin | null }) {
+function Editor({ recurso }: { recurso: RecursoAdminDetalle | null }) {
   const navigate = useNavigate()
   const location = useLocation()
   const [form, setForm] = useState<Formulario>(() => (recurso ? aFormulario(recurso) : VACIO))
@@ -201,6 +190,14 @@ function Editor({ recurso }: { recurso: RecursoAdmin | null }) {
   })
   // Cada intento fallido incrementa este contador; el efecto de abajo lleva
   // el foco al primer campo con error una vez que el DOM ya los muestra.
+  // El aviso ya se copió: se quita del historial para que no reaparezca al
+  // recargar, conservando a qué página de la lista volver.
+  useEffect(() => {
+    const estado = location.state as { avisoEditor?: unknown; volverA?: string } | null
+    if (estado?.avisoEditor === undefined) return
+    navigate(location.pathname, { replace: true, state: { volverA: estado.volverA } })
+  }, [location.state, location.pathname, navigate])
+
   const [intentoFallido, setIntentoFallido] = useState(0)
   // Página de la lista de la que se llegó (?pagina=N), para volver a ella.
   const [volverA] = useState(() => {
@@ -376,6 +373,7 @@ function Editor({ recurso }: { recurso: RecursoAdmin | null }) {
     <AppShell
       seccionActiva="contenido"
       titulo={recurso ? 'Editar recurso' : 'Nuevo recurso'}
+      volverA={`/admin/contenido${volverA}`}
       acciones={
         estatus === 'publicado' && recurso ? (
           <Button variant="secondary" size="sm" to={`/recursos/${recurso.idRecurso}`}>
@@ -386,9 +384,6 @@ function Editor({ recurso }: { recurso: RecursoAdmin | null }) {
     >
       <div className={styles.pagina}>
         <div className={styles.barra}>
-          <Link to={`/admin/contenido${volverA}`} className={styles.volver}>
-            ← Contenido formativo
-          </Link>
           {estatus ? (
             <Badge
               variant={
@@ -399,6 +394,29 @@ function Editor({ recurso }: { recurso: RecursoAdmin | null }) {
             </Badge>
           ) : null}
         </div>
+
+        {recurso && recurso.usadoEn.length > 0 ? (
+          <div className={styles.usadoEn}>
+            <p>
+              <strong>
+                {recurso.usadoEn.length === 1
+                  ? 'Se usa en 1 curso'
+                  : `Se usa en ${recurso.usadoEn.length} cursos`}
+                :
+              </strong>{' '}
+              {recurso.usadoEn.map((c, i) => (
+                <span key={c.idCurso}>
+                  {i > 0 ? ', ' : null}
+                  <Link to={`/admin/cursos/${c.idCurso}`}>{c.titulo}</Link>
+                </span>
+              ))}
+            </p>
+            <p>
+              Para eliminarlo, primero quítalo de esos cursos. Si lo retiras, la lección se verá
+              como no disponible.
+            </p>
+          </div>
+        ) : null}
 
         {mensaje ? (
           <div ref={resumenErroresRef} tabIndex={-1} className={styles.resumenErrores} role="alert">
@@ -550,12 +568,18 @@ function Editor({ recurso }: { recurso: RecursoAdmin | null }) {
                   <>
                     {archivo ? (
                       <p className={styles.archivoActual}>
-                        <a href={urlArchivo(archivo)} target="_blank" rel="noopener noreferrer">
+                        {/* Descarga del panel: abre también el PDF de un borrador
+                            o de un recurso retirado, para revisarlo. */}
+                        <a
+                          href={urlArchivoAdmin(idRecurso, archivo)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
                           {archivo.nombre}
                         </a>{' '}
                         · {formatoTamano(archivo.tamano)}
                         {estatus !== 'publicado' ? (
-                          <span className={styles.nota}> (visible al publicar)</span>
+                          <span className={styles.nota}> (el público lo verá al publicar)</span>
                         ) : null}
                       </p>
                     ) : (
@@ -727,7 +751,12 @@ function Editor({ recurso }: { recurso: RecursoAdmin | null }) {
                 variant="danger"
                 className={styles.accionDestructiva}
                 onClick={() => setConfirmar('eliminar')}
-                disabled={ocupado}
+                disabled={ocupado || recurso.usadoEn.length > 0}
+                title={
+                  recurso.usadoEn.length > 0
+                    ? 'Este recurso está en un curso; quítalo de ahí primero.'
+                    : undefined
+                }
               >
                 Eliminar
               </Button>
@@ -745,7 +774,11 @@ function Editor({ recurso }: { recurso: RecursoAdmin | null }) {
             ? estatus === 'borrador'
               ? `«${form.titulo}» se eliminará definitivamente. No se puede deshacer.`
               : `«${form.titulo}» se eliminará definitivamente, junto con su archivo, y dejará de aparecer en Recursos. No se puede deshacer. Si solo quieres ocultarlo por ahora, retíralo.`
-            : `«${form.titulo}» dejará de aparecer en Recursos. Podrás volver a publicarlo después.`
+            : `«${form.titulo}» dejará de aparecer en Recursos${
+                recurso?.usadoEn.length
+                  ? ' y sus lecciones en cursos se verán como no disponibles'
+                  : ''
+              }. Podrás volver a publicarlo después.`
         }
       >
         <div className={styles.accionesModal}>

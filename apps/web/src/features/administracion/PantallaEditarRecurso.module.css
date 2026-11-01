@@ -31,6 +31,34 @@
   outline-offset: 2px;
 }
 
+.usadoEn {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+}
+
+.usadoEn p {
+  margin: 0;
+}
+
+.usadoEn p + p {
+  margin-top: var(--space-1);
+}
+
+.usadoEn strong {
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.usadoEn a {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+}
+
 .aviso {
   margin: 0;
   padding: var(--space-3) var(--space-4);

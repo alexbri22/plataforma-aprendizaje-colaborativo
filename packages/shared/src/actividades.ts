@@ -25,6 +25,11 @@ export const ACCIONES_ACTIVIDAD = [
   'ajustar_funciones',
   'ajustar_periodos',
   'cerrar_inscripcion',
+  // Desarrollo → Cierre (nucleo §7.4). Sin precondición, a diferencia de
+  // cerrar_inscripcion. Hoy el único efecto implementado es el cambio de
+  // fase: abrir calificación/evaluaciones y caducar invitaciones pendientes
+  // no tienen qué hacer todavía porque esos módulos no existen.
+  'iniciar_cierre',
   'agregar_coorganizador',
   // Equipos (nucleo §8). Sus permisos salen del rol, del permiso de
   // co-organizador y del estado de `formacion_equipos`; nunca de un tipo de
@@ -35,6 +40,12 @@ export const ACCIONES_ACTIVIDAD = [
   'elegir_equipo',
   'editar_equipo',
   'generar_propuesta_equipos',
+  // Seguimiento (nucleo §9.1): crear, editar o eliminar un elemento del
+  // espacio del propio equipo (metas, avances, recursos). La matriz de
+  // permisos sigue siendo de Actividades (nucleo §2.2, "una sola función");
+  // que el equipo sobre el que se actúa sea el propio depende de datos y lo
+  // verifica el servicio de Seguimiento, igual que editar_equipo.
+  'usar_espacio_equipo',
 ] as const
 
 export type AccionActividad = (typeof ACCIONES_ACTIVIDAD)[number]

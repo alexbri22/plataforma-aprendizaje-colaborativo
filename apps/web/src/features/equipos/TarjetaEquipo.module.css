@@ -1,7 +1,40 @@
 .tarjeta {
+  /* Ancla al enlace superpuesto (position: absolute, ver .enlaceSuperpuesto
+     abajo): sin esto, "cubrir toda la tarjeta" cubriría toda la página. */
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+/* La tarjeta entera es el acceso al espacio de equipo (en vez de solo un
+   botón dentro de ella), con un borde que se acentúa al pasar el cursor
+   para que se lea como una fila clicable y no como una tarjeta cualquiera.
+   El foco (mismo lenguaje que botones e inputs, DESIGN.md) ya no vive aquí
+   sino en .enlaceSuperpuesto, el elemento que de verdad recibe el foco. */
+.tarjetaClicable {
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.tarjetaClicable:hover {
+  border-color: var(--color-primary-border);
+}
+
+/* El acceso real al espacio de equipo: cubre toda la tarjeta en vez de que
+   la tarjeta misma sea el control (ver el porqué en TarjetaEquipo.tsx,
+   junto a este Link). border-radius: inherit para que el anillo de foco siga
+   la forma de la tarjeta y no un rectángulo recto encima de sus esquinas
+   redondeadas. */
+.enlaceSuperpuesto {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.enlaceSuperpuesto:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
 }
 
 .encabezado {
@@ -40,6 +73,11 @@
 }
 
 .integrantes {
+  /* Por encima de .enlaceSuperpuesto, mismo motivo que .acciones: cada
+     nombre es ahora un EnlacePerfil real (enlace al perfil de esa persona),
+     y sin esto el enlace superpuesto de la tarjeta se lo robaría. */
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   margin: 0;
@@ -70,6 +108,11 @@
 }
 
 .acciones {
+  /* Por encima de .enlaceSuperpuesto (position: absolute, sin z-index
+     propio): sin esto, el enlace capturaría el clic antes que estos
+     botones, que vienen después en el documento pero quedarían debajo. */
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);

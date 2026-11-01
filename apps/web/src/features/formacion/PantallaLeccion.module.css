@@ -1,0 +1,299 @@
+.pagina {
+  width: 100%;
+  max-width: var(--layout-content-max);
+  margin: 0 auto;
+  padding: var(--space-10) var(--space-6) var(--space-16);
+  box-sizing: border-box;
+}
+
+.volver {
+  display: inline-block;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+}
+
+.volver:hover {
+  color: var(--color-primary);
+}
+
+.volver:focus-visible,
+.indiceEnlace:focus-visible,
+.indiceActual:focus-visible,
+.anterior:focus-visible,
+.siguiente:focus-visible,
+.plegable summary:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.estado {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+  color: var(--color-text-muted);
+}
+
+.visor {
+  display: grid;
+  grid-template-columns: 18rem minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-10);
+  margin-top: var(--space-6);
+}
+
+.lateral {
+  position: sticky;
+  top: var(--space-6);
+}
+
+.plegable summary {
+  margin-bottom: var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.08em;
+  list-style: none;
+  text-transform: uppercase;
+}
+
+.plegable summary::-webkit-details-marker {
+  display: none;
+}
+
+.indice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.indiceEnlace,
+.indiceActual,
+.indiceInactivo {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  text-decoration: none;
+}
+
+.indiceEnlace:hover {
+  background: var(--color-surface-hover);
+}
+
+/* La lección actual se marca con fondo y aria-current, nunca solo con color. */
+.indiceActual {
+  background: var(--color-primary-subtle);
+  font-weight: var(--font-weight-semibold);
+}
+
+.indiceInactivo {
+  color: var(--color-text-muted);
+}
+
+.indiceNumero {
+  flex: 0 0 auto;
+  color: var(--color-primary);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-normal);
+}
+
+.indiceTexto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.indiceMeta {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+}
+
+.leccion {
+  min-width: 0;
+  max-width: 48rem;
+}
+
+.cabecera {
+  padding-bottom: var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.eyebrow {
+  margin: 0 0 var(--space-2);
+  color: var(--color-primary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.titulo {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.02em;
+  line-height: var(--line-height-tight);
+  text-wrap: balance;
+}
+
+.cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding-top: var(--space-8);
+}
+
+.reflexion {
+  padding: var(--space-6);
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-primary-subtle);
+}
+
+.reflexionTitulo {
+  margin: 0 0 var(--space-3);
+  color: var(--color-primary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.reflexionNota {
+  margin: var(--space-4) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+}
+
+.noDisponible {
+  padding: var(--space-5);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+}
+
+.noDisponible p {
+  margin: 0;
+}
+
+.noDisponible .noDisponibleTitulo {
+  margin-bottom: var(--space-1);
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.navegacion {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin-top: var(--space-12);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--color-border);
+}
+
+.anterior,
+.siguiente {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  transition: border-color 0.15s ease;
+}
+
+.anterior:hover,
+.siguiente:hover {
+  border-color: var(--color-primary-border);
+}
+
+.siguiente {
+  grid-column: 2;
+  text-align: right;
+}
+
+.navegacionEtiqueta {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+@media (max-width: 56rem) {
+  .visor {
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+  }
+
+  .lateral {
+    position: static;
+  }
+
+  /* En angosto el índice es un desplegable con su flecha visible. */
+  .plegable {
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg);
+  }
+
+  .plegable summary {
+    margin-bottom: 0;
+    cursor: pointer;
+  }
+
+  .plegable summary::after {
+    content: ' ▾';
+  }
+
+  .plegable[open] summary {
+    margin-bottom: var(--space-3);
+  }
+}
+
+@media (max-width: 42rem) {
+  .pagina {
+    padding: var(--space-6) var(--space-4) var(--space-12);
+  }
+
+  .titulo {
+    font-size: var(--font-size-2xl);
+  }
+
+  .navegacion {
+    grid-template-columns: 1fr;
+  }
+
+  .siguiente {
+    grid-column: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anterior,
+  .siguiente {
+    transition: none;
+  }
+}

@@ -416,3 +416,193 @@ describe('recursos usados en cursos', () => {
     await comoAdmin.get('/api/admin/recursos?estatus=otro').expect(400)
   })
 })
+
+describe('un recurso retirado en un curso publicado', () => {
+  async function publicadoConRecursoRetirado() {
+    const { idCurso, idRecurso } = await cursoCompleto()
+    await comoAdmin.patch(`/api/admin/cursos/${idCurso}`, { estatus: 'publicado' }).expect(200)
+    await comoAdmin.patch(`/api/admin/recursos/${idRecurso}`, { estatus: 'retirado' }).expect(200)
+    const { body } = await comoAdmin.get(`/api/admin/cursos/${idCurso}`)
+    return { idCurso, idRecurso, lecciones: body.curso.lecciones }
+  }
+
+  it('no impide editar la ficha ni las otras lecciones', async () => {
+    const { idCurso, lecciones } = await publicadoConRecursoRetirado()
+    await comoAdmin.patch(`/api/admin/cursos/${idCurso}`, { resumen: 'Nuevo resumen' }).expect(200)
+    await comoAdmin
+      .patch(`/api/admin/cursos/${idCurso}/lecciones/${lecciones[1].idLeccion}`, { titulo: 'Otra' })
+      .expect(200)
+  })
+
+  it('la lección se puede reparar apuntando a otro recurso publicado', async () => {
+    const { idCurso, lecciones } = await publicadoConRecursoRetirado()
+    const otro = await crearRecurso()
+    const respuesta = await comoAdmin.patch(
+      `/api/admin/cursos/${idCurso}/lecciones/${lecciones[0].idLeccion}`,
+      { idRecurso: otro },
+    )
+    expect(respuesta.status).toBe(200)
+  })
+
+  it('no se puede poner un recurso sin publicar en un curso publicado', async () => {
+    const { idCurso, lecciones } = await publicadoConRecursoRetirado()
+    const borrador = await crearRecurso('borrador')
+    const respuesta = await comoAdmin.patch(
+      `/api/admin/cursos/${idCurso}/lecciones/${lecciones[0].idLeccion}`,
+      { idRecurso: borrador },
+    )
+    expect(respuesta.status).toBe(400)
+  })
+
+  it('un curso retirado no se vuelve a publicar con el recurso retirado', async () => {
+    const { idCurso } = await publicadoConRecursoRetirado()
+    await comoAdmin.patch(`/api/admin/cursos/${idCurso}`, { estatus: 'retirado' }).expect(200)
+    const respuesta = await comoAdmin.patch(`/api/admin/cursos/${idCurso}`, {
+      estatus: 'publicado',
+    })
+    expect(respuesta.status).toBe(400)
+  })
+})
+
+describe('cambios simultáneos sobre un curso', () => {
+  // Sin el bloqueo por curso, cada petición valida contra lo que leyó y las
+  // dos pasan: se rompen los límites que el servicio promete.
+  it('nunca pasa de 5 lecciones ni repite un orden', async () => {
+    for (let i = 0; i < 5; i++) {
+      const idCurso = await crearCurso({ titulo: `Curso ${i}` })
+      const respuestas = await Promise.all(
+        Array.from({ length: 7 }, (_, n) =>
+          agregar(idCurso, { ...PRACTICA, titulo: `Práctica ${n}` }).then((r) => r),
+        ),
+      )
+      expect(respuestas.every((r) => r.status === 201 || r.status === 400)).toBe(true)
+      expect(await prisma.leccionCurso.count({ where: { idCurso } })).toBe(5)
+    }
+  })
+
+  it('un curso publicado no se queda sin sus mínimos con dos borrados a la vez', async () => {
+    for (let i = 0; i < 5; i++) {
+      const { idCurso } = await cursoCompleto()
+      await agregar(idCurso, { ...PRACTICA, titulo: 'Segunda práctica' }).expect(201)
+      await comoAdmin.patch(`/api/admin/cursos/${idCurso}`, { estatus: 'publicado' }).expect(200)
+      const { body } = await comoAdmin.get(`/api/admin/cursos/${idCurso}`)
+      const practicas = body.curso.lecciones.filter((l: { tipo: string }) => l.tipo === 'practica')
+
+      await Promise.all(
+        practicas.map((l: { idLeccion: string }) =>
+          comoAdmin.delete(`/api/admin/cursos/${idCurso}/lecciones/${l.idLeccion}`).then((r) => r),
+        ),
+      )
+      expect(
+        await prisma.leccionCurso.count({ where: { idCurso, tipo: 'practica' } }),
+      ).toBeGreaterThanOrEqual(1)
+    }
+  })
+})
+
+describe('tamaño del cuerpo en cursos', () => {
+  it('acepta una lección de 20 000 caracteres de varios bytes', async () => {
+    const idCurso = await crearCurso()
+    const respuesta = await agregar(idCurso, { ...PRACTICA, contenido: '協"\n'.repeat(6_000) })
+    expect(respuesta.status).toBe(201)
+  })
+})
+
+describe('API pública de cursos', () => {
+  async function publicado() {
+    const curso = await cursoCompleto()
+    await comoAdmin
+      .patch(`/api/admin/cursos/${curso.idCurso}`, { estatus: 'publicado' })
+      .expect(200)
+    return curso
+  }
+
+  it('el catálogo solo lista publicados, sin sesión, y sin el contenido', async () => {
+    const { idCurso } = await publicado()
+    await crearCurso({ titulo: 'Borrador' })
+
+    const { body } = await request(app).get('/api/cursos').expect(200)
+    expect(body.cursos.map((c: { idCurso: string }) => c.idCurso)).toEqual([idCurso])
+    expect(body.cursos[0]).toMatchObject({ numLecciones: 3, duracionMin: 19 })
+    expect(body.cursos[0].lecciones).toBeUndefined()
+    expect(body.cursos[0].estatus).toBeUndefined()
+    expect(body.paginacion).toMatchObject({ pagina: 1, total: 1 })
+  })
+
+  it('filtra por área, nivel, elemento y texto, y rechaza valores desconocidos', async () => {
+    const { idCurso } = await publicado()
+    const total = async (query: string) =>
+      (await request(app).get(`/api/cursos?${query}`).expect(200)).body.paginacion.total
+
+    expect(await total('area=organizacion')).toBe(1)
+    expect(await total('area=comunicacion')).toBe(0)
+    expect(await total('nivel=inicial')).toBe(1)
+    expect(await total('nivel=avanzado')).toBe(0)
+    expect(await total('elemento=responsabilidades')).toBe(1)
+    expect(await total('elemento=procesamiento_grupal')).toBe(0)
+    expect(await total('q=COMPROMISOS')).toBe(1)
+    expect(idCurso).toBeTruthy()
+
+    await request(app).get('/api/cursos?nivel=experto').expect(400)
+    await request(app).get('/api/cursos?elemento=otro').expect(400)
+  })
+
+  it('la ficha trae el índice sin contenido; borradores y retirados dan 404', async () => {
+    const { idCurso } = await publicado()
+    const { body } = await request(app).get(`/api/cursos/${idCurso}`).expect(200)
+
+    expect(body.curso.objetivo).toBe(FICHA_COMPLETA.objetivo)
+    expect(body.curso.lecciones).toHaveLength(3)
+    expect(body.curso.lecciones[0]).toMatchObject({
+      titulo: 'Plantilla de acuerdos claros',
+      tipo: 'recurso',
+      disponible: true,
+    })
+    expect(body.curso.lecciones[1].contenido).toBeUndefined()
+
+    const borrador = await crearCurso({ titulo: 'Borrador' })
+    await request(app).get(`/api/cursos/${borrador}`).expect(404)
+
+    await comoAdmin.patch(`/api/admin/cursos/${idCurso}`, { estatus: 'retirado' }).expect(200)
+    const retirado = await request(app).get(`/api/cursos/${idCurso}`)
+    expect(retirado.status).toBe(404)
+    expect(retirado.body.codigo).toBe('curso_no_encontrado')
+  })
+
+  it('una lección de recurso trae el recurso completo y sus vecinas', async () => {
+    const { idCurso } = await publicado()
+    const ficha = await request(app).get(`/api/cursos/${idCurso}`)
+    const [primera, segunda] = ficha.body.curso.lecciones
+
+    const { body } = await request(app)
+      .get(`/api/cursos/${idCurso}/lecciones/${primera.idLeccion}`)
+      .expect(200)
+    expect(body.leccion.recurso.contenido).toBe('Contenido')
+    expect(body.leccion.anterior).toBeNull()
+    expect(body.leccion.siguiente).toEqual({
+      idLeccion: segunda.idLeccion,
+      titulo: PRACTICA.titulo,
+    })
+  })
+
+  it('una lección cuyo recurso se retiró no expone el recurso ni su título', async () => {
+    const { idCurso, idRecurso } = await publicado()
+    await comoAdmin.patch(`/api/admin/recursos/${idRecurso}`, { estatus: 'retirado' }).expect(200)
+
+    const ficha = await request(app).get(`/api/cursos/${idCurso}`).expect(200)
+    const [primera] = ficha.body.curso.lecciones
+    expect(primera).toMatchObject({ disponible: false, titulo: 'Recurso no disponible' })
+
+    const { body } = await request(app)
+      .get(`/api/cursos/${idCurso}/lecciones/${primera.idLeccion}`)
+      .expect(200)
+    expect(body.leccion.recurso).toBeNull()
+  })
+
+  it('responde 404 a una lección de otro curso', async () => {
+    const { idCurso } = await publicado()
+    const respuesta = await request(app).get(`/api/cursos/${idCurso}/lecciones/no-existe`)
+    expect(respuesta.status).toBe(404)
+    expect(respuesta.body.codigo).toBe('leccion_no_encontrada')
+  })
+})

@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { POR_PAGINA_ADMIN } from '@plataforma/shared'
+import { POR_PAGINA_ADMIN, POR_PAGINA_PUBLICA } from '@plataforma/shared'
 import { exigirAdministrador } from '../middleware/sesion.js'
 import type { UsuarioPublico } from '../services/cuentas/cuentas.service.js'
 import {
@@ -10,22 +10,53 @@ import {
   eliminarCurso,
   eliminarLeccion,
   listarCursosAdmin,
+  listarCursosPublicados,
   obtenerCursoAdmin,
+  obtenerCursoPublicado,
+  obtenerLeccionPublica,
   reordenarLecciones,
 } from '../services/formacion/cursos.service.js'
 import {
   validarDatosCurso,
   validarDatosLeccion,
+  validarFiltrosCursos,
   validarOrdenLecciones,
 } from '../services/formacion/cursos.validacion.js'
 import { validarPaginacion } from '../services/formacion/validacion.js'
 
-// Administración de cursos (docs/diseno-desarrollo-formacion.md §9.3 y
-// §12.3). Todas exigen sesión de administrador. Las operaciones sobre
+// Cursos (docs/diseno-desarrollo-formacion.md §9.3 y §12.3). Las rutas
+// públicas no exigen sesión y solo ven cursos publicados: leer un curso es
+// libre, lo único que pedirá cuenta es guardar el progreso. Las de
+// administración exigen sesión de administrador; sus operaciones sobre
 // lecciones responden con el curso completo, para que el editor se pinte de
-// nuevo con una sola respuesta. La API pública de cursos llega con el
-// catálogo y el visor.
+// nuevo con una sola respuesta.
+export const cursosRouter = Router()
 export const adminCursosRouter = Router()
+
+// GET /api/cursos?area&nivel&elemento&q&pagina&porPagina: catálogo publicado.
+cursosRouter.get('/cursos', async (req, res) => {
+  const query = req.query as Record<string, unknown>
+  const filtros = validarFiltrosCursos(query)
+  const pagina = validarPaginacion(query, POR_PAGINA_PUBLICA)
+  res.status(200).json(await listarCursosPublicados(filtros, pagina))
+})
+
+// GET /api/cursos/:id: ficha e índice de lecciones, sin su contenido.
+cursosRouter.get('/cursos/:id', async (req, res) => {
+  res.status(200).json({ curso: await obtenerCursoPublicado(req.params.id as string) })
+})
+
+// GET /api/cursos/:id/lecciones/:idLeccion: contenido de una lección, con el
+// recurso completo si lo reutiliza y sus vecinas para navegar.
+cursosRouter.get('/cursos/:id/lecciones/:idLeccion', async (req, res) => {
+  const leccion = await obtenerLeccionPublica(
+    req.params.id as string,
+    req.params.idLeccion as string,
+  )
+  res.status(200).json({ leccion })
+})
+
+// ---- Administración (/api/admin) ----
 
 // GET /api/admin/cursos?pagina&porPagina: todos, en cualquier estatus.
 adminCursosRouter.get('/cursos', exigirAdministrador, async (req, res) => {

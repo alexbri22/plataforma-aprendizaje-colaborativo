@@ -5,7 +5,14 @@ import { MemoryRouter } from 'react-router-dom'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { obtenerSesionActual } from '../cuentas/api'
 import { normalizarBusqueda } from '@plataforma/shared'
-import { listarRecursos, type ConsultaRecursos, type ResumenRecurso } from './formacion.api'
+import {
+  listarCursos,
+  listarRecursos,
+  type ConsultaCursos,
+  type ConsultaRecursos,
+  type ResumenCursoPublico,
+  type ResumenRecurso,
+} from './formacion.api'
 import { PantallaRecursos } from './PantallaRecursos'
 
 vi.mock('../cuentas/api', async () => {
@@ -15,7 +22,7 @@ vi.mock('../cuentas/api', async () => {
 
 vi.mock('./formacion.api', async () => {
   const real = await vi.importActual<typeof import('./formacion.api')>('./formacion.api')
-  return { ...real, listarRecursos: vi.fn() }
+  return { ...real, listarRecursos: vi.fn(), listarCursos: vi.fn() }
 })
 
 function recurso(parcial: Partial<ResumenRecurso> & Pick<ResumenRecurso, 'idRecurso' | 'titulo'>) {
@@ -58,6 +65,56 @@ function renderPantalla() {
       </MemoryRouter>
     </QueryClientProvider>,
   )
+  return queryClient
+}
+
+const CURSOS: ResumenCursoPublico[] = [
+  {
+    idCurso: 'c1',
+    titulo: 'Comunicación clara en equipos',
+    resumen: 'Expresa ideas de forma directa.',
+    area: 'comunicacion',
+    nivel: 'inicial',
+    elementos: ['interaccion_promotora'],
+    numLecciones: 3,
+    duracionMin: 30,
+    fechaActualizacion: '2026-09-01T00:00:00.000Z',
+  },
+  {
+    idCurso: 'c2',
+    titulo: 'Retrospectivas para mejorar',
+    resumen: 'Revisa cómo colaboró el grupo.',
+    area: 'reflexion',
+    nivel: 'intermedio',
+    elementos: ['procesamiento_grupal'],
+    numLecciones: 4,
+    duracionMin: 40,
+    fechaActualizacion: '2026-09-01T00:00:00.000Z',
+  },
+]
+
+function servidorCursos(catalogo: ResumenCursoPublico[]) {
+  return async (consulta: ConsultaCursos = {}) => {
+    const filtrados = catalogo.filter(
+      (c) =>
+        (!consulta.area || c.area === consulta.area) &&
+        (!consulta.nivel || c.nivel === consulta.nivel) &&
+        (!consulta.elemento || c.elementos.includes(consulta.elemento)) &&
+        (!consulta.texto ||
+          normalizarBusqueda(c.titulo).includes(normalizarBusqueda(consulta.texto))),
+    )
+    const pagina = consulta.pagina ?? 1
+    const porPagina = consulta.porPagina ?? 9
+    return {
+      cursos: filtrados.slice((pagina - 1) * porPagina, pagina * porPagina),
+      paginacion: {
+        pagina,
+        porPagina,
+        total: filtrados.length,
+        totalPaginas: Math.ceil(filtrados.length / porPagina),
+      },
+    }
+  }
 }
 
 // Servidor de mentira: filtra y pagina como lo hace GET /api/recursos.
@@ -98,6 +155,41 @@ describe('PantallaRecursos', () => {
     vi.mocked(obtenerSesionActual).mockResolvedValue(null)
     vi.mocked(listarRecursos).mockReset()
     vi.mocked(listarRecursos).mockImplementation(servidor(RECURSOS))
+    vi.mocked(listarCursos).mockReset()
+    vi.mocked(listarCursos).mockImplementation(servidorCursos(CURSOS))
+  })
+
+  it('lista los cursos publicados con enlace a su ficha', async () => {
+    renderPantalla()
+
+    const enlace = await screen.findByRole('link', {
+      name: /Ver curso.*Comunicación clara en equipos/,
+    })
+    expect(enlace).toHaveAttribute('href', '/cursos/c1')
+    expect(screen.queryByText('Próximamente')).not.toBeInTheDocument()
+  })
+
+  it('filtra los cursos por nivel y ofrece volver a verlos todos', async () => {
+    const user = userEvent.setup()
+    renderPantalla()
+    await screen.findByText('Retrospectivas para mejorar')
+
+    await user.selectOptions(screen.getByLabelText('Nivel'), 'avanzado')
+    expect(await screen.findByText(/Ningún curso coincide/)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Ver todos los cursos' }))
+    expect(await screen.findByText('Retrospectivas para mejorar')).toBeInTheDocument()
+  })
+
+  it('elegir una sección oculta los cursos, que no pertenecen a ninguna', async () => {
+    const user = userEvent.setup()
+    renderPantalla()
+    await screen.findByText('Retrospectivas para mejorar')
+
+    await user.selectOptions(screen.getByLabelText('Sección'), 'como_colaborar')
+    await waitFor(() =>
+      expect(screen.queryByText('Retrospectivas para mejorar')).not.toBeInTheDocument(),
+    )
   })
 
   it('separa artículos de recursos breves y destaca el primero de Qué es colaborar', async () => {
@@ -172,5 +264,26 @@ describe('PantallaRecursos', () => {
 
     await user.click(screen.getByRole('button', { name: 'Comunicación' }))
     expect(await within(articulos).findByText('Artículo 1')).toBeInTheDocument()
+  })
+
+  it('si el catálogo se reduce estando en una página que ya no existe, vuelve a la última', async () => {
+    const user = userEvent.setup()
+    const ocho = Array.from({ length: 8 }, (_, i) =>
+      recurso({ idRecurso: `a${i}`, titulo: `Artículo ${i + 1}` }),
+    )
+    vi.mocked(listarRecursos).mockImplementation(servidor(ocho))
+    const queryClient = renderPantalla()
+
+    const articulos = await screen.findByRole('region', { name: 'Artículos' })
+    await user.click(within(articulos).getByRole('button', { name: 'Siguiente' }))
+    expect(await within(articulos).findByText('Artículo 7')).toBeInTheDocument()
+
+    // Se retiran dos artículos y la lista se vuelve a pedir: ya solo hay una
+    // página, y la 2 llegaría vacía.
+    vi.mocked(listarRecursos).mockImplementation(servidor(ocho.slice(0, 6)))
+    await queryClient.invalidateQueries()
+
+    expect(await within(articulos).findByText('Artículo 1')).toBeInTheDocument()
+    expect(within(articulos).getAllByRole('heading', { level: 3 })).toHaveLength(6)
   })
 })

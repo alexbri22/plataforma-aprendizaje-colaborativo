@@ -435,6 +435,38 @@
 
 /* ---- Añadidos al diseño V1 ---- */
 
+.grupoCabecera {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-6);
+  scroll-margin-top: var(--space-6);
+}
+
+.filtrosCurso {
+  display: grid;
+  grid-template-columns: minmax(8rem, 10rem) minmax(12rem, 16rem);
+  gap: var(--space-3);
+}
+
+.sinCursos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+  padding: var(--space-5);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.sinCursos p {
+  margin: 0;
+}
+
 /* Mientras llega la página nueva se sigue viendo la anterior, atenuada. */
 .actualizando {
   opacity: 0.6;
@@ -503,8 +535,7 @@
     max-width: 34rem;
   }
 
-  .cursosGrid,
-  .articulosGrid {
+  .grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -543,8 +574,17 @@
     grid-template-columns: 1fr;
   }
 
-  .cursosGrid,
-  .articulosGrid {
+  .grupoCabecera {
+    align-items: stretch;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .filtrosCurso {
+    grid-template-columns: 1fr;
+  }
+
+  .grid {
     grid-template-columns: 1fr;
   }
 

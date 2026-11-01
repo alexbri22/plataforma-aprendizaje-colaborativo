@@ -13,6 +13,7 @@
     "seed:dev": "tsx scripts/sembrar-desarrollo.ts",
     "promover-admin": "node scripts/promover-admin.mjs",
     "sembrar-recursos": "node scripts/sembrar-recursos.mjs",
+    "sembrar-cursos": "node scripts/sembrar-cursos.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "pretest": "node scripts/migrar-bd-pruebas.mjs",

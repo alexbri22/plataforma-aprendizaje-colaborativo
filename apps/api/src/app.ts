@@ -7,14 +7,16 @@ import { resolverSesion } from './middleware/sesion.js'
 import { actividadesRouter } from './routes/actividades.js'
 import { adminRouter } from './routes/admin.js'
 import { clavesRouter } from './routes/claves.js'
+import { elementosRouter } from './routes/elementos.js'
 import { equiposRouter } from './routes/equipos.js'
+import { historialRouter } from './routes/historial.js'
 import { insigniasRouter } from './routes/insignias.js'
 import { cuentasRouter } from './routes/cuentas.js'
-import { adminCursosRouter } from './routes/cursos.js'
+import { adminCursosRouter, cursosRouter } from './routes/cursos.js'
 import { healthRouter } from './routes/health.js'
 import { periodosRouter } from './routes/periodos.js'
 import { tareasRouter } from './routes/tareas.js'
-import { adminRecursosRouter, recursosRouter } from './routes/recursos.js'
+import { LIMITE_JSON_FORMACION, adminRecursosRouter, recursosRouter } from './routes/recursos.js'
 
 // Cada preview de Vercel vive en un subdominio *.vercel.app distinto e
 // impredecible (uno por rama/PR) — no se puede precargar en WEB_ORIGIN.
@@ -52,6 +54,11 @@ export function createApp(): Express {
       credentials: true,
     }),
   )
+  // Antes del parser general: las rutas de recursos y cursos aceptan cuerpos más
+  // grandes (ver LIMITE_JSON_FORMACION). Un cuerpo ya leído aquí no se vuelve a
+  // leer abajo.
+  app.use('/api/admin/recursos', express.json({ limit: LIMITE_JSON_FORMACION }))
+  app.use('/api/admin/cursos', express.json({ limit: LIMITE_JSON_FORMACION }))
   app.use(express.json())
   app.use(cookieParser())
   app.use(resolverSesion)
@@ -69,9 +76,12 @@ export function createApp(): Express {
   app.use('/api', clavesRouter)
   app.use('/api', periodosRouter)
   app.use('/api', equiposRouter)
+  app.use('/api', elementosRouter)
   app.use('/api', tareasRouter)
   app.use('/api', insigniasRouter)
+  app.use('/api', historialRouter)
   app.use('/api', recursosRouter)
+  app.use('/api', cursosRouter)
 
   app.use(manejadorErrores)
 

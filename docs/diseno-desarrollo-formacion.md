@@ -602,7 +602,36 @@ Modelo de cursos y API de administración, sin pantallas todavía.
 
 Además, `GET /api/admin/recursos` acepta `q`, `tipo` y `estatus` para buscar en la biblioteca, y `GET /api/admin/recursos/:id` incluye `usadoEn` con los cursos que usan el recurso.
 
+## Nota de implementación: incremento 2, pasos 2 y 3 (30 de octubre de 2026)
+
+Panel para armar cursos y parte pública: catálogo, ficha y visor.
+
+### Decisiones
+
+- **Recurso retirado en un curso publicado:** el curso sigue publicado y la lección se muestra como no disponible, sin exponer el título del recurso. Publicar (o volver a publicar) exige todos los recursos publicados; editar un curso ya publicado solo se lo exige a la lección que se está tocando. Así un recurso retirado no bloquea arreglar el curso ni editar el resto.
+- **Concurrencia:** toda modificación de un curso bloquea su fila (`SELECT … FOR UPDATE`), igual que en recursos. El borrado de un recurso comprueba su uso dentro del bloqueo del recurso, y la llave RESTRICT cubre lo que quede.
+- **Selector de la biblioteca:** el editor de cursos solo ofrece recursos publicados, y no los que ya están en el curso.
+- **Un curso nuevo se queda en el editor** al crearse, porque lo siguiente es agregar lecciones. Las lecciones se guardan al momento; la ficha, con los botones. Al guardar la ficha se vuelve a la lista con confirmación, igual que en recursos.
+- **Filtros del catálogo:** área y texto aplican a cursos y recursos; nivel y elemento solo a cursos. Elegir una sección oculta los cursos, que no pertenecen a ninguna. El filtro por duración de CAT-01 queda pendiente: la duración se calcula y no se puede filtrar en la consulta.
+- **Reflexión:** solo muestra la pregunta; guardar la respuesta llega con el progreso.
+
+### API pública implementada
+
+| Método | Ruta                                               | Propósito                                             |
+| ------ | -------------------------------------------------- | ----------------------------------------------------- |
+| GET    | /api/cursos?area&nivel&elemento&q&pagina&porPagina | Catálogo publicado                                    |
+| GET    | /api/cursos/:id                                    | Ficha e índice, sin el contenido de las lecciones     |
+| GET    | /api/cursos/:id/lecciones/:idLeccion               | Contenido de la lección, con el recurso y sus vecinas |
+
+Lo que no está publicado responde 404, igual que un id inexistente.
+
+### Pantallas
+
+- Público: cursos en `/recursos`, ficha en `/cursos/:id`, visor en `/cursos/:id/lecciones/:idLeccion`.
+- Panel: `/admin/cursos`, `/admin/cursos/nuevo`, `/admin/cursos/:id`.
+- `npm run sembrar-cursos` carga tres cursos de ejemplo (requiere `sembrar-recursos`).
+
 ### Siguientes incrementos
 
-- **Incremento 2:** cursos, lecciones y rutas, con ficha y visor públicos. Paso 1 hecho (modelo y API de administración); siguen el panel para armar cursos y el catálogo, ficha y visor públicos. Sustituye los datos editoriales de `cursos.fixtures.ts`.
+- **Incremento 2:** cursos, lecciones y rutas, con ficha y visor públicos. Hechos modelo, API, panel, catálogo, ficha y visor. Falta solo la ruta de aprendizaje, que sigue siendo una vista previa fija. Falta sustituir `ruta.fixtures.ts`.
 - **Incremento 3:** inscripción, progreso, "Continúa aprendiendo", Mis cursos y recursos guardados.

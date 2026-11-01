@@ -7,9 +7,12 @@ propias calificaciones e insignias — ver sección 7 de
 `apps/api` como middleware (sección 3.4 del general; mecanismo detallado en
 `docs/diseno-desarrollo-nucleo.md`, sección 5), no aquí.
 
-**Estado:** pendiente de implementación — Fase A (`docs/diseno-desarrollo-general.md`,
-sección 9.2; desglose de incrementos en `docs/diseno-desarrollo-nucleo.md`,
-sección 11.2).
+**Estado:** consulta cronológica mínima implementada (`PantallaHistorial`),
+como parte del incremento "Espacio de equipo y cierre de fase" de Fase A
+(`docs/diseno-desarrollo-nucleo.md`, sección 11.2). Sin filtros ni
+agregación de ediciones consecutivas todavía — eso es Fase B, incremento
+"Cierre y consulta" (sección 11.3). La visibilidad por rol ya se aplica en
+el servidor (organizador: todo; participante: aportación y estructura).
 
 Convención de la carpeta: componentes, queries (TanStack Query) y stores
 (Zustand, adopción diferida — sección 2.1) de esta feature viven aquí. Los

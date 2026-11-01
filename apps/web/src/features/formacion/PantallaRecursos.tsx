@@ -1,15 +1,19 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   AREAS_HABILIDAD,
   ETIQUETAS_AREA,
+  ELEMENTOS_COLABORACION,
   ETIQUETAS_ELEMENTO,
+  ETIQUETAS_NIVEL_CURSO,
   ETIQUETAS_SECCION,
+  NIVELES_CURSO,
   SECCIONES_FORMATIVAS,
   TIPOS_LECTURA,
   TIPOS_RECURSO,
-  normalizarBusqueda,
   type AreaHabilidad,
+  type ElementoColaboracion,
+  type NivelCurso,
   type SeccionFormativa,
 } from '@plataforma/shared'
 import {
@@ -22,12 +26,14 @@ import {
   Paginacion,
   Select,
 } from '../../components/ui'
-import { CURSOS_PREVIOS, RUTA_DESTACADA } from './cursos.fixtures'
 import { etiquetaTipo, formatoDuracion } from './formato'
 import { IconoFlecha, IconoLibro } from './iconos'
 import { MarcoFormacion } from './MarcoFormacion'
 import { useDentroDeApp } from './marcoContexto'
+import { RUTA_DESTACADA } from './ruta.fixtures'
+import { useCursosPublicos } from './useCursos'
 import { useRecursosPublicos } from './useRecursos'
+import { useValorDiferido } from './useValorDiferido'
 import styles from './PantallaRecursos.module.css'
 
 type FiltroArea = 'todas' | AreaHabilidad
@@ -38,21 +44,7 @@ type FiltroSeccion = 'todas' | SeccionFormativa
 const TIPOS_BREVES = TIPOS_RECURSO.filter((t) => !TIPOS_LECTURA.includes(t))
 const POR_PAGINA_ARTICULOS = 6
 const POR_PAGINA_BREVES = 8
-
-/** Espera a que la persona deje de escribir antes de buscar, para no pedir
- * una página por cada tecla. */
-function useValorDiferido(valor: string, ms = 300): string {
-  const [diferido, setDiferido] = useState(valor)
-  useEffect(() => {
-    const t = setTimeout(() => setDiferido(valor), ms)
-    return () => clearTimeout(t)
-  }, [valor, ms])
-  return diferido
-}
-
-function coincide(texto: string, termino: string): boolean {
-  return !termino || normalizarBusqueda(texto).includes(termino)
-}
+const POR_PAGINA_CURSOS = 6
 
 function irA(selector: string) {
   document.querySelector(selector)?.scrollIntoView()
@@ -60,10 +52,10 @@ function irA(selector: string) {
 
 /*
  * Centro de formación (docs/diseno-desarrollo-formacion.md §2 y §10.1), con
- * el diseño de la rama plataforma-formativaV1. Artículos y recursos breves
- * vienen de la API, filtrados y paginados en el servidor; los cursos y la
- * ruta son la vista previa editorial del incremento 2 (ver
- * cursos.fixtures.ts) y se filtran aquí. Los filtros aplican a todo a la vez.
+ * el diseño de la rama plataforma-formativaV1. Cursos, artículos y recursos
+ * breves vienen de la API, filtrados y paginados en el servidor; la ruta aún
+ * es una vista previa editorial (ver ruta.fixtures.ts). Los filtros de arriba
+ * aplican a todo a la vez; nivel y elemento, solo a los cursos.
  */
 export function PantallaRecursos() {
   return (
@@ -79,6 +71,8 @@ function CentroFormacion() {
   const [area, setArea] = useState<FiltroArea>('todas')
   const [seccion, setSeccion] = useState<FiltroSeccion>('todas')
   const [busqueda, setBusqueda] = useState('')
+  const [nivel, setNivel] = useState<'' | NivelCurso>('')
+  const [elemento, setElemento] = useState<'' | ElementoColaboracion>('')
 
   const texto = useValorDiferido(busqueda.trim())
   const filtros = {
@@ -88,12 +82,23 @@ function CentroFormacion() {
   }
 
   // Las páginas se recuerdan junto con los filtros con que se eligieron: si
-  // los filtros cambian, las dos listas vuelven solas a su primera página.
-  const claveFiltros = JSON.stringify(filtros)
-  const [paginas, setPaginas] = useState({ clave: claveFiltros, articulos: 1, breves: 1 })
-  const vigentes = paginas.clave === claveFiltros ? paginas : { articulos: 1, breves: 1 }
+  // los filtros cambian, las listas vuelven solas a su primera página.
+  const claveFiltros = JSON.stringify({ ...filtros, nivel, elemento })
+  const inicio = { cursos: 1, articulos: 1, breves: 1 }
+  const [paginas, setPaginas] = useState({ clave: claveFiltros, ...inicio })
+  const vigentes = paginas.clave === claveFiltros ? paginas : inicio
+  const paginaCursos = vigentes.cursos
   const paginaArticulos = vigentes.articulos
   const paginaBreves = vigentes.breves
+
+  const cursos = useCursosPublicos({
+    area: filtros.area,
+    texto: filtros.texto,
+    nivel: nivel || undefined,
+    elemento: elemento || undefined,
+    pagina: paginaCursos,
+    porPagina: POR_PAGINA_CURSOS,
+  })
 
   const articulos = useRecursosPublicos({
     ...filtros,
@@ -107,6 +112,33 @@ function CentroFormacion() {
     pagina: paginaBreves,
     porPagina: POR_PAGINA_BREVES,
   })
+  // Si el catálogo se reduce mientras se ve una página que ya no existe (se
+  // retiraron recursos y se volvió a pedir la lista), la API devuelve esa
+  // página vacía y Paginacion se oculta cuando todo cabe en una: sin esto no
+  // habría forma de volver a los resultados. Se lleva a la última página que
+  // sí existe. Solo con una respuesta real (no la anterior que se sigue
+  // mostrando mientras llega la nueva), para no saltar a destiempo. Es un
+  // ajuste de estado durante el render, que React permite y repite antes de
+  // pintar; se detiene en cuanto la página pedida ya es válida.
+  const ajuste = { cursos: paginaCursos, articulos: paginaArticulos, breves: paginaBreves }
+  for (const [lista, consulta] of [
+    ['cursos', cursos],
+    ['articulos', articulos],
+    ['breves', breves],
+  ] as const) {
+    if (consulta.isSuccess && !consulta.isPlaceholderData) {
+      const ultima = Math.max(1, consulta.data.paginacion.totalPaginas)
+      if (ajuste[lista] > ultima) ajuste[lista] = ultima
+    }
+  }
+  if (
+    ajuste.cursos !== paginaCursos ||
+    ajuste.articulos !== paginaArticulos ||
+    ajuste.breves !== paginaBreves
+  ) {
+    setPaginas({ clave: claveFiltros, ...ajuste })
+  }
+
   // "Empieza por aquí": el primer artículo de Qué es colaborar, sin filtros.
   // Cuando exista el progreso (incremento 3), quien tenga un curso iniciado
   // verá aquí "Continúa aprendiendo".
@@ -117,40 +149,41 @@ function CentroFormacion() {
   })
   const inicial = destacado.data?.recursos[0]
 
-  const termino = normalizarBusqueda(texto)
-  // Los cursos todavía no tienen sección: el filtro de sección solo los deja
-  // pasar cuando está en "todas".
-  const cursosVisibles = CURSOS_PREVIOS.filter(
-    (c) =>
-      seccion === 'todas' &&
-      (area === 'todas' || c.area === area) &&
-      coincide(
-        `${c.titulo} ${c.descripcion} ${ETIQUETAS_AREA[c.area]} ${ETIQUETAS_ELEMENTO[c.elemento]}`,
-        termino,
-      ),
-  )
+  // Los cursos no pertenecen a una sección: elegir una los oculta.
+  const totalCursos = seccion === 'todas' ? (cursos.data?.paginacion.total ?? 0) : 0
+  const hayFiltrosDeCurso = nivel !== '' || elemento !== ''
+  const mostrarCursos = seccion === 'todas' && (totalCursos > 0 || hayFiltrosDeCurso)
 
   const totalArticulos = articulos.data?.paginacion.total ?? 0
   const totalBreves = breves.data?.paginacion.total ?? 0
-  const cargando = articulos.isPending || breves.isPending
-  const error = articulos.error ?? breves.error
-  const hayFiltros = area !== 'todas' || seccion !== 'todas' || texto !== ''
+  const cargando = cursos.isPending || articulos.isPending || breves.isPending
+  const error = cursos.error ?? articulos.error ?? breves.error
+  const hayFiltros = area !== 'todas' || seccion !== 'todas' || texto !== '' || hayFiltrosDeCurso
   const sinResultados =
+    cursos.isSuccess &&
     articulos.isSuccess &&
     breves.isSuccess &&
-    cursosVisibles.length === 0 &&
+    !mostrarCursos &&
     totalArticulos === 0 &&
     totalBreves === 0
 
-  function cambiarPagina(lista: 'articulos' | 'breves', pagina: number) {
+  function cambiarPagina(lista: 'cursos' | 'articulos' | 'breves', pagina: number) {
     setPaginas({ clave: claveFiltros, ...vigentes, [lista]: pagina })
-    irA(lista === 'articulos' ? '#titulo-articulos' : '#titulo-recursos-breves')
+    irA(
+      {
+        cursos: '#titulo-cursos',
+        articulos: '#titulo-articulos',
+        breves: '#titulo-recursos-breves',
+      }[lista],
+    )
   }
 
   function limpiarFiltros() {
     setArea('todas')
     setSeccion('todas')
     setBusqueda('')
+    setNivel('')
+    setElemento('')
   }
 
   return (
@@ -277,6 +310,7 @@ function CentroFormacion() {
               variant="secondary"
               size="sm"
               onClick={() => {
+                void cursos.refetch()
                 void articulos.refetch()
                 void breves.refetch()
               }}
@@ -310,29 +344,100 @@ function CentroFormacion() {
           </div>
         ) : null}
 
-        {cursosVisibles.length > 0 ? (
-          <div className={styles.grupo} aria-live="polite">
-            <h3 className={styles.subtitulo}>Cursos</h3>
-            <div className={styles.grid}>
-              {cursosVisibles.map((curso) => (
-                <Card key={curso.id} className={styles.tarjeta}>
-                  <div className={styles.tarjetaMeta}>
-                    <Badge variant="neutral">{ETIQUETAS_AREA[curso.area]}</Badge>
-                    <span>{curso.duracionMin} min</span>
-                  </div>
-                  <div className={styles.tarjetaContenido}>
-                    <h4>{curso.titulo}</h4>
-                    <p>{curso.descripcion}</p>
-                  </div>
-                  <div className={styles.tarjetaDetalle}>
-                    <span>{curso.nivel}</span>
-                    <span aria-hidden="true">·</span>
-                    <span>{ETIQUETAS_ELEMENTO[curso.elemento]}</span>
-                  </div>
-                  <span className={styles.proximamente}>Próximamente</span>
-                </Card>
-              ))}
+        {mostrarCursos && cursos.data ? (
+          <div className={styles.grupo}>
+            <div className={styles.grupoCabecera}>
+              <h3 id="titulo-cursos" className={styles.subtitulo}>
+                Cursos
+              </h3>
+              <div className={styles.filtrosCurso}>
+                <Select
+                  label="Nivel"
+                  value={nivel}
+                  onChange={(e) => setNivel(e.target.value as '' | NivelCurso)}
+                >
+                  <option value="">Todos</option>
+                  {NIVELES_CURSO.map((n) => (
+                    <option key={n} value={n}>
+                      {ETIQUETAS_NIVEL_CURSO[n]}
+                    </option>
+                  ))}
+                </Select>
+                <Select
+                  label="Elemento de colaboración"
+                  value={elemento}
+                  onChange={(e) => setElemento(e.target.value as '' | ElementoColaboracion)}
+                >
+                  <option value="">Todos</option>
+                  {ELEMENTOS_COLABORACION.map((e) => (
+                    <option key={e} value={e}>
+                      {ETIQUETAS_ELEMENTO[e]}
+                    </option>
+                  ))}
+                </Select>
+              </div>
             </div>
+
+            {totalCursos === 0 ? (
+              <div className={styles.sinCursos} role="status">
+                <p>Ningún curso coincide con ese nivel y elemento.</p>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setNivel('')
+                    setElemento('')
+                  }}
+                >
+                  Ver todos los cursos
+                </Button>
+              </div>
+            ) : (
+              <>
+                <div
+                  className={[styles.grid, cursos.isPlaceholderData ? styles.actualizando : null]
+                    .filter(Boolean)
+                    .join(' ')}
+                  aria-live="polite"
+                >
+                  {cursos.data.cursos.map((curso) => (
+                    <Card key={curso.idCurso} className={styles.tarjeta}>
+                      <div className={styles.tarjetaMeta}>
+                        {curso.area ? (
+                          <Badge variant="neutral">{ETIQUETAS_AREA[curso.area]}</Badge>
+                        ) : (
+                          <span />
+                        )}
+                        <span>{curso.duracionMin} min</span>
+                      </div>
+                      <div className={styles.tarjetaContenido}>
+                        <h4>{curso.titulo}</h4>
+                        <p>{curso.resumen}</p>
+                      </div>
+                      <div className={styles.tarjetaDetalle}>
+                        {curso.nivel ? <span>{ETIQUETAS_NIVEL_CURSO[curso.nivel]}</span> : null}
+                        {curso.nivel ? <span aria-hidden="true">·</span> : null}
+                        <span>
+                          {curso.numLecciones} {curso.numLecciones === 1 ? 'lección' : 'lecciones'}
+                        </span>
+                      </div>
+                      <Link to={`/cursos/${curso.idCurso}`} className={styles.enlaceTexto}>
+                        Ver curso <IconoFlecha className={styles.flecha} />
+                        <span className={styles.srOnly}>: {curso.titulo}</span>
+                      </Link>
+                    </Card>
+                  ))}
+                </div>
+                {/* Paginacion (DESIGN.md) cuenta páginas desde 0; la API desde 1. */}
+                <Paginacion
+                  etiqueta="Páginas de cursos"
+                  total={cursos.data.paginacion.total}
+                  tamano={cursos.data.paginacion.porPagina}
+                  pagina={cursos.data.paginacion.pagina - 1}
+                  onCambiar={(p) => cambiarPagina('cursos', p + 1)}
+                />
+              </>
+            )}
           </div>
         ) : null}
       </section>

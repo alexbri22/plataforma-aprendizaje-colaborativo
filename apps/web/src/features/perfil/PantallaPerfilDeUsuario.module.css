@@ -12,6 +12,14 @@
   flex-wrap: wrap;
 }
 
+.identidad {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  flex: 1;
+}
+
 .nombre {
   margin: 0;
   font-size: var(--font-size-2xl);
@@ -19,18 +27,31 @@
   line-height: var(--line-height-tight);
 }
 
-.seccion {
+/* Mismo grupo que en Mi perfil (PantallaPerfil.module.css). */
+.grupo {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  margin-bottom: var(--space-8);
+  gap: var(--space-4);
+  margin-bottom: var(--space-10);
 }
 
-.tituloSeccion {
-  font-size: var(--font-size-xl);
+.tituloGrupo {
+  font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-tight);
   margin: 0;
+}
+
+.correo {
+  margin: 0;
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.estudios {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
 }
 
 .nota {

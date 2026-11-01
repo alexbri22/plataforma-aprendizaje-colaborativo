@@ -1,0 +1,18 @@
+.enlace {
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--color-border-strong);
+  text-underline-offset: 0.2em;
+}
+
+.enlace:hover {
+  color: var(--color-primary);
+  text-decoration-color: currentColor;
+}
+
+.enlace:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}

@@ -58,7 +58,10 @@ describe('PantallaCuentas', () => {
     vi.mocked(listarCuentas).mockResolvedValue([CUENTA_ACTIVA, CUENTA_DESACTIVADA])
     renderPantalla()
 
-    expect(await screen.findByText('Ada Lovelace Byron')).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: 'Ada Lovelace Byron' })).toHaveAttribute(
+      'href',
+      '/usuarios/u1',
+    )
     expect(screen.getByText('ada@ejemplo.com')).toBeInTheDocument()
     expect(screen.getByText('Activa')).toBeInTheDocument()
     expect(screen.getByText('Alan Turing Mathison')).toBeInTheDocument()

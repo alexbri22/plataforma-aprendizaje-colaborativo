@@ -47,6 +47,19 @@ async function exigirOk(respuesta: Response, mensajePorDefecto: string): Promise
 
 const idActividadEnRuta = encodeURIComponent
 
+export type EquipoConActividad = Equipo & { idActividad: string; idMiMembresia: string }
+
+// GET /api/equipos/{id} (nucleo §4.2): nombre, integrantes y la actividad a
+// la que pertenece. Lo usa AppShellEquipo, que solo conoce idEquipo por la
+// URL.
+export async function obtenerEquipoConActividad(idEquipo: string): Promise<EquipoConActividad> {
+  const respuesta = await exigirOk(
+    await pedir(`/api/equipos/${encodeURIComponent(idEquipo)}`, 'GET'),
+    'No encontramos este equipo, o no formas parte de su actividad.',
+  )
+  return ((await respuesta.json()) as { equipo: EquipoConActividad }).equipo
+}
+
 // GET /api/actividades/{id}/equipos (docs/diseno-desarrollo-nucleo.md §8.6).
 export async function obtenerEquipos(idActividad: string): Promise<ListaEquipos> {
   const respuesta = await exigirOk(

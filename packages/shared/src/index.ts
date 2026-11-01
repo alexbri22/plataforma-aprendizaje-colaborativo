@@ -95,6 +95,12 @@ export { LIMITE_PERIODOS, generarPeriodos } from './periodos.js'
 
 export type { PeriodoGenerado } from './periodos.js'
 
+export { LONGITUD_MAXIMA_CONTENIDO_ELEMENTO } from './seguimiento.js'
+
+export type { ElementoDeEspacioEquipo } from './seguimiento.js'
+
+export type { CategoriaEvento, EventoHistorial, PaginaHistorial } from './historial.js'
+
 export {
   AREAS_HABILIDAD,
   DURACION_MAXIMA_RECURSO_MIN,

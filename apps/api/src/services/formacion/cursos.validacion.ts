@@ -35,6 +35,13 @@ export interface DatosCurso {
   estatus: EstatusCurso
 }
 
+export interface FiltrosCursos {
+  area?: AreaHabilidad
+  nivel?: NivelCurso
+  elemento?: ElementoColaboracion
+  texto?: string
+}
+
 export interface DatosLeccion {
   titulo: string
   tipo: TipoLeccion
@@ -192,4 +199,29 @@ export function validarOrdenLecciones(cuerpo: unknown): string[] {
     })
   }
   return lista as string[]
+}
+
+/** Filtros del catálogo público. Como en recursos, un valor desconocido es un
+ * error: un filtro ignorado en silencio devolvería de más. */
+export function validarFiltrosCursos(query: Record<string, unknown>): FiltrosCursos {
+  const detalle: Detalle = {}
+  const filtros: FiltrosCursos = {}
+  const { area, nivel, elemento, q } = query
+
+  if (typeof area === 'string' && area) {
+    if (esAreaHabilidad(area)) filtros.area = area
+    else detalle.area = 'Área desconocida.'
+  }
+  if (typeof nivel === 'string' && nivel) {
+    if (esNivelCurso(nivel)) filtros.nivel = nivel
+    else detalle.nivel = 'Nivel desconocido.'
+  }
+  if (typeof elemento === 'string' && elemento) {
+    if (esElementoColaboracion(elemento)) filtros.elemento = elemento
+    else detalle.elemento = 'Elemento desconocido.'
+  }
+  if (typeof q === 'string' && q.trim()) filtros.texto = q.trim().slice(0, 100)
+
+  if (Object.keys(detalle).length > 0) throw new ErrorValidacion(detalle)
+  return filtros
 }

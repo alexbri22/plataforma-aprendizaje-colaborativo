@@ -10,8 +10,9 @@ import {
   quitarArchivoRecurso,
   subirArchivoRecurso,
   type ConsultaRecursos,
+  type ConsultaRecursosAdmin,
   type DatosRecurso,
-  type RecursoAdmin,
+  type RecursoAdminDetalle,
 } from './formacion.api'
 
 // Todo cuelga de ['recursos']: cualquier cambio del administrador invalida esa
@@ -40,10 +41,10 @@ export function useRecursoPublico(idRecurso: string) {
   })
 }
 
-export function useRecursosAdmin(pagina: number, porPagina?: number) {
+export function useRecursosAdmin(consulta: ConsultaRecursosAdmin) {
   return useQuery({
-    queryKey: [...CLAVE_ADMIN, 'lista', { pagina, porPagina }],
-    queryFn: () => listarRecursosAdmin({ pagina, porPagina }),
+    queryKey: [...CLAVE_ADMIN, 'lista', consulta],
+    queryFn: () => listarRecursosAdmin(consulta),
     placeholderData: keepPreviousData,
   })
 }
@@ -57,7 +58,9 @@ export function useRecursoAdmin(idRecurso: string | undefined) {
   })
 }
 
-function useMutacionRecurso<TVariables>(fn: (variables: TVariables) => Promise<RecursoAdmin>) {
+function useMutacionRecurso<TVariables>(
+  fn: (variables: TVariables) => Promise<RecursoAdminDetalle>,
+) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: fn,

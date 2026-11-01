@@ -19,8 +19,15 @@ const claveDeParticipante = (id: string, idMembresia: string) =>
 const CLAVE_ACUMULADO = ['insignias', 'acumulado'] as const
 const CLAVE_RECIBIDOS_EN_PERFIL = ['insignias', 'recibidos'] as const
 
-export function useRitual(idActividad: string) {
-  return useQuery({ queryKey: claveRitual(idActividad), queryFn: () => obtenerRitual(idActividad) })
+// `enabled` en false: para quien solo conoce idActividad una vez resuelta
+// otra consulta primero (AppShellEquipo, que solo tiene idEquipo en la URL —
+// mismo caso que useActividad).
+export function useRitual(idActividad: string, opciones?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: claveRitual(idActividad),
+    queryFn: () => obtenerRitual(idActividad),
+    enabled: opciones?.enabled ?? true,
+  })
 }
 
 export function useGuardarReconocimientos(idActividad: string) {
