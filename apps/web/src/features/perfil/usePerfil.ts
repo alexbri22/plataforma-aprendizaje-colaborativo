@@ -25,7 +25,7 @@ const claveDeUsuario = (id: string) => ['usuarios', id] as const
 
 /** Cada cuánto se relee el perfil mientras hay una solicitud de cambio de
  * nombre pendiente: la resuelve otra persona, en otra sesión. */
-export const INTERVALO_SOLICITUD_PENDIENTE_MS = 5000
+export const INTERVALO_SOLICITUD_PENDIENTE_MS = 2000
 
 export function usePerfilPropio() {
   const queryClient = useQueryClient()
