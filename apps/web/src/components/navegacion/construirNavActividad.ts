@@ -55,7 +55,10 @@ export interface NavActividad {
   /** El rol en la actividad: Organizo o Participo. */
   rama: 'organizo' | 'participo'
   nombreActividad: string
-  /** El nivel de arriba, al que lleva la flecha de la barra lateral. */
+  /** La única flecha dentro de una actividad, en la barra lateral: siempre
+   * al nivel de arriba, no a la pantalla anterior. Las secciones de la
+   * actividad son hermanas y suben a Organizo o Participo; un equipo que se
+   * revisa sube a Equipos. */
   volver: { etiqueta: string; to: string }
   /** Encabezado: el nombre de la actividad. */
   titulo: string
@@ -218,7 +221,11 @@ export function construirNavActividad({
     return {
       rama: 'organizo',
       nombreActividad,
-      volver: { etiqueta: 'Organizo', to: '/actividades/organizo' },
+      // Un equipo que se revisa cuelga de Equipos; lo demás es hermano del
+      // Resumen y sube a la lista de actividades.
+      volver: idEquipoAbierto
+        ? { etiqueta: 'Equipos', to: `/actividades/${id}/equipos` }
+        : { etiqueta: 'Organizo', to: '/actividades/organizo' },
       titulo: nombreActividad,
       secciones,
     }
@@ -294,7 +301,11 @@ export function construirNavActividad({
   return {
     rama,
     nombreActividad,
-    volver: { etiqueta: 'Participo', to: '/actividades/participo' },
+    // "Mi equipo" es hermano del Resumen: sube a Participo. Otro equipo se
+    // abre desde Equipos, y ahí regresa.
+    volver: idOtroEquipo
+      ? { etiqueta: 'Equipos', to: `/actividades/${id}/equipos` }
+      : { etiqueta: 'Participo', to: '/actividades/participo' },
     titulo: nombreActividad,
     secciones,
   }

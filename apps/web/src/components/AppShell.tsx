@@ -397,9 +397,10 @@ function guardarDesplazamiento(evento: UIEvent<HTMLDivElement>) {
 export interface AppShellProps {
   seccionActiva: SeccionApp
   titulo: string
-  /** Pantalla a la que regresa la flecha de la izquierda del título. Sin ella
-   * (las pantallas raíz) no hay flecha. Dentro de una actividad solo la usan
-   * las pantallas de detalle: el resto se ubica con la barra lateral. */
+  /** Pantalla a la que regresa la flecha. Sin ella (las pantallas raíz) no
+   * hay flecha. Fuera de una actividad va junto al título; dentro, toma el
+   * lugar de la flecha de la barra lateral (pantallas de detalle, como la
+   * bitácora de alguien), para que nunca haya dos flechas. */
   volverA?: string
   /** Sin un destino fijo (un perfil se abre desde varios lugares): la flecha
    * regresa a la pantalla anterior, o a Actividades si se llegó directo. */
@@ -442,6 +443,12 @@ export function AppShell({
   const nivelVisible = Boolean(contexto) && (navActividad.nav !== null || navActividad.cargando)
   const [historialAbierto, setHistorialAbierto] = useState(false)
   const nombreActividad = navActividad.nav?.nombreActividad
+  // Dentro de una actividad hay una sola flecha, la de la barra lateral: sube
+  // al nivel de arriba (construirNavActividad), o al destino explícito de una
+  // pantalla de detalle.
+  const volverBarra = volverA
+    ? { etiqueta: volverEtiqueta ?? 'Volver', to: volverA }
+    : navActividad.nav?.volver
   const refBarra = useDesplazamientoBarra(!nivelVisible || navActividad.nav !== null)
 
   // Cada pestaña y cada entrada del historial del navegador dice dónde lleva
@@ -469,14 +476,14 @@ export function AppShell({
             <img src="/co3-marca.png" alt="Co3" className={styles.marcaImg} />
           </Link>
 
-          {nivelVisible && navActividad.nav ? (
+          {nivelVisible && navActividad.nav && volverBarra ? (
             <Link
-              to={navActividad.nav.volver.to}
+              to={volverBarra.to}
               className={[styles.navItem, styles.navItemAncestro].join(' ')}
-              aria-label={`Volver a ${navActividad.nav.volver.etiqueta}`}
+              aria-label={`Volver a ${volverBarra.etiqueta}`}
             >
               <IconoVolver />
-              {navActividad.nav.volver.etiqueta}
+              {volverBarra.etiqueta}
             </Link>
           ) : null}
         </div>
@@ -572,7 +579,7 @@ export function AppShell({
       <div className={styles.columna}>
         <header className={styles.topbar}>
           <div className={styles.encabezadoTitulo}>
-            {volverAlAnterior && !volverA ? (
+            {volverAlAnterior && !volverA && !nivelVisible ? (
               <button
                 type="button"
                 className={styles.volver}
@@ -588,7 +595,7 @@ export function AppShell({
                 <IconoVolver />
               </button>
             ) : null}
-            {volverA ? (
+            {volverA && !nivelVisible ? (
               <Link
                 to={volverA}
                 className={styles.volver}

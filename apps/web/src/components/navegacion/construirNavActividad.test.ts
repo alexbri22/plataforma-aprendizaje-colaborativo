@@ -52,18 +52,37 @@ function activos(nav: NavActividad) {
 }
 
 describe('construirNavActividad', () => {
-  it('quien organiza ve la actividad con una flecha a Organizo', () => {
+  it('quien organiza ve la actividad; la flecha sube a Organizo', () => {
     const nav = construirNavActividad({
       actividad: actividad(),
       contexto: { idActividad: 'a1', seccion: 'equipos' },
     })
 
-    expect(nav.volver).toEqual({ etiqueta: 'Organizo', to: '/actividades/organizo' })
     expect(nav.titulo).toBe('Taller de ecología')
     expect(etiquetas(nav)).toEqual([
       { titulo: undefined, entradas: ['Resumen', 'Planificar', 'Equipos', 'Participantes'] },
     ])
     expect(activos(nav)).toEqual(['Equipos'])
+    expect(nav.volver).toEqual({ etiqueta: 'Organizo', to: '/actividades/organizo' })
+  })
+
+  it('el Resumen sube con la flecha a Organizo', () => {
+    const nav = construirNavActividad({
+      actividad: actividad(),
+      contexto: { idActividad: 'a1', seccion: 'resumen' },
+    })
+
+    expect(nav.volver).toEqual({ etiqueta: 'Organizo', to: '/actividades/organizo' })
+  })
+
+  it('quien organiza, dentro de un equipo, regresa con la flecha a Equipos', () => {
+    const nav = construirNavActividad({
+      actividad: actividad(),
+      contexto: { idEquipo: 'e1', seccion: 'metas' },
+      equipo: EQUIPO,
+    })
+
+    expect(nav.volver).toEqual({ etiqueta: 'Equipos', to: '/actividades/a1/equipos' })
   })
 
   it('sin capacidades de planificación no ofrece Planificar', () => {
@@ -117,7 +136,7 @@ describe('construirNavActividad', () => {
     ])
   })
 
-  it('quien participa ve la actividad arriba y su equipo debajo, con Participo', () => {
+  it('quien participa ve la actividad arriba y su equipo debajo, con la flecha a Participo', () => {
     const nav = construirNavActividad({
       actividad: actividad({
         rol: 'participante',
@@ -131,13 +150,14 @@ describe('construirNavActividad', () => {
       equipo: EQUIPO,
     })
 
-    expect(nav.volver.etiqueta).toBe('Participo')
     const [bloqueActividad, bloqueEquipo] = etiquetas(nav)
     expect(bloqueActividad.entradas).toEqual(['Resumen', 'Equipos', 'Participantes'])
     expect(bloqueEquipo.titulo).toBe('Mi equipo: Alfa')
     expect(bloqueEquipo.entradas).toContain('Mi bitácora')
     expect(bloqueEquipo.entradas).toContain('Reconocimientos › Reconocer al equipo')
     expect(activos(nav)).toEqual(['Avances'])
+    // Su equipo es hermano del Resumen, no un nivel bajo Equipos.
+    expect(nav.volver).toEqual({ etiqueta: 'Participo', to: '/actividades/participo' })
   })
 
   it('quien participa sin equipo solo ve el bloque de la actividad', () => {
@@ -162,5 +182,6 @@ describe('construirNavActividad', () => {
       'Mi equipo: Alfa',
       'Equipo: Beta',
     ])
+    expect(nav.volver).toEqual({ etiqueta: 'Equipos', to: '/actividades/a1/equipos' })
   })
 })
