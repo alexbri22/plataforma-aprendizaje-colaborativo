@@ -1,0 +1,70 @@
+.tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.titulo {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.solicitud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.solicitud:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.datos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.datos p {
+  margin: 0;
+}
+
+.cambio {
+  overflow-wrap: anywhere;
+}
+
+.detalle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.acciones {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

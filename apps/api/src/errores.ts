@@ -41,6 +41,7 @@ export type CodigoError =
   | 'leccion_no_encontrada'
   | 'recurso_en_uso'
   | 'curso_desactualizado'
+  | 'solicitud_no_encontrada'
 
 export abstract class ErrorDominio extends Error {
   abstract readonly codigo: CodigoError
@@ -470,5 +471,17 @@ export class ErrorCursoDesactualizado extends ErrorDominio {
 
   constructor() {
     super('Otro administrador modificó este curso mientras lo editabas.')
+  }
+}
+
+// La solicitud de cambio de nombre ya no existe o ya no está pendiente: la
+// persona la canceló, envió otra que la reemplazó, u otro administrador la
+// resolvió primero (docs/diseno-desarrollo-nucleo.md §6.3).
+export class ErrorSolicitudNoEncontrada extends ErrorDominio {
+  readonly codigo = 'solicitud_no_encontrada' as const
+  readonly status = 404
+
+  constructor(mensaje = 'Esta solicitud ya no está pendiente.') {
+    super(mensaje)
   }
 }

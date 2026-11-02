@@ -1,7 +1,7 @@
 import { MAX_BYTES_FOTO_PERFIL, TIPOS_FOTO_PERFIL } from '@plataforma/shared'
 import express, { Router, type Response } from 'express'
 import { config } from '../config.js'
-import { ErrorUsuarioNoEncontrado } from '../errores.js'
+import { ErrorSinPermiso, ErrorUsuarioNoEncontrado } from '../errores.js'
 import { limitadorRegistro, limitadorSesion } from '../middleware/limitadorTasa.js'
 import { exigirSesion } from '../middleware/sesion.js'
 import {
@@ -22,9 +22,16 @@ import {
   quitarFoto,
 } from '../services/cuentas/perfil.service.js'
 import {
+  descartarSolicitudPropia,
+  obtenerSolicitudPropia,
+  solicitarCambioNombre,
+} from '../services/cuentas/solicitudesNombre.service.js'
+import {
   validarActualizacionPerfil,
   validarCredenciales,
+  validarDatosPerfil,
   validarDatosRegistro,
+  validarEstadoSolicitud,
 } from '../services/cuentas/validacion.js'
 import { opcionesCookieSesion } from '../services/cuentas/sesiones.js'
 
@@ -76,7 +83,9 @@ cuentasRouter.get('/usuarios/yo', exigirSesion, async (req, res) => {
 
 // PATCH /api/usuarios/yo: edita nombre y apellidos, cambia la contraseña o
 // cambia la visibilidad del correo. Cambiar la contraseña cierra las demás
-// sesiones (§3.2); la actual sigue viva.
+// sesiones (§3.2); la actual sigue viva. Solo un administrador edita su nombre
+// directamente; una cuenta de usuario lo solicita (PUT
+// /api/usuarios/yo/solicitud-nombre) y un administrador lo aprueba (§6.3).
 cuentasRouter.patch('/usuarios/yo', exigirSesion, async (req, res) => {
   const actor = req.actor as UsuarioPublico
   const actualizacion = validarActualizacionPerfil(req.body)
@@ -93,8 +102,43 @@ cuentasRouter.patch('/usuarios/yo', exigirSesion, async (req, res) => {
     return
   }
 
+  if (actor.tipoCuenta !== 'administrador') {
+    throw new ErrorSinPermiso(
+      'Tu cambio de nombre necesita la aprobación de un administrador: envíalo como solicitud.',
+    )
+  }
   const usuario = await actualizarDatosPerfil(actor.idUsuario, actualizacion.datos)
   res.status(200).json({ usuario })
+})
+
+// GET /api/usuarios/yo/solicitud-nombre: solo la solicitud vigente, o null. Es
+// lo que el cliente sondea mientras está pendiente: leer el perfil completo
+// recalcularía las insignias en cada vuelta (§6.3).
+cuentasRouter.get('/usuarios/yo/solicitud-nombre', exigirSesion, async (req, res) => {
+  const actor = req.actor as UsuarioPublico
+  res.status(200).json({ solicitud: await obtenerSolicitudPropia(actor.idUsuario) })
+})
+
+// PUT /api/usuarios/yo/solicitud-nombre: pide el cambio de nombre. Reemplaza a
+// la solicitud anterior, pendiente o rechazada (§6.3). Un administrador no la
+// necesita: edita su nombre con PATCH /api/usuarios/yo.
+cuentasRouter.put('/usuarios/yo/solicitud-nombre', exigirSesion, async (req, res) => {
+  const actor = req.actor as UsuarioPublico
+  if (actor.tipoCuenta === 'administrador') {
+    throw new ErrorSinPermiso('Como administrador, cambia tu nombre directamente en tus datos.')
+  }
+  const solicitud = await solicitarCambioNombre(actor.idUsuario, validarDatosPerfil(req.body))
+  res.status(201).json({ solicitud })
+})
+
+// DELETE /api/usuarios/yo/solicitud-nombre/{id}?estado=...: cancela la
+// solicitud pendiente o descarta el aviso de una resuelta. El estado es el que
+// la persona tiene a la vista; si ya no coincide, 404 y nada se borra.
+cuentasRouter.delete('/usuarios/yo/solicitud-nombre/:id', exigirSesion, async (req, res) => {
+  const actor = req.actor as UsuarioPublico
+  const estado = validarEstadoSolicitud(req.query.estado)
+  await descartarSolicitudPropia(actor.idUsuario, req.params.id as string, estado)
+  res.status(204).end()
 })
 
 // PUT /api/usuarios/yo/foto: el cuerpo es la imagen tal cual, con su tipo en

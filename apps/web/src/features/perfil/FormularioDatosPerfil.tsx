@@ -1,32 +1,51 @@
 import { useState, type FormEvent } from 'react'
 import { AvisoError, Button, Input } from '../../components/ui'
-import { useActualizarDatosPerfil } from './usePerfil'
+import { useActualizarDatosPerfil, useSolicitarCambioNombre } from './usePerfil'
 import styles from './FormularioPerfil.module.css'
 import { ErrorPerfil, type DatosPerfil, validarCampoRequerido } from '../cuentas'
 
 type Errores = Partial<Record<keyof DatosPerfil, string>>
 
 interface FormularioDatosPerfilProps {
-  /** Valores con los que arranca. Quien lo monta le pasa una `key` ligada a
-   * ellos, así que un cambio externo remonta el formulario en vez de
-   * sincronizarlo por efecto. */
+  /** El nombre vigente. Si cambia desde fuera (una aprobación, un guardado),
+   * el formulario lo adopta solo si no hay un borrador sin enviar. */
   inicial: DatosPerfil
+  /** Un administrador cambia su nombre directamente; una cuenta de usuario
+   * envía una solicitud que un administrador aprueba. */
+  directo: boolean
+}
+
+function mismoNombre(a: DatosPerfil, b: DatosPerfil): boolean {
+  return (
+    a.nombre === b.nombre &&
+    a.apellidoPaterno === b.apellidoPaterno &&
+    a.apellidoMaterno === b.apellidoMaterno
+  )
 }
 
 /** Nombre y apellidos, lo único editable del perfil además de la contraseña
  * (docs/diseno-desarrollo-nucleo.md §6.3). */
-export function FormularioDatosPerfil({ inicial }: FormularioDatosPerfilProps) {
-  const mutacion = useActualizarDatosPerfil()
+export function FormularioDatosPerfil({ inicial, directo }: FormularioDatosPerfilProps) {
+  const actualizar = useActualizarDatosPerfil()
+  const solicitar = useSolicitarCambioNombre()
+  const mutacion = directo ? actualizar : solicitar
   const [valores, setValores] = useState<DatosPerfil>(inicial)
+  const [base, setBase] = useState<DatosPerfil>(inicial)
   const [errores, setErrores] = useState<Errores>({})
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null)
 
-  const sinCambios =
-    valores.nombre === inicial.nombre &&
-    valores.apellidoPaterno === inicial.apellidoPaterno &&
-    valores.apellidoMaterno === inicial.apellidoMaterno
+  // Ajuste durante el render, no en un efecto: si el nombre vigente cambió
+  // (p. ej. un administrador aprobó una solicitud anterior mientras se
+  // escribía otra), los campos lo adoptan solo si no se habían editado; un
+  // borrador en curso se conserva.
+  if (!mismoNombre(base, inicial)) {
+    setBase(inicial)
+    if (mismoNombre(valores, base)) setValores(inicial)
+  }
 
-  function actualizar(campo: keyof DatosPerfil, valor: string) {
+  const sinCambios = mismoNombre(valores, inicial)
+
+  function cambiarCampo(campo: keyof DatosPerfil, valor: string) {
     setValores((actuales) => ({ ...actuales, [campo]: valor }))
   }
 
@@ -45,11 +64,20 @@ export function FormularioDatosPerfil({ inicial }: FormularioDatosPerfilProps) {
 
     setErrorEnvio(null)
     try {
-      await mutacion.mutateAsync({
+      const datos = {
         nombre: valores.nombre.trim(),
         apellidoPaterno: valores.apellidoPaterno.trim(),
         apellidoMaterno: valores.apellidoMaterno.trim(),
-      })
+      }
+      if (directo) {
+        await actualizar.mutateAsync(datos)
+      } else {
+        await solicitar.mutateAsync(datos)
+        // El nombre vigente no cambió: el formulario vuelve a él, y el aviso
+        // de que la solicitud llegó al administrador lo pinta
+        // AvisoSolicitudNombre, que aparece al releer el perfil.
+        setValores(inicial)
+      }
     } catch (error) {
       if (error instanceof ErrorPerfil && error.detallePorCampo) {
         setErrores(error.detallePorCampo)
@@ -66,7 +94,7 @@ export function FormularioDatosPerfil({ inicial }: FormularioDatosPerfilProps) {
         label="Nombre"
         autoComplete="given-name"
         value={valores.nombre}
-        onChange={(e) => actualizar('nombre', e.target.value)}
+        onChange={(e) => cambiarCampo('nombre', e.target.value)}
         error={errores.nombre}
         disabled={mutacion.isPending}
       />
@@ -76,7 +104,7 @@ export function FormularioDatosPerfil({ inicial }: FormularioDatosPerfilProps) {
           label="Apellido paterno"
           autoComplete="family-name"
           value={valores.apellidoPaterno}
-          onChange={(e) => actualizar('apellidoPaterno', e.target.value)}
+          onChange={(e) => cambiarCampo('apellidoPaterno', e.target.value)}
           error={errores.apellidoPaterno}
           disabled={mutacion.isPending}
         />
@@ -84,16 +112,16 @@ export function FormularioDatosPerfil({ inicial }: FormularioDatosPerfilProps) {
           id="perfil-apellidoMaterno"
           label="Apellido materno"
           value={valores.apellidoMaterno}
-          onChange={(e) => actualizar('apellidoMaterno', e.target.value)}
+          onChange={(e) => cambiarCampo('apellidoMaterno', e.target.value)}
           error={errores.apellidoMaterno}
           disabled={mutacion.isPending}
         />
       </div>
       <div className={styles.acciones}>
         <Button type="submit" disabled={mutacion.isPending || sinCambios}>
-          {mutacion.isPending ? 'Guardando…' : 'Guardar datos'}
+          {mutacion.isPending ? (directo ? 'Guardando…' : 'Enviando…') : 'Guardar datos'}
         </Button>
-        {mutacion.isSuccess && sinCambios ? (
+        {directo && actualizar.isSuccess && sinCambios ? (
           <p className={styles.confirmacion} role="status">
             Datos guardados.
           </p>
