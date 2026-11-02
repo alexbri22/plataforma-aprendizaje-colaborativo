@@ -16,7 +16,11 @@ export function TarjetaActividad({ actividad }: TarjetaActividadProps) {
     <Link to={`/actividades/${actividad.id}`} className={styles.enlace}>
       <Card className={styles.tarjeta}>
         <h3 className={styles.nombre}>{actividad.nombre}</h3>
-        <p className={styles.objetivo}>{actividad.objetivo}</p>
+        {/* Rotulado, como el pie ("Clave: …"): sin la etiqueta no se
+            entendía qué era este texto. */}
+        <p className={styles.objetivo}>
+          <span className={styles.etiqueta}>Objetivo:</span> {actividad.objetivo}
+        </p>
 
         <div className={styles.pie}>
           {actividad.rol === 'co-organizador' ? (

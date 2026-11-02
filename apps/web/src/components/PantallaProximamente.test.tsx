@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { renderConProveedores } from '../pruebas/conProveedores'
 import { describe, expect, it, vi } from 'vitest'
 import type { Usuario } from '../features/cuentas'
 import { PantallaProximamente } from './PantallaProximamente'
@@ -32,15 +32,13 @@ const USUARIO_PRUEBA: Usuario = {
 }
 
 function renderPantalla(publica: boolean) {
-  return render(
-    <MemoryRouter>
-      <PantallaProximamente
-        publica={publica}
-        seccionActiva="recursos"
-        titulo="Recursos"
-        descripcion="Todavía no está construido."
-      />
-    </MemoryRouter>,
+  return renderConProveedores(
+    <PantallaProximamente
+      publica={publica}
+      seccionActiva="recursos"
+      titulo="Recursos"
+      descripcion="Todavía no está construido."
+    />,
   )
 }
 

@@ -10,8 +10,7 @@ const BASE_URL = import.meta.env.VITE_API_URL ?? ''
 
 export class ErrorActividad extends Error {}
 
-const MENSAJE_SIN_CONEXION =
-  'No pudimos conectar con el servidor. Verifica tu conexión e intenta de nuevo.'
+const MENSAJE_SIN_CONEXION = 'No pudimos comunicarnos con Co3. Intenta de nuevo en un momento.'
 
 async function leerMensajeError(respuesta: Response, mensajePorDefecto: string): Promise<string> {
   try {
@@ -260,7 +259,7 @@ export async function obtenerPeriodos(id: string): Promise<PeriodoReporte[]> {
 
   if (!respuesta.ok) {
     throw new ErrorActividad(
-      await leerMensajeError(respuesta, 'No pudimos cargar el calendario de avances.'),
+      await leerMensajeError(respuesta, 'No pudimos cargar el calendario de entregas.'),
     )
   }
 

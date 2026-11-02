@@ -91,9 +91,7 @@ describe('PanelHistorial', () => {
 
     const panel = await screen.findByRole('dialog')
     expect(await within(panel).findByText('Sistema')).toBeInTheDocument()
-    expect(
-      within(panel).getByText('Avanzó de fase: formacion_equipos → desarrollo'),
-    ).toBeInTheDocument()
+    expect(within(panel).getByText('Pasó a la etapa En desarrollo')).toBeInTheDocument()
   })
 
   it('sin eventos todavía, lo dice en vez de una lista vacía', async () => {

@@ -54,6 +54,11 @@
   overflow: hidden;
 }
 
+.etiqueta {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+}
+
 .pie {
   display: flex;
   flex-wrap: wrap;

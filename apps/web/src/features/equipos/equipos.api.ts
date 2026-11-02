@@ -5,8 +5,7 @@ const BASE_URL = import.meta.env.VITE_API_URL ?? ''
 
 export class ErrorEquipos extends Error {}
 
-const MENSAJE_SIN_CONEXION =
-  'No pudimos conectar con el servidor. Verifica tu conexión e intenta de nuevo.'
+const MENSAJE_SIN_CONEXION = 'No pudimos comunicarnos con Co3. Intenta de nuevo en un momento.'
 
 async function leerMensajeError(respuesta: Response, mensajePorDefecto: string): Promise<string> {
   try {
@@ -131,7 +130,7 @@ export async function eliminarEquipo(idEquipo: string): Promise<void> {
 export async function cerrarFormacion(idActividad: string): Promise<Actividad> {
   const respuesta = await exigirOk(
     await pedir(`/api/actividades/${idActividadEnRuta(idActividad)}/formacion/cierre`, 'POST'),
-    'No pudimos cerrar la formación de equipos. Intenta de nuevo.',
+    'No pudimos confirmar los equipos. Intenta de nuevo.',
   )
   return ((await respuesta.json()) as { actividad: Actividad }).actividad
 }
@@ -142,7 +141,7 @@ export async function cerrarFormacion(idActividad: string): Promise<Actividad> {
 export async function generarPropuesta(idActividad: string): Promise<PropuestaEquipos> {
   const respuesta = await exigirOk(
     await pedir(`/api/actividades/${idActividadEnRuta(idActividad)}/equipos/propuesta`, 'POST'),
-    'No pudimos generar la propuesta de equipos. Intenta de nuevo.',
+    'No pudimos sugerir equipos. Intenta de nuevo.',
   )
   return (await respuesta.json()) as PropuestaEquipos
 }

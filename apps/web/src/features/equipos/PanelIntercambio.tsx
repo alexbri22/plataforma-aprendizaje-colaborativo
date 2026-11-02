@@ -57,7 +57,12 @@ function Formulario({
           </option>
         ))}
       </Select>
-      <Select label="Con" value={b} disabled={!personaA} onChange={(e) => setB(e.target.value)}>
+      <Select
+        label="Intercambiar con"
+        value={b}
+        disabled={!personaA}
+        onChange={(e) => setB(e.target.value)}
+      >
         <option value="">Elegir…</option>
         {candidatas.map((p) => (
           <option key={p.idMembresia} value={p.idMembresia}>

@@ -241,7 +241,13 @@ describe('GET /api/actividades/:id', () => {
     expect(respuesta.body.actividad.configuracion.formacion_equipos).toBe('autogestionado')
     expect(respuesta.body.actividad.configuracion.bitacora_individual).toBe('deshabilitada')
     const espacioEquipo = JSON.parse(respuesta.body.actividad.configuracion.espacio_equipo)
-    expect(espacioEquipo).toEqual({ metas: 'opcional', avances: 'opcional', recursos: 'opcional' })
+    expect(espacioEquipo).toEqual({
+      metas: 'opcional',
+      planeacion: 'opcional',
+      avances: 'opcional',
+      recursos: 'opcional',
+      producto: 'opcional',
+    })
   })
 
   it('responde 404 a quien no es miembro, sin distinguir de una actividad inexistente', async () => {
@@ -384,13 +390,21 @@ describe('PUT /api/actividades/:id/configuracion/:funcion', () => {
     const respuesta = await request(app)
       .put(`/api/actividades/${id}/configuracion/espacio_equipo`)
       .set('Cookie', cookieOrganizador)
-      .send({ metas: 'obligatorio', avances: 'opcional', recursos: 'obligatorio' })
+      .send({
+        metas: 'obligatorio',
+        planeacion: 'opcional',
+        avances: 'opcional',
+        recursos: 'obligatorio',
+        producto: 'opcional',
+      })
 
     expect(respuesta.status).toBe(200)
     expect(JSON.parse(respuesta.body.actividad.configuracion.espacio_equipo)).toEqual({
       metas: 'obligatorio',
+      planeacion: 'opcional',
       avances: 'opcional',
       recursos: 'obligatorio',
+      producto: 'opcional',
     })
   })
 
@@ -820,6 +834,95 @@ describe('transicionarActividadesVencidas (tarea programada, nucleo §7.5)', () 
   })
 })
 
+// Un instante bien entrado el día que sigue a `fecha` + `dias` (YYYY-MM-DD).
+function diasDespuesDe(fecha: string, dias: number): Date {
+  return new Date(
+    new Date(`${fecha}T00:00:00.000Z`).getTime() + (dias + 1) * UN_DIA_MS + 12 * 60 * 60 * 1000,
+  )
+}
+
+describe('transicionarActividadesVencidas: desarrollo, cierre y archivo', () => {
+  async function actividadEnEstado(estado: 'desarrollo' | 'cierre'): Promise<string> {
+    const cookieOrganizador = await registrarYObtenerCookie('ada@ejemplo.com')
+    const { id } = await crearActividad(cookieOrganizador)
+    await prisma.actividad.update({ where: { idActividad: id }, data: { estado } })
+    return id
+  }
+
+  async function estadoDe(id: string) {
+    return (await prisma.actividad.findUniqueOrThrow({ where: { idActividad: id } })).estado
+  }
+
+  it('al terminar el día de término, el desarrollo pasa a cierre', async () => {
+    const id = await actividadEnEstado('desarrollo')
+
+    const resultado = await transicionarActividadesVencidas(
+      diasDespuesDe(DATOS_ACTIVIDAD.fechaTermino, 0),
+    )
+
+    expect(resultado.cierresIniciados).toBe(1)
+    expect(await estadoDe(id)).toBe('cierre')
+    const evento = await prisma.historial.findFirstOrThrow({
+      where: { idActividad: id, tipoEvento: 'fase_avanzada' },
+    })
+    expect(evento).toMatchObject({ tipoActor: 'sistema' })
+    expect(evento.datos).toMatchObject({ faseOrigen: 'desarrollo', faseDestino: 'cierre' })
+  })
+
+  it('el mismo día de término todavía es desarrollo', async () => {
+    const id = await actividadEnEstado('desarrollo')
+
+    await transicionarActividadesVencidas(new Date(`${DATOS_ACTIVIDAD.fechaTermino}T12:00:00.000Z`))
+
+    expect(await estadoDe(id)).toBe('desarrollo')
+  })
+
+  it('al vencer el plazo de cierre, la actividad se archiva', async () => {
+    const id = await actividadEnEstado('cierre')
+
+    const resultado = await transicionarActividadesVencidas(
+      diasDespuesDe(DATOS_ACTIVIDAD.fechaTermino, DATOS_ACTIVIDAD.plazoCierreDias),
+    )
+
+    expect(resultado.archivadas).toBe(1)
+    expect(await estadoDe(id)).toBe('archivada')
+  })
+
+  it('dentro del plazo de cierre no se archiva', async () => {
+    const id = await actividadEnEstado('cierre')
+
+    await transicionarActividadesVencidas(diasDespuesDe(DATOS_ACTIVIDAD.fechaTermino, 0))
+
+    expect(await estadoDe(id)).toBe('cierre')
+  })
+
+  it('una actividad atrasada avanza las dos etapas en la misma corrida', async () => {
+    const id = await actividadEnEstado('desarrollo')
+
+    const resultado = await transicionarActividadesVencidas(
+      diasDespuesDe(DATOS_ACTIVIDAD.fechaTermino, DATOS_ACTIVIDAD.plazoCierreDias),
+    )
+
+    expect(resultado).toMatchObject({ cierresIniciados: 1, archivadas: 1 })
+    expect(await estadoDe(id)).toBe('archivada')
+  })
+})
+
+describe('POST /api/actividades: fecha límite de inscripción', () => {
+  it('rechaza una inscripción que cierra el día del término o después', async () => {
+    const cookie = await registrarYObtenerCookie('ada@ejemplo.com')
+    const respuesta = await request(app)
+      .post('/api/actividades')
+      .set('Cookie', cookie)
+      .send({ ...DATOS_ACTIVIDAD, fechaLimiteInscripcion: DATOS_ACTIVIDAD.fechaTermino })
+
+    expect(respuesta.status).toBe(400)
+    expect(respuesta.body.detallePorCampo).toEqual({
+      fechaLimiteInscripcion: 'Debe ser anterior a la fecha de término.',
+    })
+  })
+})
+
 describe('PUT /api/actividades/:id/configuracion/:funcion durante el desarrollo y el cierre', () => {
   async function actividadEn(
     estado: 'desarrollo' | 'cierre' | 'archivada',
@@ -875,8 +978,10 @@ describe('PUT /api/actividades/:id/configuracion/:funcion durante el desarrollo 
     const { cookie, id } = await actividadEn('desarrollo')
     const respuesta = await configurar(id, cookie, 'espacio_equipo', {
       metas: 'obligatorio',
+      planeacion: 'opcional',
       avances: 'deshabilitado',
       recursos: 'opcional',
+      producto: 'opcional',
     })
     expect(respuesta.status).toBe(200)
   })

@@ -1,7 +1,22 @@
 import type { ElementoEspacioEquipo } from '@plataforma/shared'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { claveEquipo } from '../equipos/useEquipos'
-import { crearElemento, editarElemento, eliminarElemento, obtenerElementos } from './elementos.api'
+import {
+  crearElemento,
+  editarElemento,
+  eliminarElemento,
+  obtenerElementos,
+  quitarArchivoElemento,
+  subirArchivoElemento,
+} from './elementos.api'
+
+/** Lo que se guarda de un elemento. `archivo`: undefined lo deja como está,
+ * null lo quita, un File lo adjunta o reemplaza. */
+export interface DatosElemento {
+  contenido: string
+  enlace: string | null
+  archivo?: File | null
+}
 
 // Cuelga de ['equipos', idEquipo] (nucleo §4.2, "escribir en el espacio de un
 // equipo invalida ese equipo") y no de la actividad: dos equipos de la misma
@@ -22,20 +37,39 @@ function useInvalidarElementos(idEquipo: string, tipo: ElementoEspacioEquipo) {
   return () => queryClient.invalidateQueries({ queryKey: claveElementos(idEquipo, tipo) })
 }
 
+// El archivo va en una segunda petición (el cuerpo es el archivo tal cual,
+// no JSON). Si esa falla, el texto ya quedó guardado: se invalida igual,
+// para que la lista lo muestre, y el error dice qué faltó.
+async function guardarArchivo(idElemento: string, archivo: File | null | undefined) {
+  if (archivo === undefined) return
+  if (archivo === null) await quitarArchivoElemento(idElemento)
+  else await subirArchivoElemento(idElemento, archivo)
+}
+
 export function useCrearElementoMutation(idEquipo: string, tipo: ElementoEspacioEquipo) {
   const invalidar = useInvalidarElementos(idEquipo, tipo)
   return useMutation({
-    mutationFn: (contenido: string) => crearElemento(idEquipo, tipo, contenido),
-    onSuccess: invalidar,
+    mutationFn: async ({ contenido, enlace, archivo }: DatosElemento) => {
+      const creado = await crearElemento(idEquipo, tipo, contenido, enlace)
+      await guardarArchivo(creado.id, archivo)
+    },
+    onSettled: invalidar,
   })
 }
 
 export function useEditarElementoMutation(idEquipo: string, tipo: ElementoEspacioEquipo) {
   const invalidar = useInvalidarElementos(idEquipo, tipo)
   return useMutation({
-    mutationFn: ({ idElemento, contenido }: { idElemento: string; contenido: string }) =>
-      editarElemento(idElemento, contenido),
-    onSuccess: invalidar,
+    mutationFn: async ({
+      idElemento,
+      contenido,
+      enlace,
+      archivo,
+    }: DatosElemento & { idElemento: string }) => {
+      await editarElemento(idElemento, contenido, enlace)
+      await guardarArchivo(idElemento, archivo)
+    },
+    onSettled: invalidar,
   })
 }
 

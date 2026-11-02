@@ -42,6 +42,10 @@ export interface Actividad {
   // propia membresía del actor, para saber si una fila con autoría (una
   // entrada de bitácora, un comentario) es suya.
   idMiMembresia?: string
+  // Solo GET /api/actividades/{id}: el equipo del actor en esta actividad, o
+  // null si todavía no integra ninguno. Con él se entra directo al espacio
+  // del propio equipo sin pasar por la lista de equipos.
+  idMiEquipo?: string | null
 }
 
 // Lo mínimo que devuelve GET /api/claves/{clave} para decidir si unirse

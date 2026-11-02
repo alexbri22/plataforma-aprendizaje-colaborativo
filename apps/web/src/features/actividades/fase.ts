@@ -16,7 +16,7 @@ interface InfoFase {
 // únicos usos sancionados de Apothecary Amber fuera de insignias (ver
 // DESIGN.md, "The One-Bottle Rule").
 const INFO_POR_FASE: Record<FaseActividad, InfoFase> = {
-  configuracion: { etiqueta: 'Configuración', variant: 'primary' },
+  configuracion: { etiqueta: 'Planificación', variant: 'primary' },
   inscripcion: { etiqueta: 'Inscripción', variant: 'primary' },
   formacion_equipos: { etiqueta: 'Formación de equipos', variant: 'success' },
   desarrollo: { etiqueta: 'En desarrollo', variant: 'neutral' },

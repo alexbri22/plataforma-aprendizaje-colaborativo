@@ -29,7 +29,7 @@ export function PantallaMisReconocimientos() {
       <AppShell
         seccionActiva="actividades"
         titulo="Mis reconocimientos"
-        volverA={`/actividades/${id}`}
+        contexto={{ idActividad: id, seccion: 'insignias' }}
       >
         <div className={styles.cargando} role="status" aria-label="Cargando tus reconocimientos">
           <IconoCargando size={24} />
@@ -43,7 +43,7 @@ export function PantallaMisReconocimientos() {
       <AppShell
         seccionActiva="actividades"
         titulo="Mis reconocimientos"
-        volverA={`/actividades/${id}`}
+        contexto={{ idActividad: id, seccion: 'insignias' }}
       >
         <AvisoError mensaje="No pudimos cargar tus reconocimientos." />
       </AppShell>
@@ -63,7 +63,7 @@ export function PantallaMisReconocimientos() {
     <AppShell
       seccionActiva="actividades"
       titulo="Mis reconocimientos"
-      volverA={`/actividades/${id}`}
+      contexto={{ idActividad: id, seccion: 'insignias' }}
     >
       <section className={styles.seccion}>
         <h2 className={styles.tituloSeccion}>En esta actividad</h2>

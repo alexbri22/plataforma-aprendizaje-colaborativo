@@ -151,6 +151,7 @@ describe('PantallaPerfil', () => {
       'H2:Datos generales',
       'H3:Tus datos',
       'H3:Contraseña',
+      'H3:Ayudas',
       'H2:Insignias',
     ])
   })

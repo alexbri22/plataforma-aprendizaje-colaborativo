@@ -96,14 +96,20 @@ export { LIMITE_PERIODOS, generarPeriodos } from './periodos.js'
 export type { PeriodoGenerado } from './periodos.js'
 
 export {
+  EXTENSIONES_ARCHIVO_ELEMENTO,
   LONGITUD_MAXIMA_CONTENIDO_BITACORA,
   LONGITUD_MAXIMA_CONTENIDO_COMENTARIO,
   LONGITUD_MAXIMA_CONTENIDO_ELEMENTO,
+  LONGITUD_MAXIMA_ENLACE_ELEMENTO,
+  MAX_BYTES_ARCHIVO_ELEMENTO,
+  TIPOS_ARCHIVO_ELEMENTO,
   TIPOS_ENTIDAD_COMENTARIO,
+  esTipoArchivoElemento,
 } from './seguimiento.js'
 
 export type {
   Comentario,
+  ArchivoDeElemento,
   ElementoDeEspacioEquipo,
   EntradaBitacora,
   TipoEntidadComentario,
@@ -164,3 +170,6 @@ export type {
   TipoLeccion,
   TipoRecurso,
 } from './formacion.js'
+
+export { IDS_PISTA, esIdPista } from './ayuda.js'
+export type { IdPista } from './ayuda.js'

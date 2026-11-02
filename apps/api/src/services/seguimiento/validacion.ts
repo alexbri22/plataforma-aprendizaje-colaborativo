@@ -4,7 +4,9 @@ import {
   LONGITUD_MAXIMA_CONTENIDO_BITACORA,
   LONGITUD_MAXIMA_CONTENIDO_COMENTARIO,
   LONGITUD_MAXIMA_CONTENIDO_ELEMENTO,
+  LONGITUD_MAXIMA_ENLACE_ELEMENTO,
   PERIODICIDADES,
+  esUrlSegura,
   type ElementoEspacioEquipo,
   type EstadoPeriodo,
   type Periodicidad,
@@ -89,13 +91,30 @@ function validarContenido(valor: unknown): { contenido: string } | { error: stri
   return { contenido }
 }
 
+// El enlace es opcional: ausente (undefined) no cambia nada al editar;
+// null o vacío lo quita. Solo https, como los enlaces de los recursos
+// formativos.
+function validarEnlace(valor: unknown): { enlace: string | null | undefined } | { error: string } {
+  if (valor === undefined) return { enlace: undefined }
+  if (valor === null) return { enlace: null }
+  if (typeof valor !== 'string') return { error: 'Debe ser un enlace.' }
+  const enlace = valor.trim()
+  if (enlace === '') return { enlace: null }
+  if (enlace.length > LONGITUD_MAXIMA_ENLACE_ELEMENTO || !esUrlSegura(enlace)) {
+    return { error: 'Debe ser un enlace completo que empiece con https://' }
+  }
+  return { enlace }
+}
+
 export function validarDatosCrearElemento(cuerpo: unknown): {
   tipo: ElementoEspacioEquipo
   contenido: string
+  enlace: string | null
 } {
   const datos = comoObjeto(cuerpo)
   const detallePorCampo: Record<string, string> = {}
   let contenido = ''
+  let enlace: string | null = null
 
   if (
     typeof datos.tipo !== 'string' ||
@@ -108,14 +127,30 @@ export function validarDatosCrearElemento(cuerpo: unknown): {
   if ('error' in resultado) detallePorCampo.contenido = resultado.error
   else contenido = resultado.contenido
 
+  const resultadoEnlace = validarEnlace(datos.enlace)
+  if ('error' in resultadoEnlace) detallePorCampo.enlace = resultadoEnlace.error
+  else enlace = resultadoEnlace.enlace ?? null
+
   if (Object.keys(detallePorCampo).length > 0) throw new ErrorValidacion(detallePorCampo)
-  return { tipo: datos.tipo as ElementoEspacioEquipo, contenido }
+  return { tipo: datos.tipo as ElementoEspacioEquipo, contenido, enlace }
 }
 
-export function validarDatosActualizarElemento(cuerpo: unknown): { contenido: string } {
-  const resultado = validarContenido(comoObjeto(cuerpo).contenido)
-  if ('error' in resultado) throw new ErrorValidacion({ contenido: resultado.error })
-  return resultado
+export function validarDatosActualizarElemento(cuerpo: unknown): {
+  contenido: string
+  enlace?: string | null
+} {
+  const datos = comoObjeto(cuerpo)
+  const detallePorCampo: Record<string, string> = {}
+  const resultado = validarContenido(datos.contenido)
+  if ('error' in resultado) detallePorCampo.contenido = resultado.error
+  const resultadoEnlace = validarEnlace(datos.enlace)
+  if ('error' in resultadoEnlace) detallePorCampo.enlace = resultadoEnlace.error
+  if ('error' in resultado || 'error' in resultadoEnlace) {
+    throw new ErrorValidacion(detallePorCampo)
+  }
+  return resultadoEnlace.enlace === undefined
+    ? { contenido: resultado.contenido }
+    : { contenido: resultado.contenido, enlace: resultadoEnlace.enlace }
 }
 
 // Bitácora individual (nucleo §9.3).

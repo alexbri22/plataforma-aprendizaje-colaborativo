@@ -1,6 +1,6 @@
 import { generarPeriodos, type Periodicidad, type PeriodoReporte } from '@plataforma/shared'
 import { useState, type ChangeEvent } from 'react'
-import { Button, Card, Select } from '../../components/ui'
+import { Badge, Button, Card, Select } from '../../components/ui'
 import type { CambiosPeriodo } from './actividades.api'
 import {
   etiquetaInstrumento,
@@ -127,9 +127,15 @@ export function SeccionProcesoColaborativo({
 
   return (
     <section aria-labelledby="titulo-proceso-colaborativo" className={styles.seccion}>
-      <h2 id="titulo-proceso-colaborativo" className={styles.titulo}>
-        Proceso colaborativo
-      </h2>
+      {/* Lo que se elige aquí vive solo en esta pantalla: Proceso
+          colaborativo todavía no tiene dónde guardarse (nucleo §9.1). Sin
+          decirlo, parecía configuración real que se perdía al salir. */}
+      <div className={styles.encabezado}>
+        <h2 id="titulo-proceso-colaborativo" className={styles.titulo}>
+          Proceso colaborativo
+        </h2>
+        <Badge variant="neutral">Vista previa · todavía no se guarda</Badge>
+      </div>
       <p className={styles.descripcion}>
         Con qué instrumento se evalúa cada aspecto del trabajo colaborativo, y cada cuánto.
       </p>
@@ -140,10 +146,10 @@ export function SeccionProcesoColaborativo({
             <thead>
               <tr>
                 <th scope="col" className={styles.encabezadoColumna}>
-                  Tarea
+                  Aspecto
                 </th>
                 <th scope="col" className={styles.encabezadoColumna}>
-                  Recurso
+                  Instrumento
                 </th>
                 <th scope="col" className={styles.encabezadoColumna}>
                   Periodicidad
@@ -165,7 +171,7 @@ export function SeccionProcesoColaborativo({
                     </th>
                     <td className={styles.celdaControl}>
                       <Select
-                        label={`Recurso de ${etiqueta}`}
+                        label={`Instrumento de ${etiqueta}`}
                         ocultarEtiqueta
                         value={estadoTarea.recurso}
                         onChange={(evento: ChangeEvent<HTMLSelectElement>) =>

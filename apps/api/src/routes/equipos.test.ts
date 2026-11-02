@@ -30,6 +30,31 @@ afterAll(async () => {
   await prisma.$disconnect()
 })
 
+describe('GET /api/actividades/:id: idMiEquipo', () => {
+  const detalle = (id: string, cookie: string) =>
+    request(app).get(`/api/actividades/${id}`).set('Cookie', cookie)
+
+  it('es null mientras la persona no tiene equipo', async () => {
+    const e = await actividadEnFormacion(1)
+
+    const respuesta = await detalle(e.id, e.participantes[0].cookie)
+    expect(respuesta.status).toBe(200)
+    expect(respuesta.body.actividad.idMiEquipo).toBeNull()
+  })
+
+  it('es el equipo de quien llama, no el de otra persona', async () => {
+    const e = await actividadEnFormacion(2)
+    const idA = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
+    const idB = await idEquipoCreado(e.id, e.organizador.cookie, 'Beta')
+    await asignar(idA, e.participantes[0].idMembresia, e.organizador.cookie).expect(200)
+    await asignar(idB, e.participantes[1].idMembresia, e.organizador.cookie).expect(200)
+
+    expect((await detalle(e.id, e.participantes[0].cookie)).body.actividad.idMiEquipo).toBe(idA)
+    expect((await detalle(e.id, e.participantes[1].cookie)).body.actividad.idMiEquipo).toBe(idB)
+    expect((await detalle(e.id, e.organizador.cookie)).body.actividad.idMiEquipo).toBeNull()
+  })
+})
+
 describe('GET /api/actividades/:id/equipos', () => {
   it('lista los equipos y a quienes quedan sin equipo; todo miembro lo ve', async () => {
     const e = await actividadEnFormacion(3)

@@ -24,7 +24,7 @@ import { contextoEntradaParaComentario, puedeLeerEntrada } from './bitacora.serv
 // contextoElementoParaComentario / contextoEntradaParaComentario) y repite
 // la misma condición que esos módulos usan para la entidad misma.
 
-const MENSAJE_FASE = 'Los comentarios no pueden escribirse ni editarse en esta fase.'
+const MENSAJE_FASE = 'Los comentarios no pueden escribirse ni editarse en esta etapa.'
 
 function aRespuesta(fila: FilaComentario, nombreAutor: string): Comentario {
   return {

@@ -1,8 +1,13 @@
 import { MAX_BYTES_FOTO_PERFIL, TIPOS_FOTO_PERFIL } from '@plataforma/shared'
 import express, { Router, type Response } from 'express'
 import { config } from '../config.js'
-import { ErrorUsuarioNoEncontrado } from '../errores.js'
-import { limitadorRegistro, limitadorSesion } from '../middleware/limitadorTasa.js'
+import { ErrorCredencialesInvalidas, ErrorUsuarioNoEncontrado } from '../errores.js'
+import {
+  limitadorRegistro,
+  limitadorSesion,
+  limitadorSesionPorIp,
+  segundosParaReintentar,
+} from '../middleware/limitadorTasa.js'
 import { exigirSesion } from '../middleware/sesion.js'
 import {
   cerrarSesion,
@@ -11,6 +16,11 @@ import {
   type SesionCreada,
   type UsuarioPublico,
 } from '../services/cuentas/cuentas.service.js'
+import {
+  listarPistasVistas,
+  marcarPistaVista,
+  reiniciarPistas,
+} from '../services/cuentas/pistas.service.js'
 import {
   actualizarDatosPerfil,
   cambiarContrasena,
@@ -46,12 +56,32 @@ cuentasRouter.post('/usuarios', limitadorRegistro, async (req, res) => {
   res.status(201).json({ usuario })
 })
 
-// POST /api/sesion: inicia sesión y emite la cookie.
-cuentasRouter.post('/sesion', limitadorSesion, async (req, res) => {
+// POST /api/sesion: inicia sesión y emite la cookie. Con credenciales
+// incorrectas dice cuántos intentos quedan antes de la pausa: el conteo es
+// por IP y correo exista o no la cuenta (limitadorSesion), así que la cifra
+// no revela si el correo está registrado.
+cuentasRouter.post('/sesion', limitadorSesionPorIp, limitadorSesion, async (req, res) => {
   const credenciales = validarCredenciales(req.body)
-  const { usuario, sesion } = await iniciarSesion(credenciales)
-  establecerCookieSesion(res, sesion)
-  res.status(200).json({ usuario })
+  try {
+    const { usuario, sesion } = await iniciarSesion(credenciales)
+    establecerCookieSesion(res, sesion)
+    res.status(200).json({ usuario })
+  } catch (err) {
+    if (err instanceof ErrorCredencialesInvalidas && req.rateLimit) {
+      res.status(err.status).json({
+        codigo: err.codigo,
+        mensaje: err.message,
+        intentosRestantes: req.rateLimit.remaining,
+        // Con el último intento gastado, cuánto esperar: el cliente bloquea
+        // el formulario sin tener que provocar el 429.
+        ...(req.rateLimit.remaining === 0
+          ? { reintentarEnSegundos: segundosParaReintentar(req) }
+          : {}),
+      })
+      return
+    }
+    throw err
+  }
 })
 
 // DELETE /api/sesion: cierra la sesión y elimina el registro en servidor.
@@ -95,6 +125,25 @@ cuentasRouter.patch('/usuarios/yo', exigirSesion, async (req, res) => {
 
   const usuario = await actualizarDatosPerfil(actor.idUsuario, actualizacion.datos)
   res.status(200).json({ usuario })
+})
+
+// Ayudas de primera vez ya vistas (PistaVista): el cliente las lee una vez
+// por sesión y marca cada una al cerrarla.
+cuentasRouter.get('/usuarios/yo/pistas', exigirSesion, async (req, res) => {
+  const actor = req.actor as UsuarioPublico
+  res.status(200).json({ pistas: await listarPistasVistas(actor.idUsuario) })
+})
+
+cuentasRouter.put('/usuarios/yo/pistas/:idPista', exigirSesion, async (req, res) => {
+  const actor = req.actor as UsuarioPublico
+  await marcarPistaVista(actor.idUsuario, String(req.params.idPista))
+  res.status(204).end()
+})
+
+cuentasRouter.delete('/usuarios/yo/pistas', exigirSesion, async (req, res) => {
+  const actor = req.actor as UsuarioPublico
+  await reiniciarPistas(actor.idUsuario)
+  res.status(204).end()
 })
 
 // PUT /api/usuarios/yo/foto: el cuerpo es la imagen tal cual, con su tipo en
