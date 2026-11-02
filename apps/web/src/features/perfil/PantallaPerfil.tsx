@@ -75,7 +75,10 @@ export function PantallaPerfil() {
     )
   }
 
-  if (perfil.isError || !perfil.data) {
+  // Error de página solo si no hay nada que mostrar. Si falla una recarga en
+  // segundo plano, el perfil anterior sigue en pantalla con un aviso, y los
+  // formularios no se desmontan ni pierden lo que se estaba escribiendo.
+  if (!perfil.data) {
     return (
       <AppShell seccionActiva="perfil" titulo="Mi perfil">
         <AvisoError mensaje={perfil.error?.message ?? 'No pudimos cargar tu perfil.'} />
@@ -92,6 +95,9 @@ export function PantallaPerfil() {
 
   return (
     <AppShell seccionActiva="perfil" titulo="Mi perfil">
+      {perfil.isError ? (
+        <AvisoError mensaje="No pudimos actualizar tu perfil. Lo que ves puede no estar al día." />
+      ) : null}
       <Card className={styles.cabecera}>
         <Avatar
           nombre={usuario.nombre}
@@ -160,13 +166,9 @@ export function PantallaPerfil() {
             {usuario.solicitudNombre ? (
               <AvisoSolicitudNombre solicitud={usuario.solicitudNombre} />
             ) : null}
-            {/* La key remonta el formulario cuando cambia el nombre vigente, en
-                vez de sincronizar el estado con un efecto. Solo el nombre:
-                cancelar o descartar el aviso no debe borrar lo que se esté
-                escribiendo. Tras enviar una solicitud, el formulario mismo
-                vuelve al nombre vigente. */}
+            {/* Sin key ligada al nombre: el formulario adopta el nombre vigente
+                cuando cambia, sin perder un borrador en curso. */}
             <FormularioDatosPerfil
-              key={`${usuario.nombre}|${usuario.apellidoPaterno}|${usuario.apellidoMaterno}`}
               inicial={{
                 nombre: usuario.nombre,
                 apellidoPaterno: usuario.apellidoPaterno,

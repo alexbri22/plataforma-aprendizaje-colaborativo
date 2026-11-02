@@ -23,6 +23,7 @@ import {
 } from '../services/cuentas/perfil.service.js'
 import {
   descartarSolicitudPropia,
+  obtenerSolicitudPropia,
   solicitarCambioNombre,
 } from '../services/cuentas/solicitudesNombre.service.js'
 import {
@@ -108,6 +109,14 @@ cuentasRouter.patch('/usuarios/yo', exigirSesion, async (req, res) => {
   }
   const usuario = await actualizarDatosPerfil(actor.idUsuario, actualizacion.datos)
   res.status(200).json({ usuario })
+})
+
+// GET /api/usuarios/yo/solicitud-nombre: solo la solicitud vigente, o null. Es
+// lo que el cliente sondea mientras está pendiente: leer el perfil completo
+// recalcularía las insignias en cada vuelta (§6.3).
+cuentasRouter.get('/usuarios/yo/solicitud-nombre', exigirSesion, async (req, res) => {
+  const actor = req.actor as UsuarioPublico
+  res.status(200).json({ solicitud: await obtenerSolicitudPropia(actor.idUsuario) })
 })
 
 // PUT /api/usuarios/yo/solicitud-nombre: pide el cambio de nombre. Reemplaza a

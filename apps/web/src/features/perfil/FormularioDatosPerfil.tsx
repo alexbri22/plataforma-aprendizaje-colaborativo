@@ -7,13 +7,20 @@ import { ErrorPerfil, type DatosPerfil, validarCampoRequerido } from '../cuentas
 type Errores = Partial<Record<keyof DatosPerfil, string>>
 
 interface FormularioDatosPerfilProps {
-  /** Valores con los que arranca. Quien lo monta le pasa una `key` ligada a
-   * ellos, así que un cambio externo remonta el formulario en vez de
-   * sincronizarlo por efecto. */
+  /** El nombre vigente. Si cambia desde fuera (una aprobación, un guardado),
+   * el formulario lo adopta solo si no hay un borrador sin enviar. */
   inicial: DatosPerfil
   /** Un administrador cambia su nombre directamente; una cuenta de usuario
    * envía una solicitud que un administrador aprueba. */
   directo: boolean
+}
+
+function mismoNombre(a: DatosPerfil, b: DatosPerfil): boolean {
+  return (
+    a.nombre === b.nombre &&
+    a.apellidoPaterno === b.apellidoPaterno &&
+    a.apellidoMaterno === b.apellidoMaterno
+  )
 }
 
 /** Nombre y apellidos, lo único editable del perfil además de la contraseña
@@ -23,13 +30,20 @@ export function FormularioDatosPerfil({ inicial, directo }: FormularioDatosPerfi
   const solicitar = useSolicitarCambioNombre()
   const mutacion = directo ? actualizar : solicitar
   const [valores, setValores] = useState<DatosPerfil>(inicial)
+  const [base, setBase] = useState<DatosPerfil>(inicial)
   const [errores, setErrores] = useState<Errores>({})
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null)
 
-  const sinCambios =
-    valores.nombre === inicial.nombre &&
-    valores.apellidoPaterno === inicial.apellidoPaterno &&
-    valores.apellidoMaterno === inicial.apellidoMaterno
+  // Ajuste durante el render, no en un efecto: si el nombre vigente cambió
+  // (p. ej. un administrador aprobó una solicitud anterior mientras se
+  // escribía otra), los campos lo adoptan solo si no se habían editado; un
+  // borrador en curso se conserva.
+  if (!mismoNombre(base, inicial)) {
+    setBase(inicial)
+    if (mismoNombre(valores, base)) setValores(inicial)
+  }
+
+  const sinCambios = mismoNombre(valores, inicial)
 
   function cambiarCampo(campo: keyof DatosPerfil, valor: string) {
     setValores((actuales) => ({ ...actuales, [campo]: valor }))

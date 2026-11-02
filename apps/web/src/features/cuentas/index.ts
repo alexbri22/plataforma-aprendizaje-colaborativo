@@ -8,6 +8,8 @@ export {
   cambiarVisibilidadCorreo,
   descartarSolicitudNombre,
   obtenerPerfilDeUsuario,
+  obtenerSolicitudNombre,
+  CABECERA_SONDEO,
   obtenerPerfilPropio,
   quitarFoto,
   solicitarCambioNombre,

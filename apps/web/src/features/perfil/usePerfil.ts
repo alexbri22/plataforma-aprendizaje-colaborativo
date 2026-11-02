@@ -7,6 +7,7 @@ import {
   descartarSolicitudNombre,
   obtenerPerfilDeUsuario,
   obtenerPerfilPropio,
+  obtenerSolicitudNombre,
   quitarFoto,
   solicitarCambioNombre,
   subirFoto,
@@ -23,28 +24,49 @@ import {
 export const CLAVE_PERFIL_PROPIO = ['usuarios', 'yo'] as const
 const claveDeUsuario = (id: string) => ['usuarios', id] as const
 
-/** Cada cuánto se relee el perfil mientras hay una solicitud de cambio de
- * nombre pendiente: la resuelve otra persona, en otra sesión. */
+const CLAVE_SONDEO_SOLICITUD = ['usuarios', 'yo', 'solicitud-nombre'] as const
+
+/** Cada cuánto se consulta la solicitud de cambio de nombre mientras está
+ * pendiente: la resuelve otra persona, en otra sesión. */
 export const INTERVALO_SOLICITUD_PENDIENTE_MS = 2000
 
 export function usePerfilPropio() {
   const queryClient = useQueryClient()
-  const perfil = useQuery({
-    queryKey: CLAVE_PERFIL_PROPIO,
-    queryFn: obtenerPerfilPropio,
-    refetchInterval: (query) =>
-      query.state.data?.solicitudNombre?.estado === 'pendiente'
-        ? INTERVALO_SOLICITUD_PENDIENTE_MS
-        : false,
+  const perfil = useQuery({ queryKey: CLAVE_PERFIL_PROPIO, queryFn: obtenerPerfilPropio })
+
+  // Mientras la solicitud está pendiente se sondea solo ella, no el perfil
+  // completo (que recalcula las insignias). Cuando deja de coincidir con la
+  // que trae el perfil —la aprobaron, la rechazaron o la cancelaron en otra
+  // pestaña—, se relee el perfil, que trae nombre y solicitud consistentes.
+  const solicitud = perfil.data?.solicitudNombre ?? null
+  const pendiente = solicitud?.estado === 'pendiente'
+  const sondeo = useQuery({
+    queryKey: CLAVE_SONDEO_SOLICITUD,
+    queryFn: obtenerSolicitudNombre,
+    enabled: pendiente,
+    refetchInterval: INTERVALO_SOLICITUD_PENDIENTE_MS,
   })
+  const sondeada = sondeo.data
+  // Un sondeo anterior al perfil (caché de otra solicitud) no cuenta.
+  const sondeoReciente = sondeo.isSuccess && sondeo.dataUpdatedAt > perfil.dataUpdatedAt
+  const cambio =
+    pendiente &&
+    sondeoReciente &&
+    (sondeada?.idSolicitud !== solicitud?.idSolicitud || sondeada?.estado !== 'pendiente')
+  useEffect(() => {
+    if (cambio) void queryClient.invalidateQueries({ queryKey: CLAVE_PERFIL_PROPIO, exact: true })
+  }, [cambio, queryClient])
 
   // Si un administrador aprobó el nombre, el perfil releído ya lo trae pero
-  // la sesión, que pinta el AppShell, no: se le copia sin otra petición.
+  // la sesión, que pinta el AppShell, no: se le copia sin otra petición. Solo
+  // si es la misma persona: con otra cuenta abierta en otra pestaña, la cookie
+  // compartida puede traer el perfil de alguien más.
   const datos = perfil.data
   useEffect(() => {
     if (!datos) return
     queryClient.setQueryData<Usuario | null>(CLAVE_SESION, (sesion) =>
       sesion &&
+      sesion.idUsuario === datos.idUsuario &&
       (sesion.nombre !== datos.nombre ||
         sesion.apellidoPaterno !== datos.apellidoPaterno ||
         sesion.apellidoMaterno !== datos.apellidoMaterno)

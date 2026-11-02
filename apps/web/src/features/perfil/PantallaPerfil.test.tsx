@@ -9,6 +9,7 @@ import {
   cambiarVisibilidadCorreo,
   descartarSolicitudNombre,
   obtenerPerfilPropio,
+  obtenerSolicitudNombre,
   solicitarCambioNombre,
 } from '../cuentas/api'
 import type { ReconocimientoEnPerfil } from '../insignias/insignias.api'
@@ -76,6 +77,7 @@ vi.mock('../cuentas/api', async () => {
     cambiarVisibilidadCorreo: vi.fn(),
     solicitarCambioNombre: vi.fn(),
     descartarSolicitudNombre: vi.fn(),
+    obtenerSolicitudNombre: vi.fn(),
   }
 })
 
@@ -109,6 +111,45 @@ describe('PantallaPerfil', () => {
     vi.mocked(cambiarVisibilidadCorreo).mockReset()
     vi.mocked(solicitarCambioNombre).mockReset()
     vi.mocked(descartarSolicitudNombre).mockReset()
+    vi.mocked(obtenerSolicitudNombre).mockReset().mockResolvedValue(SOLICITUD)
+  })
+
+  it('si la aprueban mientras escribo otra, aparece el aviso sin perder el borrador', async () => {
+    vi.mocked(obtenerPerfilPropio).mockResolvedValue({ ...PERFIL, solicitudNombre: SOLICITUD })
+    const { usuario } = renderPantalla()
+
+    const apellido = await screen.findByLabelText('Apellido paterno')
+    await usuario.clear(apellido)
+    await usuario.type(apellido, 'Garcés')
+
+    // El siguiente sondeo ve la solicitud aprobada y el perfil releído trae el
+    // nombre nuevo.
+    const aprobada = { ...SOLICITUD, estado: 'aprobada' as const }
+    vi.mocked(obtenerSolicitudNombre).mockResolvedValue(aprobada)
+    vi.mocked(obtenerPerfilPropio).mockResolvedValue({
+      ...PERFIL,
+      apellidoPaterno: 'Garza',
+      solicitudNombre: aprobada,
+    })
+
+    expect(
+      await screen.findByText('Tu cambio de nombre fue aprobado', {}, { timeout: 4000 }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Ana Garza López' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Apellido paterno')).toHaveValue('Garcés')
+  })
+
+  it('si falla una recarga, el perfil sigue en pantalla con un aviso', async () => {
+    vi.mocked(obtenerPerfilPropio).mockResolvedValue({ ...PERFIL, solicitudNombre: SOLICITUD })
+    // La cancelaron en otra pestaña: el sondeo ya no la ve y el perfil se relee.
+    vi.mocked(obtenerSolicitudNombre).mockResolvedValue(null)
+    vi.mocked(obtenerPerfilPropio).mockResolvedValueOnce({ ...PERFIL, solicitudNombre: SOLICITUD })
+    vi.mocked(obtenerPerfilPropio).mockRejectedValue(new Error('sin conexión'))
+    renderPantalla()
+
+    expect(await screen.findByText(/No pudimos actualizar tu perfil/)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Ana García López' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Apellido paterno')).toBeInTheDocument()
   })
 
   it('el correo es privado hasta que lo hago público con el interruptor', async () => {

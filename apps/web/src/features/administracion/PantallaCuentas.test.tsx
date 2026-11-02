@@ -135,6 +135,18 @@ describe('PantallaCuentas', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Esta solicitud ya no está pendiente.')
   })
 
+  it('si otro administrador resuelve una solicitud, la tabla de cuentas se relee', async () => {
+    vi.mocked(listarCuentas).mockResolvedValue([CUENTA_ACTIVA])
+    vi.mocked(listarSolicitudesNombre).mockResolvedValue([SOLICITUD])
+    renderPantalla()
+
+    await screen.findByRole('heading', { name: 'Solicitudes de cambio de nombre (1)' })
+    expect(listarCuentas).toHaveBeenCalledTimes(1)
+
+    vi.mocked(listarSolicitudesNombre).mockResolvedValue([])
+    await waitFor(() => expect(listarCuentas).toHaveBeenCalledTimes(2), { timeout: 4000 })
+  })
+
   it('rechaza una solicitud con motivo', async () => {
     vi.mocked(listarCuentas).mockResolvedValue([CUENTA_ACTIVA])
     vi.mocked(listarSolicitudesNombre).mockResolvedValue([SOLICITUD])

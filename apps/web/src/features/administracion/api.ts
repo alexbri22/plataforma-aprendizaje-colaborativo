@@ -1,4 +1,4 @@
-import type { TipoCuenta } from '../cuentas/api'
+import { CABECERA_SONDEO, type TipoCuenta } from '../cuentas/api'
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? ''
 
@@ -100,8 +100,11 @@ export interface SolicitudNombreAdmin {
 export async function listarSolicitudesNombre(): Promise<SolicitudNombreAdmin[]> {
   let respuesta: Response
   try {
+    // Se sondea cada pocos segundos: X-Sondeo evita que dejar la pestaña
+    // abierta mantenga viva la sesión por inactividad.
     respuesta = await fetch(`${BASE_URL}/api/admin/solicitudes-nombre`, {
       credentials: 'include',
+      headers: CABECERA_SONDEO,
     })
   } catch {
     throw new ErrorAdmin(MENSAJE_SIN_CONEXION)

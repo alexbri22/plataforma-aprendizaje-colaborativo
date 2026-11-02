@@ -43,11 +43,14 @@ subida mockeada y, del lado del API, el rechazo de tipos y firmas.
 Una cuenta de usuario no cambia su nombre: lo solicita, y cambia cuando un
 administrador aprueba (§6.3). "Guardar datos" envía la solicitud, el
 formulario vuelve al nombre vigente y el aviso de arriba confirma que llegó al
-administrador. Mientras está pendiente, `usePerfilPropio` relee el perfil cada
-pocos segundos: la aprobación o el rechazo aparecen sin recargar, y al aprobarse
-copia el nombre nuevo a la sesión para que el menú también cambie. La `key` del
-formulario es solo el nombre vigente, así que cancelar o descartar el aviso no
-borra lo que se esté escribiendo. Un administrador guarda su nombre
+administrador. Mientras está pendiente, `usePerfilPropio` sondea solo la
+solicitud cada pocos segundos (con `X-Sondeo`, que no renueva la sesión) y relee
+el perfil cuando cambia: la aprobación o el rechazo aparecen sin recargar, y al
+aprobarse copia el nombre nuevo a la sesión, si es la misma persona, para que el
+menú también cambie. El formulario adopta el nombre vigente solo si no hay un
+borrador sin enviar, así que ni una aprobación ni descartar el aviso borran lo
+que se esté escribiendo. Si falla una recarga, el perfil sigue en pantalla con
+un aviso. Un administrador guarda su nombre
 directamente (`directo`).
 
 ## Quién ve qué

@@ -45,7 +45,7 @@ export interface SolicitudNombreAdmin {
   }
 }
 
-const CAMPOS_SOLICITUD = {
+export const CAMPOS_SOLICITUD = {
   idSolicitud: true,
   nombre: true,
   apellidoPaterno: true,

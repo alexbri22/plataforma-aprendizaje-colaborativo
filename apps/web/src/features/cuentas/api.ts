@@ -247,6 +247,19 @@ export async function solicitarCambioNombre(datos: DatosPerfil): Promise<Solicit
   return solicitud
 }
 
+/** Cabecera que marca una lectura automática: el API comprueba la sesión sin
+ * contarla como actividad, para no impedir el cierre por inactividad. */
+export const CABECERA_SONDEO = { 'X-Sondeo': '1' } as const
+
+/** Solo la solicitud vigente, o null: lo que se sondea mientras está
+ * pendiente, en lugar del perfil completo. */
+export async function obtenerSolicitudNombre(): Promise<SolicitudNombre | null> {
+  const respuesta = await pedir('/api/usuarios/yo/solicitud-nombre', { headers: CABECERA_SONDEO })
+  if (!respuesta.ok) throw await errorDePerfil(respuesta, 'No pudimos consultar tu solicitud.')
+  const { solicitud } = (await respuesta.json()) as { solicitud: SolicitudNombre | null }
+  return solicitud
+}
+
 /** Cancela la solicitud pendiente o descarta el aviso de una resuelta. Lleva
  * el estado que se ve: si cambió mientras tanto, el API no borra nada. */
 export async function descartarSolicitudNombre(

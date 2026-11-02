@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { EnlacePerfil } from '../../components/EnlacePerfil'
 import { AvisoError, Button, Card } from '../../components/ui'
 import { ModalRechazarSolicitud } from './ModalRechazarSolicitud'
@@ -46,6 +46,22 @@ export function SolicitudesNombre() {
   })
 
   const pendientes = solicitudes.data ?? []
+
+  // Otro administrador pudo aprobar una solicitud desde su navegador: si la
+  // lista sondeada cambia, la tabla de cuentas se relee para mostrar el nombre
+  // nuevo. Gracias al structural sharing de TanStack Query, `data` solo cambia
+  // de referencia cuando cambia el contenido, no en cada vuelta del sondeo.
+  const datos = solicitudes.data
+  const anteriores = useRef(datos)
+  useEffect(() => {
+    if (anteriores.current && anteriores.current !== datos) {
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'cuentas'] })
+    }
+    anteriores.current = datos
+  }, [datos, queryClient])
+
+  // Estable: el Modal no debe ver un callback nuevo en cada vuelta del sondeo.
+  const cerrarRechazo = useCallback(() => setEnRechazo(null), [])
 
   // Los errores y el modal quedan fuera de la tarjeta: si resolver la última
   // solicitud falla porque ya no estaba pendiente, la lista releída queda
@@ -111,7 +127,7 @@ export function SolicitudesNombre() {
       <ModalRechazarSolicitud
         key={enRechazo?.idSolicitud ?? 'cerrado'}
         solicitud={enRechazo}
-        onCerrar={() => setEnRechazo(null)}
+        onCerrar={cerrarRechazo}
       />
     </>
   )

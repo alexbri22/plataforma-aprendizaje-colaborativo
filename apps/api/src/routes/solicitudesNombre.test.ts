@@ -142,6 +142,42 @@ describe('PUT /api/usuarios/yo/solicitud-nombre', () => {
   })
 })
 
+describe('GET /api/usuarios/yo/solicitud-nombre (sondeo)', () => {
+  it('devuelve solo la solicitud vigente, o null', async () => {
+    const r = await request(app).get('/api/usuarios/yo/solicitud-nombre').set('Cookie', ada.cookie)
+    expect(r.status).toBe(200)
+    expect(r.body.solicitud).toMatchObject({ estado: 'pendiente', apellidoPaterno: 'King' })
+
+    const sin = await request(app)
+      .get('/api/usuarios/yo/solicitud-nombre')
+      .set('Cookie', admin.cookie)
+    expect(sin.body.solicitud).toBeNull()
+  })
+
+  it('con X-Sondeo comprueba la sesión sin renovar su actividad', async () => {
+    const idSesion = decodeURIComponent(ada.cookie.split('=')[1])
+    // Hace un minuto: dentro del plazo de inactividad, para que la sesión siga viva.
+    const antes = new Date(Date.now() - 60_000)
+    await prisma.sesion.update({ where: { id: idSesion }, data: { ultimaActividad: antes } })
+    const { ultimaActividad: marcada } = await prisma.sesion.findUniqueOrThrow({
+      where: { id: idSesion },
+    })
+
+    await request(app)
+      .get('/api/usuarios/yo/solicitud-nombre')
+      .set('Cookie', ada.cookie)
+      .set('X-Sondeo', '1')
+      .expect(200)
+    const tras = await prisma.sesion.findUniqueOrThrow({ where: { id: idSesion } })
+    expect(tras.ultimaActividad).toEqual(marcada)
+
+    // Sin la cabecera, sí cuenta como actividad.
+    await request(app).get('/api/usuarios/yo/solicitud-nombre').set('Cookie', ada.cookie)
+    const renovada = await prisma.sesion.findUniqueOrThrow({ where: { id: idSesion } })
+    expect(renovada.ultimaActividad.getTime()).toBeGreaterThan(antes.getTime())
+  })
+})
+
 describe('resolución por el administrador', () => {
   it('aprobar aplica el nombre y la persona ve el aviso hasta descartarlo', async () => {
     const { body } = await solicitar(grace, {
