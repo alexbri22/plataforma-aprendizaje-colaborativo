@@ -51,6 +51,7 @@ let linus: Cuenta
 let margaret: Cuenta
 let barbara: Cuenta
 let edsger: Cuenta
+let alan: Cuenta
 
 beforeAll(async () => {
   await prisma.sesion.deleteMany()
@@ -61,6 +62,7 @@ beforeAll(async () => {
   margaret = await registrar('Margaret')
   barbara = await registrar('Barbara')
   edsger = await registrar('Edsger')
+  alan = await registrar('Alan')
 })
 
 afterAll(async () => {
@@ -91,17 +93,33 @@ describe('GET /api/usuarios/yo', () => {
 })
 
 describe('PATCH /api/usuarios/yo', () => {
-  it('edita nombre y apellidos y la sesión lo refleja', async () => {
+  it('un administrador edita su nombre directamente y la sesión lo refleja', async () => {
+    await prisma.usuario.update({
+      where: { idUsuario: alan.idUsuario },
+      data: { tipoCuenta: 'administrador' },
+    })
+
+    const r = await request(app)
+      .patch('/api/usuarios/yo')
+      .set('Cookie', alan.cookie)
+      .send({ nombre: 'Alan', apellidoPaterno: 'Turing', apellidoMaterno: 'Stoney' })
+
+    expect(r.status).toBe(200)
+    expect(r.body.usuario.apellidoPaterno).toBe('Turing')
+
+    const sesion = await request(app).get('/api/sesion').set('Cookie', alan.cookie)
+    expect(sesion.body.usuario.apellidoPaterno).toBe('Turing')
+  })
+
+  it('una cuenta de usuario no edita su nombre directamente: lo solicita', async () => {
     const r = await request(app)
       .patch('/api/usuarios/yo')
       .set('Cookie', grace.cookie)
       .send({ nombre: 'Grace', apellidoPaterno: 'Hopper', apellidoMaterno: 'Murray' })
 
-    expect(r.status).toBe(200)
-    expect(r.body.usuario.apellidoPaterno).toBe('Hopper')
-
-    const sesion = await request(app).get('/api/sesion').set('Cookie', grace.cookie)
-    expect(sesion.body.usuario.apellidoPaterno).toBe('Hopper')
+    expect(r.status).toBe(403)
+    const yo = await request(app).get('/api/usuarios/yo').set('Cookie', grace.cookie)
+    expect(yo.body.usuario.apellidoPaterno).toBe('Lovelace')
   })
 
   it('rechaza apellidos vacíos con detalle por campo', async () => {

@@ -18,6 +18,10 @@ contraseña_:
   usuario afectado. Es la vía de soporte de respaldo, no la principal: el
   autoservicio por correo depende de P-24 (`docs/diseno-desarrollo-nucleo.md`
   §6.7) y todavía no existe.
+- `SolicitudesNombre` — arriba de la tabla, las solicitudes de cambio de
+  nombre pendientes (nombre actual → solicitado) con Aprobar y Rechazar. No
+  aparece si no hay ninguna. `ModalRechazarSolicitud` pide un motivo opcional
+  que la persona ve en su perfil (`docs/diseno-desarrollo-nucleo.md` §6.3).
 - `RutaAdmin` — guard **solo de UX**: consulta `GET /api/sesion` y evita
   mostrar el panel a quien no es administrador. La autorización real la impone
   el servidor con `exigirAdministrador` (§3.5 del general); el cliente nunca es

@@ -3,6 +3,7 @@ import { MAX_BYTES_FOTO_PERFIL, esTipoFotoPerfil } from '@plataforma/shared'
 import { prisma } from '../../data/prisma.js'
 import { ErrorFotoInvalida, ErrorUsuarioNoEncontrado, ErrorValidacion } from '../../errores.js'
 import { acumuladoDeUsuario } from '../insignias/insignias.service.js'
+import { obtenerSolicitudPropia, type SolicitudNombre } from './solicitudesNombre.service.js'
 import { hashContrasena, verificarContrasena } from './contrasena.js'
 import { INCLUIR_FOTO, aUsuarioPublico, type UsuarioPublico } from './cuentas.service.js'
 import type { CambioContrasenaValidado, DatosPerfilValidados } from './validacion.js'
@@ -21,6 +22,8 @@ export interface PerfilPropio extends UsuarioPublico {
   institucionEducativa: string
   /** Si otras personas ven el correo en el perfil básico. */
   correoPublico: boolean
+  /** Solicitud de cambio de nombre pendiente o rechazada; null si no hay. */
+  solicitudNombre: SolicitudNombre | null
   acumulado: Acumulado
 }
 
@@ -54,6 +57,7 @@ export async function obtenerPerfilPropio(idUsuario: string): Promise<PerfilProp
     nivelEstudios: usuario.nivelEstudios,
     institucionEducativa: usuario.institucionEducativa,
     correoPublico: usuario.correoPublico,
+    solicitudNombre: await obtenerSolicitudPropia(idUsuario),
     acumulado: await acumuladoDeUsuario(idUsuario),
   }
 }

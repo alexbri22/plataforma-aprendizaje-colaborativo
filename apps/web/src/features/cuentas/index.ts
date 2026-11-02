@@ -6,14 +6,17 @@ export {
   actualizarDatosPerfil,
   cambiarContrasena,
   cambiarVisibilidadCorreo,
+  descartarSolicitudNombre,
   obtenerPerfilDeUsuario,
   obtenerPerfilPropio,
   quitarFoto,
+  solicitarCambioNombre,
   subirFoto,
   type CambioContrasena,
   type DatosPerfil,
   type PerfilBasico,
   type PerfilPropio,
+  type SolicitudNombre,
   type Usuario,
 } from './api'
 export {

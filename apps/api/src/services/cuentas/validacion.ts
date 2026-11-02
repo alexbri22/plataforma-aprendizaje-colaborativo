@@ -197,6 +197,15 @@ export function validarActualizacionPerfil(cuerpo: unknown): ActualizacionPerfil
     return { tipo: 'contrasena', cambio: { contrasenaActual, contrasenaNueva } }
   }
 
+  return { tipo: 'datos', datos: validarDatosPerfil(datos) }
+}
+
+/** Nombre y apellidos: los de una edición directa (administrador) y los de una
+ * solicitud de cambio de nombre (docs/diseno-desarrollo-nucleo.md §6.3). */
+export function validarDatosPerfil(cuerpo: unknown): DatosPerfilValidados {
+  const datos = (cuerpo && typeof cuerpo === 'object' ? cuerpo : {}) as Record<string, unknown>
+  const detallePorCampo: Record<string, string> = {}
+
   const nombre = requerido(datos.nombre)
   if (!nombre) detallePorCampo.nombre = 'El nombre es requerido.'
 
@@ -209,11 +218,26 @@ export function validarActualizacionPerfil(cuerpo: unknown): ActualizacionPerfil
   if (Object.keys(detallePorCampo).length > 0) throw new ErrorValidacion(detallePorCampo)
 
   return {
-    tipo: 'datos',
-    datos: {
-      nombre: nombre as string,
-      apellidoPaterno: apellidoPaterno as string,
-      apellidoMaterno: apellidoMaterno as string,
-    },
+    nombre: nombre as string,
+    apellidoPaterno: apellidoPaterno as string,
+    apellidoMaterno: apellidoMaterno as string,
   }
+}
+
+export const MAX_MOTIVO_RECHAZO = 500
+
+/** El motivo al rechazar una solicitud de cambio de nombre es opcional; vacío
+ * equivale a no darlo. */
+export function validarRechazoSolicitud(cuerpo: unknown): { motivo: string | null } {
+  const datos = (cuerpo && typeof cuerpo === 'object' ? cuerpo : {}) as Record<string, unknown>
+  if (datos.motivo !== undefined && datos.motivo !== null && typeof datos.motivo !== 'string') {
+    throw new ErrorValidacion({ motivo: 'El motivo debe ser texto.' })
+  }
+  const motivo = typeof datos.motivo === 'string' ? datos.motivo.trim() : ''
+  if (motivo.length > MAX_MOTIVO_RECHAZO) {
+    throw new ErrorValidacion({
+      motivo: `El motivo no puede pasar de ${MAX_MOTIVO_RECHAZO} caracteres.`,
+    })
+  }
+  return { motivo: motivo || null }
 }

@@ -3,6 +3,7 @@ import { ETIQUETAS_NIVEL_ESTUDIOS, type CategoriaInsignia } from '@plataforma/sh
 import { AppShell } from '../../components/AppShell'
 import { Avatar, AvisoError, Button, Card, IconoCargando, Switch } from '../../components/ui'
 import { DetalleInsignia, VitrinaInsignias, useRecibidosEnPerfil } from '../insignias'
+import { AvisoSolicitudNombre } from './AvisoSolicitudNombre'
 import { FormularioContrasena } from './FormularioContrasena'
 import { FormularioDatosPerfil } from './FormularioDatosPerfil'
 import { ErrorFoto, TIPOS_ACEPTADOS, prepararFoto } from './foto'
@@ -84,6 +85,7 @@ export function PantallaPerfil() {
 
   const usuario = perfil.data
   const ocupado = preparando || subir.isPending || quitar.isPending
+  const esAdministrador = usuario.tipoCuenta === 'administrador'
   const correoPublico = visibilidad.isPending
     ? (visibilidad.variables ?? usuario.correoPublico)
     : usuario.correoPublico
@@ -155,17 +157,26 @@ export function PantallaPerfil() {
             Tus datos
           </h3>
           <Card>
+            {usuario.solicitudNombre ? (
+              <AvisoSolicitudNombre solicitud={usuario.solicitudNombre} />
+            ) : null}
             {/* La key remonta el formulario cuando el servidor devuelve datos
-                nuevos, en vez de sincronizar el estado con un efecto. */}
+                nuevos, en vez de sincronizar el estado con un efecto. Lleva
+                también la solicitud: al enviarla, el formulario vuelve al
+                nombre vigente y el aviso de arriba muestra el solicitado. */}
             <FormularioDatosPerfil
-              key={`${usuario.nombre}|${usuario.apellidoPaterno}|${usuario.apellidoMaterno}`}
+              key={`${usuario.nombre}|${usuario.apellidoPaterno}|${usuario.apellidoMaterno}|${usuario.solicitudNombre?.idSolicitud ?? ''}`}
               inicial={{
                 nombre: usuario.nombre,
                 apellidoPaterno: usuario.apellidoPaterno,
                 apellidoMaterno: usuario.apellidoMaterno,
               }}
+              directo={esAdministrador}
             />
             <p className={styles.nota}>
+              {esAdministrador
+                ? null
+                : 'Un cambio de nombre se aplica cuando un administrador lo aprueba. '}
               El correo no se puede cambiar: es con el que inicias sesión y con el que te encuentran
               para invitarte.
             </p>

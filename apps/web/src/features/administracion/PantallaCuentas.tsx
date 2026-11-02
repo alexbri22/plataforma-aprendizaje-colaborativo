@@ -12,6 +12,7 @@ import {
   TableRow,
 } from '../../components/ui'
 import { ModalRestablecerContrasena } from './ModalRestablecerContrasena'
+import { SolicitudesNombre } from './SolicitudesNombre'
 import { listarCuentas, type CuentaAdmin } from './api'
 import styles from './PantallaCuentas.module.css'
 
@@ -40,6 +41,8 @@ export function PantallaCuentas() {
         <p className={styles.subtitulo}>
           Todas las cuentas registradas en la plataforma y su estado.
         </p>
+
+        <SolicitudesNombre />
 
         {isPending ? (
           <p role="status" className={styles.estadoTexto}>

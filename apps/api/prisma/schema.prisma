@@ -162,6 +162,7 @@ model Usuario {
   membresias       Membresia[]
   eventosHistorial Historial[]
   foto             FotoDePerfil?
+  solicitudNombre  SolicitudCambioNombre?
 
   recursosFormativos RecursoFormativo[]
   cursos             Curso[]
@@ -185,6 +186,36 @@ model FotoDePerfil {
   usuario Usuario @relation(fields: [idUsuario], references: [idUsuario], onDelete: Cascade)
 
   @@map("fotos_de_perfil")
+}
+
+// Solicitud de cambio de nombre (docs/diseno-desarrollo-nucleo.md §6.3). Una
+// cuenta de usuario no cambia su nombre directamente: lo pide y un
+// administrador lo aprueba. Una sola por persona (idUsuario único): enviar otra
+// reemplaza a la anterior, así que la fila es siempre la vigente. Aprobarla
+// aplica el nombre y borra la fila; rechazarla la conserva, con su motivo,
+// hasta que la persona la descarte o envíe otra.
+model SolicitudCambioNombre {
+  idSolicitud     String                @id @default(uuid()) @map("id_solicitud")
+  idUsuario       String                @unique @map("id_usuario")
+  nombre          String
+  apellidoPaterno String                @map("apellido_paterno")
+  apellidoMaterno String                @map("apellido_materno")
+  estado          EstadoSolicitudNombre @default(pendiente)
+  motivoRechazo   String?               @map("motivo_rechazo")
+  creadaEn        DateTime              @default(now()) @map("creada_en")
+  resueltaEn      DateTime?             @map("resuelta_en")
+
+  usuario Usuario @relation(fields: [idUsuario], references: [idUsuario], onDelete: Cascade)
+
+  @@index([estado, creadaEn])
+  @@map("solicitudes_cambio_nombre")
+}
+
+enum EstadoSolicitudNombre {
+  pendiente
+  rechazada
+
+  @@map("estado_solicitud_nombre")
 }
 
 // Sesión de servidor (docs/diseno-desarrollo-nucleo.md §3.2): la cookie solo

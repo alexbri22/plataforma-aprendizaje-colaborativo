@@ -1,7 +1,7 @@
 import { MAX_BYTES_FOTO_PERFIL, TIPOS_FOTO_PERFIL } from '@plataforma/shared'
 import express, { Router, type Response } from 'express'
 import { config } from '../config.js'
-import { ErrorUsuarioNoEncontrado } from '../errores.js'
+import { ErrorSinPermiso, ErrorUsuarioNoEncontrado } from '../errores.js'
 import { limitadorRegistro, limitadorSesion } from '../middleware/limitadorTasa.js'
 import { exigirSesion } from '../middleware/sesion.js'
 import {
@@ -22,8 +22,13 @@ import {
   quitarFoto,
 } from '../services/cuentas/perfil.service.js'
 import {
+  descartarSolicitudPropia,
+  solicitarCambioNombre,
+} from '../services/cuentas/solicitudesNombre.service.js'
+import {
   validarActualizacionPerfil,
   validarCredenciales,
+  validarDatosPerfil,
   validarDatosRegistro,
 } from '../services/cuentas/validacion.js'
 import { opcionesCookieSesion } from '../services/cuentas/sesiones.js'
@@ -76,7 +81,9 @@ cuentasRouter.get('/usuarios/yo', exigirSesion, async (req, res) => {
 
 // PATCH /api/usuarios/yo: edita nombre y apellidos, cambia la contraseña o
 // cambia la visibilidad del correo. Cambiar la contraseña cierra las demás
-// sesiones (§3.2); la actual sigue viva.
+// sesiones (§3.2); la actual sigue viva. Solo un administrador edita su nombre
+// directamente; una cuenta de usuario lo solicita (PUT
+// /api/usuarios/yo/solicitud-nombre) y un administrador lo aprueba (§6.3).
 cuentasRouter.patch('/usuarios/yo', exigirSesion, async (req, res) => {
   const actor = req.actor as UsuarioPublico
   const actualizacion = validarActualizacionPerfil(req.body)
@@ -93,8 +100,33 @@ cuentasRouter.patch('/usuarios/yo', exigirSesion, async (req, res) => {
     return
   }
 
+  if (actor.tipoCuenta !== 'administrador') {
+    throw new ErrorSinPermiso(
+      'Tu cambio de nombre necesita la aprobación de un administrador: envíalo como solicitud.',
+    )
+  }
   const usuario = await actualizarDatosPerfil(actor.idUsuario, actualizacion.datos)
   res.status(200).json({ usuario })
+})
+
+// PUT /api/usuarios/yo/solicitud-nombre: pide el cambio de nombre. Reemplaza a
+// la solicitud anterior, pendiente o rechazada (§6.3). Un administrador no la
+// necesita: edita su nombre con PATCH /api/usuarios/yo.
+cuentasRouter.put('/usuarios/yo/solicitud-nombre', exigirSesion, async (req, res) => {
+  const actor = req.actor as UsuarioPublico
+  if (actor.tipoCuenta === 'administrador') {
+    throw new ErrorSinPermiso('Como administrador, cambia tu nombre directamente en tus datos.')
+  }
+  const solicitud = await solicitarCambioNombre(actor.idUsuario, validarDatosPerfil(req.body))
+  res.status(201).json({ solicitud })
+})
+
+// DELETE /api/usuarios/yo/solicitud-nombre: cancela la solicitud pendiente o
+// descarta el aviso de una rechazada.
+cuentasRouter.delete('/usuarios/yo/solicitud-nombre', exigirSesion, async (req, res) => {
+  const actor = req.actor as UsuarioPublico
+  await descartarSolicitudPropia(actor.idUsuario)
+  res.status(204).end()
 })
 
 // PUT /api/usuarios/yo/foto: el cuerpo es la imagen tal cual, con su tipo en

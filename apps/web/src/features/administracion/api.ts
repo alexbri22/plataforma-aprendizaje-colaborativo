@@ -79,3 +79,82 @@ export async function restablecerContrasena(idUsuario: string, contrasena: strin
     )
   }
 }
+
+/** Solicitud de cambio de nombre pendiente: el nombre actual de la cuenta y el
+ * que pide (docs/diseno-desarrollo-nucleo.md §6.3). */
+export interface SolicitudNombreAdmin {
+  idSolicitud: string
+  creadaEn: string
+  solicitado: { nombre: string; apellidoPaterno: string; apellidoMaterno: string }
+  usuario: {
+    idUsuario: string
+    nombre: string
+    apellidoPaterno: string
+    apellidoMaterno: string
+    correo: string
+  }
+}
+
+// GET /api/admin/solicitudes-nombre: las pendientes, de la más antigua a la
+// más reciente.
+export async function listarSolicitudesNombre(): Promise<SolicitudNombreAdmin[]> {
+  let respuesta: Response
+  try {
+    respuesta = await fetch(`${BASE_URL}/api/admin/solicitudes-nombre`, {
+      credentials: 'include',
+    })
+  } catch {
+    throw new ErrorAdmin(MENSAJE_SIN_CONEXION)
+  }
+
+  if (!respuesta.ok) {
+    throw new ErrorAdmin(
+      await leerMensajeError(respuesta, 'No pudimos cargar las solicitudes de cambio de nombre.'),
+    )
+  }
+
+  const { solicitudes } = (await respuesta.json()) as { solicitudes: SolicitudNombreAdmin[] }
+  return solicitudes
+}
+
+async function resolverSolicitudNombre(
+  idSolicitud: string,
+  accion: 'aprobar' | 'rechazar',
+  cuerpo: object | undefined,
+  mensajePorDefecto: string,
+): Promise<void> {
+  let respuesta: Response
+  try {
+    respuesta = await fetch(`${BASE_URL}/api/admin/solicitudes-nombre/${idSolicitud}/${accion}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(cuerpo ?? {}),
+    })
+  } catch {
+    throw new ErrorAdmin(MENSAJE_SIN_CONEXION)
+  }
+
+  if (!respuesta.ok) throw new ErrorAdmin(await leerMensajeError(respuesta, mensajePorDefecto))
+}
+
+// POST /api/admin/solicitudes-nombre/{id}/aprobar: aplica el nombre solicitado.
+export function aprobarSolicitudNombre(idSolicitud: string): Promise<void> {
+  return resolverSolicitudNombre(
+    idSolicitud,
+    'aprobar',
+    undefined,
+    'No pudimos aprobar la solicitud. Intenta de nuevo.',
+  )
+}
+
+// POST /api/admin/solicitudes-nombre/{id}/rechazar: el motivo es opcional y la
+// persona lo ve en su perfil.
+export function rechazarSolicitudNombre(idSolicitud: string, motivo: string): Promise<void> {
+  return resolverSolicitudNombre(
+    idSolicitud,
+    'rechazar',
+    { motivo },
+    'No pudimos rechazar la solicitud. Intenta de nuevo.',
+  )
+}

@@ -4,11 +4,27 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { PantallaCuentas } from './PantallaCuentas'
-import { ErrorAdmin, listarCuentas, restablecerContrasena, type CuentaAdmin } from './api'
+import {
+  ErrorAdmin,
+  aprobarSolicitudNombre,
+  listarCuentas,
+  listarSolicitudesNombre,
+  rechazarSolicitudNombre,
+  restablecerContrasena,
+  type CuentaAdmin,
+  type SolicitudNombreAdmin,
+} from './api'
 
 vi.mock('./api', async () => {
   const real = await vi.importActual<typeof import('./api')>('./api')
-  return { ...real, listarCuentas: vi.fn(), restablecerContrasena: vi.fn() }
+  return {
+    ...real,
+    listarCuentas: vi.fn(),
+    restablecerContrasena: vi.fn(),
+    listarSolicitudesNombre: vi.fn(),
+    aprobarSolicitudNombre: vi.fn(),
+    rechazarSolicitudNombre: vi.fn(),
+  }
 })
 
 vi.mock('../cuentas/api', async () => {
@@ -37,6 +53,19 @@ const CUENTA_DESACTIVADA: CuentaAdmin = {
   estadoCuenta: 'desactivada',
 }
 
+const SOLICITUD: SolicitudNombreAdmin = {
+  idSolicitud: 's1',
+  creadaEn: '2026-11-02T10:00:00.000Z',
+  solicitado: { nombre: 'Ada', apellidoPaterno: 'King', apellidoMaterno: 'Byron' },
+  usuario: {
+    idUsuario: 'u1',
+    nombre: 'Ada',
+    apellidoPaterno: 'Lovelace',
+    apellidoMaterno: 'Byron',
+    correo: 'ada@ejemplo.com',
+  },
+}
+
 function renderPantalla() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
@@ -52,6 +81,62 @@ describe('PantallaCuentas', () => {
   beforeEach(() => {
     vi.mocked(listarCuentas).mockReset()
     vi.mocked(restablecerContrasena).mockReset()
+    vi.mocked(listarSolicitudesNombre).mockReset().mockResolvedValue([])
+    vi.mocked(aprobarSolicitudNombre).mockReset()
+    vi.mocked(rechazarSolicitudNombre).mockReset()
+  })
+
+  it('sin solicitudes de cambio de nombre no muestra la sección', async () => {
+    vi.mocked(listarCuentas).mockResolvedValue([CUENTA_ACTIVA])
+    renderPantalla()
+
+    await screen.findByRole('link', { name: 'Ada Lovelace Byron' })
+    expect(screen.queryByText(/Solicitudes de cambio de nombre/)).not.toBeInTheDocument()
+  })
+
+  it('aprueba una solicitud de cambio de nombre y vuelve a cargar', async () => {
+    vi.mocked(listarCuentas).mockResolvedValue([CUENTA_ACTIVA])
+    vi.mocked(listarSolicitudesNombre).mockResolvedValue([SOLICITUD])
+    vi.mocked(aprobarSolicitudNombre).mockResolvedValue(undefined)
+    const usuario = userEvent.setup()
+    renderPantalla()
+
+    expect(
+      await screen.findByRole('heading', { name: 'Solicitudes de cambio de nombre (1)' }),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Ada King Byron')).toBeInTheDocument()
+
+    vi.mocked(listarSolicitudesNombre).mockResolvedValue([])
+    await usuario.click(screen.getByRole('button', { name: 'Aprobar el cambio a Ada King Byron' }))
+
+    expect(aprobarSolicitudNombre).toHaveBeenCalledWith('s1')
+    await waitFor(() =>
+      expect(screen.queryByText(/Solicitudes de cambio de nombre/)).not.toBeInTheDocument(),
+    )
+  })
+
+  it('rechaza una solicitud con motivo', async () => {
+    vi.mocked(listarCuentas).mockResolvedValue([CUENTA_ACTIVA])
+    vi.mocked(listarSolicitudesNombre).mockResolvedValue([SOLICITUD])
+    vi.mocked(rechazarSolicitudNombre).mockResolvedValue(undefined)
+    const usuario = userEvent.setup()
+    renderPantalla()
+
+    await usuario.click(
+      await screen.findByRole('button', { name: 'Rechazar el cambio a Ada King Byron' }),
+    )
+    const dialogo = screen.getByRole('dialog', { name: 'Rechazar cambio de nombre' })
+    await usuario.type(
+      within(dialogo).getByLabelText(/Motivo/),
+      '  Usa tu nombre como aparece en tu identificación.  ',
+    )
+    await usuario.click(within(dialogo).getByRole('button', { name: 'Rechazar solicitud' }))
+
+    expect(rechazarSolicitudNombre).toHaveBeenCalledWith(
+      's1',
+      'Usa tu nombre como aparece en tu identificación.',
+    )
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 
   it('lista las cuentas con su estado', async () => {

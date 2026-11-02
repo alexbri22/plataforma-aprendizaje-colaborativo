@@ -3,9 +3,11 @@ import {
   actualizarDatosPerfil,
   cambiarContrasena,
   cambiarVisibilidadCorreo,
+  descartarSolicitudNombre,
   obtenerPerfilDeUsuario,
   obtenerPerfilPropio,
   quitarFoto,
+  solicitarCambioNombre,
   subirFoto,
   type CambioContrasena,
   type DatosPerfil,
@@ -63,6 +65,25 @@ export function useCambiarVisibilidadCorreo() {
     mutationFn: (correoPublico: boolean) => cambiarVisibilidadCorreo(correoPublico),
     onSuccess: (usuario) => queryClient.setQueryData(CLAVE_SESION, usuario),
     onSettled: () => queryClient.invalidateQueries({ queryKey: CLAVE_PERFIL_PROPIO }),
+  })
+}
+
+// Una solicitud no cambia el nombre: solo hay que releer el perfil propio,
+// que es donde aparece. La invalidación se devuelve para que la mutación siga
+// pendiente hasta que el aviso ya esté en pantalla.
+export function useSolicitarCambioNombre() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (datos: DatosPerfil) => solicitarCambioNombre(datos),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: CLAVE_PERFIL_PROPIO }),
+  })
+}
+
+export function useDescartarSolicitudNombre() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => descartarSolicitudNombre(),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: CLAVE_PERFIL_PROPIO }),
   })
 }
 
