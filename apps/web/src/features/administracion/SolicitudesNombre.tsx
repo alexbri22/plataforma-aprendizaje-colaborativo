@@ -8,6 +8,10 @@ import styles from './SolicitudesNombre.module.css'
 
 const CLAVE_SOLICITUDES_NOMBRE = ['admin', 'solicitudes-nombre'] as const
 
+/** Las solicitudes llegan de otras sesiones: la lista se relee sola para que
+ * aparezcan sin recargar la página. */
+const INTERVALO_SOLICITUDES_MS = 15000
+
 const FORMATO_FECHA = new Intl.DateTimeFormat('es-MX', {
   year: 'numeric',
   month: 'short',
@@ -30,6 +34,7 @@ export function SolicitudesNombre() {
     queryKey: CLAVE_SOLICITUDES_NOMBRE,
     queryFn: listarSolicitudesNombre,
     retry: false,
+    refetchInterval: INTERVALO_SOLICITUDES_MS,
   })
 
   // Invalida ['admin'] y no solo las solicitudes: aprobar cambia el nombre que
@@ -40,62 +45,67 @@ export function SolicitudesNombre() {
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['admin'] }),
   })
 
-  if (solicitudes.isError) {
-    return <AvisoError mensaje={solicitudes.error.message} />
-  }
-  if (!solicitudes.data || solicitudes.data.length === 0) return null
+  const pendientes = solicitudes.data ?? []
 
+  // Los errores y el modal quedan fuera de la tarjeta: si resolver la última
+  // solicitud falla porque ya no estaba pendiente, la lista releída queda
+  // vacía y la tarjeta desaparece, pero el error y el modal abierto siguen.
   return (
-    <section aria-labelledby="titulo-solicitudes-nombre">
-      <Card className={styles.tarjeta}>
-        <h2 id="titulo-solicitudes-nombre" className={styles.titulo}>
-          Solicitudes de cambio de nombre ({solicitudes.data.length})
-        </h2>
-        {aprobar.isError ? <AvisoError mensaje={aprobar.error.message} /> : null}
-        <ul className={styles.lista}>
-          {solicitudes.data.map((solicitud) => {
-            const solicitado = nombreCompleto(solicitud.solicitado)
-            const ocupada = aprobar.isPending && aprobar.variables === solicitud.idSolicitud
-            return (
-              <li key={solicitud.idSolicitud} className={styles.solicitud}>
-                <div className={styles.datos}>
-                  <p className={styles.cambio}>
-                    <EnlacePerfil idUsuario={solicitud.usuario.idUsuario}>
-                      {nombreCompleto(solicitud.usuario)}
-                    </EnlacePerfil>
-                    <span aria-hidden="true"> → </span>
-                    <span className={styles.srOnly}> pide cambiar su nombre a </span>
-                    <strong>{solicitado}</strong>
-                  </p>
-                  <p className={styles.detalle}>
-                    {solicitud.usuario.correo} ·{' '}
-                    {FORMATO_FECHA.format(new Date(solicitud.creadaEn))}
-                  </p>
-                </div>
-                <div className={styles.acciones}>
-                  <Button
-                    size="sm"
-                    disabled={aprobar.isPending}
-                    onClick={() => aprobar.mutate(solicitud.idSolicitud)}
-                    aria-label={`Aprobar el cambio a ${solicitado}`}
-                  >
-                    {ocupada ? 'Aprobando…' : 'Aprobar'}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    disabled={aprobar.isPending}
-                    onClick={() => setEnRechazo(solicitud)}
-                    aria-label={`Rechazar el cambio a ${solicitado}`}
-                  >
-                    Rechazar
-                  </Button>
-                </div>
-              </li>
-            )
-          })}
-        </ul>
-      </Card>
+    <>
+      {solicitudes.isError ? <AvisoError mensaje={solicitudes.error.message} /> : null}
+      {aprobar.isError ? <AvisoError mensaje={aprobar.error.message} /> : null}
+      {pendientes.length > 0 ? (
+        <section aria-labelledby="titulo-solicitudes-nombre">
+          <Card className={styles.tarjeta}>
+            <h2 id="titulo-solicitudes-nombre" className={styles.titulo}>
+              Solicitudes de cambio de nombre ({pendientes.length})
+            </h2>
+            <ul className={styles.lista}>
+              {pendientes.map((solicitud) => {
+                const solicitado = nombreCompleto(solicitud.solicitado)
+                const ocupada = aprobar.isPending && aprobar.variables === solicitud.idSolicitud
+                return (
+                  <li key={solicitud.idSolicitud} className={styles.solicitud}>
+                    <div className={styles.datos}>
+                      <p className={styles.cambio}>
+                        <EnlacePerfil idUsuario={solicitud.usuario.idUsuario}>
+                          {nombreCompleto(solicitud.usuario)}
+                        </EnlacePerfil>
+                        <span aria-hidden="true"> → </span>
+                        <span className={styles.srOnly}> pide cambiar su nombre a </span>
+                        <strong>{solicitado}</strong>
+                      </p>
+                      <p className={styles.detalle}>
+                        {solicitud.usuario.correo} ·{' '}
+                        {FORMATO_FECHA.format(new Date(solicitud.creadaEn))}
+                      </p>
+                    </div>
+                    <div className={styles.acciones}>
+                      <Button
+                        size="sm"
+                        disabled={aprobar.isPending}
+                        onClick={() => aprobar.mutate(solicitud.idSolicitud)}
+                        aria-label={`Aprobar el cambio a ${solicitado}`}
+                      >
+                        {ocupada ? 'Aprobando…' : 'Aprobar'}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={aprobar.isPending}
+                        onClick={() => setEnRechazo(solicitud)}
+                        aria-label={`Rechazar el cambio a ${solicitado}`}
+                      >
+                        Rechazar
+                      </Button>
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          </Card>
+        </section>
+      ) : null}
 
       {/* key por solicitud: cada apertura empieza con el motivo vacío. */}
       <ModalRechazarSolicitud
@@ -103,6 +113,6 @@ export function SolicitudesNombre() {
         solicitud={enRechazo}
         onCerrar={() => setEnRechazo(null)}
       />
-    </section>
+    </>
   )
 }

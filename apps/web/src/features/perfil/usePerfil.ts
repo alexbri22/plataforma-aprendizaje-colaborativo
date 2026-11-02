@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   actualizarDatosPerfil,
@@ -11,6 +12,7 @@ import {
   subirFoto,
   type CambioContrasena,
   type DatosPerfil,
+  type SolicitudNombre,
   type Usuario,
   CLAVE_SESION,
 } from '../cuentas'
@@ -21,8 +23,42 @@ import {
 export const CLAVE_PERFIL_PROPIO = ['usuarios', 'yo'] as const
 const claveDeUsuario = (id: string) => ['usuarios', id] as const
 
+/** Cada cuánto se relee el perfil mientras hay una solicitud de cambio de
+ * nombre pendiente: la resuelve otra persona, en otra sesión. */
+export const INTERVALO_SOLICITUD_PENDIENTE_MS = 5000
+
 export function usePerfilPropio() {
-  return useQuery({ queryKey: CLAVE_PERFIL_PROPIO, queryFn: obtenerPerfilPropio })
+  const queryClient = useQueryClient()
+  const perfil = useQuery({
+    queryKey: CLAVE_PERFIL_PROPIO,
+    queryFn: obtenerPerfilPropio,
+    refetchInterval: (query) =>
+      query.state.data?.solicitudNombre?.estado === 'pendiente'
+        ? INTERVALO_SOLICITUD_PENDIENTE_MS
+        : false,
+  })
+
+  // Si un administrador aprobó el nombre, el perfil releído ya lo trae pero
+  // la sesión, que pinta el AppShell, no: se le copia sin otra petición.
+  const datos = perfil.data
+  useEffect(() => {
+    if (!datos) return
+    queryClient.setQueryData<Usuario | null>(CLAVE_SESION, (sesion) =>
+      sesion &&
+      (sesion.nombre !== datos.nombre ||
+        sesion.apellidoPaterno !== datos.apellidoPaterno ||
+        sesion.apellidoMaterno !== datos.apellidoMaterno)
+        ? {
+            ...sesion,
+            nombre: datos.nombre,
+            apellidoPaterno: datos.apellidoPaterno,
+            apellidoMaterno: datos.apellidoMaterno,
+          }
+        : sesion,
+    )
+  }, [datos, queryClient])
+
+  return perfil
 }
 
 export function usePerfilDeUsuario(idUsuario: string) {
@@ -79,11 +115,14 @@ export function useSolicitarCambioNombre() {
   })
 }
 
+// onSettled y no onSuccess: si falló porque la solicitud cambió mientras tanto
+// (la aprobaron, la rechazaron o se envió otra), releer el perfil muestra su
+// estado actual en vez de dejar un aviso que ya no corresponde.
 export function useDescartarSolicitudNombre() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: () => descartarSolicitudNombre(),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: CLAVE_PERFIL_PROPIO }),
+    mutationFn: (solicitud: SolicitudNombre) => descartarSolicitudNombre(solicitud),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: CLAVE_PERFIL_PROPIO }),
   })
 }
 

@@ -43,6 +43,12 @@ function solicitar(cuenta: Cuenta, datos: object) {
     .send(datos)
 }
 
+function descartar(cuenta: Cuenta, idSolicitud: string, estado: string) {
+  return request(app)
+    .delete(`/api/usuarios/yo/solicitud-nombre/${idSolicitud}?estado=${estado}`)
+    .set('Cookie', cuenta.cookie)
+}
+
 async function perfilDe(cuenta: Cuenta) {
   const r = await request(app).get('/api/usuarios/yo').set('Cookie', cuenta.cookie)
   return r.body.usuario
@@ -54,6 +60,8 @@ let ada: Cuenta
 let grace: Cuenta
 let linus: Cuenta
 let margaret: Cuenta
+let barbara: Cuenta
+let edsger: Cuenta
 
 beforeAll(async () => {
   await prisma.sesion.deleteMany()
@@ -67,6 +75,8 @@ beforeAll(async () => {
   grace = await registrar('Grace')
   linus = await registrar('Linus')
   margaret = await registrar('Margaret')
+  barbara = await registrar('Barbara')
+  edsger = await registrar('Edsger')
 })
 
 afterAll(async () => {
@@ -114,6 +124,18 @@ describe('PUT /api/usuarios/yo/solicitud-nombre', () => {
     expect(igual.status).toBe(400)
   })
 
+  it('dos envíos simultáneos dejan una sola solicitud, sin error', async () => {
+    const respuestas = await Promise.all([
+      solicitar(barbara, { ...NOMBRE_NUEVO, nombre: 'Barbara', apellidoPaterno: 'Liskov' }),
+      solicitar(barbara, { ...NOMBRE_NUEVO, nombre: 'Barbara', apellidoPaterno: 'Huberman' }),
+    ])
+
+    expect(respuestas.map((r) => r.status)).toEqual([201, 201])
+    expect(
+      await prisma.solicitudCambioNombre.count({ where: { idUsuario: barbara.idUsuario } }),
+    ).toBe(1)
+  })
+
   it('un administrador no la necesita', async () => {
     const r = await solicitar(admin, NOMBRE_NUEVO)
     expect(r.status).toBe(403)
@@ -121,7 +143,7 @@ describe('PUT /api/usuarios/yo/solicitud-nombre', () => {
 })
 
 describe('resolución por el administrador', () => {
-  it('aprobar aplica el nombre y retira la solicitud', async () => {
+  it('aprobar aplica el nombre y la persona ve el aviso hasta descartarlo', async () => {
     const { body } = await solicitar(grace, {
       nombre: 'Grace',
       apellidoPaterno: 'Hopper',
@@ -135,13 +157,17 @@ describe('resolución por el administrador', () => {
 
     const perfil = await perfilDe(grace)
     expect(perfil.apellidoPaterno).toBe('Hopper')
-    expect(perfil.solicitudNombre).toBeNull()
+    expect(perfil.solicitudNombre).toMatchObject({ estado: 'aprobada' })
 
-    // Ya resuelta: una segunda aprobación no encuentra nada que aplicar.
+    // Ya resuelta: una segunda aprobación no encuentra nada que aplicar, y ya
+    // no está en la lista del administrador.
     await request(app)
       .post(`/api/admin/solicitudes-nombre/${body.solicitud.idSolicitud}/aprobar`)
       .set('Cookie', admin.cookie)
       .expect(404)
+
+    await descartar(grace, body.solicitud.idSolicitud, 'aprobada').expect(204)
+    expect((await perfilDe(grace)).solicitudNombre).toBeNull()
   })
 
   it('rechazar conserva el nombre y la persona ve el motivo hasta descartarlo', async () => {
@@ -168,10 +194,7 @@ describe('resolución por el administrador', () => {
       body.solicitud.idSolicitud,
     )
 
-    await request(app)
-      .delete('/api/usuarios/yo/solicitud-nombre')
-      .set('Cookie', linus.cookie)
-      .expect(204)
+    await descartar(linus, body.solicitud.idSolicitud, 'rechazada').expect(204)
     expect((await perfilDe(linus)).solicitudNombre).toBeNull()
   })
 
@@ -185,20 +208,36 @@ describe('resolución por el administrador', () => {
       .set('Cookie', admin.cookie)
       .expect(404)
 
-    await request(app)
-      .delete('/api/usuarios/yo/solicitud-nombre')
-      .set('Cookie', margaret.cookie)
-      .expect(204)
+    await descartar(margaret, segunda.body.solicitud.idSolicitud, 'pendiente').expect(204)
     await request(app)
       .post(`/api/admin/solicitudes-nombre/${segunda.body.solicitud.idSolicitud}/aprobar`)
       .set('Cookie', admin.cookie)
       .expect(404)
 
     expect((await perfilDe(margaret)).apellidoPaterno).toBe('Lovelace')
+    await descartar(margaret, segunda.body.solicitud.idSolicitud, 'pendiente').expect(404)
+  })
+
+  it('descartar solo borra la solicitud que la persona tiene a la vista', async () => {
+    const vieja = await solicitar(edsger, NOMBRE_NUEVO)
+    const nueva = await solicitar(edsger, { ...NOMBRE_NUEVO, apellidoPaterno: 'Dijkstra' })
+
+    // Cancelar la vieja (otra pestaña) no borra la nueva.
+    await descartar(edsger, vieja.body.solicitud.idSolicitud, 'pendiente').expect(404)
+    expect((await perfilDe(edsger)).solicitudNombre).toMatchObject({
+      idSolicitud: nueva.body.solicitud.idSolicitud,
+    })
+
+    // Si la rechazaron mientras tanto, cancelarla como pendiente no borra el aviso.
     await request(app)
-      .delete('/api/usuarios/yo/solicitud-nombre')
-      .set('Cookie', margaret.cookie)
-      .expect(404)
+      .post(`/api/admin/solicitudes-nombre/${nueva.body.solicitud.idSolicitud}/rechazar`)
+      .set('Cookie', admin.cookie)
+      .send({})
+      .expect(204)
+    await descartar(edsger, nueva.body.solicitud.idSolicitud, 'pendiente').expect(404)
+    expect((await perfilDe(edsger)).solicitudNombre).toMatchObject({ estado: 'rechazada' })
+
+    await descartar(edsger, nueva.body.solicitud.idSolicitud, 'otro').expect(400)
   })
 
   it('rechaza un motivo demasiado largo', async () => {

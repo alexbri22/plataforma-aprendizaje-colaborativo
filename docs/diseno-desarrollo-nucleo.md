@@ -437,7 +437,7 @@ El registro pide nombre, apellido paterno, apellido materno, nivel de estudios, 
 
 El perfil propio permite cambiar nombre y apellidos, y cambiar la contraseña exigiendo la anterior. El correo no es editable en el alcance actual: es el identificador de acceso y la llave con la que se busca a alguien para invitarlo, y cambiarlo sin verificación permitiría apropiarse de una dirección ajena. El nivel de estudios y la institución se muestran pero no se editan desde el perfil en este alcance. Desde el perfil propio se decide además si el correo es público o privado; es privado por defecto, también para las cuentas creadas antes de que existiera la opción, porque nadie aceptó mostrarlo.
 
-**Cambio de nombre con aprobación.** Una cuenta de usuario no cambia su nombre directamente: lo solicita y el nombre cambia cuando un administrador aprueba la solicitud. El nombre es lo que identifica a una persona ante sus equipos y en el historial de cada actividad, y cambiarlo sin control permitiría hacerse pasar por otra. Hay a lo más una solicitud por persona (tabla `solicitudes_cambio_nombre`, única por usuario): enviar otra reemplaza a la anterior con un identificador nuevo, de modo que un administrador nunca aprueba un nombre distinto del que vio, y la persona puede cancelarla mientras esté pendiente. El administrador la aprueba (`POST /api/admin/solicitudes-nombre/{id}/aprobar`), lo que aplica el nombre y retira la solicitud en la misma transacción, o la rechaza con un motivo opcional (`POST /api/admin/solicitudes-nombre/{id}/rechazar`), que la persona ve en su perfil hasta descartarlo o enviar otra. Ambas responden 404 si la solicitud ya no está pendiente. El administrador cambia su propio nombre directamente: aprobarse a sí mismo no agregaría ningún control.
+**Cambio de nombre con aprobación.** Una cuenta de usuario no cambia su nombre directamente: lo solicita y el nombre cambia cuando un administrador aprueba la solicitud. El nombre es lo que identifica a una persona ante sus equipos y en el historial de cada actividad, y cambiarlo sin control permitiría hacerse pasar por otra. Hay a lo más una solicitud por persona (tabla `solicitudes_cambio_nombre`, única por usuario): enviar otra reemplaza a la anterior en una sola escritura y con un identificador nuevo, de modo que un administrador nunca aprueba un nombre distinto del que vio, y la persona puede cancelarla mientras esté pendiente. El administrador la aprueba (`POST /api/admin/solicitudes-nombre/{id}/aprobar`), lo que aplica el nombre en la misma transacción, o la rechaza con un motivo opcional (`POST /api/admin/solicitudes-nombre/{id}/rechazar`). Ambas responden 404 si la solicitud ya no está pendiente. Aprobada o rechazada, la persona lo ve en su perfil hasta descartar el aviso o enviar otra; descartar o cancelar indica el identificador y el estado que tiene a la vista, y no borra nada si cambiaron mientras tanto. Mientras la solicitud está pendiente, el perfil propio se relee periódicamente para que la resolución aparezca sin recargar, y la lista del administrador también se relee para mostrar las nuevas. El administrador cambia su propio nombre directamente: aprobarse a sí mismo no agregaría ningún control.
 
 **Foto de perfil.** Es opcional: sin ella, la interfaz muestra las iniciales. El cliente recorta la imagen elegida a un cuadrado, la reduce a 256 px y la codifica en WebP (o JPEG donde el navegador no produzca WebP) antes de subirla; el servidor solo admite JPEG, PNG o WebP hasta 512 KB, comprueba que los primeros bytes correspondan al tipo declarado y la guarda en la relación fotos\_de\_perfil (4.4 del general). Se guarda en la base y no en disco porque el API se despliega como función sin sistema de archivos persistente, y reducirla en el cliente evita decodificar imágenes en el servidor. La foto se sirve con sesión, como el resto del perfil, y su URL lleva la fecha de la última subida para poder cachearla sin plazo. Los límites viven en `packages/shared` para que cliente y servidor no discrepen.
 
@@ -453,29 +453,29 @@ La propuesta por defecto de P-11 limita la búsqueda al flujo de invitación y a
 
 ## **6.5 Endpoints**
 
-| Método y ruta                            | Quién         | Qué hace                                                         |
-| :--------------------------------------- | :------------ | :--------------------------------------------------------------- |
-| POST /api/usuarios                       | Público       | Registra una cuenta                                              |
-| POST /api/sesion                         | Público       | Inicia sesión y emite la cookie                                  |
-| DELETE /api/sesion                       | Usuario       | Cierra la sesión y elimina el registro en servidor               |
-| GET /api/sesion                          | Usuario       | Devuelve el actor actual y su tipo de cuenta                     |
-| GET /api/usuarios/yo                     | Usuario       | Perfil propio completo, con rangos                               |
-| PATCH /api/usuarios/yo                   | Usuario       | Edita datos (solo admin), contraseña o visibilidad del correo    |
-| PUT /api/usuarios/yo/foto                | Usuario       | Sube o reemplaza la foto; el cuerpo es la imagen (6.3)           |
-| DELETE /api/usuarios/yo/foto             | Usuario       | Quita la foto                                                    |
-| PUT /api/usuarios/yo/solicitud-nombre    | Usuario       | Solicita el cambio de nombre; reemplaza la anterior (6.3)        |
-| DELETE /api/usuarios/yo/solicitud-nombre | Usuario       | Cancela la solicitud o descarta el aviso de rechazo              |
-| GET /api/usuarios/{id}                   | Usuario       | Perfil básico de otro; el correo, solo si es público             |
-| GET /api/usuarios/{id}/foto              | Usuario       | La imagen de la foto de perfil                                   |
-| GET /api/actividades/{id}/candidatos     | Organizador   | Busca usuarios para invitar (6.4)                                |
-| POST /api/verificaciones/{token}         | Público       | Confirma la dirección de correo                                  |
-| POST /api/verificaciones                 | Usuario       | Reenvía el enlace de verificación                                |
-| POST /api/recuperaciones                 | Público       | Solicita restablecer la contraseña. Respuesta indistinta         |
-| POST /api/recuperaciones/{token}         | Público       | Fija la nueva contraseña y cierra las sesiones                   |
-| GET /api/admin/usuarios                  | Administrador | Lista de cuentas con su estado                                   |
-| PATCH /api/admin/usuarios/{id}           | Administrador | Activa o desactiva la cuenta; al desactivar elimina sus sesiones |
-| POST /api/admin/usuarios/{id}/contrasena | Administrador | Restablece la contraseña                                         |
-| GET /api/admin/solicitudes-nombre        | Administrador | Solicitudes de cambio de nombre pendientes; se resuelven (6.3)   |
+| Método y ruta                                 | Quién         | Qué hace                                                         |
+| :-------------------------------------------- | :------------ | :--------------------------------------------------------------- |
+| POST /api/usuarios                            | Público       | Registra una cuenta                                              |
+| POST /api/sesion                              | Público       | Inicia sesión y emite la cookie                                  |
+| DELETE /api/sesion                            | Usuario       | Cierra la sesión y elimina el registro en servidor               |
+| GET /api/sesion                               | Usuario       | Devuelve el actor actual y su tipo de cuenta                     |
+| GET /api/usuarios/yo                          | Usuario       | Perfil propio completo, con rangos                               |
+| PATCH /api/usuarios/yo                        | Usuario       | Edita datos (solo admin), contraseña o visibilidad del correo    |
+| PUT /api/usuarios/yo/foto                     | Usuario       | Sube o reemplaza la foto; el cuerpo es la imagen (6.3)           |
+| DELETE /api/usuarios/yo/foto                  | Usuario       | Quita la foto                                                    |
+| PUT /api/usuarios/yo/solicitud-nombre         | Usuario       | Solicita el cambio de nombre; reemplaza la anterior (6.3)        |
+| DELETE /api/usuarios/yo/solicitud-nombre/{id} | Usuario       | Cancela la solicitud o descarta el aviso; con `?estado=`         |
+| GET /api/usuarios/{id}                        | Usuario       | Perfil básico de otro; el correo, solo si es público             |
+| GET /api/usuarios/{id}/foto                   | Usuario       | La imagen de la foto de perfil                                   |
+| GET /api/actividades/{id}/candidatos          | Organizador   | Busca usuarios para invitar (6.4)                                |
+| POST /api/verificaciones/{token}              | Público       | Confirma la dirección de correo                                  |
+| POST /api/verificaciones                      | Usuario       | Reenvía el enlace de verificación                                |
+| POST /api/recuperaciones                      | Público       | Solicita restablecer la contraseña. Respuesta indistinta         |
+| POST /api/recuperaciones/{token}              | Público       | Fija la nueva contraseña y cierra las sesiones                   |
+| GET /api/admin/usuarios                       | Administrador | Lista de cuentas con su estado                                   |
+| PATCH /api/admin/usuarios/{id}                | Administrador | Activa o desactiva la cuenta; al desactivar elimina sus sesiones |
+| POST /api/admin/usuarios/{id}/contrasena      | Administrador | Restablece la contraseña                                         |
+| GET /api/admin/solicitudes-nombre             | Administrador | Solicitudes de cambio de nombre pendientes; se resuelven (6.3)   |
 
 Los tres últimos son la superficie que consume el panel de administración (1.3). Los expone este módulo porque el estado de la cuenta es dominio del núcleo y el panel no escribe sobre sus tablas (3.4 del general).
 

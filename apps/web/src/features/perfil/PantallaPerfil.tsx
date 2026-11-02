@@ -160,12 +160,13 @@ export function PantallaPerfil() {
             {usuario.solicitudNombre ? (
               <AvisoSolicitudNombre solicitud={usuario.solicitudNombre} />
             ) : null}
-            {/* La key remonta el formulario cuando el servidor devuelve datos
-                nuevos, en vez de sincronizar el estado con un efecto. Lleva
-                también la solicitud: al enviarla, el formulario vuelve al
-                nombre vigente y el aviso de arriba muestra el solicitado. */}
+            {/* La key remonta el formulario cuando cambia el nombre vigente, en
+                vez de sincronizar el estado con un efecto. Solo el nombre:
+                cancelar o descartar el aviso no debe borrar lo que se esté
+                escribiendo. Tras enviar una solicitud, el formulario mismo
+                vuelve al nombre vigente. */}
             <FormularioDatosPerfil
-              key={`${usuario.nombre}|${usuario.apellidoPaterno}|${usuario.apellidoMaterno}|${usuario.solicitudNombre?.idSolicitud ?? ''}`}
+              key={`${usuario.nombre}|${usuario.apellidoPaterno}|${usuario.apellidoMaterno}`}
               inicial={{
                 nombre: usuario.nombre,
                 apellidoPaterno: usuario.apellidoPaterno,

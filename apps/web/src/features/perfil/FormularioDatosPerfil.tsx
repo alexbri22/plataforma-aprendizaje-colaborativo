@@ -55,10 +55,15 @@ export function FormularioDatosPerfil({ inicial, directo }: FormularioDatosPerfi
         apellidoPaterno: valores.apellidoPaterno.trim(),
         apellidoMaterno: valores.apellidoMaterno.trim(),
       }
-      // El aviso de que la solicitud llegó al administrador lo pinta
-      // AvisoSolicitudNombre, que aparece al releer el perfil.
-      if (directo) await actualizar.mutateAsync(datos)
-      else await solicitar.mutateAsync(datos)
+      if (directo) {
+        await actualizar.mutateAsync(datos)
+      } else {
+        await solicitar.mutateAsync(datos)
+        // El nombre vigente no cambió: el formulario vuelve a él, y el aviso
+        // de que la solicitud llegó al administrador lo pinta
+        // AvisoSolicitudNombre, que aparece al releer el perfil.
+        setValores(inicial)
+      }
     } catch (error) {
       if (error instanceof ErrorPerfil && error.detallePorCampo) {
         setErrores(error.detallePorCampo)

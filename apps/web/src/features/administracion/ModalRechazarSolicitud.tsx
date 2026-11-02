@@ -37,7 +37,9 @@ export function ModalRechazarSolicitud({ solicitud, onCerrar }: ModalRechazarSol
   return (
     <Modal
       abierto={solicitud !== null}
-      onCerrar={onCerrar}
+      // Mientras se envía, Escape y el clic en el fondo no cierran: el cierre
+      // al terminar (onSuccess) cerraría otro rechazo abierto después.
+      onCerrar={rechazar.isPending ? () => undefined : onCerrar}
       titulo="Rechazar cambio de nombre"
       descripcion={
         <>

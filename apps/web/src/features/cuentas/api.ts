@@ -32,14 +32,15 @@ export interface Usuario {
   fotoUrl: string | null
 }
 
-/** Cambio de nombre pedido por una cuenta de usuario, a la espera de un
- * administrador o rechazado por él (docs/diseno-desarrollo-nucleo.md §6.3). */
+/** Cambio de nombre pedido por una cuenta de usuario: a la espera de un
+ * administrador, o ya resuelto y por avisar (docs/diseno-desarrollo-nucleo.md
+ * §6.3). */
 export interface SolicitudNombre {
   idSolicitud: string
   nombre: string
   apellidoPaterno: string
   apellidoMaterno: string
-  estado: 'pendiente' | 'rechazada'
+  estado: 'pendiente' | 'aprobada' | 'rechazada'
   motivoRechazo: string | null
   creadaEn: string
   resueltaEn: string | null
@@ -50,7 +51,7 @@ export interface PerfilPropio extends Usuario {
   institucionEducativa: string
   /** Si otras personas ven el correo en el perfil básico. */
   correoPublico: boolean
-  /** null si no hay solicitud de cambio de nombre pendiente ni rechazada. */
+  /** null si no hay solicitud de cambio de nombre pendiente ni por avisar. */
   solicitudNombre: SolicitudNombre | null
   acumulado: PuntosPorCategoria
 }
@@ -246,9 +247,15 @@ export async function solicitarCambioNombre(datos: DatosPerfil): Promise<Solicit
   return solicitud
 }
 
-/** Cancela la solicitud pendiente o descarta el aviso de una rechazada. */
-export async function descartarSolicitudNombre(): Promise<void> {
-  const respuesta = await pedir('/api/usuarios/yo/solicitud-nombre', { method: 'DELETE' })
+/** Cancela la solicitud pendiente o descarta el aviso de una resuelta. Lleva
+ * el estado que se ve: si cambió mientras tanto, el API no borra nada. */
+export async function descartarSolicitudNombre(
+  solicitud: Pick<SolicitudNombre, 'idSolicitud' | 'estado'>,
+): Promise<void> {
+  const respuesta = await pedir(
+    `/api/usuarios/yo/solicitud-nombre/${solicitud.idSolicitud}?estado=${solicitud.estado}`,
+    { method: 'DELETE' },
+  )
   if (!respuesta.ok) throw await errorDePerfil(respuesta, 'No pudimos quitar tu solicitud.')
 }
 

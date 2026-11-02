@@ -224,6 +224,16 @@ export function validarDatosPerfil(cuerpo: unknown): DatosPerfilValidados {
   }
 }
 
+const ESTADOS_SOLICITUD = new Set(['pendiente', 'aprobada', 'rechazada'])
+
+/** El estado con el que la persona ve la solicitud que quiere descartar. */
+export function validarEstadoSolicitud(valor: unknown): 'pendiente' | 'aprobada' | 'rechazada' {
+  if (typeof valor !== 'string' || !ESTADOS_SOLICITUD.has(valor)) {
+    throw new ErrorValidacion({ estado: 'Indica el estado de la solicitud que quieres quitar.' })
+  }
+  return valor as 'pendiente' | 'aprobada' | 'rechazada'
+}
+
 export const MAX_MOTIVO_RECHAZO = 500
 
 /** El motivo al rechazar una solicitud de cambio de nombre es opcional; vacío

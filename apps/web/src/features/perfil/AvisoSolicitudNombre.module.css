@@ -1,6 +1,8 @@
-/* Pendiente en el tono informativo de la marca; rechazada en advertencia, no
-   en error: no falló nada, el administrador decidió (DESIGN.md). */
+/* Pendiente en el tono informativo de la marca, aprobada en el verde de
+   "hecho" y rechazada en advertencia, no en error: no falló nada, el
+   administrador decidió (DESIGN.md). */
 .pendiente,
+.aprobada,
 .rechazada {
   display: flex;
   flex-direction: column;
@@ -16,6 +18,12 @@
   border: 1px solid var(--color-primary-border);
   background: var(--color-primary-subtle);
   color: var(--color-text);
+}
+
+.aprobada {
+  border: 1px solid var(--color-success);
+  background: var(--color-success-subtle);
+  color: var(--color-success-ink);
 }
 
 .rechazada {

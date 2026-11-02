@@ -30,6 +30,7 @@ import {
   validarCredenciales,
   validarDatosPerfil,
   validarDatosRegistro,
+  validarEstadoSolicitud,
 } from '../services/cuentas/validacion.js'
 import { opcionesCookieSesion } from '../services/cuentas/sesiones.js'
 
@@ -121,11 +122,13 @@ cuentasRouter.put('/usuarios/yo/solicitud-nombre', exigirSesion, async (req, res
   res.status(201).json({ solicitud })
 })
 
-// DELETE /api/usuarios/yo/solicitud-nombre: cancela la solicitud pendiente o
-// descarta el aviso de una rechazada.
-cuentasRouter.delete('/usuarios/yo/solicitud-nombre', exigirSesion, async (req, res) => {
+// DELETE /api/usuarios/yo/solicitud-nombre/{id}?estado=...: cancela la
+// solicitud pendiente o descarta el aviso de una resuelta. El estado es el que
+// la persona tiene a la vista; si ya no coincide, 404 y nada se borra.
+cuentasRouter.delete('/usuarios/yo/solicitud-nombre/:id', exigirSesion, async (req, res) => {
   const actor = req.actor as UsuarioPublico
-  await descartarSolicitudPropia(actor.idUsuario)
+  const estado = validarEstadoSolicitud(req.query.estado)
+  await descartarSolicitudPropia(actor.idUsuario, req.params.id as string, estado)
   res.status(204).end()
 })
 

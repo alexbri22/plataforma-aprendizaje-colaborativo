@@ -115,6 +115,26 @@ describe('PantallaCuentas', () => {
     )
   })
 
+  it('si la solicitud ya no estaba pendiente, el error sigue a la vista aunque la lista se vacíe', async () => {
+    vi.mocked(listarCuentas).mockResolvedValue([CUENTA_ACTIVA])
+    vi.mocked(listarSolicitudesNombre).mockResolvedValue([SOLICITUD])
+    vi.mocked(aprobarSolicitudNombre).mockRejectedValue(
+      new ErrorAdmin('Esta solicitud ya no está pendiente.'),
+    )
+    const usuario = userEvent.setup()
+    renderPantalla()
+
+    vi.mocked(listarSolicitudesNombre).mockResolvedValue([])
+    await usuario.click(
+      await screen.findByRole('button', { name: 'Aprobar el cambio a Ada King Byron' }),
+    )
+
+    await waitFor(() =>
+      expect(screen.queryByText(/Solicitudes de cambio de nombre/)).not.toBeInTheDocument(),
+    )
+    expect(screen.getByRole('alert')).toHaveTextContent('Esta solicitud ya no está pendiente.')
+  })
+
   it('rechaza una solicitud con motivo', async () => {
     vi.mocked(listarCuentas).mockResolvedValue([CUENTA_ACTIVA])
     vi.mocked(listarSolicitudesNombre).mockResolvedValue([SOLICITUD])

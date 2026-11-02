@@ -13,7 +13,7 @@ detalle por insignia, y perfil ajeno con datos básicos, foto y rangos.
 | `PantallaPerfil`          | `/perfil`, desde el nombre del menú. Cabecera; Datos generales (datos y contraseña); Insignias.               |
 | `PantallaPerfilDeUsuario` | `/usuarios/:id`. Cabecera con foto y datos básicos, e Insignias de solo lectura. El propio id va a `/perfil`. |
 | `FormularioDatosPerfil`   | Nombre y apellidos. Recibe `inicial` y una `key` ligada a él: cambia el dato, se remonta.                     |
-| `AvisoSolicitudNombre`    | Solicitud de cambio de nombre pendiente (cancelable) o rechazada (con motivo).                                |
+| `AvisoSolicitudNombre`    | Solicitud de cambio de nombre pendiente (cancelable), aprobada o rechazada (con motivo).                      |
 | `FormularioContrasena`    | Actual, nueva y confirmación. Avisa que las demás sesiones se cierran.                                        |
 | `foto.ts`                 | `prepararFoto`: recorta, reduce a 256 px y codifica en WebP/JPEG antes de subir.                              |
 | `usePerfil.ts`            | Queries bajo `['usuarios', ...]` y mutaciones que actualizan también `CLAVE_SESION`.                          |
@@ -41,10 +41,14 @@ subida mockeada y, del lado del API, el rechazo de tipos y firmas.
 ## El cambio de nombre
 
 Una cuenta de usuario no cambia su nombre: lo solicita, y cambia cuando un
-administrador aprueba (§6.3). "Guardar datos" envía la solicitud y el aviso de
-arriba del formulario confirma que llegó al administrador; el formulario vuelve
-al nombre vigente porque su `key` incluye la solicitud. Un administrador
-guarda su nombre directamente (`directo`).
+administrador aprueba (§6.3). "Guardar datos" envía la solicitud, el
+formulario vuelve al nombre vigente y el aviso de arriba confirma que llegó al
+administrador. Mientras está pendiente, `usePerfilPropio` relee el perfil cada
+pocos segundos: la aprobación o el rechazo aparecen sin recargar, y al aprobarse
+copia el nombre nuevo a la sesión para que el menú también cambie. La `key` del
+formulario es solo el nombre vigente, así que cancelar o descartar el aviso no
+borra lo que se esté escribiendo. Un administrador guarda su nombre
+directamente (`directo`).
 
 ## Quién ve qué
 

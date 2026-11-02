@@ -192,8 +192,8 @@ model FotoDePerfil {
 // cuenta de usuario no cambia su nombre directamente: lo pide y un
 // administrador lo aprueba. Una sola por persona (idUsuario único): enviar otra
 // reemplaza a la anterior, así que la fila es siempre la vigente. Aprobarla
-// aplica el nombre y borra la fila; rechazarla la conserva, con su motivo,
-// hasta que la persona la descarte o envíe otra.
+// aplica el nombre; aprobada o rechazada (con su motivo), la fila se conserva
+// para avisarle a la persona hasta que la descarte o envíe otra.
 model SolicitudCambioNombre {
   idSolicitud     String                @id @default(uuid()) @map("id_solicitud")
   idUsuario       String                @unique @map("id_usuario")
@@ -213,6 +213,7 @@ model SolicitudCambioNombre {
 
 enum EstadoSolicitudNombre {
   pendiente
+  aprobada
   rechazada
 
   @@map("estado_solicitud_nombre")

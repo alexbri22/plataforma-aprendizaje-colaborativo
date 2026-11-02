@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto'
+import type { EstadoSolicitudNombre } from '@prisma/client'
 import { prisma } from '../../data/prisma.js'
 import {
   ErrorSolicitudNoEncontrada,
@@ -11,10 +13,11 @@ import type { DatosPerfilValidados } from './validacion.js'
  * cuenta de usuario no cambia su nombre directamente: lo pide, y el nombre
  * cambia cuando un administrador lo aprueba. Hay a lo más una por persona;
  * enviar otra reemplaza a la anterior con un identificador nuevo, de modo que
- * un administrador nunca aprueba algo distinto de lo que vio.
+ * un administrador nunca aprueba algo distinto de lo que vio. Aprobada o
+ * rechazada, se conserva para avisarle a la persona hasta que la descarte.
  */
 
-export type EstadoSolicitudNombre = 'pendiente' | 'rechazada'
+export type { EstadoSolicitudNombre }
 
 /** Lo que la persona ve de su propia solicitud. */
 export interface SolicitudNombre {
@@ -75,24 +78,42 @@ export async function solicitarCambioNombre(
     throw new ErrorValidacion({ nombre: 'Ese ya es tu nombre.' })
   }
 
-  // Borrar y crear en lugar de actualizar: la solicitud nueva lleva otro
-  // identificador, y una aprobación dirigida a la anterior falla en vez de
-  // aplicar un nombre que el administrador no vio.
-  const [, solicitud] = await prisma.$transaction([
-    prisma.solicitudCambioNombre.deleteMany({ where: { idUsuario } }),
-    prisma.solicitudCambioNombre.create({
-      data: { idUsuario, ...datos },
-      select: CAMPOS_SOLICITUD,
-    }),
-  ])
-  return solicitud
+  // Un solo upsert sobre idUsuario, que Prisma ejecuta como INSERT ... ON
+  // CONFLICT: dos envíos simultáneos no chocan con el índice único, el último
+  // gana. Al reemplazar se le da otro identificador, y una aprobación dirigida
+  // a la anterior falla en vez de aplicar un nombre que el administrador no vio.
+  return prisma.solicitudCambioNombre.upsert({
+    where: { idUsuario },
+    create: { idSolicitud: randomUUID(), idUsuario, ...datos },
+    update: {
+      idSolicitud: randomUUID(),
+      ...datos,
+      estado: 'pendiente',
+      motivoRechazo: null,
+      creadaEn: new Date(),
+      resueltaEn: null,
+    },
+    select: CAMPOS_SOLICITUD,
+  })
 }
 
-/** Cancela la solicitud pendiente o descarta el aviso de una rechazada. */
-export async function descartarSolicitudPropia(idUsuario: string): Promise<void> {
-  const { count } = await prisma.solicitudCambioNombre.deleteMany({ where: { idUsuario } })
-  if (count === 0)
-    throw new ErrorSolicitudNoEncontrada('No tienes una solicitud de cambio de nombre.')
+/**
+ * Cancela la solicitud pendiente o descarta el aviso de una resuelta. Solo si
+ * sigue siendo la que la persona tiene a la vista: mismo identificador y mismo
+ * estado. Así, cancelar desde una pestaña vieja no borra la que envió desde
+ * otra, ni el aviso de una resolución que todavía no ha visto.
+ */
+export async function descartarSolicitudPropia(
+  idUsuario: string,
+  idSolicitud: string,
+  estado: EstadoSolicitudNombre,
+): Promise<void> {
+  const { count } = await prisma.solicitudCambioNombre.deleteMany({
+    where: { idUsuario, idSolicitud, estado },
+  })
+  if (count === 0) {
+    throw new ErrorSolicitudNoEncontrada('Tu solicitud cambió mientras tanto. Revisa su estado.')
+  }
 }
 
 export async function listarSolicitudesPendientes(): Promise<SolicitudNombreAdmin[]> {
@@ -124,19 +145,20 @@ export async function listarSolicitudesPendientes(): Promise<SolicitudNombreAdmi
 }
 
 /**
- * Aplica el nombre solicitado y borra la solicitud, en una sola transacción.
- * El borrado condicionado a que siga pendiente es lo que decide: si la persona
- * la canceló o la reemplazó, u otro administrador la resolvió, no borra nada y
- * el nombre no cambia.
+ * Aplica el nombre solicitado y marca la solicitud como aprobada, en una sola
+ * transacción. El cambio de estado condicionado a que siga pendiente es lo que
+ * decide: si la persona la canceló o la reemplazó, u otro administrador la
+ * resolvió, no cambia nada.
  */
 export async function aprobarSolicitud(idSolicitud: string): Promise<void> {
   await prisma.$transaction(async (tx) => {
-    const solicitud = await tx.solicitudCambioNombre.findUnique({ where: { idSolicitud } })
-    const { count } = await tx.solicitudCambioNombre.deleteMany({
+    const { count } = await tx.solicitudCambioNombre.updateMany({
       where: { idSolicitud, estado: 'pendiente' },
+      data: { estado: 'aprobada', resueltaEn: new Date() },
     })
-    if (!solicitud || count === 0) throw new ErrorSolicitudNoEncontrada()
+    if (count === 0) throw new ErrorSolicitudNoEncontrada()
 
+    const solicitud = await tx.solicitudCambioNombre.findUniqueOrThrow({ where: { idSolicitud } })
     await tx.usuario.update({
       where: { idUsuario: solicitud.idUsuario },
       data: {

@@ -229,14 +229,35 @@ describe('PantallaPerfil', () => {
     expect(screen.getByRole('heading', { name: 'Ana García López' })).toBeInTheDocument()
   })
 
-  it('una solicitud pendiente se puede cancelar', async () => {
+  it('cancelar la solicitud no borra lo que se está escribiendo', async () => {
     vi.mocked(obtenerPerfilPropio).mockResolvedValue({ ...PERFIL, solicitudNombre: SOLICITUD })
     vi.mocked(descartarSolicitudNombre).mockResolvedValue(undefined)
     const { usuario } = renderPantalla()
 
-    await usuario.click(await screen.findByRole('button', { name: 'Cancelar solicitud' }))
+    const apellido = await screen.findByLabelText('Apellido paterno')
+    await usuario.clear(apellido)
+    await usuario.type(apellido, 'Garcés')
 
-    expect(descartarSolicitudNombre).toHaveBeenCalled()
+    vi.mocked(obtenerPerfilPropio).mockResolvedValue(PERFIL)
+    await usuario.click(screen.getByRole('button', { name: 'Cancelar solicitud' }))
+
+    expect(descartarSolicitudNombre).toHaveBeenCalledWith(SOLICITUD)
+    await waitFor(() =>
+      expect(screen.queryByText('Solicitud enviada al administrador')).not.toBeInTheDocument(),
+    )
+    expect(screen.getByLabelText('Apellido paterno')).toHaveValue('Garcés')
+  })
+
+  it('una solicitud aprobada avisa el nombre nuevo', async () => {
+    vi.mocked(obtenerPerfilPropio).mockResolvedValue({
+      ...PERFIL,
+      apellidoPaterno: 'Garza',
+      solicitudNombre: { ...SOLICITUD, estado: 'aprobada' },
+    })
+    renderPantalla()
+
+    expect(await screen.findByText('Tu cambio de nombre fue aprobado')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Entendido' })).toBeInTheDocument()
   })
 
   it('una solicitud rechazada muestra el motivo', async () => {
