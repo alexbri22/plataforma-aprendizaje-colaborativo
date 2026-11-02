@@ -10,7 +10,7 @@ const CLAVE_SOLICITUDES_NOMBRE = ['admin', 'solicitudes-nombre'] as const
 
 /** Las solicitudes llegan de otras sesiones: la lista se relee sola para que
  * aparezcan sin recargar la página. */
-const INTERVALO_SOLICITUDES_MS = 15000
+const INTERVALO_SOLICITUDES_MS = 2000
 
 const FORMATO_FECHA = new Intl.DateTimeFormat('es-MX', {
   year: 'numeric',

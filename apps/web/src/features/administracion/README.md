@@ -20,7 +20,7 @@ contraseña_:
   §6.7) y todavía no existe.
 - `SolicitudesNombre` — arriba de la tabla, las solicitudes de cambio de
   nombre pendientes (nombre actual → solicitado) con Aprobar y Rechazar. No
-  aparece si no hay ninguna, y se relee sola cada 15 s para mostrar las nuevas. `ModalRechazarSolicitud` pide un motivo opcional
+  aparece si no hay ninguna, y se relee sola cada 2 s para mostrar las nuevas. `ModalRechazarSolicitud` pide un motivo opcional
   que la persona ve en su perfil (`docs/diseno-desarrollo-nucleo.md` §6.3).
 - `RutaAdmin` — guard **solo de UX**: consulta `GET /api/sesion` y evita
   mostrar el panel a quien no es administrador. La autorización real la impone
