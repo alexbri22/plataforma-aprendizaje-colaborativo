@@ -168,6 +168,7 @@ model Usuario {
   cursos             Curso[]
   inscripcionesCurso InscripcionCurso[]
   recursosGuardados  RecursoGuardado[]
+  rutasFormativas    RutaFormativa[]
 
   @@map("usuarios")
 }
@@ -694,6 +695,7 @@ model Curso {
   autor         Usuario?           @relation(fields: [idUsuarioAutor], references: [idUsuario], onDelete: SetNull)
   lecciones     LeccionCurso[]
   inscripciones InscripcionCurso[]
+  rutas         CursoRuta[]
 
   @@index([estatus, orden])
   @@map("cursos")
@@ -799,4 +801,52 @@ model RecursoGuardado {
   @@id([idUsuario, idRecurso])
   @@index([idRecurso])
   @@map("recursos_guardados")
+}
+
+// ---- Rutas de aprendizaje (docs/diseno-desarrollo-formacion.md §4.1 y la
+// nota del incremento 4). Una ruta es una selección editorial ordenada de 2 a
+// 5 cursos con una misma finalidad. Área, elementos, nivel y duración no se
+// guardan: se calculan de sus cursos, para que nunca los contradigan. El
+// progreso de una ruta también se calcula, del de sus cursos.
+model RutaFormativa {
+  idRuta             String         @id @default(uuid()) @map("id_ruta")
+  titulo             String
+  // Para qué sirve la ruta: la frase que se lee en el catálogo.
+  finalidad          String         @default("")
+  descripcion        String         @default("")
+  orden              Int            @default(0)
+  estatus            EstatusRecurso @default(borrador)
+  // La ruta editorial que se muestra cuando no hay con qué recomendar (sin
+  // sesión o sin datos). A lo más una; marcar otra desmarca la anterior.
+  destacada          Boolean        @default(false)
+  textoBusqueda      String         @default("") @map("texto_busqueda")
+  // Mismo control de edición simultánea que en cursos.
+  versionFicha       Int            @default(0) @map("version_ficha")
+  idUsuarioAutor     String?        @map("id_usuario_autor")
+  fechaCreacion      DateTime       @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime       @updatedAt @map("fecha_actualizacion")
+
+  autor  Usuario?    @relation(fields: [idUsuarioAutor], references: [idUsuario], onDelete: SetNull)
+  cursos CursoRuta[]
+
+  @@index([estatus, orden])
+  @@map("rutas_formativas")
+}
+
+// Un curso dentro de una ruta, en su posición. Un curso puede estar en varias
+// rutas, pero una sola vez en cada una.
+model CursoRuta {
+  idRuta  String @map("id_ruta")
+  idCurso String @map("id_curso")
+  orden   Int
+
+  ruta  RutaFormativa @relation(fields: [idRuta], references: [idRuta], onDelete: Cascade)
+  // RESTRICT: un curso que forma parte de una ruta no se elimina; se quita
+  // de la ruta o se retira.
+  curso Curso         @relation(fields: [idCurso], references: [idCurso], onDelete: Restrict)
+
+  @@id([idRuta, idCurso])
+  @@unique([idRuta, orden])
+  @@index([idCurso])
+  @@map("cursos_ruta")
 }
