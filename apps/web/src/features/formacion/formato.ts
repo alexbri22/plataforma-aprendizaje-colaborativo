@@ -31,3 +31,19 @@ export function etiquetaLeccion(l: {
   if (l.disponible === false) return 'No disponible'
   return l.tipoRecurso ? ETIQUETAS_TIPO_RECURSO[l.tipoRecurso] : 'Recurso'
 }
+
+/** Resumen del avance en un curso, para acompañar siempre a la barra:
+ * "2 de 3 lecciones · 66 %". */
+export function textoProgreso(p: {
+  completadas: number
+  total: number
+  porcentaje: number
+}): string {
+  return `${p.completadas} de ${p.total} ${p.total === 1 ? 'lección' : 'lecciones'} · ${p.porcentaje} %`
+}
+
+const FECHA_LARGA = new Intl.DateTimeFormat('es-MX', { dateStyle: 'long' })
+
+export function formatoFecha(iso: string): string {
+  return FECHA_LARGA.format(new Date(iso))
+}

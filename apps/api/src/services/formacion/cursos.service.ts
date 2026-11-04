@@ -16,12 +16,14 @@ import {
 } from '@plataforma/shared'
 import { prisma } from '../../data/prisma.js'
 import {
+  ErrorCursoConInscripciones,
   ErrorCursoDesactualizado,
   ErrorCursoNoEncontrado,
   ErrorLeccionNoEncontrada,
   ErrorRecursoNoEncontrado,
   ErrorValidacion,
 } from '../../errores.js'
+import { fijarFinalizaciones } from './calculoProgreso.js'
 import type { DatosCurso, DatosLeccion, FiltrosCursos } from './cursos.validacion.js'
 import { obtenerRecursoPublicado, type RecursoPublico } from './recursos.service.js'
 import type { PeticionPagina } from './validacion.js'
@@ -291,7 +293,9 @@ function fichaDe(fila: FilaCurso): FichaCurso {
 
 /** Después de tocar las lecciones de un curso: si está publicado, debe
  * seguir siendo publicable (si no, lanza y la transacción se deshace). Además
- * marca el curso como actualizado. */
+ * marca el curso como actualizado y termina el curso de quien ya cumple con
+ * las lecciones que quedan (quitar una lección o volverla opcional puede
+ * dejar a alguien con todo hecho). */
 async function cerrarCambioDeLecciones(
   tx: Prisma.TransactionClient,
   idCurso: string,
@@ -305,6 +309,7 @@ async function cerrarCambioDeLecciones(
   if (curso.estatus === 'publicado') {
     validarPublicable(fichaDe(curso), curso.lecciones, leccionTocada ? [leccionTocada] : [])
   }
+  await fijarFinalizaciones(tx, idCurso)
   return curso
 }
 
@@ -432,10 +437,22 @@ export async function actualizarCurso(
   return aAdmin(fila)
 }
 
-/** Borra el curso y sus lecciones. Los recursos que usaba no se tocan. */
+/** Borra el curso y sus lecciones. Los recursos que usaba no se tocan. Si
+ * alguien ya lo empezó no se borra, para no perder su progreso: se retira.
+ * El bloqueo del curso hace esperar a quien se inscribe en ese momento, y la
+ * llave RESTRICT de inscripciones_curso cubre lo que quede. */
 export async function eliminarCurso(idCurso: string): Promise<void> {
-  const { count } = await prisma.curso.deleteMany({ where: { idCurso } })
-  if (count === 0) throw new ErrorCursoNoEncontrado()
+  await conCursoBloqueado(idCurso, async (tx) => {
+    if ((await tx.inscripcionCurso.count({ where: { idCurso } })) > 0) {
+      throw new ErrorCursoConInscripciones()
+    }
+    try {
+      await tx.curso.delete({ where: { idCurso } })
+    } catch (error) {
+      if ((error as { code?: string }).code === 'P2003') throw new ErrorCursoConInscripciones()
+      throw error
+    }
+  })
 }
 
 // ---- Lecciones ----

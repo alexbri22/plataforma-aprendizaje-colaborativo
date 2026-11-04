@@ -17,6 +17,7 @@ import { cuentasRouter } from './routes/cuentas.js'
 import { adminCursosRouter, cursosRouter } from './routes/cursos.js'
 import { healthRouter } from './routes/health.js'
 import { periodosRouter } from './routes/periodos.js'
+import { progresoRouter } from './routes/progreso.js'
 import { tareasRouter } from './routes/tareas.js'
 import { LIMITE_JSON_FORMACION, adminRecursosRouter, recursosRouter } from './routes/recursos.js'
 
@@ -86,6 +87,7 @@ export function createApp(): Express {
   app.use('/api', historialRouter)
   app.use('/api', recursosRouter)
   app.use('/api', cursosRouter)
+  app.use('/api', progresoRouter)
 
   app.use(manejadorErrores)
 

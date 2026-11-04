@@ -174,6 +174,9 @@ export const LARGO_MAXIMO_LECCION = {
   contenido: 20_000,
 } as const
 
+/** Respuesta privada a una lección de reflexión (CUR-03). */
+export const LARGO_MAXIMO_REFLEXION = 5_000
+
 export function esNivelCurso(valor: string): valor is NivelCurso {
   return (NIVELES_CURSO as readonly string[]).includes(valor)
 }

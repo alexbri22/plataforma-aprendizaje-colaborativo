@@ -166,6 +166,8 @@ model Usuario {
 
   recursosFormativos RecursoFormativo[]
   cursos             Curso[]
+  inscripcionesCurso InscripcionCurso[]
+  recursosGuardados  RecursoGuardado[]
 
   @@map("usuarios")
 }
@@ -464,13 +466,13 @@ enum TipoEntidadComentario {
 // visibilidad no es un atributo propio: la hereda la entidad referida
 // (concepto §5.3).
 model Comentario {
-  idComentario       String                 @id @default(uuid()) @map("id_comentario")
-  idMembresiaAutor   String                 @map("id_membresia_autor")
-  tipoEntidad        TipoEntidadComentario  @map("tipo_entidad")
-  idEntidad          String                 @map("id_entidad")
+  idComentario       String                @id @default(uuid()) @map("id_comentario")
+  idMembresiaAutor   String                @map("id_membresia_autor")
+  tipoEntidad        TipoEntidadComentario @map("tipo_entidad")
+  idEntidad          String                @map("id_entidad")
   contenido          String
-  fechaCreacion      DateTime               @default(now()) @map("fecha_creacion")
-  fechaActualizacion DateTime               @updatedAt @map("fecha_actualizacion")
+  fechaCreacion      DateTime              @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime              @updatedAt @map("fecha_actualizacion")
 
   autor Membresia @relation(fields: [idMembresiaAutor], references: [idMembresia], onDelete: Cascade)
 
@@ -614,9 +616,10 @@ model RecursoFormativo {
   fechaCreacion      DateTime         @default(now()) @map("fecha_creacion")
   fechaActualizacion DateTime         @updatedAt @map("fecha_actualizacion")
 
-  autor     Usuario?        @relation(fields: [idUsuarioAutor], references: [idUsuario], onDelete: SetNull)
+  autor     Usuario?          @relation(fields: [idUsuarioAutor], references: [idUsuario], onDelete: SetNull)
   archivo   ArchivoRecurso?
   lecciones LeccionCurso[]
+  guardados RecursoGuardado[]
 
   @@index([estatus, orden])
   @@map("recursos_formativos")
@@ -688,8 +691,9 @@ model Curso {
   fechaCreacion      DateTime       @default(now()) @map("fecha_creacion")
   fechaActualizacion DateTime       @updatedAt @map("fecha_actualizacion")
 
-  autor     Usuario?       @relation(fields: [idUsuarioAutor], references: [idUsuario], onDelete: SetNull)
-  lecciones LeccionCurso[]
+  autor         Usuario?           @relation(fields: [idUsuarioAutor], references: [idUsuario], onDelete: SetNull)
+  lecciones     LeccionCurso[]
+  inscripciones InscripcionCurso[]
 
   @@index([estatus, orden])
   @@map("cursos")
@@ -713,10 +717,86 @@ model LeccionCurso {
   obligatoria Boolean     @default(true)
   duracionMin Int?        @map("duracion_min")
 
-  curso   Curso             @relation(fields: [idCurso], references: [idCurso], onDelete: Cascade)
-  recurso RecursoFormativo? @relation(fields: [idRecurso], references: [idRecurso], onDelete: Restrict)
+  curso       Curso                @relation(fields: [idCurso], references: [idCurso], onDelete: Cascade)
+  recurso     RecursoFormativo?    @relation(fields: [idRecurso], references: [idRecurso], onDelete: Restrict)
+  progresos   ProgresoLeccion[]
+  reflexiones ReflexionFormativa[]
 
   @@unique([idCurso, orden])
   @@index([idRecurso])
   @@map("lecciones_curso")
+}
+
+// ---- Progreso del alumno (docs/diseno-desarrollo-formacion.md §9.1 y la
+// nota del incremento 3). Todo es privado de la persona: ningún otro usuario
+// ni el administrador lo consulta. Sin versiones de curso, el progreso se
+// guarda por lección y el porcentaje se calcula con las lecciones actuales.
+
+// Se crea (o se recupera) la primera vez que la persona toca el curso con
+// sesión. La finalización se fija una sola vez y no se borra aunque el curso
+// cambie después.
+model InscripcionCurso {
+  idInscripcion        String    @id @default(uuid()) @map("id_inscripcion")
+  idUsuario            String    @map("id_usuario")
+  idCurso              String    @map("id_curso")
+  fechaInicio          DateTime  @default(now()) @map("fecha_inicio")
+  fechaFinalizacion    DateTime? @map("fecha_finalizacion")
+  // Para "Continúa aprendiendo": el curso que se tocó más recientemente.
+  fechaUltimaActividad DateTime  @default(now()) @map("fecha_ultima_actividad")
+
+  usuario     Usuario              @relation(fields: [idUsuario], references: [idUsuario], onDelete: Cascade)
+  // RESTRICT: un curso con inscripciones no se elimina, solo se retira, para
+  // no borrar el progreso de nadie.
+  curso       Curso                @relation(fields: [idCurso], references: [idCurso], onDelete: Restrict)
+  progresos   ProgresoLeccion[]
+  reflexiones ReflexionFormativa[]
+
+  @@unique([idUsuario, idCurso])
+  @@index([idCurso])
+  @@map("inscripciones_curso")
+}
+
+// Una lección completada dentro de una inscripción. Si el administrador quita
+// la lección, su progreso se va con ella.
+model ProgresoLeccion {
+  idInscripcion   String   @map("id_inscripcion")
+  idLeccion       String   @map("id_leccion")
+  fechaCompletada DateTime @default(now()) @map("fecha_completada")
+
+  inscripcion InscripcionCurso @relation(fields: [idInscripcion], references: [idInscripcion], onDelete: Cascade)
+  leccion     LeccionCurso     @relation(fields: [idLeccion], references: [idLeccion], onDelete: Cascade)
+
+  @@id([idInscripcion, idLeccion])
+  @@index([idLeccion])
+  @@map("progreso_leccion")
+}
+
+// Respuesta privada a una lección de reflexión. Nunca se califica ni se
+// muestra a otra persona.
+model ReflexionFormativa {
+  idInscripcion      String   @map("id_inscripcion")
+  idLeccion          String   @map("id_leccion")
+  texto              String
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+
+  inscripcion InscripcionCurso @relation(fields: [idInscripcion], references: [idInscripcion], onDelete: Cascade)
+  leccion     LeccionCurso     @relation(fields: [idLeccion], references: [idLeccion], onDelete: Cascade)
+
+  @@id([idInscripcion, idLeccion])
+  @@index([idLeccion])
+  @@map("reflexiones_formativas")
+}
+
+// Biblioteca personal: guardar no inicia un curso ni genera medición.
+model RecursoGuardado {
+  idUsuario     String   @map("id_usuario")
+  idRecurso     String   @map("id_recurso")
+  fechaGuardado DateTime @default(now()) @map("fecha_guardado")
+
+  usuario Usuario          @relation(fields: [idUsuario], references: [idUsuario], onDelete: Cascade)
+  recurso RecursoFormativo @relation(fields: [idRecurso], references: [idRecurso], onDelete: Cascade)
+
+  @@id([idUsuario, idRecurso])
+  @@index([idRecurso])
+  @@map("recursos_guardados")
 }

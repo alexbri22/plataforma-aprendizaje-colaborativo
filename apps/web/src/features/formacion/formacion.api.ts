@@ -515,3 +515,87 @@ export function reordenarLecciones(idCurso: string, lecciones: string[]): Promis
     json('PUT', { lecciones }),
   )
 }
+
+// ---- Progreso personal: espejo de apps/api/src/services/formacion/progreso.service.ts ----
+//
+// Todo exige sesión y es de la propia persona (/api/me y las acciones sobre
+// un curso). Leer cursos sigue siendo libre; esto solo guarda el avance.
+
+export interface ReflexionPropia {
+  idLeccion: string
+  texto: string
+  fechaActualizacion: string
+}
+
+export interface SiguienteLeccion {
+  idLeccion: string
+  titulo: string
+}
+
+export interface MiProgresoCurso {
+  idCurso: string
+  inscrito: boolean
+  fechaInicio: string | null
+  fechaFinalizacion: string | null
+  leccionesCompletadas: string[]
+  /** Lecciones que cuentan para terminar: obligatorias y disponibles. */
+  total: number
+  completadas: number
+  porcentaje: number
+  siguiente: SiguienteLeccion | null
+  reflexiones: ReflexionPropia[]
+}
+
+export interface ResultadoMarcar {
+  progreso: MiProgresoCurso
+  /** True solo en la marca que terminó el curso. */
+  cursoCompletadoAhora: boolean
+}
+
+function rutaCursoPublico(idCurso: string): string {
+  return `/api/cursos/${encodeURIComponent(idCurso)}`
+}
+
+export async function obtenerMiProgreso(idCurso: string): Promise<MiProgresoCurso> {
+  const { progreso } = await pedir<{ progreso: MiProgresoCurso }>(
+    `/api/me/cursos/${encodeURIComponent(idCurso)}`,
+    'No pudimos cargar tu progreso. Intenta de nuevo.',
+  )
+  return progreso
+}
+
+export async function inscribirse(idCurso: string): Promise<MiProgresoCurso> {
+  const { progreso } = await pedir<{ progreso: MiProgresoCurso }>(
+    `${rutaCursoPublico(idCurso)}/inscripcion`,
+    'No pudimos empezar el curso. Intenta de nuevo.',
+    { method: 'POST' },
+  )
+  return progreso
+}
+
+export function marcarLeccion(
+  idCurso: string,
+  idLeccion: string,
+  completada: boolean,
+): Promise<ResultadoMarcar> {
+  return pedir<ResultadoMarcar>(
+    `${rutaCursoPublico(idCurso)}/lecciones/${encodeURIComponent(idLeccion)}/completada`,
+    completada
+      ? 'No pudimos marcar la lección. Intenta de nuevo.'
+      : 'No pudimos desmarcar la lección. Intenta de nuevo.',
+    { method: completada ? 'PUT' : 'DELETE' },
+  )
+}
+
+export async function guardarReflexion(
+  idCurso: string,
+  idLeccion: string,
+  texto: string,
+): Promise<ReflexionPropia | null> {
+  const { reflexion } = await pedir<{ reflexion: ReflexionPropia | null }>(
+    `${rutaCursoPublico(idCurso)}/lecciones/${encodeURIComponent(idLeccion)}/reflexion`,
+    'No pudimos guardar tu reflexión. Intenta de nuevo.',
+    json('PUT', { texto }),
+  )
+  return reflexion
+}

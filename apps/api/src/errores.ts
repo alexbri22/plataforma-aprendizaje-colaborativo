@@ -41,6 +41,8 @@ export type CodigoError =
   | 'leccion_no_encontrada'
   | 'recurso_en_uso'
   | 'curso_desactualizado'
+  | 'curso_con_inscripciones'
+  | 'leccion_no_disponible'
   | 'solicitud_no_encontrada'
 
 export abstract class ErrorDominio extends Error {
@@ -483,5 +485,28 @@ export class ErrorSolicitudNoEncontrada extends ErrorDominio {
 
   constructor(mensaje = 'Esta solicitud ya no está pendiente.') {
     super(mensaje)
+  }
+}
+
+// Un curso que alguien ya empezó no se elimina: se borraría su progreso y sus
+// reflexiones. Se puede retirar (docs/diseno-desarrollo-formacion.md, nota del
+// incremento 3).
+export class ErrorCursoConInscripciones extends ErrorDominio {
+  readonly codigo = 'curso_con_inscripciones' as const
+  readonly status = 409
+
+  constructor() {
+    super('No se puede eliminar: hay personas que ya empezaron este curso. Puedes retirarlo.')
+  }
+}
+
+// La lección usa un recurso que ya no está publicado: no se puede completar
+// y tampoco cuenta para terminar el curso.
+export class ErrorLeccionNoDisponible extends ErrorDominio {
+  readonly codigo = 'leccion_no_disponible' as const
+  readonly status = 409
+
+  constructor() {
+    super('Esta lección no está disponible por ahora.')
   }
 }
