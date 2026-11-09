@@ -1,18 +1,11 @@
-import { LONGITUD_MAXIMA_CONTENIDO_BITACORA } from '@plataforma/shared'
+import { validarRespuestasBitacora, type RespuestasBitacora } from '@plataforma/shared'
 import { useState, type FormEvent } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { AppShellEquipo } from '../../components/AppShellEquipo'
-import {
-  AvisoError,
-  Button,
-  Card,
-  IconoCargando,
-  Paginacion,
-  Textarea,
-  rebanar,
-} from '../../components/ui'
+import { AvisoError, Button, Card, IconoCargando, Paginacion, rebanar } from '../../components/ui'
 import { useActividad } from '../actividades'
 import { useEquipo } from '../equipos/useEquipos'
+import { CamposBitacora } from './CamposBitacora'
 import { TarjetaEntradaBitacora } from './TarjetaEntradaBitacora'
 import {
   useBitacora,
@@ -32,18 +25,42 @@ function mensajeDe(error: unknown): string {
     : 'No pudimos completar la acción. Intenta de nuevo.'
 }
 
-function FormularioNuevaEntrada({ onCrear }: { onCrear: (contenido: string) => Promise<void> }) {
-  const [contenido, setContenido] = useState('')
+// Entrada guiada (nucleo §9.3): plegada tras un botón, porque son diez
+// preguntas y abiertas siempre empujarían las entradas fuera de la vista.
+function FormularioNuevaEntrada({
+  onCrear,
+}: {
+  onCrear: (respuestas: RespuestasBitacora) => Promise<void>
+}) {
+  const [abierto, setAbierto] = useState(false)
+  const [respuestas, setRespuestas] = useState<RespuestasBitacora>({})
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [errores, setErrores] = useState<Record<string, string>>({})
+
+  const algunaRespuesta = Object.values(respuestas).some((texto) => texto?.trim())
+
+  function cerrar() {
+    setAbierto(false)
+    setRespuestas({})
+    setError(null)
+    setErrores({})
+  }
 
   async function manejarEnviar(evento: FormEvent) {
     evento.preventDefault()
+    const validacion = validarRespuestasBitacora(respuestas)
+    if ('errores' in validacion) {
+      setErrores(validacion.errores)
+      setError(validacion.errores.respuestas ?? null)
+      return
+    }
     setGuardando(true)
     setError(null)
+    setErrores({})
     try {
-      await onCrear(contenido)
-      setContenido('')
+      await onCrear(validacion.respuestas)
+      cerrar()
     } catch (e) {
       setError(mensajeDe(e))
     } finally {
@@ -51,20 +68,33 @@ function FormularioNuevaEntrada({ onCrear }: { onCrear: (contenido: string) => P
     }
   }
 
+  if (!abierto) {
+    return (
+      <div>
+        <Button size="sm" onClick={() => setAbierto(true)}>
+          Nueva entrada
+        </Button>
+      </div>
+    )
+  }
+
   return (
     <Card className={styles.formularioNuevo}>
       <form onSubmit={manejarEnviar} className={styles.formulario}>
-        <Textarea
-          label="Nueva entrada"
-          value={contenido}
-          onChange={(e) => setContenido(e.target.value)}
-          maxLength={LONGITUD_MAXIMA_CONTENIDO_BITACORA}
-          placeholder="Qué avanzaste, qué se te dificultó."
+        <CamposBitacora
+          respuestas={respuestas}
+          errores={errores}
+          onCambiar={(clave, texto) => setRespuestas((previas) => ({ ...previas, [clave]: texto }))}
         />
         {error ? <AvisoError mensaje={error} /> : null}
-        <Button type="submit" size="sm" disabled={guardando || contenido.trim() === ''}>
-          {guardando ? <IconoCargando size={14} /> : 'Agregar'}
-        </Button>
+        <div className={styles.acciones}>
+          <Button type="submit" size="sm" disabled={guardando || !algunaRespuesta}>
+            {guardando ? <IconoCargando size={14} /> : 'Guardar entrada'}
+          </Button>
+          <Button type="button" variant="secondary" size="sm" disabled={guardando} onClick={cerrar}>
+            Cancelar
+          </Button>
+        </div>
       </form>
     </Card>
   )
@@ -151,8 +181,8 @@ export function PantallaMiBitacora() {
       <div className={styles.contenido}>
         {puedeEscribir ? (
           <FormularioNuevaEntrada
-            onCrear={async (contenido) => {
-              await crear.mutateAsync(contenido)
+            onCrear={async (respuestas) => {
+              await crear.mutateAsync(respuestas)
             }}
           />
         ) : null}
@@ -166,7 +196,7 @@ export function PantallaMiBitacora() {
         ) : entradasQuery.data.length === 0 ? (
           <p className={styles.ayuda}>
             {puedeEscribir
-              ? 'Todavía no has escrito nada aquí. Usa el formulario para agregar tu primera entrada.'
+              ? 'Todavía no has escrito nada aquí. Usa Nueva entrada para agregar la primera.'
               : 'Todavía no hay entradas aquí.'}
           </p>
         ) : (
@@ -188,10 +218,10 @@ export function PantallaMiBitacora() {
                     idMiMembresia={actividad.idMiMembresia}
                     puedeComentar={puedeComentar}
                     expandidaInicial={entrada.id === idAAbrir}
-                    onGuardar={async (contenido) => {
+                    onGuardar={async (respuestas) => {
                       limpiarError(entrada.id)
                       try {
-                        await editar.mutateAsync({ idEntrada: entrada.id, contenido })
+                        await editar.mutateAsync({ idEntrada: entrada.id, respuestas })
                       } catch (e) {
                         alFallar(entrada.id, e)
                         throw e

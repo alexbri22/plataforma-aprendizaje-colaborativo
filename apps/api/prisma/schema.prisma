@@ -441,10 +441,14 @@ enum TipoElemento {
 // §9.3. Vinculada a la membresía y no al equipo, de modo que acompaña a la
 // persona si se la reasigna. La propiedad es del módulo de Seguimiento, que
 // es el único que lee y escribe esta tabla.
+//
+// Bitácora guiada (nucleo §9.3): `respuestas` guarda un texto por clave de
+// pregunta de PREGUNTAS_BITACORA (packages/shared). Las claves se validan en
+// la capa de servicios, no en el esquema.
 model Bitacora {
   idEntrada          String   @id @default(uuid()) @map("id_entrada")
   idMembresia        String   @map("id_membresia")
-  contenido          String
+  respuestas         Json
   fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
   fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
 

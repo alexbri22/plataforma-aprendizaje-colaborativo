@@ -33,7 +33,7 @@ bitacoraRouter.get(
   },
 )
 
-// POST /api/actividades/{id}/bitacora: crea una entrada propia.
+// POST /api/actividades/{id}/bitacora: crea una entrada guiada propia.
 bitacoraRouter.post(
   '/actividades/:id/bitacora',
   exigirSesion,
@@ -41,9 +41,9 @@ bitacoraRouter.post(
   async (req, res) => {
     const { actividad, membresia } = req.contextoActividad!
     const actor = req.actor as UsuarioPublico
-    const { contenido } = validarDatosEntradaBitacora(req.body)
+    const { respuestas } = validarDatosEntradaBitacora(req.body)
 
-    const entrada = await crearEntradaBitacora(actividad, contenido, actor.idUsuario, membresia)
+    const entrada = await crearEntradaBitacora(actividad, respuestas, actor.idUsuario, membresia)
     res.status(201).location(`/api/bitacora/${entrada.id}`).json({ entrada })
   },
 )
@@ -53,7 +53,7 @@ bitacoraRouter.post(
 // resuelve la actividad por su cuenta.
 bitacoraRouter.patch('/bitacora/:id', exigirSesion, async (req, res) => {
   const actor = req.actor as UsuarioPublico
-  const { contenido } = validarDatosEntradaBitacora(req.body)
-  const entrada = await editarEntradaBitacora(req.params.id as string, contenido, actor.idUsuario)
+  const { respuestas } = validarDatosEntradaBitacora(req.body)
+  const entrada = await editarEntradaBitacora(req.params.id as string, respuestas, actor.idUsuario)
   res.status(200).json({ entrada })
 })

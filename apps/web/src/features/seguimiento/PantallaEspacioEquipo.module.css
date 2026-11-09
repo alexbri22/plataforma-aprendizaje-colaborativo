@@ -26,3 +26,8 @@
   flex-direction: column;
   gap: var(--space-3);
 }
+
+.acciones {
+  display: flex;
+  gap: var(--space-2);
+}

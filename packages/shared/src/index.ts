@@ -97,21 +97,28 @@ export type { PeriodoGenerado } from './periodos.js'
 
 export {
   EXTENSIONES_ARCHIVO_ELEMENTO,
-  LONGITUD_MAXIMA_CONTENIDO_BITACORA,
+  BLOQUES_BITACORA,
   LONGITUD_MAXIMA_CONTENIDO_COMENTARIO,
   LONGITUD_MAXIMA_CONTENIDO_ELEMENTO,
   LONGITUD_MAXIMA_ENLACE_ELEMENTO,
   MAX_BYTES_ARCHIVO_ELEMENTO,
   TIPOS_ARCHIVO_ELEMENTO,
+  LONGITUD_MAXIMA_RESPUESTA_BITACORA,
+  PREGUNTAS_BITACORA,
   TIPOS_ENTIDAD_COMENTARIO,
   esTipoArchivoElemento,
+  mismasRespuestasBitacora,
+  primeraRespuestaBitacora,
+  validarRespuestasBitacora,
 } from './seguimiento.js'
 
 export type {
   Comentario,
   ArchivoDeElemento,
   ElementoDeEspacioEquipo,
+  ClavePreguntaBitacora,
   EntradaBitacora,
+  RespuestasBitacora,
   TipoEntidadComentario,
 } from './seguimiento.js'
 

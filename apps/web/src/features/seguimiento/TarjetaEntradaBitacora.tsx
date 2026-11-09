@@ -1,7 +1,13 @@
-import { LONGITUD_MAXIMA_CONTENIDO_BITACORA, type EntradaBitacora } from '@plataforma/shared'
+import {
+  primeraRespuestaBitacora,
+  validarRespuestasBitacora,
+  type EntradaBitacora,
+  type RespuestasBitacora,
+} from '@plataforma/shared'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { formatearFechaHora } from '../actividades'
-import { AvisoError, Button, Card, IconoCargando, Textarea } from '../../components/ui'
+import { AvisoError, Button, Card, IconoCargando } from '../../components/ui'
+import { CamposBitacora, RespuestasDeBitacora } from './CamposBitacora'
 import { ComentariosDeEntrada } from './ComentariosDeEntrada'
 import { IconoChevron } from './IconoChevron'
 import styles from './TarjetaElemento.module.css'
@@ -12,7 +18,7 @@ interface TarjetaEntradaBitacoraProps {
   puedeEditar: boolean
   guardando: boolean
   error: string | null
-  onGuardar: (contenido: string) => Promise<void>
+  onGuardar: (respuestas: RespuestasBitacora) => Promise<void>
   idMiMembresia: string | undefined
   /** Organizador o co-organizador con `calificar_y_comentar` (nucleo §10.4). */
   puedeComentar: boolean
@@ -39,7 +45,8 @@ export function TarjetaEntradaBitacora({
 }: TarjetaEntradaBitacoraProps) {
   const [expandida, setExpandida] = useState(expandidaInicial)
   const [editando, setEditando] = useState(false)
-  const [borrador, setBorrador] = useState(entrada.contenido)
+  const [borrador, setBorrador] = useState<RespuestasBitacora>(entrada.respuestas)
+  const [errores, setErrores] = useState<Record<string, string>>({})
   const encabezadoRef = useRef<HTMLButtonElement>(null)
 
   // expandidaInicial refleja el id pedido por la URL. La tarjeta puede ya
@@ -56,11 +63,24 @@ export function TarjetaEntradaBitacora({
     if (expandidaInicial) encabezadoRef.current?.scrollIntoView({ block: 'center' })
   }, [expandidaInicial])
 
+  function empezarEdicion() {
+    setBorrador(entrada.respuestas)
+    setErrores({})
+    setEditando(true)
+  }
+
   async function manejarGuardar(evento: FormEvent) {
     evento.preventDefault()
-    await onGuardar(borrador)
+    const validacion = validarRespuestasBitacora(borrador)
+    if ('errores' in validacion) {
+      setErrores(validacion.errores)
+      return
+    }
+    await onGuardar(validacion.respuestas)
     setEditando(false)
   }
+
+  const sinRespuestas = !Object.values(borrador).some((texto) => texto?.trim())
 
   return (
     <Card className={styles.tarjeta}>
@@ -71,7 +91,9 @@ export function TarjetaEntradaBitacora({
         onClick={() => setExpandida((previo) => !previo)}
         aria-expanded={expandida}
       >
-        <span className={styles.contenidoPreview}>{entrada.contenido}</span>
+        <span className={styles.contenidoPreview}>
+          {primeraRespuestaBitacora(entrada.respuestas)}
+        </span>
         <span className={styles.autoria}>{formatearFechaHora(entrada.fechaActualizacion)}</span>
         <IconoChevron className={styles.chevron} />
       </button>
@@ -80,16 +102,17 @@ export function TarjetaEntradaBitacora({
         <div className={styles.panel}>
           {editando ? (
             <form onSubmit={manejarGuardar} className={styles.formulario}>
-              <Textarea
-                label="Contenido"
-                value={borrador}
-                onChange={(e) => setBorrador(e.target.value)}
-                maxLength={LONGITUD_MAXIMA_CONTENIDO_BITACORA}
-                autoFocus
+              <CamposBitacora
+                respuestas={borrador}
+                errores={errores}
+                onCambiar={(clave, texto) =>
+                  setBorrador((previas) => ({ ...previas, [clave]: texto }))
+                }
               />
               {error ? <AvisoError mensaje={error} /> : null}
+              {errores.respuestas ? <AvisoError mensaje={errores.respuestas} /> : null}
               <div className={styles.acciones}>
-                <Button type="submit" size="sm" disabled={guardando || borrador.trim() === ''}>
+                <Button type="submit" size="sm" disabled={guardando || sinRespuestas}>
                   {guardando ? <IconoCargando size={14} /> : 'Guardar'}
                 </Button>
                 <Button
@@ -97,10 +120,7 @@ export function TarjetaEntradaBitacora({
                   variant="secondary"
                   size="sm"
                   disabled={guardando}
-                  onClick={() => {
-                    setBorrador(entrada.contenido)
-                    setEditando(false)
-                  }}
+                  onClick={() => setEditando(false)}
                 >
                   Cancelar
                 </Button>
@@ -108,18 +128,10 @@ export function TarjetaEntradaBitacora({
             </form>
           ) : (
             <>
-              <p className={styles.contenido}>{entrada.contenido}</p>
+              <RespuestasDeBitacora respuestas={entrada.respuestas} />
               {puedeEditar ? (
                 <div className={styles.acciones}>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setBorrador(entrada.contenido)
-                      setEditando(true)
-                    }}
-                  >
+                  <Button type="button" variant="ghost" size="sm" onClick={empezarEdicion}>
                     Editar
                   </Button>
                 </div>

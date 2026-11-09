@@ -7,7 +7,11 @@
 //   npm run seed:dev -w apps/api
 //
 // Todas las cuentas usan la misma contraseña (CONTRASENA).
-import { PERMISOS_COORGANIZADOR_POR_DEFECTO, type FuncionSeguimiento } from '@plataforma/shared'
+import {
+  PERMISOS_COORGANIZADOR_POR_DEFECTO,
+  type FuncionSeguimiento,
+  type RespuestasBitacora,
+} from '@plataforma/shared'
 import { prisma } from '../src/data/prisma.js'
 import { config } from '../src/config.js'
 import {
@@ -168,13 +172,15 @@ async function crearElementoEspacio(
   tipo: 'metas' | 'avances' | 'recursos',
   contenido: string,
 ) {
-  return crearElementoDeServicio(idEquipo, tipo, contenido, idUsuarioAutor)
+  return crearElementoDeServicio(idEquipo, tipo, contenido, null, idUsuarioAutor)
 }
 
+// La bitácora es guiada (nucleo §9.3): un texto suelto del sembrado va como
+// respuesta a la primera pregunta.
 async function crearEntradaBitacora(
   idActividad: string,
   idUsuarioAutor: string,
-  contenido: string,
+  respuestas: RespuestasBitacora | string,
 ) {
   const membresiaActor = await buscarMembresiaConPermisos(idUsuarioAutor, idActividad)
   if (!membresiaActor) {
@@ -184,7 +190,7 @@ async function crearEntradaBitacora(
   }
   return crearEntradaBitacoraDeServicio(
     { idActividad, estado: 'desarrollo' },
-    contenido,
+    typeof respuestas === 'string' ? { conocimientos_adquiridos: respuestas } : respuestas,
     idUsuarioAutor,
     membresiaActor,
   )
@@ -436,11 +442,13 @@ async function sembrarEnDesarrolloConContenido(idPorCorreo: IdPorCorreo) {
     'Escribí la primera versión del documento de integración, falta la sección de errores.',
   )
 
-  const primeraEntradaAlumno01 = await crearEntradaBitacora(
-    idActividad,
-    idUsuario('alumno01'),
-    'Hoy me costó decidir la jerarquía visual de la pantalla de inicio, al final usé la que vimos en clase.',
-  )
+  const primeraEntradaAlumno01 = await crearEntradaBitacora(idActividad, idUsuario('alumno01'), {
+    conocimientos_adquiridos: 'Aprendí a definir la jerarquía visual de una pantalla de inicio.',
+    aspecto_mas_dificil:
+      'Me costó decidir la jerarquía visual de la pantalla de inicio; al final usé la que vimos en clase.',
+    tareas_cumplidas: 'Sí, entregué el wireframe que me tocaba.',
+    aportacion_concreta: 'Propuse la estructura de navegación que adoptó el equipo.',
+  })
   await crearEntradaBitacora(
     idActividad,
     idUsuario('alumno01'),

@@ -1,5 +1,10 @@
 import type { Bitacora as FilaBitacora, EstadoActividad, Prisma } from '@prisma/client'
-import { type EntradaBitacora } from '@plataforma/shared'
+import {
+  mismasRespuestasBitacora,
+  primeraRespuestaBitacora,
+  type EntradaBitacora,
+  type RespuestasBitacora,
+} from '@plataforma/shared'
 import { prisma } from '../../data/prisma.js'
 import {
   ErrorAccionNoPermitida,
@@ -28,7 +33,8 @@ function aRespuesta(fila: FilaBitacora): EntradaBitacora {
   return {
     id: fila.idEntrada,
     idMembresia: fila.idMembresia,
-    contenido: fila.contenido,
+    // Escrito solo por este servicio, ya validado contra PREGUNTAS_BITACORA.
+    respuestas: fila.respuestas as RespuestasBitacora,
     fechaCreacion: fila.fechaCreacion.toISOString(),
     fechaActualizacion: fila.fechaActualizacion.toISOString(),
   }
@@ -102,7 +108,7 @@ async function exigirBitacoraHabilitada(idActividad: string): Promise<void> {
 // crea una entrada nueva.
 export async function crearEntradaBitacora(
   actividad: ActividadParaBitacora,
-  contenido: string,
+  respuestas: RespuestasBitacora,
   idUsuarioActor: string,
   membresiaActor: MembresiaActor,
 ): Promise<EntradaBitacora> {
@@ -117,7 +123,7 @@ export async function crearEntradaBitacora(
 
   const fila = await prisma.$transaction(async (tx) => {
     const creada = await tx.bitacora.create({
-      data: { idMembresia: membresiaActor.idMembresia, contenido },
+      data: { idMembresia: membresiaActor.idMembresia, respuestas },
     })
 
     await registrarEvento(tx, {
@@ -132,7 +138,7 @@ export async function crearEntradaBitacora(
       // bitácora — el cliente lo usa para construir el enlace de vuelta
       // (la propia o la de otra persona) sin otra consulta.
       datos: {
-        extracto: contenido.slice(0, 140),
+        extracto: primeraRespuestaBitacora(respuestas).slice(0, 140),
         idMembresia: membresiaActor.idMembresia,
         ...(idEquipoAutor ? { idEquipo: idEquipoAutor } : {}),
       },
@@ -179,7 +185,7 @@ async function contextoDeEntradaPropia(
 // Nucleo §9.4 no lista DELETE: no existe.
 export async function editarEntradaBitacora(
   idEntrada: string,
-  contenido: string,
+  respuestas: RespuestasBitacora,
   idUsuarioActor: string,
 ): Promise<EntradaBitacora> {
   const { entrada, idActividad, membresiaActor } = await contextoDeEntradaPropia(
@@ -193,9 +199,10 @@ export async function editarEntradaBitacora(
   const idEquipoAutor = await obtenerIdEquipoDeMembresia(membresiaActor.idMembresia)
 
   const fila = await prisma.$transaction(async (tx) => {
-    if (contenido === entrada.contenido) return entrada
+    const anteriores = entrada.respuestas as RespuestasBitacora
+    if (mismasRespuestasBitacora(respuestas, anteriores)) return entrada
 
-    const actualizada = await tx.bitacora.update({ where: { idEntrada }, data: { contenido } })
+    const actualizada = await tx.bitacora.update({ where: { idEntrada }, data: { respuestas } })
 
     await registrarEvento(tx, {
       idActividad,
@@ -204,9 +211,11 @@ export async function editarEntradaBitacora(
       tipoEvento: 'entrada_bitacora_modificada',
       tipoEntidad: 'bitacora',
       idEntidad: idEntrada,
+      // antes y despues son las respuestas completas: el historial conserva
+      // el valor anterior (general §8.2).
       datos: {
-        antes: entrada.contenido,
-        despues: contenido,
+        antes: entrada.respuestas,
+        despues: respuestas,
         idMembresia: membresiaActor.idMembresia,
         ...(idEquipoAutor ? { idEquipo: idEquipoAutor } : {}),
       },

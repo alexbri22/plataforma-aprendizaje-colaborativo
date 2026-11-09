@@ -771,7 +771,7 @@ La bitácora está vinculada a la membresía y no al equipo (5.2 del general), d
 - **Mi responsabilidad individual:** si cumplí con mis tareas, si aproveché el tiempo, si preparé y aporté la información que me correspondía, y si asumí las consecuencias de mis decisiones y compromisos.
 - **Mi reflexión:** qué aportación concreta hice al equipo y qué aprendí sobre trabajar cooperativamente.
 
-Ninguna pregunta es obligatoria por separado, pero una entrada necesita al menos una respuesta. Las entradas escritas antes de este cambio se conservan como texto libre y se muestran tal cual; no se convierten ni se pueden reescribir como guiadas. El extracto del evento de historial toma la primera respuesta no vacía.
+Ninguna pregunta es obligatoria por separado, pero una entrada necesita al menos una respuesta. No existe la entrada de texto libre: al hacer el cambio no había entradas reales, y las de los datos de desarrollo se convirtieron con su texto como respuesta a la primera pregunta. El extracto del evento de historial toma la primera respuesta no vacía.
 
 **Puntaje.** La bitácora es el instrumento manual del componente de aprendizaje (4.2 del general). Quien organiza la puntúa por participante, sobre el conjunto de sus entradas; no se puntúa cada entrada por separado.
 
@@ -795,7 +795,7 @@ Su visibilidad es la de la propuesta por defecto de P-06: el autor, quien organi
 | PATCH /api/actividades/{id}/periodos/{idPeriodo} | Organizador              | Mueve las fechas de un periodo o lo cancela y reactiva                   |
 | GET /api/actividades/{id}/bitacora               | Autor u organizador      | Entradas de bitácora, propias o de un participante                       |
 | POST /api/actividades/{id}/bitacora              | Participante             | Crea una entrada guiada: respuestas por clave de pregunta                |
-| PATCH /api/bitacora/{id}                         | Autor                    | Edita una entrada propia; una de texto libre solo edita su texto         |
+| PATCH /api/bitacora/{id}                         | Autor                    | Edita las respuestas de una entrada propia                               |
 | GET /api/elementos/{id}/comentarios              | Integrante u organizador | Comentarios sobre el elemento (10.4); visibilidad heredada del elemento  |
 | POST /api/elementos/{id}/comentarios             | Organizador              | Escribe un comentario sobre el elemento                                  |
 | GET /api/bitacora/{id}/comentarios               | Autor u organizador      | Comentarios sobre la entrada; visibilidad heredada de la bitácora (P-06) |
@@ -804,12 +804,12 @@ Su visibilidad es la de la propuesta por defecto de P-06: el autor, quien organi
 
 ## **9.5 Pantallas**
 
-| Pantalla                    | Contenido                                                                                                                                                                                                                            |
-| :-------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Espacio del equipo          | Metas, avances y recursos en secciones separadas, cada una presente solo si la configuración la habilita. Los obligatorios ausentes se señalan sin bloquear. Cada elemento muestra, si existen, los comentarios de quien organiza    |
-| Reportes del equipo         | Los reportes por periodo. En modo con fechas, los periodos sin reporte aparecen como pendientes                                                                                                                                      |
-| Mi bitácora                 | Formulario guiado con un campo por pregunta (9.3). Entradas propias en orden cronológico inverso, las anteriores como texto libre, con la indicación de quién más puede leerlas y, si existen, los comentarios recibidos en cada una |
-| Seguimiento del organizador | Vista por equipo con el estado de cada función: qué reportó, qué falta y cuándo fue la última aportación                                                                                                                             |
+| Pantalla                    | Contenido                                                                                                                                                                                                                         |
+| :-------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Espacio del equipo          | Metas, avances y recursos en secciones separadas, cada una presente solo si la configuración la habilita. Los obligatorios ausentes se señalan sin bloquear. Cada elemento muestra, si existen, los comentarios de quien organiza |
+| Reportes del equipo         | Los reportes por periodo. En modo con fechas, los periodos sin reporte aparecen como pendientes                                                                                                                                   |
+| Mi bitácora                 | Formulario guiado con un campo por pregunta (9.3). Entradas propias en orden cronológico inverso, con la indicación de quién más puede leerlas y, si existen, los comentarios recibidos en cada una                               |
+| Seguimiento del organizador | Vista por equipo con el estado de cada función: qué reportó, qué falta y cuándo fue la última aportación                                                                                                                          |
 
 ## **9.6 Pregunta abierta de este módulo**
 
@@ -972,7 +972,7 @@ Cada incremento es vertical y se considera terminado cuando tiene sus cuatro pie
 | Incremento                    | Contenido                                                                                                                                               |
 | :---------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Seguimiento                   | Reportes en sus tres modos activos, periodos de reporte, bitácora individual y comentarios sobre elementos del espacio de equipo y entradas de bitácora |
-| Bitácora guiada               | Preguntas fijas por clave, entradas de texto libre conservadas (§9.3)                                                                                   |
+| Bitácora guiada               | Preguntas fijas por clave, una respuesta por pregunta (§9.3)                                                                                            |
 | Estructura de la calificación | Componentes, aspectos e instrumentos con sus pesos, valores por defecto, `calcularCalificacion` con sus pruebas, y Planificar › Calificación            |
 | Autoevaluaciones              | Las tres plantillas, la respuesta y su puntaje (10.1)                                                                                                   |
 | Evaluación por pares          | Campo de distribución entre integrantes, el cálculo de 10.2 y la vista de quien organiza con la autoasignación                                          |

@@ -1,15 +1,16 @@
 import {
   ELEMENTOS_ESPACIO_EQUIPO,
   ESTADOS_PERIODO,
-  LONGITUD_MAXIMA_CONTENIDO_BITACORA,
   LONGITUD_MAXIMA_CONTENIDO_COMENTARIO,
   LONGITUD_MAXIMA_CONTENIDO_ELEMENTO,
   LONGITUD_MAXIMA_ENLACE_ELEMENTO,
   PERIODICIDADES,
   esUrlSegura,
+  validarRespuestasBitacora,
   type ElementoEspacioEquipo,
   type EstadoPeriodo,
   type Periodicidad,
+  type RespuestasBitacora,
 } from '@plataforma/shared'
 import { ErrorValidacion } from '../../errores.js'
 import { parsearFechaCalendario } from '../../utilidades/fechas.js'
@@ -168,13 +169,13 @@ function validarContenidoConLimite(
   return { contenido }
 }
 
-export function validarDatosEntradaBitacora(cuerpo: unknown): { contenido: string } {
-  const resultado = validarContenidoConLimite(
-    comoObjeto(cuerpo).contenido,
-    LONGITUD_MAXIMA_CONTENIDO_BITACORA,
-    'Escribe el contenido de la entrada.',
-  )
-  if ('error' in resultado) throw new ErrorValidacion({ contenido: resultado.error })
+// Crear y editar mandan lo mismo (nucleo §9.3): las respuestas por clave de
+// pregunta, con la validación compartida con el cliente.
+export function validarDatosEntradaBitacora(cuerpo: unknown): {
+  respuestas: RespuestasBitacora
+} {
+  const resultado = validarRespuestasBitacora(comoObjeto(cuerpo).respuestas)
+  if ('errores' in resultado) throw new ErrorValidacion(resultado.errores)
   return resultado
 }
 

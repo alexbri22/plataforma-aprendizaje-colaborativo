@@ -77,14 +77,138 @@ export interface ElementoDeEspacioEquipo {
  *          docs/diseno-desarrollo-nucleo.md §9.3, §9.4, §10.4.
  */
 
-export const LONGITUD_MAXIMA_CONTENIDO_BITACORA = 4000
+/** Bitácora guiada (nucleo §9.3): las preguntas del documento de
+ * evaluaciones, fijas y en código como el catálogo de insignias. Las
+ * respuestas se guardan por clave. Las claves son estables (general §4.2):
+ * nunca se renombran ni se reutilizan, y cambiar el sentido de una pregunta
+ * es una clave nueva. */
+export const BLOQUES_BITACORA = [
+  {
+    clave: 'aprendizaje',
+    titulo: '¿Qué he aprendido?',
+    preguntas: [
+      {
+        clave: 'conocimientos_adquiridos',
+        texto: '¿Qué conocimientos o habilidades he adquirido en este periodo?',
+      },
+      {
+        clave: 'comprendido_gracias_a_companeros',
+        texto: '¿Qué he comprendido mejor gracias a mis compañeros?',
+      },
+      { clave: 'aspecto_mas_dificil', texto: '¿Qué aspecto me ha resultado más difícil?' },
+      { clave: 'duda_pendiente', texto: '¿Qué pregunta o duda me queda por resolver?' },
+    ],
+  },
+  {
+    clave: 'responsabilidad',
+    titulo: 'Mi responsabilidad individual',
+    preguntas: [
+      { clave: 'tareas_cumplidas', texto: '¿He cumplido con las tareas que tenía asignadas?' },
+      { clave: 'tiempo_aprovechado', texto: '¿He aprovechado el tiempo de trabajo?' },
+      {
+        clave: 'informacion_aportada',
+        texto: '¿He preparado y aportado la información que correspondía?',
+      },
+      {
+        clave: 'consecuencias_asumidas',
+        texto: '¿He asumido las consecuencias de mis decisiones y compromisos?',
+      },
+    ],
+  },
+  {
+    clave: 'reflexion',
+    titulo: 'Mi reflexión',
+    preguntas: [
+      {
+        clave: 'aportacion_concreta',
+        texto: '¿Qué aportación concreta he realizado al trabajo del equipo?',
+      },
+      {
+        clave: 'importancia_cooperar',
+        texto: '¿Qué he aprendido sobre la importancia de trabajar cooperativamente?',
+      },
+    ],
+  },
+] as const
+
+export type ClavePreguntaBitacora = (typeof BLOQUES_BITACORA)[number]['preguntas'][number]['clave']
+
+export const PREGUNTAS_BITACORA: readonly { clave: ClavePreguntaBitacora; texto: string }[] =
+  BLOQUES_BITACORA.flatMap(
+    (bloque): readonly { clave: ClavePreguntaBitacora; texto: string }[] => bloque.preguntas,
+  )
+
+export const LONGITUD_MAXIMA_RESPUESTA_BITACORA = 2000
+
+/** Solo las preguntas respondidas: una respuesta vacía no se guarda. */
+export type RespuestasBitacora = Partial<Record<ClavePreguntaBitacora, string>>
+
+/** Validación de una entrada guiada, la misma en el cliente y en el
+ * servidor (nucleo §4.4). Recorta, descarta las respuestas vacías y exige al
+ * menos una. Devuelve el error por clave (o en `respuestas` si es de la
+ * entrada completa) en lugar de lanzar: quien llama decide cómo mostrarlo. */
+export function validarRespuestasBitacora(
+  valor: unknown,
+): { respuestas: RespuestasBitacora } | { errores: Record<string, string> } {
+  if (!valor || typeof valor !== 'object' || Array.isArray(valor)) {
+    return { errores: { respuestas: 'Responde al menos una pregunta.' } }
+  }
+  const claves = PREGUNTAS_BITACORA.map((pregunta) => pregunta.clave as string)
+  const errores: Record<string, string> = {}
+  const respuestas: Record<string, string> = {}
+
+  for (const [clave, texto] of Object.entries(valor)) {
+    if (!claves.includes(clave)) {
+      errores[clave] = 'No es una pregunta de la bitácora.'
+      continue
+    }
+    if (typeof texto !== 'string') {
+      errores[clave] = 'Debe ser texto.'
+      continue
+    }
+    const recortado = texto.trim()
+    if (recortado === '') continue
+    if (recortado.length > LONGITUD_MAXIMA_RESPUESTA_BITACORA) {
+      errores[clave] = `Debe tener a lo más ${LONGITUD_MAXIMA_RESPUESTA_BITACORA} caracteres.`
+      continue
+    }
+    respuestas[clave] = recortado
+  }
+
+  if (Object.keys(errores).length > 0) return { errores }
+  if (Object.keys(respuestas).length === 0) {
+    return { errores: { respuestas: 'Responde al menos una pregunta.' } }
+  }
+  // En el orden del catálogo y no en el de la petición, para que se lean
+  // igual en cualquier parte. Para comparar dos entradas no basta: jsonb
+  // reordena las claves al guardar (ver mismasRespuestasBitacora).
+  const ordenadas: Record<string, string> = {}
+  for (const clave of claves) if (respuestas[clave]) ordenadas[clave] = respuestas[clave]
+  return { respuestas: ordenadas as RespuestasBitacora }
+}
+
+/** Si dos entradas dicen lo mismo, pregunta por pregunta. No se comparan
+ * serializadas porque Postgres guarda jsonb con sus claves reordenadas. */
+export function mismasRespuestasBitacora(a: RespuestasBitacora, b: RespuestasBitacora): boolean {
+  return PREGUNTAS_BITACORA.every(({ clave }) => (a[clave] ?? '') === (b[clave] ?? ''))
+}
+
+/** La primera respuesta en el orden de las preguntas: es el extracto del
+ * historial y la vista previa de la entrada. */
+export function primeraRespuestaBitacora(respuestas: RespuestasBitacora): string {
+  for (const { clave } of PREGUNTAS_BITACORA) {
+    const texto = respuestas[clave]
+    if (texto) return texto
+  }
+  return ''
+}
 
 /** Una entrada de bitácora (general §5.2: bitacoras). Privada: solo su autor
  * y quien organiza o co-organiza con `leer_bitacoras` la leen (P-06). */
 export interface EntradaBitacora {
   id: string
   idMembresia: string
-  contenido: string
+  respuestas: RespuestasBitacora
   fechaCreacion: string
   fechaActualizacion: string
 }
