@@ -136,7 +136,7 @@ Durante esta fase los equipos y participantes individuales hacen uso de las func
 
 ## **Fase 5 — Cierre**
 
-Al llegar la fecha de término, o cuando el organizador lo determine, la actividad entra en periodo de cierre: dejan de aceptarse nuevos reportes de trabajo, entradas de bitácora y avances en el espacio de equipo, pero se habilitan las acciones propias del cierre, que son la calificación por parte del organizador, las evaluaciones configuradas (autoevaluación y evaluación por pares) y el otorgamiento de insignias según lo configurado para la actividad.
+Al llegar la fecha de término, o cuando el organizador lo determine, la actividad entra en periodo de cierre: dejan de aceptarse nuevos reportes de trabajo, entradas de bitácora y avances en el espacio de equipo, pero se habilitan las acciones propias del cierre, que son la captura de puntajes por parte del organizador para completar la calificación y el otorgamiento de insignias según lo configurado para la actividad. Los participantes pueden seguir respondiendo las evaluaciones configuradas (autoevaluaciones y evaluación por pares), que se abren desde el desarrollo.
 
 Cuando el organizador da la actividad por finalizada, o al vencer el plazo de cierre si este fue definido en la configuración, la actividad pasa a estado archivado: queda disponible en modo de solo lectura para todos sus miembros, sin posibilidad de nuevas acciones. Las insignias se otorgan únicamente durante el periodo de cierre, no durante el desarrollo de la actividad, para evitar reconocimientos motivados por la emoción del momento.
 
@@ -172,17 +172,16 @@ A diferencia de un modelo de modos predefinidos, el organizador no elige entre c
 
 ## **5.1 Catálogo de funciones y estados**
 
-| Función                                          | Estados                                                                                                                                                                                                               |
-| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Formación de equipos**                         | Autogestionado por participantes / Propuesta del sistema editable por el organizador / Asignación manual por el organizador                                                                                           |
-| **Reporte de trabajo**                           | Deshabilitado / Libre (sin fechas, formato abierto) / Fechas sugeridas, formato libre / Fechas obligatorias, campos estructurados                                                                                     |
-| **Bitácora individual**                          | Deshabilitada / Habilitada                                                                                                                                                                                            |
-| **Calificación**                                 | Deshabilitada / Habilitada — asignación directa por el organizador (sin rúbrica) / Habilitada — mediante rúbrica definida por el organizador.La calificación se asigna siempre de forma individual, por participante. |
-| **Autoevaluación individual**                    | Deshabilitada / Habilitada                                                                                                                                                                                            |
-| **Autoevaluación grupal**                        | Deshabilitada / Habilitada                                                                                                                                                                                            |
-| **Evaluación por pares**                         | Deshabilitada / Habilitada opcional / Habilitada obligatoria                                                                                                                                                          |
-| **Espacio de equipo (metas, avances, recursos)** | Por elemento: Opcional / Obligatorio                                                                                                                                                                                  |
-| **Insignias**                                    | Deshabilitado / Habilitado — solo el organizador otorga / Habilitado — organizador y participantes otorgan entre sí                                                                                                   |
+| Función                                          | Estados                                                                                                                                                       |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Formación de equipos**                         | Autogestionado por participantes / Propuesta del sistema editable por el organizador / Asignación manual por el organizador                                   |
+| **Reporte de trabajo**                           | Deshabilitado / Libre (sin fechas, formato abierto) / Fechas sugeridas, formato libre / Fechas obligatorias, campos estructurados                             |
+| **Bitácora individual**                          | Deshabilitada / Habilitada                                                                                                                                    |
+| **Calificación**                                 | Deshabilitada / Habilitada. Cuando está habilitada, la calificación se calcula por ponderación (5.3): no se captura. Es siempre individual, por participante. |
+| **Autoevaluaciones**                             | No son una función aparte: son los instrumentos que el organizador elige para cada aspecto del proceso colaborativo (5.3).                                    |
+| **Evaluación por pares**                         | Deshabilitada / Habilitada opcional / Habilitada obligatoria                                                                                                  |
+| **Espacio de equipo (metas, avances, recursos)** | Por elemento: Opcional / Obligatorio                                                                                                                          |
+| **Insignias**                                    | Deshabilitado / Habilitado — solo el organizador otorga / Habilitado — organizador y participantes otorgan entre sí                                           |
 
 _En el estado "Habilitada obligatoria", el sistema no bloquea técnicamente el cierre de la actividad si algún participante no completó su evaluación por pares: la evaluación pendiente se marca como no realizada y el organizador puede consultar quiénes no la completaron. La obligatoriedad es una expectativa visible, no una restricción técnica._
 
@@ -200,16 +199,21 @@ Un comentario no se dirige a un equipo ni a una persona en abstracto: se escribe
 
 **Quién escribe.** El organizador y los co-organizadores con el permiso correspondiente. Los participantes no escriben comentarios: siguen siendo retroalimentación de quien organiza hacia el trabajo, y no una discusión bidireccional. Si en algún momento conviene que quien recibe un comentario pueda responder, es una decisión nueva y pendiente, no algo que este diseño ya resuelva.
 
-Estos comentarios siempre son cualitativos: el sistema no los convierte en número por sí mismos. Su relación con la calificación numérica depende de cómo esté configurada esa función para la actividad:
+Estos comentarios siempre son cualitativos: el sistema no los convierte en número. Son el respaldo del organizador para los puntajes que captura a mano.
 
-- Si la calificación se realiza **mediante rúbrica**, los comentarios son complemento cualitativo a los criterios ya estructurados de la rúbrica.
-- Si la calificación está habilitada **sin rúbrica**, el organizador asigna el número directamente, apoyándose en sus propios comentarios como respaldo — sin que el sistema le imponga una estructura de criterios.
+**Calificación ponderada.** La calificación final de cada participante se calcula; nadie la captura. Es la ponderación de tres componentes: proyecto colaborativo, proceso colaborativo y aprendizaje. El organizador fija el peso de cada uno, y los pesos suman 100 %. Cada componente se desglosa en aspectos con peso propio, y los instrumentos de un aspecto se reparten su peso en partes iguales. Por ejemplo, si el proceso vale 60 %, la interacción vale 10 % del proceso y se aplican tres cuestionarios, cada cuestionario vale 2 % de la calificación.
 
-La calificación es individual: cada participante recibe su propia calificación, incluso cuando el trabajo evaluado es producto del equipo. El sistema no contempla una calificación a nivel de equipo en esta fase; si el organizador desea asignar el mismo valor a todos los integrantes, lo hace capturándolo para cada participante.
+- **Proyecto colaborativo:** el trabajo del equipo. El organizador lo califica por equipo, el puntaje se copia a cada integrante y puede ajustarlo para un participante en particular.
+- **Proceso colaborativo:** los cinco aspectos de la sección 1, cada uno evaluado con los instrumentos que el organizador elija. Un instrumento con plantilla del sistema (las autoevaluaciones con escala de Nunca a Siempre y la evaluación por pares) se puntúa solo a partir de las respuestas. Un instrumento externo, enlazado desde donde esté alojado, lo puntúa el organizador a mano.
+- **Aprendizaje:** la bitácora individual, que el organizador puntúa a mano.
+
+Si un instrumento no aplica a un participante, como la evaluación por pares en un equipo de una sola persona, su peso se reparte entre los demás instrumentos del mismo nivel en proporción a sus pesos.
+
+La calificación es individual: cada participante recibe la suya, aunque el trabajo evaluado sea del equipo. El sistema no contempla una calificación a nivel de equipo; la captura por equipo del proyecto es solo un atajo para escribir el mismo puntaje a cada integrante.
 
 Las calificaciones asignadas en una actividad son internas a la plataforma: no constituyen calificaciones institucionales ni se integran a ningún sistema académico oficial. Por ello, la capacidad de calificar no se restringe a un tipo de cuenta: cualquier organizador puede habilitarla en sus actividades. La validez académica que se le dé a una calificación queda bajo la responsabilidad de quien organiza la actividad, que en contextos escolares será típicamente un docente que decide usar el resultado como insumo para su evaluación oficial.
 
-Autoevaluación, autoevaluación grupal y evaluación por pares mantienen carácter exclusivamente formativo en ambos casos: no se agregan de forma automática a la calificación numérica. El organizador puede consultarlas como contexto adicional, pero su ponderación, si la hay, queda a su criterio manual.
+**Las autoevaluaciones y la evaluación por pares suman a la calificación.** Esto revierte la decisión anterior, que les daba carácter exclusivamente formativo. A partir del documento de evaluaciones de las coordinadoras, tienen valor numérico y entran en la ponderación como instrumentos del proceso colaborativo.
 
 #
 

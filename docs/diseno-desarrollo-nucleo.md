@@ -281,7 +281,7 @@ Tres consecuencias hacen que la decisión valga el campo adicional en la respues
 
 Un mismo esquema, declarado en el paquete compartido, valida en el cliente mientras se escribe y en el servidor al recibir. Evita el desajuste habitual en el que el cliente acepta un valor que el servidor rechaza, y hace que agregar una restricción sea un cambio en un solo archivo. La validación del cliente es de conveniencia, porque adelanta el error a la persona; la del servidor es la que decide.
 
-**El caso de los instrumentos.** Los campos de una rúbrica, de una autoevaluación o de un reporte estructurado son datos y no esquema, por la decisión de instrumentos genéricos de 4.2 del general. Su formulario se construye en tiempo de ejecución a partir de la definición del instrumento, y su validación se deriva del tipo de cada campo. Es la contrapartida prevista de aquella decisión: la validación deja de ser estática y pasa a ser una función de los datos, en el cliente y en el servidor por igual. Lo que la hace sostenible es que la función es la misma en ambos lados y vive en el paquete compartido.
+**El caso de los instrumentos.** Los reactivos de las autoevaluaciones y de la evaluación por pares, y las preguntas de la bitácora, no se cargan como datos: viven en el paquete compartido (`PLANTILLAS_INSTRUMENTO`, `PREGUNTAS_BITACORA`), igual que el catálogo de insignias (4.2 del general). El formulario se construye a partir de esa definición, y la validación de cada respuesta se deriva del tipo de campo del reactivo (likert, distribución entre integrantes o texto). La función que valida es la misma en el cliente y en el servidor. La suma de 100 en la distribución entre integrantes es una regla de dominio y no de forma: depende de quiénes integran el equipo en ese momento, así que el cliente la adelanta como ayuda y el servidor la verifica con la composición real del equipo.
 
 ## **4.5 Estados de pantalla**
 
@@ -311,26 +311,27 @@ El mecanismo de captura es el descrito en 2.4 y no se repite aquí. Lo que corre
 
 La categoría, y no el tipo, determina la visibilidad del evento (8.1 del general). Por eso el catálogo se declara con ambas columnas juntas: un tipo nuevo sin categoría asignada sería invisible para todos o visible de más, y ninguna de las dos cosas se detecta al probar la aplicación a mano.
 
-| Categoría  | Tipos de evento                                                                                 | Módulo      |
-| :--------- | :---------------------------------------------------------------------------------------------- | :---------- |
-| Aportación | Elemento del espacio de equipo creado, modificado o eliminado                                   | Seguimiento |
-| Aportación | Reporte de trabajo creado, modificado o eliminado                                               | Seguimiento |
-| Aportación | Entrada de bitácora creada, modificada o eliminada                                              | Seguimiento |
-| Aportación | Instrumento respondido: autoevaluación individual, autoevaluación grupal o evaluación por pares | Evaluación  |
-| Estructura | Actividad creada                                                                                | Actividades |
-| Estructura | Fase avanzada, con actor de tipo persona o de tipo sistema                                      | Actividades |
-| Estructura | Configuración de una función modificada                                                         | Actividades |
-| Estructura | Invitación enviada, aceptada o rechazada                                                        | Actividades |
-| Estructura | Participante incorporado por clave de ingreso                                                   | Actividades |
-| Estructura | Participante desactivado de la actividad                                                        | Actividades |
-| Estructura | Co-organizador agregado, retirado, o sus permisos modificados                                   | Actividades |
-| Estructura | Equipo creado, modificado (nombre, descripción, forma de trabajo) o eliminado                   | Equipos     |
-| Estructura | Integrante asignado a un equipo, reasignado entre equipos, retirado o intercambiado con otro    | Equipos     |
-| Estructura | Reparto automático de participantes sin equipo ejecutado, con actor de tipo sistema             | Equipos     |
-| Estructura | Propuesta de equipos generada, con su semilla y lo que reemplazó                                | Equipos     |
-| Evaluación | Calificación asignada o modificada                                                              | Evaluación  |
-| Evaluación | Comentario escrito o editado sobre un elemento del espacio de equipo o una entrada de bitácora  | Evaluación  |
-| Evaluación | Insignia otorgada                                                                               | Insignias   |
+| Categoría  | Tipos de evento                                                                                    | Módulo      |
+| :--------- | :------------------------------------------------------------------------------------------------- | :---------- |
+| Aportación | Elemento del espacio de equipo creado, modificado o eliminado                                      | Seguimiento |
+| Aportación | Reporte de trabajo creado, modificado o eliminado                                                  | Seguimiento |
+| Aportación | Entrada de bitácora creada, modificada o eliminada                                                 | Seguimiento |
+| Aportación | Instrumento respondido o respuesta modificada: autoevaluación con plantilla o evaluación por pares | Evaluación  |
+| Estructura | Actividad creada                                                                                   | Actividades |
+| Estructura | Fase avanzada, con actor de tipo persona o de tipo sistema                                         | Actividades |
+| Estructura | Configuración de una función modificada                                                            | Actividades |
+| Estructura | Ponderación de la calificación modificada: pesos, aspectos o instrumentos                          | Evaluación  |
+| Estructura | Invitación enviada, aceptada o rechazada                                                           | Actividades |
+| Estructura | Participante incorporado por clave de ingreso                                                      | Actividades |
+| Estructura | Participante desactivado de la actividad                                                           | Actividades |
+| Estructura | Co-organizador agregado, retirado, o sus permisos modificados                                      | Actividades |
+| Estructura | Equipo creado, modificado (nombre, descripción, forma de trabajo) o eliminado                      | Equipos     |
+| Estructura | Integrante asignado a un equipo, reasignado entre equipos, retirado o intercambiado con otro       | Equipos     |
+| Estructura | Reparto automático de participantes sin equipo ejecutado, con actor de tipo sistema                | Equipos     |
+| Estructura | Propuesta de equipos generada, con su semilla y lo que reemplazó                                   | Equipos     |
+| Evaluación | Puntaje capturado o modificado, de un participante o de un equipo completo                         | Evaluación  |
+| Evaluación | Comentario escrito o editado sobre un elemento del espacio de equipo o una entrada de bitácora     | Evaluación  |
+| Evaluación | Insignia otorgada                                                                                  | Insignias   |
 
 **Los cambios de configuración se registran todos.** No solo los que retiran a los participantes algo que ya estaban usando, conforme a la categoría de estructura de 8.1 del general. Registrar también las habilitaciones cuesta lo mismo y hace legible cómo evolucionó la actividad. Al quedar en la categoría de estructura, el cambio es visible para los participantes y no solo para quien organiza, lo que es coherente con que la configuración determina lo que cada uno puede hacer.
 
@@ -750,11 +751,11 @@ Metas, avances y recursos comparten una sola relación con un atributo de tipo (
 
 La función tiene cuatro estados en 6.2 del general: deshabilitado, libre sin fechas, con fechas sugeridas y formato libre, y con fechas obligatorias y campos estructurados. Los tres modos activos se distinguen en dos dimensiones independientes, el calendario y el formato.
 
-| Modo                | Calendario                                                                   | Formato                                               |
-| :------------------ | :--------------------------------------------------------------------------- | :---------------------------------------------------- |
-| Libre               | El equipo declara el periodo que cubre cada reporte                          | Texto libre                                           |
-| Fechas sugeridas    | El sistema propone el periodo en curso; el equipo puede reportar fuera de él | Texto libre                                           |
-| Fechas obligatorias | Un reporte por periodo definido, y no se admite fuera de ellos               | Campos del instrumento de reporte estructurado (10.1) |
+| Modo                | Calendario                                                                   | Formato                                     |
+| :------------------ | :--------------------------------------------------------------------------- | :------------------------------------------ |
+| Libre               | El equipo declara el periodo que cubre cada reporte                          | Texto libre                                 |
+| Fechas sugeridas    | El sistema propone el periodo en curso; el equipo puede reportar fuera de él | Texto libre                                 |
+| Fechas obligatorias | Un reporte por periodo definido, y no se admite fuera de ellos               | Campos estructurados, sin plantilla todavía |
 
 **Dónde viven los periodos.** Los dos modos con calendario necesitan saber cuáles son los periodos, y la relación de actividades no tiene dónde guardarlos: solo contiene la fecha de inicio, la de término, la fecha límite de inscripción y el plazo de cierre. Para eso existe la relación de periodos de reporte de 4.4 del general, con la actividad a la que pertenece, un orden, una fecha de inicio y una fecha de fin. Su propiedad es de este módulo, que es el único que la referencia, y el reporte la apunta mediante una llave foránea anulable: nula en el modo libre, obligatoria en el de fechas.
 
@@ -762,7 +763,17 @@ La función tiene cuatro estados en 6.2 del general: deshabilitado, libre sin fe
 
 ## **9.3 Bitácora individual**
 
-La bitácora está vinculada a la membresía y no al equipo (5.2 del general), de modo que acompaña a la persona si se la reasigna (8.4). Se compone de entradas con fecha y contenido libre, sin límite de una por día: es un registro personal de avances y dificultades y no un parte diario.
+La bitácora está vinculada a la membresía y no al equipo (5.2 del general), de modo que acompaña a la persona si se la reasigna (8.4). Se compone de entradas con fecha, sin límite de una por día: es un registro personal de avances y no un parte diario.
+
+**Entrada guiada.** Cada entrada nueva responde a las preguntas del documento de evaluaciones, con un campo de texto por pregunta. Las preguntas son fijas, viven en `PREGUNTAS_BITACORA` y se guardan por clave, con la regla de estabilidad de claves de 4.2 del general. Están en tres bloques:
+
+- **Qué he aprendido:** qué conocimientos o habilidades adquirí, qué comprendí mejor gracias a mis compañeros, qué me resultó más difícil y qué duda me queda.
+- **Mi responsabilidad individual:** si cumplí con mis tareas, si aproveché el tiempo, si preparé y aporté la información que me correspondía, y si asumí las consecuencias de mis decisiones y compromisos.
+- **Mi reflexión:** qué aportación concreta hice al equipo y qué aprendí sobre trabajar cooperativamente.
+
+Ninguna pregunta es obligatoria por separado, pero una entrada necesita al menos una respuesta. Las entradas escritas antes de este cambio se conservan como texto libre y se muestran tal cual; no se convierten ni se pueden reescribir como guiadas. El extracto del evento de historial toma la primera respuesta no vacía.
+
+**Puntaje.** La bitácora es el instrumento manual del componente de aprendizaje (4.2 del general). Quien organiza la puntúa por participante, sobre el conjunto de sus entradas; no se puntúa cada entrada por separado.
 
 Su visibilidad es la de la propuesta por defecto de P-06: el autor, quien organiza y los co-organizadores con el permiso correspondiente. La respuesta a esa pregunta cambia lo que los estudiantes escriben en ella, y por eso conviene resolverla antes de implementar la pantalla y no después.
 
@@ -783,8 +794,8 @@ Su visibilidad es la de la propuesta por defecto de P-06: el autor, quien organi
 | PUT /api/actividades/{id}/periodos               | Organizador              | Genera el calendario desde una periodicidad, o lo borra con `ninguna`    |
 | PATCH /api/actividades/{id}/periodos/{idPeriodo} | Organizador              | Mueve las fechas de un periodo o lo cancela y reactiva                   |
 | GET /api/actividades/{id}/bitacora               | Autor u organizador      | Entradas de bitácora, propias o de un participante                       |
-| POST /api/actividades/{id}/bitacora              | Participante             | Crea una entrada                                                         |
-| PATCH /api/bitacora/{id}                         | Autor                    | Edita una entrada propia                                                 |
+| POST /api/actividades/{id}/bitacora              | Participante             | Crea una entrada guiada: respuestas por clave de pregunta                |
+| PATCH /api/bitacora/{id}                         | Autor                    | Edita una entrada propia; una de texto libre solo edita su texto         |
 | GET /api/elementos/{id}/comentarios              | Integrante u organizador | Comentarios sobre el elemento (10.4); visibilidad heredada del elemento  |
 | POST /api/elementos/{id}/comentarios             | Organizador              | Escribe un comentario sobre el elemento                                  |
 | GET /api/bitacora/{id}/comentarios               | Autor u organizador      | Comentarios sobre la entrada; visibilidad heredada de la bitácora (P-06) |
@@ -793,12 +804,12 @@ Su visibilidad es la de la propuesta por defecto de P-06: el autor, quien organi
 
 ## **9.5 Pantallas**
 
-| Pantalla                    | Contenido                                                                                                                                                                                                                         |
-| :-------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Espacio del equipo          | Metas, avances y recursos en secciones separadas, cada una presente solo si la configuración la habilita. Los obligatorios ausentes se señalan sin bloquear. Cada elemento muestra, si existen, los comentarios de quien organiza |
-| Reportes del equipo         | Los reportes por periodo. En modo con fechas, los periodos sin reporte aparecen como pendientes                                                                                                                                   |
-| Mi bitácora                 | Entradas propias en orden cronológico inverso, con la indicación de quién más puede leerlas y, si existen, los comentarios recibidos en cada una                                                                                  |
-| Seguimiento del organizador | Vista por equipo con el estado de cada función: qué reportó, qué falta y cuándo fue la última aportación                                                                                                                          |
+| Pantalla                    | Contenido                                                                                                                                                                                                                            |
+| :-------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Espacio del equipo          | Metas, avances y recursos en secciones separadas, cada una presente solo si la configuración la habilita. Los obligatorios ausentes se señalan sin bloquear. Cada elemento muestra, si existen, los comentarios de quien organiza    |
+| Reportes del equipo         | Los reportes por periodo. En modo con fechas, los periodos sin reporte aparecen como pendientes                                                                                                                                      |
+| Mi bitácora                 | Formulario guiado con un campo por pregunta (9.3). Entradas propias en orden cronológico inverso, las anteriores como texto libre, con la indicación de quién más puede leerlas y, si existen, los comentarios recibidos en cada una |
+| Seguimiento del organizador | Vista por equipo con el estado de cada función: qué reportó, qué falta y cuándo fue la última aportación                                                                                                                             |
 
 ## **9.6 Pregunta abierta de este módulo**
 
@@ -814,46 +825,60 @@ Su visibilidad es la de la propuesta por defecto de P-06: el autor, quien organi
 
 # **10\. Evaluación**
 
-Cubre el motor de instrumentos del que cuelgan la rúbrica, las autoevaluaciones, la evaluación por pares y el reporte estructurado; la calificación en sus dos modos; y los comentarios. Es el módulo con más incertidumbre de requisitos, porque los campos concretos de cada instrumento no están confirmados, y es también aquel cuyo diseño absorbe esa incertidumbre sin quedar bloqueado por ella.
+Cubre las plantillas de instrumento, la evaluación por pares, el cálculo de la calificación ponderada y los comentarios. El modelo y las reglas que comparten los tres subsistemas están en 4.2, 4.4 y 4.6 del general. Este capítulo fija cómo se ejecutan: el puntaje de cada plantilla, el cálculo entre pares, los casos de aplicabilidad y las pantallas.
 
-## **10.1 El motor de instrumentos**
+## **10.1 Plantillas e instrumentos**
 
-Los cinco instrumentos comparten la estructura de instrumento, campo y respuesta que fija 4.2 del general. La consecuencia allí señalada es que la validación deja de ser responsabilidad del esquema relacional y pasa a la capa de servicios; esta sección la asume.
+Las plantillas viven en `PLANTILLAS_INSTRUMENTO` (packages/shared). Sus reactivos son los del documento de evaluaciones de las coordinadoras, transcritos sin cambios.
 
-| Tipo de campo       | Validación                                        | Dónde se usa                                    |
-| :------------------ | :------------------------------------------------ | :---------------------------------------------- |
-| Escala numérica     | Entero dentro del intervalo declarado en el campo | Rúbrica, evaluación por pares, autoevaluaciones |
-| Opción de una lista | El valor pertenece a las opciones del campo       | Autoevaluaciones, evaluación por pares          |
-| Texto libre         | Longitud máxima                                   | Todos                                           |
-| Sí o no             | Uno de los dos valores                            | Autoevaluaciones                                |
+| Clave de plantilla               | Nombre                                         | Aspecto                                    | Tipo de campo             | Reactivos |
+| :------------------------------- | :--------------------------------------------- | :----------------------------------------- | :------------------------ | :-------- |
+| autoevaluacion\_responsabilidad  | Mi responsabilidad individual y grupal         | Responsabilidad individual y grupal        | likert                    | 9         |
+| autoevaluacion\_comunicacion     | Mi comunicación con los compañeros             | Evaluación de grupo y habilidades sociales | likert                    | 8         |
+| autoevaluacion\_interdependencia | Mi contribución a la interdependencia positiva | Interdependencia positiva                  | likert                    | 8         |
+| evaluacion\_pares                | Evaluación por pares                           | Evaluación por pares (P-38)                | distribucion\_integrantes | 9         |
 
-**Registro de decisión — instrumentos por defecto copiados, no referenciados.** Los campos definitivos de cada instrumento no están confirmados, pero una actividad que habilita la autoevaluación y encuentra un instrumento vacío es inutilizable. El sistema trae por tanto un conjunto de instrumentos por defecto que se copian a la actividad en el momento de habilitar la función, y que quien organiza edita. Se copian y no se referencian: si la actividad apuntara a la plantilla del sistema, editarla alteraría actividades en curso y cambiaría el significado de respuestas ya emitidas. Cuando los campos queden confirmados, se actualizan las plantillas y el cambio afecta solo a las actividades creadas después, que es el comportamiento correcto.
+**Puntaje de una autoevaluación.** Cada reactivo se responde de 1 (Nunca) a 4 (Siempre). El puntaje es (promedio − 1) / 3, expresado de 0 a 100. Para enviar la autoevaluación hay que responder todos los reactivos, así que el promedio nunca se calcula sobre un formulario incompleto.
 
-**Cuándo puede editarse un instrumento.** Mientras no tenga respuestas. Es la misma regla que la propuesta por defecto de P-17 para la configuración de funciones, y por el mismo motivo: alterar los campos de un instrumento ya respondido deja las respuestas referidas a campos que cambiaron de significado.
+**Instrumentos de un aspecto.** En la planificación, quien organiza elige para cada aspecto el instrumento: la plantilla del aspecto, si la tiene, o un enlace externo. También elige una periodicidad. Sin periodicidad se crea una sola instancia. Con periodicidad se crea una instancia por periodo entre el inicio y el término de la actividad (mismo generador que el calendario de avances, §9.2), cada una con su fecha planificada y con nombre numerado ("Cuestionario 2"). Las instancias se reparten el peso del aspecto en partes iguales. Mientras las fechas no tengan efecto, todas las instancias se pueden responder desde el inicio del desarrollo (P-41 del general).
 
-## **10.2 Calificación**
+**Cuándo cambia la planificación.** Los pesos se pueden cambiar hasta que la actividad se archive: la calificación es calculada, así que un cambio de peso no deja datos huérfanos, y el historial registra el valor anterior. En cambio, un instrumento que ya tiene respuestas o puntajes no se elimina ni cambia de origen; es la misma regla de P-17, por el mismo motivo. Los componentes y aspectos por defecto no se eliminan: un aspecto que no se va a evaluar se queda sin instrumentos, y su peso se redistribuye.
 
-La calificación es siempre individual por participante y única por actividad (4.4 del general). Sus dos modos activos son la asignación directa y la rúbrica.
+**Responder de nuevo.** Mientras la fase lo permita, quien respondió puede cambiar sus respuestas. Se guarda la última, y el historial conserva la anterior.
 
-**Modo directo.** Quien organiza captura el valor. Al configurar la función define el valor máximo, y el sistema valida contra él.
+## **10.2 Evaluación por pares**
 
-**Modo rúbrica.** El valor es la suma de los puntajes asignados a los criterios y no se captura: 4.6 del general establece que el sistema no admite un valor que contradiga sus criterios, de modo que el campo es de solo lectura y se recalcula cada vez que un criterio cambia. El valor máximo es la suma de los puntajes máximos de los criterios.
+Son nueve acciones, cada una con una descripción fija que sirve de ejemplo y es solo informativa: aportar ideas, fomentar la participación, resumir e integrar el trabajo, comprobar lo aprendido, relacionar lo nuevo con lo ya asimilado, organizar al grupo, escuchar y respetar, ayudar a los compañeros y cumplir compromisos. En cada acción, quien responde reparte 100 % entre todos los integrantes activos de su equipo, incluido él mismo, según quién realizó principalmente la acción. Cubre el alcance al propio equipo de P-08.
 
-**Modificación posterior.** Una calificación puede corregirse mientras la actividad esté en el periodo de cierre. El evento del historial conserva el valor anterior y el nuevo (5.1), de modo que la corrección queda trazada sin necesidad de una reversión, que está fuera del alcance del sistema.
+**Validación.** La hace el servicio contra la composición del equipo en el momento de responder: las claves deben ser exactamente esos integrantes y los porcentajes deben sumar 100 en cada acción. El cliente muestra lo que falta por repartir, pero no es la barrera (general §7.4).
 
-El momento en que la calificación se hace visible a su destinatario es P-18 del general, cuya propuesta por defecto es que lo sea en cuanto se asigna.
+**Cálculo.** Para un participante _i_ de un equipo de _n_ integrantes, y para cada acción:
 
-## **10.3 Autoevaluaciones y evaluación por pares**
+1. Se promedia el porcentaje que le asignaron los demás integrantes que respondieron. La autoasignación no entra en el cálculo; se le muestra a quien organiza como contraste.
+2. El factor de la acción es ese promedio dividido entre la parte igualitaria, 100 / _n_. Un factor de 1 significa que sus compañeros lo vieron aportar lo mismo que a cualquiera.
+3. El puntaje es min(1, promedio de los factores de las nueve acciones), expresado de 0 a 100 (P-37). Quien aporta más que la parte igualitaria no supera el 100.
 
-Los tres instrumentos se responden durante el periodo de cierre (6.1 del general) y se distinguen por qué llena cada uno los campos de sujeto y equipo de la respuesta.
+**Cuándo no aplica.** En un equipo de una persona, porque no hay a quién evaluar. Para quien ningún compañero evaluó, porque no hay votos que promediar. En ambos casos el peso se redistribuye (4.2 del general). Una respuesta cuyo reparto ya no coincide con el equipo actual, porque hubo una reasignación (§8.4), se descarta del cálculo, y a quien la escribió se le pide responder de nuevo.
 
-| Instrumento               | Quién responde                                                    | Sujeto de la respuesta                  |
-| :------------------------ | :---------------------------------------------------------------- | :-------------------------------------- |
-| Autoevaluación individual | Cada participante, una vez                                        | Ninguno: la respuesta es sobre sí mismo |
-| Autoevaluación grupal     | Cada integrante por separado (P-07)                               | Su equipo                               |
-| Evaluación por pares      | Cada participante, una vez por cada compañero de su equipo (P-08) | La membresía evaluada                   |
+**Obligatoriedad sin bloqueo.** En el estado obligatorio, no responder no impide cerrar la actividad (6.2 del general): la evaluación pendiente se marca como no realizada y quien organiza puede consultarla. No responder tampoco reduce la calificación de quien no respondió, porque el puntaje de pares mide lo que los demás vieron en cada persona.
 
-**Obligatoriedad sin bloqueo.** Cuando la evaluación por pares está en su estado obligatorio, no completarla no impide cerrar la actividad (6.2 del general): la evaluación pendiente se marca como no realizada y queda consultable por quien organiza. Un equipo de una sola persona es un caso distinto y no una omisión: se marca como no aplicable, porque no hay a quién evaluar (7.4).
+## **10.3 Calificación**
+
+La calcula `calcularCalificacion` (packages/shared) con la estructura de la actividad y el puntaje de cada instrumento para cada participante. Cada puntaje está en uno de tres estados:
+
+| Estado    | Cuándo                                                                                                                                                   | Efecto en el cálculo                                                             |
+| :-------- | :------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------- |
+| Con valor | Plantilla respondida, o puntaje capturado                                                                                                                | Entra con su peso                                                                |
+| No aplica | Evaluación por pares en los casos de 10.2; bitácora con la función deshabilitada; instrumento cuyo aspecto el participante no puede responder por su rol | Su peso se redistribuye entre los del mismo nivel                                |
+| Pendiente | Plantilla sin responder, o puntaje sin capturar                                                                                                          | Cuenta 0 y la calificación se marca como provisional mientras haya alguno (P-39) |
+
+Solo reciben calificación los participantes. Quien organiza o co-organiza e integra un equipo no responde instrumentos ni recibe calificación (7.3 del general).
+
+**Captura por equipo.** El instrumento del proyecto se captura por equipo: el puntaje se escribe a cada integrante activo, y quien organiza puede después ajustar el de una persona (P-40 del general). Volver a capturar por equipo sobrescribe también los ajustes individuales, y la pantalla lo advierte antes de hacerlo.
+
+**Modificación posterior.** Los puntajes se capturan y corrigen durante el desarrollo y el cierre. El evento conserva el valor anterior y el nuevo (5.1), de modo que la corrección queda trazada sin necesidad de reversión.
+
+La visibilidad para el participante es la de P-18 del general.
 
 ## **10.4 Comentarios**
 
@@ -869,36 +894,59 @@ Los endpoints y las pantallas de este módulo viven junto a los del elemento que
 
 ## **10.5 Endpoints**
 
-| Método y ruta                                          | Quién                | Qué hace                                     |
-| :----------------------------------------------------- | :------------------- | :------------------------------------------- |
-| GET /api/actividades/{id}/instrumentos                 | Miembro              | Instrumentos de la actividad con sus campos  |
-| POST /api/actividades/{id}/instrumentos                | Organizador          | Crea un instrumento a partir de la plantilla |
-| PUT /api/instrumentos/{id}/campos                      | Organizador          | Define los campos, si no hay respuestas      |
-| POST /api/instrumentos/{id}/respuestas                 | Participante         | Responde el instrumento                      |
-| GET /api/instrumentos/{id}/respuestas                  | Organizador o sujeto | Respuestas, con el alcance de P-08           |
-| PUT /api/actividades/{id}/calificaciones/{idMembresia} | Organizador          | Asigna o corrige la calificación             |
-| GET /api/actividades/{id}/calificaciones               | Organizador          | Todas las calificaciones de la actividad     |
+| Método y ruta                                          | Quién                   | Qué hace                                                                                                 |
+| :----------------------------------------------------- | :---------------------- | :------------------------------------------------------------------------------------------------------- |
+| GET /api/actividades/{id}/ponderacion                  | Miembro                 | Componentes, aspectos e instrumentos, con el peso efectivo de cada instrumento                           |
+| PUT /api/actividades/{id}/ponderacion                  | Organizador             | Cambia nombres y pesos de componentes y aspectos; valida que sumen 100                                   |
+| POST /api/aspectos/{id}/instrumentos                   | Organizador             | Agrega el instrumento del aspecto (plantilla o enlace), con sus instancias por periodicidad              |
+| PATCH /api/instrumentos/{id}                           | Organizador             | Edita nombre, enlace o fecha planificada                                                                 |
+| DELETE /api/instrumentos/{id}                          | Organizador             | Elimina una instancia sin respuestas ni puntajes                                                         |
+| GET /api/actividades/{id}/mis-instrumentos             | Participante            | Instrumentos que le toca responder, con su estado                                                        |
+| PUT /api/instrumentos/{id}/respuestas                  | Participante            | Responde o vuelve a responder una plantilla completa                                                     |
+| GET /api/instrumentos/{id}/respuestas                  | Organizador o autor     | Respuestas: el autor ve las suyas; quien organiza ve todas, y en pares, la autoasignación como contraste |
+| PUT /api/instrumentos/{id}/puntajes/{idMembresia}      | Organizador             | Captura o corrige el puntaje de un participante                                                          |
+| PUT /api/instrumentos/{id}/puntajes/equipos/{idEquipo} | Organizador             | Captura el puntaje del proyecto para todo un equipo (P-40)                                               |
+| GET /api/actividades/{id}/calificaciones               | Organizador             | Calificaciones de la actividad, paginadas, con lo que falta por capturar                                 |
+| GET /api/actividades/{id}/calificaciones/{idMembresia} | Organizador o el propio | Desglose por componente, aspecto e instrumento (P-18)                                                    |
 
 Los de Comentarios están en 9.4, porque cuelgan del elemento o de la entrada de bitácora que comentan y no de la actividad.
 
 ## **10.6 Pantallas**
 
-| Pantalla              | Contenido                                                                                                                                                                         |
-| :-------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Rúbrica               | Definición de criterios y puntajes. Bloqueada con el motivo si ya hay calificaciones                                                                                              |
-| Calificar             | Lista de participantes con su calificación y su avance. En modo rúbrica, los criterios con el total calculado                                                                     |
-| Responder instrumento | Formulario construido a partir de la definición del instrumento (4.4). En evaluación por pares, un formulario por compañero                                                       |
-| Mis resultados        | Calificación propia y lo que la evaluación por pares devuelva según P-08. Los comentarios recibidos se ven en el elemento o la entrada de bitácora que los originó (9.5), no aquí |
+| Pantalla                       | Contenido                                                                                                                                                                                                           |
+| :----------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Planificar › Calificación      | Componentes y aspectos con su peso, editables en el lugar. En cada aspecto, su instrumento y periodicidad, y lo que vale cada instancia de la calificación final. Reemplaza la vista previa de Proceso colaborativo |
+| Evaluación (participante)      | Instrumentos por responder y ya respondidos. Los de enlace externo abren el enlace                                                                                                                                  |
+| Responder autoevaluación       | Los reactivos de la plantilla con la escala de cuatro valores                                                                                                                                                       |
+| Responder evaluación por pares | Una acción a la vez, con su ejemplo, el reparto entre los integrantes y lo que falta para llegar a 100                                                                                                              |
+| Calificaciones (organizador)   | Lista paginada de participantes con su calificación y lo pendiente. Desglose por persona, con captura en contexto, y captura del proyecto por equipo                                                                |
+| Mis resultados                 | Calificación propia con su desglose, y lo que la evaluación por pares devuelva según P-08. Los comentarios se ven en el elemento o en la entrada que comentan (9.5), no aquí                                        |
 
-## **10.7 Pregunta abierta de este módulo**
+## **10.7 Preguntas abiertas de este módulo**
 
 **P-29 — Escala de la calificación**
 
-**Afecta:** calificación (10.2), rúbrica.
+**Afecta:** calificación (10.3).
 
-**Propuesta por defecto:** el sistema no impone una escala. En modo directo, quien organiza define el valor máximo al configurar la función; en modo rúbrica, el máximo es la suma de los puntajes de los criterios.
+**Propuesta por defecto:** el sistema no impone una escala; quien organiza define el máximo.
 
-**Qué necesitamos confirmar:** si se espera que la plataforma trabaje en la escala de cero a diez por su contexto institucional, la libertad actual permite construir rúbricas cuyo total no la respete. Imponerla obligaría a que los puntajes de los criterios sumaran exactamente diez, que es una restricción incómoda al definir la rúbrica.
+**Resolución:** superada por la calificación ponderada. La calificación y el puntaje de cada instrumento se expresan como porcentaje de 0 a 100 (4.2 del general).
+
+**P-37 — Puntaje de la evaluación por pares**
+
+**Afecta:** evaluación por pares (10.2), calificación.
+
+**Propuesta por defecto:** puntaje = min(1, factor promedio), donde el factor de cada acción es el promedio que el participante recibió de los demás dividido entre 100 / _n_. Solo cuentan los votos de quienes respondieron. Si ningún compañero respondió, la evaluación por pares no aplica para ese participante.
+
+**Qué necesitamos confirmar:** con el tope en 1, quien sus pares vieron aportar más que la parte igualitaria obtiene lo mismo que quien aportó exactamente esa parte. ¿Es el comportamiento buscado, o el excedente debería compensar acciones con factor bajo, sin superar el 100 en el total?
+
+**P-39 — Instrumentos sin responder y puntajes sin capturar**
+
+**Afecta:** calificación (10.3), P-18 del general.
+
+**Propuesta por defecto:** una plantilla que el participante no respondió cuenta 0, igual que la evaluación pendiente que queda como no realizada (6.2 del general). Un puntaje que quien organiza no ha capturado también cuenta 0, y la calificación se muestra como provisional, con la lista de lo pendiente, hasta que no quede nada por capturar.
+
+**Qué necesitamos confirmar:** ¿una autoevaluación no respondida debe contar 0, o su peso debería redistribuirse como si no aplicara? La primera opción premia responder; la segunda no castiga a quien no pudo hacerlo.
 
 # **11\. Plan de implementación del núcleo**
 
@@ -921,23 +969,25 @@ Cada incremento es vertical y se considera terminado cuando tiene sus cuatro pie
 
 ## **11.3 Fase B — del 7 de septiembre al 2 de octubre**
 
-| Incremento            | Contenido                                                                                                                                               |
-| :-------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Seguimiento           | Reportes en sus tres modos activos, periodos de reporte, bitácora individual y comentarios sobre elementos del espacio de equipo y entradas de bitácora |
-| Motor de instrumentos | Instrumentos, campos y respuestas, con las plantillas por defecto                                                                                       |
-| Calificación          | Modo directo y modo rúbrica, con el recálculo y la visibilidad de P-18                                                                                  |
-| Evaluación            | Autoevaluaciones y evaluación por pares                                                                                                                 |
-| Cierre y consulta     | Periodo de cierre y archivado, historial con filtros y agregación                                                                                       |
+| Incremento                    | Contenido                                                                                                                                               |
+| :---------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Seguimiento                   | Reportes en sus tres modos activos, periodos de reporte, bitácora individual y comentarios sobre elementos del espacio de equipo y entradas de bitácora |
+| Bitácora guiada               | Preguntas fijas por clave, entradas de texto libre conservadas (§9.3)                                                                                   |
+| Estructura de la calificación | Componentes, aspectos e instrumentos con sus pesos, valores por defecto, `calcularCalificacion` con sus pruebas, y Planificar › Calificación            |
+| Autoevaluaciones              | Las tres plantillas, la respuesta y su puntaje (10.1)                                                                                                   |
+| Evaluación por pares          | Campo de distribución entre integrantes, el cálculo de 10.2 y la vista de quien organiza con la autoasignación                                          |
+| Captura y calificación        | Puntajes capturados, captura por equipo, pantalla de calificaciones y Mis resultados                                                                    |
+| Cierre y consulta             | Periodo de cierre y archivado, historial con filtros y agregación                                                                                       |
 
 ## **11.4 Riesgos propios del núcleo**
 
-| Riesgo                                                                | Mitigación                                                                                                            |
-| :-------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------- |
-| El núcleo es la ruta crítica y su retraso desplaza todo el calendario | La superficie que consumen los otros dos subsistemas se entrega en el primer incremento, antes que cualquier pantalla |
-| El ciclo de vida es prerrequisito de los cuatro módulos restantes     | Se implementa completo en la primera mitad de la fase A, incluidos los casos límite de 7.4                            |
-| Los campos de los instrumentos no están confirmados                   | El motor es genérico y los campos son datos; la confirmación tardía no obliga a reescribir nada (10.1)                |
-| La búsqueda por rango depende del subsistema de recompensas           | Interfaz declarada e implementación vacía; el filtro es lo primero del orden de recorte (1.3)                         |
-| El historial se aplaza por no ser visible                             | Su mecanismo va en el primer incremento y forma parte del criterio de terminado (11.1)                                |
+| Riesgo                                                                | Mitigación                                                                                                                         |
+| :-------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------- |
+| El núcleo es la ruta crítica y su retraso desplaza todo el calendario | La superficie que consumen los otros dos subsistemas se entrega en el primer incremento, antes que cualquier pantalla              |
+| El ciclo de vida es prerrequisito de los cuatro módulos restantes     | Se implementa completo en la primera mitad de la fase A, incluidos los casos límite de 7.4                                         |
+| Un error de cálculo en la calificación pasa inadvertido               | `calcularCalificacion` es una función pura del paquete compartido y se prueba en cuanto existe, sin depender de la interfaz (12.1) |
+| La búsqueda por rango depende del subsistema de recompensas           | Interfaz declarada e implementación vacía; el filtro es lo primero del orden de recorte (1.3)                                      |
+| El historial se aplaza por no ser visible                             | Su mecanismo va en el primer incremento y forma parte del criterio de terminado (11.1)                                             |
 
 ## **11.5 Orden de recorte propio**
 
@@ -953,7 +1003,7 @@ Complementa el de 9.6 del general con lo que corresponde al núcleo, y sigue el 
 
 # **12\. Pruebas del subsistema**
 
-El general fija seis pruebas de contrato de cobertura obligatoria (10.1) y cinco de ellas corresponden al núcleo: las reglas de integridad no expresables en el esquema, las transiciones del ciclo de vida, cada celda de la matriz de permisos, la emisión de eventos y el alcance acotado del administrador. Este capítulo añade lo específico del subsistema.
+El general fija siete pruebas de contrato de cobertura obligatoria (10.1) y seis de ellas corresponden al núcleo: las reglas de integridad no expresables en el esquema, las transiciones del ciclo de vida, cada celda de la matriz de permisos, la emisión de eventos, el alcance acotado del administrador y el cálculo de la calificación. Este capítulo añade lo específico del subsistema.
 
 ## **12.1 Lo que se prueba y por qué no se ve al probar a mano**
 
@@ -966,6 +1016,8 @@ El general fija seis pruebas de contrato de cobertura obligatoria (10.1) y cinco
 | La envoltura de 2.4: un servicio de escritura que no registra evento falla       | Es la prueba que hace de la regla un mecanismo y no una recomendación                                   |
 | La agregación del historial agrupa sin perder eventos                            | Una agrupación que descarta se ve idéntica a una que agrupa bien                                        |
 | Un token de verificación o de recuperación sirve una sola vez y vence            | Un token reutilizable no falla: simplemente funciona dos veces, y nadie lo nota                         |
+| La ponderación, la redistribución por nivel y el puntaje de cada plantilla       | Un número mal calculado parece correcto; nadie recalcula a mano un 2 % de un 10 % de un 60 %            |
+| La validación de la distribución entre integrantes contra el equipo real         | Un reparto que no suma 100, o que incluye a alguien de otro equipo, se guarda sin protestar             |
 
 ## **12.2 Datos de prueba**
 
@@ -981,28 +1033,30 @@ Consolida las preguntas propias de este documento y señala cuáles del general 
 
 ## **13.1 Preguntas propias**
 
-| Pregunta | Asunto                                            | Debe resolverse antes de                                        |
-| :------- | :------------------------------------------------ | :-------------------------------------------------------------- |
-| P-24     | Servidor de correo del despliegue                 | El incremento de Cuentas: sin él no hay recuperación automática |
-| P-30     | Alcance de la cuenta sin verificar                | El incremento de Cuentas                                        |
-| P-25     | Configuración por defecto de una actividad nueva  | El incremento de Actividades I                                  |
-| P-26     | Transferencia de la organización de una actividad | El incremento de Actividades II                                 |
-| P-28     | Definición de los periodos de reporte             | El incremento de Seguimiento                                    |
-| P-29     | Escala de la calificación                         | El incremento de Calificación                                   |
-| P-22     | Vencimiento de la sesión                          | El incremento de Cuentas                                        |
-| P-23     | Ventana de agregación del historial               | El cierre de la fase B                                          |
+| Pregunta | Asunto                                             | Debe resolverse antes de                                        |
+| :------- | :------------------------------------------------- | :-------------------------------------------------------------- |
+| P-24     | Servidor de correo del despliegue                  | El incremento de Cuentas: sin él no hay recuperación automática |
+| P-30     | Alcance de la cuenta sin verificar                 | El incremento de Cuentas                                        |
+| P-25     | Configuración por defecto de una actividad nueva   | El incremento de Actividades I                                  |
+| P-26     | Transferencia de la organización de una actividad  | El incremento de Actividades II                                 |
+| P-28     | Definición de los periodos de reporte              | El incremento de Seguimiento                                    |
+| P-37     | Puntaje de la evaluación por pares                 | El incremento de Evaluación por pares                           |
+| P-39     | Instrumentos sin responder y puntajes sin capturar | El incremento de Captura y calificación                         |
+| P-22     | Vencimiento de la sesión                           | El incremento de Cuentas                                        |
+| P-23     | Ventana de agregación del historial                | El cierre de la fase B                                          |
 
 ## **13.2 Preguntas del documento general que condicionan al núcleo**
 
-Doce de las diecinueve preguntas abiertas del general afectan a módulos de este subsistema. Las cuatro primeras son las urgentes: condicionan el modelo de datos o la estructura de una pantalla, y su respuesta tardía obliga a rehacer.
+Las preguntas abiertas del general que se listan afectan a módulos de este subsistema. Las cuatro primeras son las urgentes: condicionan el modelo de datos o la estructura de una pantalla, y su respuesta tardía obliga a rehacer.
 
-| Pregunta   | Asunto                                                | Debe resolverse antes de                                       |
-| :--------- | :---------------------------------------------------- | :------------------------------------------------------------- |
-| P-04       | Visibilidad entre equipos                             | El incremento de Equipos: decide qué devuelve el listado       |
-| P-08       | Alcance de la evaluación por pares                    | El motor de instrumentos: decide la forma de la respuesta      |
-| P-10       | Alcance del historial visible al participante         | La consulta del historial                                      |
-| P-20       | Carga de archivos en el espacio de equipo             | El espacio de equipo: decide si hay almacenamiento de archivos |
-| P-03, P-11 | Baja de participante, búsqueda de usuarios            | Actividades I                                                  |
-| P-05, P-06 | Autoría del reporte, visibilidad de la bitácora       | Seguimiento                                                    |
-| P-07, P-18 | Autoevaluación grupal, visibilidad de la calificación | Evaluación                                                     |
-| P-16, P-17 | Plazo de cierre, cambio de configuración con datos    | Actividades II                                                 |
+| Pregunta   | Asunto                                                         | Debe resolverse antes de                                       |
+| :--------- | :------------------------------------------------------------- | :------------------------------------------------------------- |
+| P-04       | Visibilidad entre equipos                                      | El incremento de Equipos: decide qué devuelve el listado       |
+| P-08       | Alcance de la evaluación por pares                             | El motor de instrumentos: decide la forma de la respuesta      |
+| P-10       | Alcance del historial visible al participante                  | La consulta del historial                                      |
+| P-20       | Carga de archivos en el espacio de equipo                      | El espacio de equipo: decide si hay almacenamiento de archivos |
+| P-03, P-11 | Baja de participante, búsqueda de usuarios                     | Actividades I                                                  |
+| P-05, P-06 | Autoría del reporte, visibilidad de la bitácora                | Seguimiento                                                    |
+| P-18, P-41 | Visibilidad de la calificación, disponibilidad de instrumentos | Autoevaluaciones                                               |
+| P-38, P-40 | Evaluación por pares en la ponderación, proyecto colaborativo  | Estructura de la calificación                                  |
+| P-16, P-17 | Plazo de cierre, cambio de configuración con datos             | Actividades II                                                 |
