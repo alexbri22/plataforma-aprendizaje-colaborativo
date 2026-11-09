@@ -58,6 +58,7 @@ const PERMISO_REQUERIDO_POR_ACCION: Readonly<Record<AccionActividad, PermisoCoor
     ajustar_periodos: 'configurar_actividad',
     cerrar_inscripcion: 'gestionar_inscripcion',
     iniciar_cierre: 'iniciar_cierre_y_archivar',
+    archivar: 'iniciar_cierre_y_archivar',
     agregar_coorganizador: 'gestionar_coorganizadores',
     formar_equipos: 'gestionar_equipos',
     asignar_integrantes: 'gestionar_equipos',
@@ -129,6 +130,7 @@ const FASES_POR_ACCION: Readonly<Record<AccionActividad, readonly EstadoActivida
   ajustar_periodos: ['configuracion', 'inscripcion', 'formacion_equipos', 'desarrollo'],
   cerrar_inscripcion: ['inscripcion'],
   iniciar_cierre: ['desarrollo'],
+  archivar: ['cierre'],
   agregar_coorganizador: [
     'configuracion',
     'inscripcion',

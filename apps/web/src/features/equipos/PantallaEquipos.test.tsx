@@ -1102,11 +1102,30 @@ describe('PantallaEquipos', () => {
     vi.mocked(obtenerEquipos).mockResolvedValue(lista([]))
     renderPantalla()
 
+    // En Creación la pantalla es Conformación de equipos; desde Desarrollo, Equipos.
+    expect(await screen.findByRole('link', { name: 'Conformación de equipos' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    expect(
+      screen.getByRole('heading', { name: 'Conformación de equipos', level: 1 }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('Volver a la actividad')).not.toBeInTheDocument()
+  })
+
+  it('en desarrollo se llama Equipos y esa es la entrada marcada', async () => {
+    vi.mocked(obtenerActividad).mockResolvedValue(
+      actividad({ fase: 'desarrollo', capacidades: [] }),
+    )
+    vi.mocked(obtenerEquipos).mockResolvedValue(lista([]))
+    renderPantalla()
+
     expect(await screen.findByRole('link', { name: 'Equipos' })).toHaveAttribute(
       'aria-current',
       'page',
     )
-    expect(screen.queryByText('Volver a la actividad')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Equipos', level: 1 })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Conformación de equipos' })).not.toBeInTheDocument()
   })
 
   it('muestra un aviso si no se pueden cargar los equipos', async () => {

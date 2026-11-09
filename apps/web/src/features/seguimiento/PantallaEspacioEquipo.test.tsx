@@ -145,7 +145,7 @@ describe('PantallaEspacioEquipo', () => {
 
   it('un integrante ve el contenido, el nombre del equipo en el shell, y puede agregar', async () => {
     vi.mocked(obtenerEquipoConActividad).mockResolvedValue(equipo())
-    vi.mocked(obtenerActividad).mockResolvedValue(actividad())
+    vi.mocked(obtenerActividad).mockResolvedValue(actividad({ idMiEquipo: 'e1' }))
     vi.mocked(obtenerElementos).mockResolvedValue([elemento()])
     vi.mocked(crearElemento).mockResolvedValue(elemento({ id: 'el-2', contenido: 'Nueva meta' }))
     const usuario = userEvent.setup()
@@ -153,8 +153,8 @@ describe('PantallaEspacioEquipo', () => {
 
     expect(await screen.findByText('Entregar el reporte final')).toBeInTheDocument()
     expect(screen.getByText('Club de robótica')).toBeInTheDocument()
-    // El equipo es un bloque con título en la barra lateral.
-    expect(screen.getByText(/equipo: Alfa$/i)).toBeInTheDocument()
+    // Su equipo es un bloque con título en la barra lateral.
+    expect(screen.getByText('Mi equipo: Alfa')).toBeInTheDocument()
 
     await usuario.type(screen.getByLabelText('Agregar a metas'), 'Nueva meta')
     await usuario.click(screen.getByRole('button', { name: 'Agregar' }))

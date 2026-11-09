@@ -25,9 +25,10 @@ describe('guiaEtapa', () => {
   it('en inscripción, quien organiza comparte la clave y sabe cuándo cierra sola', () => {
     const guia = guiaEtapa(actividad({}))!
     expect(guia.principal.texto).toMatch(/Comparte la clave/)
+    expect(guia.principal.donde).toBe('Creación › Inscripción')
     expect(guia.tambien.map((p) => p.donde)).toEqual([
-      'Planificar',
-      'Equipos › Ajustes de formación',
+      'Creación › Planificar',
+      'Creación › Conformación de equipos › Ajustes de formación',
     ])
     expect(guia.nota).toBe('La inscripción cierra sola el 5 sep 2026, si ya hay participantes.')
   })
@@ -45,7 +46,7 @@ describe('guiaEtapa', () => {
   it('quien participa en formación libre se une a un equipo, o espera si ya tiene uno', () => {
     const sinEquipo = guiaEtapa(actividad({ fase: 'formacion_equipos', rol: 'participante' }))!
     expect(sinEquipo.principal).toEqual({
-      donde: 'Equipos',
+      donde: 'Creación › Conformación de equipos',
       texto: 'Únete a un equipo o crea uno con su nombre.',
     })
 
@@ -57,7 +58,8 @@ describe('guiaEtapa', () => {
 
   it('en cierre, el plazo para reconocer es término + días de cierre', () => {
     const guia = guiaEtapa(actividad({ fase: 'cierre', rol: 'participante', idMiEquipo: 'e1' }))!
-    expect(guia.principal.donde).toBe('Mi equipo › Reconocimientos')
+    expect(guia.principal.donde).toBe('Cierre › Otorgar reconocimientos')
+    expect(guia.tambien.map((p) => p.donde)).toEqual(['Perfil › Insignias'])
     expect(guia.nota).toBe('Se puede reconocer hasta el 10 dic 2026.')
   })
 
@@ -65,8 +67,13 @@ describe('guiaEtapa', () => {
     const guia = guiaEtapa(
       actividad({ fase: 'cierre', configuracion: { insignias: 'deshabilitado' } }),
     )!
-    expect(guia.principal.donde).toBe('Equipos')
+    expect(guia.principal.donde).toBe('Desarrollo › Equipos')
     expect(guia.nota).toMatch(/se archiva sola/)
+  })
+
+  it('en cierre, quien organiza sabe dónde archivar sin esperar la fecha', () => {
+    const guia = guiaEtapa(actividad({ fase: 'cierre' }))!
+    expect(guia.tambien.map((p) => p.donde)).toContain('Cierre › Confirmar cierre de actividad')
   })
 
   it('nunca da un enlace: dice dónde, no lleva', () => {

@@ -23,7 +23,7 @@ function fecha(fechaIso: string | undefined): string {
 
 // Último día para reconocer: término + plazo de cierre (el mismo cálculo que
 // el servidor usa para cerrar el ritual y archivar la actividad).
-function finDelCierre(actividad: Actividad): string | undefined {
+export function finDelCierre(actividad: Actividad): string | undefined {
   if (!actividad.fechaTermino || actividad.plazoCierreDias == null) return undefined
   return sumarDias(actividad.fechaTermino, actividad.plazoCierreDias)
 }
@@ -47,13 +47,13 @@ export function guiaEtapa(actividad: Actividad): GuiaEtapa | null {
       case 'inscripcion':
         return {
           principal: {
-            donde: 'Detalles, más abajo',
+            donde: 'Creación › Inscripción',
             texto: 'Comparte la clave de ingreso para que los participantes se unan.',
           },
           tambien: [
-            { donde: 'Planificar', texto: 'Elige qué seguimiento tendrá la actividad.' },
+            { donde: 'Creación › Planificar', texto: 'Elige qué seguimiento tendrá la actividad.' },
             {
-              donde: 'Equipos › Ajustes de formación',
+              donde: 'Creación › Conformación de equipos › Ajustes de formación',
               texto: 'Decide cómo se forman los equipos y de qué tamaño.',
             },
           ],
@@ -64,7 +64,7 @@ export function guiaEtapa(actividad: Actividad): GuiaEtapa | null {
       case 'formacion_equipos':
         return {
           principal: {
-            donde: 'Equipos',
+            donde: 'Creación › Conformación de equipos',
             texto: autogestionada
               ? 'Revisa que todos tengan equipo y completa los que estén marcados.'
               : 'Sugiere equipos o arma cada uno, y luego confírmalos.',
@@ -77,14 +77,22 @@ export function guiaEtapa(actividad: Actividad): GuiaEtapa | null {
       case 'desarrollo':
         return {
           principal: {
-            donde: 'Equipos',
+            donde: 'Desarrollo › Equipos',
             texto: 'Entra al espacio de cada equipo para revisar y comentar sus metas y avances.',
           },
           tambien: [
             ...(actividad.configuracion?.bitacora_individual === 'habilitada'
-              ? [{ donde: 'Equipos › Bitácoras', texto: 'Lee la bitácora de cada participante.' }]
+              ? [
+                  {
+                    donde: 'Desarrollo › Equipos › Bitácoras',
+                    texto: 'Lee la bitácora de cada participante.',
+                  },
+                ]
               : []),
-            { donde: 'Planificar', texto: 'Ajusta el calendario de entregas si hace falta.' },
+            {
+              donde: 'Desarrollo › Editar planificación',
+              texto: 'Ajusta el calendario de entregas si hace falta.',
+            },
           ],
           nota: actividad.fechaTermino
             ? `El cierre empieza solo al terminar el ${fecha(actividad.fechaTermino)}.`
@@ -93,16 +101,25 @@ export function guiaEtapa(actividad: Actividad): GuiaEtapa | null {
       case 'cierre':
         return {
           principal: reconocimientos
-            ? { donde: 'Reconocer', texto: 'Reconoce lo que aportó cada participante.' }
-            : { donde: 'Equipos', texto: 'Revisa el trabajo final de cada equipo.' },
-          tambien: reconocimientos
-            ? [
-                {
-                  donde: 'Participantes',
-                  texto: 'Revisa los reconocimientos que recibió cada quien.',
-                },
-              ]
-            : [],
+            ? {
+                donde: 'Cierre › Otorgar reconocimientos',
+                texto: 'Reconoce lo que aportó cada participante.',
+              }
+            : { donde: 'Desarrollo › Equipos', texto: 'Revisa el trabajo final de cada equipo.' },
+          tambien: [
+            ...(reconocimientos
+              ? [
+                  {
+                    donde: 'Desarrollo › Participantes',
+                    texto: 'Revisa los reconocimientos que recibió cada quien.',
+                  },
+                ]
+              : []),
+            {
+              donde: 'Cierre › Confirmar cierre de actividad',
+              texto: 'Si ya terminó todo, archiva la actividad sin esperar la fecha.',
+            },
+          ],
           nota: fin
             ? reconocimientos
               ? `Se puede reconocer hasta el ${fecha(fin)}; luego la actividad se archiva sola.`
@@ -128,14 +145,20 @@ export function guiaEtapa(actividad: Actividad): GuiaEtapa | null {
             ? `Espera a que cierre la inscripción, el ${fecha(actividad.fechaLimiteInscripcion)}. Después se forman los equipos.`
             : 'Espera a que cierre la inscripción. Después se forman los equipos.',
         },
-        tambien: [{ texto: 'Mientras, lee el objetivo y la información general, aquí arriba.' }],
+        tambien: [{ texto: 'Mientras, lee el objetivo y la información general, aquí abajo.' }],
       }
     case 'formacion_equipos':
       return {
         principal: autogestionada
           ? actividad.idMiEquipo
-            ? { donde: 'Equipos', texto: 'Ya tienes equipo. Espera a que todos tengan uno.' }
-            : { donde: 'Equipos', texto: 'Únete a un equipo o crea uno con su nombre.' }
+            ? {
+                donde: 'Creación › Conformación de equipos',
+                texto: 'Ya tienes equipo. Espera a que todos tengan uno.',
+              }
+            : {
+                donde: 'Creación › Conformación de equipos',
+                texto: 'Únete a un equipo o crea uno con su nombre.',
+              }
           : { texto: 'Quien organiza te asignará un equipo.' },
         tambien: [],
         nota: 'El desarrollo empieza cuando todos tienen equipo.',
@@ -144,7 +167,7 @@ export function guiaEtapa(actividad: Actividad): GuiaEtapa | null {
       return {
         principal: actividad.idMiEquipo
           ? {
-              donde: 'Mi equipo',
+              donde: 'Desarrollo › Mi equipo',
               texto: 'Agrega con tu equipo las metas, los avances y los materiales.',
             }
           : { texto: 'Pide a quien organiza que te asigne un equipo.' },
@@ -152,7 +175,7 @@ export function guiaEtapa(actividad: Actividad): GuiaEtapa | null {
           actividad.configuracion?.bitacora_individual === 'habilitada' && actividad.idMiEquipo
             ? [
                 {
-                  donde: 'Mi equipo › Mi bitácora',
+                  donde: 'Desarrollo › Mi bitácora',
                   texto: 'Escribe qué hiciste y qué se te dificultó.',
                 },
               ]
@@ -166,7 +189,7 @@ export function guiaEtapa(actividad: Actividad): GuiaEtapa | null {
         principal:
           reconocimientos && actividad.idMiEquipo
             ? {
-                donde: 'Mi equipo › Reconocimientos',
+                donde: 'Cierre › Otorgar reconocimientos',
                 texto: 'Reconoce lo que aportó cada compañero.',
               }
             : { texto: 'Tu equipo ya no puede agregar contenido.' },
@@ -174,7 +197,7 @@ export function guiaEtapa(actividad: Actividad): GuiaEtapa | null {
           reconocimientos && actividad.idMiEquipo
             ? [
                 {
-                  donde: 'Mi equipo › Reconocimientos',
+                  donde: 'Perfil › Insignias',
                   texto: 'Mira lo que te reconocieron tus compañeros.',
                 },
               ]

@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest'
 import type { Actividad } from '../../features/actividades'
 import {
   construirNavActividad,
+  etapaDeActividad,
   type EntradaNavActividad,
+  type EstadoEtapa,
   type NavActividad,
 } from './construirNavActividad'
 
@@ -31,39 +33,195 @@ const EQUIPO: Equipo = {
   integrantes: [{ idMembresia: 'm1', idUsuario: 'u1', nombre: 'Luis Pérez', rol: 'participante' }],
 }
 
-// Etiquetas de cada sección, con los grupos aplanados como "Grupo › Ítem".
-function etiquetas(nav: NavActividad) {
-  return nav.secciones.map((seccion) => ({
-    titulo: seccion.titulo,
-    entradas: seccion.entradas.flatMap((entrada: EntradaNavActividad) =>
-      entrada.tipo === 'grupo'
-        ? entrada.items.map((item) => `${entrada.etiqueta} › ${item.etiqueta}`)
-        : [entrada.etiqueta],
-    ),
-  }))
+type Hoja = { etiqueta: string; to?: string; activo: boolean }
+
+// Las hojas (ítems) de una lista de entradas, con los grupos y bloques
+// aplanados; las etapas se recorren dentro de `porEtapa`.
+function hojas(entradas: EntradaNavActividad[]): Hoja[] {
+  return entradas.flatMap((entrada): Hoja[] => {
+    if (entrada.tipo === 'item') return [entrada]
+    if (entrada.tipo === 'grupo') return entrada.items
+    if (entrada.tipo === 'bloque') return hojas(entrada.entradas)
+    return hojas(entrada.entradas)
+  })
+}
+
+function todas(nav: NavActividad): Hoja[] {
+  return hojas(nav.secciones.flatMap((s) => s.entradas))
 }
 
 function activos(nav: NavActividad) {
-  return nav.secciones
-    .flatMap((s) => s.entradas)
-    .flatMap((e) => (e.tipo === 'grupo' ? e.items : [e]))
-    .filter((i) => i.activo)
-    .map((i) => i.etiqueta)
+  return todas(nav)
+    .filter((h) => h.activo)
+    .map((h) => h.etiqueta)
 }
 
-describe('construirNavActividad', () => {
-  it('quien organiza ve la actividad; la flecha sube a Organizo', () => {
+function etapas(nav: NavActividad) {
+  return nav.secciones
+    .flatMap((s) => s.entradas)
+    .filter((e): e is Extract<EntradaNavActividad, { tipo: 'etapa' }> => e.tipo === 'etapa')
+}
+
+function porEtapa(nav: NavActividad) {
+  return Object.fromEntries(
+    etapas(nav).map((e) => [e.clave, e.entradas.flatMap((x) => hojas([x])).map((h) => h.etiqueta)]),
+  )
+}
+
+function estados(nav: NavActividad): EstadoEtapa[] {
+  return etapas(nav).map((e) => e.estado)
+}
+
+function enlace(nav: NavActividad, etiqueta: string): string | undefined {
+  return todas(nav).find((h) => h.etiqueta === etiqueta)?.to
+}
+
+describe('construirNavActividad: quien organiza', () => {
+  it('muestra las tres etapas y la flecha sube a Organizo', () => {
     const nav = construirNavActividad({
       actividad: actividad(),
       contexto: { idActividad: 'a1', seccion: 'equipos' },
     })
 
     expect(nav.titulo).toBe('Taller de ecología')
-    expect(etiquetas(nav)).toEqual([
-      { titulo: undefined, entradas: ['Resumen', 'Planificar', 'Equipos', 'Participantes'] },
-    ])
-    expect(activos(nav)).toEqual(['Equipos'])
     expect(nav.volver).toEqual({ etiqueta: 'Organizo', to: '/actividades/organizo' })
+    expect(etapas(nav).map((e) => e.etiqueta)).toEqual(['Creación', 'Desarrollo', 'Cierre'])
+    expect(porEtapa(nav)).toEqual({
+      creacion: ['Datos de la actividad', 'Planificar', 'Inscripción', 'Conformación de equipos'],
+      desarrollo: [
+        'Editar planificación',
+        'Equipos',
+        'Participantes',
+        'Evaluación y retroalimentación',
+      ],
+      cierre: [
+        'Confirmar cierre de actividad',
+        'Otorgar reconocimientos',
+        'Calificaciones',
+        'Publicación de proyectos',
+      ],
+    })
+  })
+
+  it('marca la etapa en curso y deja Hecha lo anterior y Próxima lo siguiente', () => {
+    const en = (fase: Actividad['fase']) =>
+      estados(
+        construirNavActividad({
+          actividad: actividad({ fase }),
+          contexto: { idActividad: 'a1', seccion: 'resumen' },
+        }),
+      )
+
+    expect(en('inscripcion')).toEqual(['actual', 'proxima', 'proxima'])
+    expect(en('formacion_equipos')).toEqual(['actual', 'proxima', 'proxima'])
+    expect(en('desarrollo')).toEqual(['hecha', 'actual', 'proxima'])
+    expect(en('cierre')).toEqual(['hecha', 'hecha', 'actual'])
+    expect(en('archivada')).toEqual(['hecha', 'hecha', 'hecha'])
+  })
+
+  it('en una etapa Próxima nada lleva a ningún lado', () => {
+    const nav = construirNavActividad({
+      actividad: actividad({ fase: 'inscripcion', capacidades: ['configurar_funciones'] }),
+      contexto: { idActividad: 'a1', seccion: 'resumen' },
+    })
+    const proximas = etapas(nav).filter((e) => e.estado === 'proxima')
+
+    expect(proximas).toHaveLength(2)
+    for (const etapa of proximas) {
+      expect(hojas(etapa.entradas).every((h) => h.to === undefined)).toBe(true)
+    }
+  })
+
+  it('en Creación Planificar y Conformación de equipos llevan a sus pantallas', () => {
+    const nav = construirNavActividad({
+      actividad: actividad({ fase: 'inscripcion', capacidades: ['configurar_funciones'] }),
+      contexto: { idActividad: 'a1', seccion: 'planificar' },
+    })
+
+    expect(enlace(nav, 'Planificar')).toBe('/actividades/a1/configuracion')
+    expect(enlace(nav, 'Inscripción')).toBe('/actividades/a1/inscripcion')
+    expect(enlace(nav, 'Conformación de equipos')).toBe('/actividades/a1/equipos')
+    expect(activos(nav)).toEqual(['Planificar'])
+  })
+
+  it('pasada la Creación, sus entradas repetidas quedan sin enlace y solo se abre la de Desarrollo', () => {
+    const nav = construirNavActividad({
+      actividad: actividad({ capacidades: ['ajustar_funciones'] }),
+      contexto: { idActividad: 'a1', seccion: 'planificar' },
+    })
+
+    expect(enlace(nav, 'Planificar')).toBeUndefined()
+    expect(enlace(nav, 'Conformación de equipos')).toBeUndefined()
+    expect(enlace(nav, 'Editar planificación')).toBe('/actividades/a1/configuracion')
+    expect(enlace(nav, 'Equipos')).toBe('/actividades/a1/equipos')
+    expect(activos(nav)).toEqual(['Editar planificación'])
+  })
+
+  it('Equipos queda marcado en Desarrollo y Conformación de equipos en Creación', () => {
+    const desarrollo = construirNavActividad({
+      actividad: actividad(),
+      contexto: { idActividad: 'a1', seccion: 'equipos' },
+    })
+    const formacion = construirNavActividad({
+      actividad: actividad({ fase: 'formacion_equipos' }),
+      contexto: { idActividad: 'a1', seccion: 'equipos' },
+    })
+
+    expect(activos(desarrollo)).toEqual(['Equipos'])
+    expect(activos(formacion)).toEqual(['Conformación de equipos'])
+  })
+
+  it('sin capacidades de planificación no ofrece Planificar ni Editar planificación', () => {
+    const nav = construirNavActividad({
+      actividad: actividad({ capacidades: [] }),
+      contexto: { idActividad: 'a1', seccion: 'resumen' },
+    })
+    const etiquetas = todas(nav).map((h) => h.etiqueta)
+
+    expect(etiquetas).not.toContain('Planificar')
+    expect(etiquetas).not.toContain('Editar planificación')
+  })
+
+  it('Datos de la actividad y Confirmar cierre son entradas distintas, cada una con su pantalla', () => {
+    const cierre = actividad({ fase: 'cierre' })
+    const datos = construirNavActividad({
+      actividad: cierre,
+      contexto: { idActividad: 'a1', seccion: 'resumen' },
+    })
+    const confirmar = construirNavActividad({
+      actividad: cierre,
+      contexto: { idActividad: 'a1', seccion: 'cierre' },
+    })
+
+    expect(enlace(datos, 'Confirmar cierre de actividad')).toBe('/actividades/a1/cierre')
+    expect(activos(datos)).toEqual(['Datos de la actividad'])
+    expect(activos(confirmar)).toEqual(['Confirmar cierre de actividad'])
+  })
+
+  it('Otorgar reconocimientos solo se abre mientras el ritual está abierto', () => {
+    const con = (abierto: boolean) =>
+      enlace(
+        construirNavActividad({
+          actividad: actividad({ fase: 'cierre' }),
+          ritual: { abierto, aplicados: false },
+          contexto: { idActividad: 'a1', seccion: 'resumen' },
+        }),
+        'Otorgar reconocimientos',
+      )
+
+    expect(con(true)).toBe('/actividades/a1/reconocer')
+    expect(con(false)).toBeUndefined()
+  })
+
+  it('debajo del nombre dice cuándo cierra, o cuándo cerró', () => {
+    const con = (fase: Actividad['fase']) =>
+      construirNavActividad({
+        actividad: actividad({ fase, fechaTermino: '2026-12-18' }),
+        contexto: { idActividad: 'a1', seccion: 'resumen' },
+      }).subtitulos
+
+    expect(con('desarrollo')).toEqual(['Cierra el 18 dic 2026'])
+    expect(con('cierre')).toEqual(['Cerró el 18 dic 2026'])
   })
 
   it('el Resumen sube con la flecha a Organizo', () => {
@@ -74,49 +232,55 @@ describe('construirNavActividad', () => {
 
     expect(nav.volver).toEqual({ etiqueta: 'Organizo', to: '/actividades/organizo' })
   })
+})
 
-  it('quien organiza, dentro de un equipo, regresa con la flecha a Equipos', () => {
+describe('construirNavActividad: quien organiza dentro de un equipo', () => {
+  it('regresa con la flecha a Equipos, y el equipo es el título', () => {
     const nav = construirNavActividad({
-      actividad: actividad(),
+      actividad: actividad({ configuracion: { bitacora_individual: 'habilitada' } }),
       contexto: { idEquipo: 'e1', seccion: 'metas' },
       equipo: EQUIPO,
     })
 
     expect(nav.volver).toEqual({ etiqueta: 'Equipos', to: '/actividades/a1/equipos' })
+    expect(nav.titulo).toBe('Alfa')
+    expect(nav.subtitulos[0]).toBe('Taller de ecología')
+    expect(etapas(nav)).toHaveLength(0)
   })
 
-  it('sin capacidades de planificación no ofrece Planificar', () => {
-    const nav = construirNavActividad({
-      actividad: actividad({ capacidades: [] }),
-      contexto: { idActividad: 'a1', seccion: 'resumen' },
-    })
-    expect(etiquetas(nav)[0].entradas).not.toContain('Planificar')
-  })
-
-  it('dentro de un equipo, el equipo es un bloque con título bajo la actividad', () => {
+  it('solo ve el proyecto, el proceso y las bitácoras del equipo', () => {
     const nav = construirNavActividad({
       actividad: actividad({ configuracion: { bitacora_individual: 'habilitada' } }),
       equipo: EQUIPO,
       contexto: { idEquipo: 'e1', seccion: 'bitacora-integrante', idMembresia: 'm1' },
     })
 
-    const [, bloqueEquipo] = etiquetas(nav)
-    expect(bloqueEquipo.titulo).toBe('Equipo: Alfa')
-    expect(bloqueEquipo.entradas).toEqual([
-      'Proyecto colaborativo › Metas',
-      'Proyecto colaborativo › Planeación',
-      'Proyecto colaborativo › Avances',
-      'Proyecto colaborativo › Materiales',
-      'Proyecto colaborativo › Producto',
-      'Proceso colaborativo › Definición de responsabilidades',
-      'Proceso colaborativo › Interdependencia positiva',
-      'Proceso colaborativo › Responsabilidad individual y grupal',
-      'Proceso colaborativo › Interacción',
-      'Proceso colaborativo › Evaluación de grupo y habilidades sociales',
+    expect(nav.secciones).toHaveLength(1)
+    expect(todas(nav).map((h) => h.etiqueta)).toEqual([
+      'Metas',
+      'Planeación',
+      'Avances',
+      'Materiales',
+      'Producto',
+      'Definición de responsabilidades',
+      'Interdependencia positiva',
+      'Responsabilidad individual y grupal',
+      'Interacción',
+      'Evaluación de grupo y habilidades sociales',
       'Bitácoras',
     ])
     // La bitácora de alguien cuenta como estar en Bitácoras.
     expect(activos(nav)).toEqual(['Bitácoras'])
+  })
+
+  it('sin bitácora individual habilitada no ofrece Bitácoras', () => {
+    const nav = construirNavActividad({
+      actividad: actividad(),
+      equipo: EQUIPO,
+      contexto: { idEquipo: 'e1', seccion: 'metas' },
+    })
+
+    expect(todas(nav).map((h) => h.etiqueta)).not.toContain('Bitácoras')
   })
 
   it('oculta lo deshabilitado salvo la sección en la que se está', () => {
@@ -127,61 +291,140 @@ describe('construirNavActividad', () => {
       contexto: { idEquipo: 'e1', seccion: 'metas' },
     })
 
-    const proyecto = etiquetas(nav)[1].entradas.filter((e) => e.startsWith('Proyecto'))
-    expect(proyecto).toEqual([
-      'Proyecto colaborativo › Metas',
-      'Proyecto colaborativo › Planeación',
-      'Proyecto colaborativo › Materiales',
-      'Proyecto colaborativo › Producto',
-    ])
+    const proyecto = todas(nav)
+      .map((h) => h.etiqueta)
+      .slice(0, 4)
+    expect(proyecto).toEqual(['Metas', 'Planeación', 'Materiales', 'Producto'])
   })
+})
 
-  it('quien participa ve la actividad arriba y su equipo debajo, con la flecha a Participo', () => {
+describe('construirNavActividad: quien participa', () => {
+  const participante = (sobrescribir: Partial<Actividad> = {}) =>
+    actividad({
+      rol: 'participante',
+      capacidades: [],
+      idMiEquipo: 'e1',
+      configuracion: { bitacora_individual: 'habilitada' },
+      ...sobrescribir,
+    })
+
+  it('ve las etapas, con "Mi equipo" como título dentro de Desarrollo', () => {
     const nav = construirNavActividad({
-      actividad: actividad({
-        rol: 'participante',
-        capacidades: [],
-        idMiEquipo: 'e1',
-        configuracion: { bitacora_individual: 'habilitada' },
-      }),
+      actividad: participante(),
       miEquipo: EQUIPO,
-      ritual: { abierto: true, aplicados: false },
       contexto: { idEquipo: 'e1', seccion: 'avances' },
       equipo: EQUIPO,
     })
 
-    const [bloqueActividad, bloqueEquipo] = etiquetas(nav)
-    expect(bloqueActividad.entradas).toEqual(['Resumen', 'Equipos', 'Participantes'])
-    expect(bloqueEquipo.titulo).toBe('Mi equipo: Alfa')
-    expect(bloqueEquipo.entradas).toContain('Mi bitácora')
-    expect(bloqueEquipo.entradas).toContain('Reconocimientos › Reconocer al equipo')
-    expect(activos(nav)).toEqual(['Avances'])
-    // Su equipo es hermano del Resumen, no un nivel bajo Equipos.
     expect(nav.volver).toEqual({ etiqueta: 'Participo', to: '/actividades/participo' })
+    expect(nav.subtitulos).toEqual(['Organiza Ana'])
+
+    const desarrollo = etapas(nav).find((e) => e.clave === 'desarrollo')!
+    const bloque = desarrollo.entradas.find((e) => e.tipo === 'bloque')
+    expect(bloque?.etiqueta).toBe('Mi equipo: Alfa')
+    expect(hojas(desarrollo.entradas).map((h) => h.etiqueta)).toContain('Mi bitácora')
+    expect(activos(nav)).toEqual(['Avances'])
+    expect(porEtapa(nav).desarrollo.slice(-3)).toEqual([
+      'Equipos',
+      'Participantes',
+      'Evaluación y retroalimentación',
+    ])
   })
 
-  it('quien participa sin equipo solo ve el bloque de la actividad', () => {
+  it('"Mi equipo" es un título sin enlace', () => {
     const nav = construirNavActividad({
-      actividad: actividad({ rol: 'participante', capacidades: [], idMiEquipo: null }),
+      actividad: participante(),
+      miEquipo: EQUIPO,
       contexto: { idActividad: 'a1', seccion: 'resumen' },
     })
-    expect(nav.secciones).toHaveLength(1)
+    const desarrollo = etapas(nav).find((e) => e.clave === 'desarrollo')!
+    const bloque = desarrollo.entradas.find((e) => e.tipo === 'bloque')!
+
+    expect(bloque).not.toHaveProperty('to')
   })
 
-  it('quien participa y mira otro equipo lo ve en un bloque aparte, bajo el suyo', () => {
+  it('en Creación ve Conformación de equipos solo si los equipos no los arma quien organiza', () => {
+    const con = (formacion: string) =>
+      porEtapa(
+        construirNavActividad({
+          actividad: participante({
+            fase: 'formacion_equipos',
+            idMiEquipo: null,
+            configuracion: { formacion_equipos: formacion },
+          }),
+          contexto: { idActividad: 'a1', seccion: 'resumen' },
+        }),
+      ).creacion
+
+    expect(con('libre')).toEqual(['Datos de la actividad', 'Conformación de equipos'])
+    expect(con('manual')).toEqual(['Datos de la actividad'])
+  })
+
+  it('Otorgar reconocimientos solo aparece con el ritual abierto', () => {
+    const con = (abierto: boolean) =>
+      porEtapa(
+        construirNavActividad({
+          actividad: participante({ fase: 'cierre' }),
+          ritual: { abierto, aplicados: false },
+          contexto: { idActividad: 'a1', seccion: 'resumen' },
+        }),
+      ).cierre
+
+    expect(con(true)).toContain('Otorgar reconocimientos')
+    expect(con(false)).not.toContain('Otorgar reconocimientos')
+  })
+
+  it('no ve entradas exclusivas de quien organiza', () => {
+    const nav = construirNavActividad({
+      actividad: participante(),
+      miEquipo: EQUIPO,
+      contexto: { idActividad: 'a1', seccion: 'resumen' },
+    })
+    const etiquetas = todas(nav).map((h) => h.etiqueta)
+
+    for (const ajena of [
+      'Planificar',
+      'Editar planificación',
+      'Inscripción',
+      'Confirmar cierre de actividad',
+    ]) {
+      expect(etiquetas).not.toContain(ajena)
+    }
+  })
+
+  it('sin equipo no tiene bloque "Mi equipo"', () => {
+    const nav = construirNavActividad({
+      actividad: participante({ idMiEquipo: null }),
+      contexto: { idActividad: 'a1', seccion: 'resumen' },
+    })
+    const desarrollo = etapas(nav).find((e) => e.clave === 'desarrollo')!
+
+    expect(desarrollo.entradas.some((e) => e.tipo === 'bloque')).toBe(false)
+  })
+
+  it('al mirar otro equipo queda marcado Equipos, no algo de su propio equipo', () => {
     const otro: Equipo = { ...EQUIPO, id: 'e2', nombre: 'Beta' }
     const nav = construirNavActividad({
-      actividad: actividad({ rol: 'participante', capacidades: [], idMiEquipo: 'e1' }),
+      actividad: participante(),
       equipo: otro,
       miEquipo: EQUIPO,
       contexto: { idEquipo: 'e2', seccion: 'metas' },
     })
 
-    expect(nav.secciones.map((s) => s.titulo)).toEqual([
-      undefined,
-      'Mi equipo: Alfa',
-      'Equipo: Beta',
-    ])
-    expect(nav.volver).toEqual({ etiqueta: 'Equipos', to: '/actividades/a1/equipos' })
+    expect(activos(nav)).toEqual(['Equipos'])
+    expect(nav.volver).toEqual({ etiqueta: 'Participo', to: '/actividades/participo' })
+  })
+})
+
+describe('etapaDeActividad', () => {
+  it('agrupa las fases en las tres etapas y no tiene una para la archivada', () => {
+    const de = (fase: Actividad['fase']) => etapaDeActividad(actividad({ fase }))
+
+    expect(de('configuracion')).toBe('creacion')
+    expect(de('inscripcion')).toBe('creacion')
+    expect(de('formacion_equipos')).toBe('creacion')
+    expect(de('desarrollo')).toBe('desarrollo')
+    expect(de('cierre')).toBe('cierre')
+    expect(de('archivada')).toBeNull()
   })
 })

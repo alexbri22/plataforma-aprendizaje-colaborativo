@@ -375,6 +375,42 @@
   overflow-wrap: anywhere;
 }
 
+.nivelCabecera {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.nivelSubtitulo {
+  margin: 0;
+  padding: 0 var(--space-3);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-tight);
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+/* "Mi equipo: Alfa" dentro de Desarrollo: un título sin enlace, con lo del
+   equipo sangrado debajo. */
+.nivelBloque {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nivelBloqueTitulo {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.nivelBloque > .nivelLista {
+  padding-left: var(--space-3);
+}
+
 .nivelSeccion {
   display: flex;
   flex-direction: column;
@@ -432,20 +468,22 @@ a.nivelItem:hover {
   outline-offset: 2px;
 }
 
+/* Entrada global sin pantalla todavía (Aprende colaborando). */
+.navItemPendiente {
+  font-weight: var(--font-weight-regular);
+  cursor: default;
+}
+
+.navItemPendiente:hover {
+  background: none;
+  color: var(--color-text-muted);
+}
+
 /* Aspecto sin pantalla todavía: está en el mapa, pero no es un enlace. */
 .nivelItemPendiente {
   font-weight: var(--font-weight-regular);
   color: var(--color-text-muted);
   cursor: default;
-}
-
-/* Recursos y Administración, bajo el nivel de la actividad: separados por
-   una línea, porque ya no son parte de dónde se está. */
-.navSecundaria {
-  flex: 0;
-  margin-top: auto;
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--color-border);
 }
 
 /* Mientras la actividad carga: reserva el alto aproximado del nivel para
@@ -469,11 +507,5 @@ a.nivelItem:hover {
 
   .nivelCargando {
     display: none;
-  }
-
-  .navSecundaria {
-    margin-top: 0;
-    padding-top: 0;
-    border-top: none;
   }
 }

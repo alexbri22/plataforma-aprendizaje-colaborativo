@@ -1,17 +1,12 @@
 import { useState } from 'react'
 import type { UseMutationResult } from '@tanstack/react-query'
-import { AvisoError, Button, Card, IconoCargando, LineaEtapas } from '../../components/ui'
+import { AvisoError, Button, Card, IconoCargando } from '../../components/ui'
 import { ErrorActividad } from './actividades.api'
-import { infoFase } from './fase'
 import { formatearFecha } from './formato'
 import { guiaEtapa } from './guiaEtapa'
-import { useCerrarInscripcionMutation, useIniciarCierreMutation } from './useActividades'
-import type { Actividad, FaseActividad } from './tipos'
+import { useIniciarCierreMutation } from './useActividades'
+import type { Actividad } from './tipos'
 import styles from './EtapasActividad.module.css'
-
-// Las etapas por las que pasa toda actividad. Archivada no se lista: es el
-// final, y solo aparece cuando ya se llegó ahí.
-const ETAPAS: FaseActividad[] = ['inscripcion', 'formacion_equipos', 'desarrollo', 'cierre']
 
 interface InfoAccionAdelantar {
   pregunta: string
@@ -27,7 +22,7 @@ interface InfoAccionAdelantar {
 // de su fecha): dos pasos, explicación + botón y luego confirmación, porque
 // ninguna de las dos tiene vuelta atrás. Secundario: lo normal es que la
 // etapa avance sola en su fecha.
-function AccionAdelantar({
+export function AccionAdelantar({
   pregunta,
   textoBoton,
   textoConfirmacion,
@@ -87,25 +82,10 @@ function AccionAdelantar({
 }
 
 // La transición manual disponible, si el actor la tiene en sus capacidades
-// (nucleo §4.3: la pantalla no evalúa rol ni etapa por su cuenta). Cada una
-// vive en una etapa distinta, así que a lo más aparece una.
+// (nucleo §4.3: la pantalla no evalúa rol ni etapa por su cuenta). Cerrar la
+// inscripción vive en su propia pantalla (PantallaInscripcion).
 function AdelantarEtapa({ actividad }: { actividad: Actividad }) {
-  const cerrarInscripcion = useCerrarInscripcionMutation(actividad.id)
   const iniciarCierre = useIniciarCierreMutation(actividad.id)
-
-  if (actividad.capacidades?.includes('cerrar_inscripcion')) {
-    return (
-      <AccionAdelantar
-        pregunta="¿Ya se unieron todos? Puedes cerrar la inscripción antes de la fecha."
-        textoBoton="Cerrar inscripción ahora"
-        textoConfirmacion="La clave dejará de admitir nuevas uniones y no se reactiva. La actividad pasa a formación de equipos."
-        textoBotonConfirmar="Sí, cerrar inscripción"
-        textoBotonCargando="Cerrando…"
-        mensajeErrorGenerico="No pudimos cerrar la inscripción. Intenta de nuevo."
-        mutacion={cerrarInscripcion}
-      />
-    )
-  }
 
   if (actividad.capacidades?.includes('iniciar_cierre')) {
     return (
@@ -131,25 +111,16 @@ function AdelantarEtapa({ actividad }: { actividad: Actividad }) {
   return null
 }
 
-// En qué etapa va la actividad y qué se hace en ella según el rol
-// (guiaEtapa). Informativo, sin botones ni enlaces (decisión de producto):
-// cada paso nombra la sección de la barra lateral donde se hace, para que la
-// persona aprenda a moverse por la plataforma. Reemplaza a la etiqueta de
-// etapa que iba junto al nombre.
+// Qué se hace en la etapa actual según el rol (guiaEtapa). Informativo, sin
+// botones ni enlaces (decisión de producto): cada paso nombra la sección de
+// la barra lateral donde se hace, para que la persona aprenda a moverse por
+// la plataforma. En qué etapa va la actividad lo dice solo la barra lateral:
+// una línea de etapas aquí, estática, confundía junto a la de la barra.
 export function EtapasActividad({ actividad }: { actividad: Actividad }) {
   const guia = guiaEtapa(actividad)
-  const archivada = actividad.fase === 'archivada'
-  const etapas = archivada ? [...ETAPAS, 'archivada' as const] : ETAPAS
-  const actual = Math.max(0, etapas.indexOf(actividad.fase))
 
   return (
     <Card className={styles.tarjeta}>
-      <LineaEtapas
-        etapas={etapas.map((etapa) => infoFase(etapa).etiqueta)}
-        actual={actual}
-        etiqueta="Etapas de la actividad"
-      />
-
       {guia ? (
         <div className={styles.guia}>
           <h2 className={styles.titulo}>Qué se hace en esta etapa</h2>

@@ -15,9 +15,9 @@ interface TextoPista {
 // ayudas de cada campo). Revisado con producto.
 export const CATALOGO_PISTAS: Record<PistaDePantalla, TextoPista> = {
   resumen: {
-    titulo: 'Resumen',
+    titulo: 'Datos de la actividad',
     organiza:
-      'En qué etapa va la actividad y qué te toca hacer en ella. Las etapas avanzan solas en sus fechas; algunas puedes adelantarlas aquí.',
+      'Lo general de la actividad: qué te toca en la etapa actual, el objetivo y los detalles, como fechas, inscripción y participantes.',
     participa:
       'Lo general de la actividad: objetivo, fechas y quién organiza. El trabajo del día a día está en tu equipo.',
   },
@@ -25,6 +25,11 @@ export const CATALOGO_PISTAS: Record<PistaDePantalla, TextoPista> = {
     titulo: 'Planificar',
     organiza:
       'Qué seguimiento tendrá la actividad y qué comparten los equipos. Algunas opciones dejan de poder cambiarse cuando la actividad avanza.',
+  },
+  inscripcion: {
+    titulo: 'Inscripción',
+    organiza:
+      'Comparte la clave para que los participantes se unan. La inscripción cierra sola en su fecha, o puedes cerrarla antes.',
   },
   equipos: {
     titulo: 'Equipos',

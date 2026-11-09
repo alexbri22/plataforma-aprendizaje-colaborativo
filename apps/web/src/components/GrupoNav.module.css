@@ -133,6 +133,55 @@
   color: var(--color-text-muted);
 }
 
+/* Etapa de una actividad (Creación, Desarrollo, Cierre): el nivel
+   principal de la barra dentro de una actividad, así que va en el color del
+   texto y en semibold; su estado (Actual, Hecha, Próxima) y el chevron, a la
+   derecha. */
+.grupoEncabezadoEtapa {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  border: none;
+  background: none;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.grupoEncabezadoEtapa:hover {
+  background: var(--color-surface-hover);
+}
+
+.grupoEncabezadoEtapa:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.grupoEncabezadoEtapa .grupoChevron {
+  color: var(--color-text-muted);
+}
+
+/* La etapa en curso no se pliega: no es un botón. */
+.grupoEncabezadoFijo {
+  cursor: default;
+}
+
+.grupoEncabezadoFijo:hover {
+  background: none;
+}
+
+.grupoItemsEtapa {
+  padding-left: var(--space-2);
+}
+
 /* Con el grupo cerrado, el encabezado delata que la pantalla actual vive
    dentro de él. */
 .grupoEncabezadoActivo[aria-expanded='false'] {
@@ -152,7 +201,8 @@
 
 .grupoEncabezado[aria-expanded='true'] .grupoChevron,
 .grupoEncabezadoPrincipal[aria-expanded='true'] .grupoChevron,
-.grupoEncabezadoSubgrupo[aria-expanded='true'] .grupoChevron {
+.grupoEncabezadoSubgrupo[aria-expanded='true'] .grupoChevron,
+.grupoEncabezadoEtapa[aria-expanded='true'] .grupoChevron {
   transform: rotate(90deg);
 }
 
@@ -207,7 +257,8 @@
 
   .grupoEncabezado,
   .grupoEncabezadoPrincipal,
-  .grupoEncabezadoSubgrupo {
+  .grupoEncabezadoSubgrupo,
+  .grupoEncabezadoEtapa {
     width: auto;
   }
 

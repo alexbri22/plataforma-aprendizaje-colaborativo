@@ -6,6 +6,7 @@ import {
 import { useState, type ChangeEvent } from 'react'
 import { useParams } from 'react-router-dom'
 import { AppShell } from '../../components/AppShell'
+import { etapaDeActividad } from '../../components/navegacion/construirNavActividad'
 import { Card, IconoCargando, Select, Switch } from '../../components/ui'
 import { ErrorActividad } from './actividades.api'
 import { FUNCIONES_SIMPLES } from './configuracionFunciones'
@@ -107,7 +108,9 @@ export function PantallaConfiguracion() {
   return (
     <AppShell
       seccionActiva="actividades"
-      titulo="Planificar"
+      // El nombre de la entrada de la barra lateral por la que se llega en
+      // cada etapa (construirNavActividad).
+      titulo={etapaDeActividad(actividad) === 'creacion' ? 'Planificar' : 'Editar planificación'}
       contexto={{ idActividad: id, seccion: 'planificar' }}
       ayuda="planificar"
     >

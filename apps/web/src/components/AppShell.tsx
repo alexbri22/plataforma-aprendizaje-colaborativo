@@ -11,7 +11,7 @@ import type {
   NavActividad,
 } from './navegacion/construirNavActividad'
 import { useNavActividad } from './navegacion/useNavActividad'
-import { Avatar, Button } from './ui'
+import { Avatar, Badge, Button } from './ui'
 import styles from './AppShell.module.css'
 
 // 'actividades' es el valor genérico para las pantallas dentro de una
@@ -32,7 +32,7 @@ interface ItemNav {
   id: SeccionApp
   etiqueta: string
   to: string
-  Icono: () => ReactNode
+  Icono?: () => ReactNode
 }
 
 function IconoActividades() {
@@ -229,9 +229,16 @@ const ITEMS_NAV_ACTIVIDADES: ItemNav[] = [
 ]
 
 // Mi perfil no es un ítem de la navegación: se abre desde el nombre de la
-// cuenta, al pie del menú, que es donde se busca lo que es de uno.
-const ITEMS_NAV: ItemNav[] = [
-  { id: 'recursos', etiqueta: 'Recursos', to: '/recursos', Icono: IconoRecursos },
+// cuenta, al pie del menú, que es donde se busca lo que es de uno. Los
+// cursos se encuentran dentro de Recursos.
+const ITEMS_NAV_APRENDE: ItemNav[] = [{ id: 'recursos', etiqueta: 'Recursos', to: '/recursos' }]
+
+// Del subsistema de formación, todavía sin pantalla: en el mapa, sin enlace.
+const PENDIENTES_APRENDE = [
+  'Recursos compartidos',
+  'Rutas de aprendizaje',
+  'Plantillas',
+  'Mis diplomas',
 ]
 
 // Solo se muestra a administradores. Es conveniencia de navegación: la
@@ -280,7 +287,7 @@ function ItemNavLink({ item, activo }: { item: ItemNav; activo: boolean }) {
       className={[styles.navItem, activo ? styles.navItemActivo : null].filter(Boolean).join(' ')}
       aria-current={activo ? 'page' : undefined}
     >
-      <item.Icono />
+      {item.Icono ? <item.Icono /> : null}
       {item.etiqueta}
     </Link>
   )
@@ -311,14 +318,60 @@ function ItemNivel({ item }: { item: ItemNavActividad }) {
   )
 }
 
+function contieneActivo(entrada: EntradaNavActividad): boolean {
+  if (entrada.tipo === 'item') return entrada.activo
+  if (entrada.tipo === 'grupo') return entrada.items.some((item) => item.activo)
+  return entrada.entradas.some(contieneActivo)
+}
+
+const ETIQUETAS_ESTADO_ETAPA = { actual: 'Actual', hecha: 'Hecha', proxima: 'Próxima' } as const
+
 function EntradaNivel({ entrada }: { entrada: EntradaNavActividad }) {
   if (entrada.tipo === 'item') return <ItemNivel item={entrada} />
+  if (entrada.tipo === 'bloque') {
+    return (
+      <li className={styles.nivelBloque}>
+        <span className={styles.nivelBloqueTitulo}>{entrada.etiqueta}</span>
+        <ul className={styles.nivelLista}>
+          {entrada.entradas.map((hija) => (
+            <EntradaNivel key={hija.clave} entrada={hija} />
+          ))}
+        </ul>
+      </li>
+    )
+  }
+  if (entrada.tipo === 'etapa') {
+    // Gris neutro para todas; la actual, en el tono primario.
+    return (
+      <li>
+        <GrupoNav
+          claveAlmacenamiento={`co3.nav.etapa.${entrada.clave}.abierto`}
+          etiqueta={entrada.etiqueta}
+          contieneActivo={contieneActivo(entrada)}
+          plegadoPorDefecto
+          fijo={entrada.estado === 'actual'}
+          variante="etapa"
+          marca={
+            <Badge variant={entrada.estado === 'actual' ? 'primary' : 'neutral'}>
+              {ETIQUETAS_ESTADO_ETAPA[entrada.estado]}
+            </Badge>
+          }
+        >
+          <ul className={styles.nivelLista}>
+            {entrada.entradas.map((hija) => (
+              <EntradaNivel key={hija.clave} entrada={hija} />
+            ))}
+          </ul>
+        </GrupoNav>
+      </li>
+    )
+  }
   return (
     <li>
       <GrupoNav
         claveAlmacenamiento={`co3.nav.actividad.${entrada.clave}.abierto`}
         etiqueta={entrada.etiqueta}
-        contieneActivo={entrada.items.some((item) => item.activo)}
+        contieneActivo={contieneActivo(entrada)}
         plegadoPorDefecto={entrada.plegadoPorDefecto}
         variante="subgrupo"
       >
@@ -332,15 +385,21 @@ function EntradaNivel({ entrada }: { entrada: EntradaNavActividad }) {
   )
 }
 
-// Dentro de una actividad, la barra muestra solo esa actividad, con una
-// flecha a Organizo o Participo, en vez de un árbol que cuelga de ellos: con
-// cuatro niveles de sangría los nombres no cabían y costaba saber en cuál se
-// estaba. Cada equipo va en su propio bloque con título. La flecha conserva
-// el color de la rama, que es lo que dice en qué papel se está.
+// Dentro de una actividad, la barra muestra solo ese nivel (la actividad
+// con sus etapas, o un equipo para quien organiza), con una flecha al de
+// arriba, en vez de un árbol: con varios niveles de sangría los nombres no
+// cabían y costaba saber en cuál se estaba.
 function NivelActividad({ nav }: { nav: NavActividad }) {
   return (
-    <nav className={styles.nivel} aria-label="Actividad">
-      <p className={styles.nivelTitulo}>{nav.titulo}</p>
+    <nav className={styles.nivel} aria-label={nav.titulo}>
+      <div className={styles.nivelCabecera}>
+        <p className={styles.nivelTitulo}>{nav.titulo}</p>
+        {nav.subtitulos.map((subtitulo) => (
+          <p key={subtitulo} className={styles.nivelSubtitulo}>
+            {subtitulo}
+          </p>
+        ))}
+      </div>
 
       {nav.secciones.map((seccion) => (
         <div key={seccion.clave} className={styles.nivelSeccion}>
@@ -497,13 +556,9 @@ export function AppShell({
             )
           ) : null}
 
-          <nav
-            className={[styles.nav, nivelVisible ? styles.navSecundaria : null]
-              .filter(Boolean)
-              .join(' ')}
-            aria-label="Principal"
-          >
-            {nivelVisible ? null : (
+          {/* Al entrar a una actividad, su nivel reemplaza a la barra global. */}
+          {nivelVisible ? null : (
+            <nav className={styles.nav} aria-label="Principal">
               <GrupoNav
                 claveAlmacenamiento="co3.nav.actividades.abierto"
                 etiqueta="Actividades"
@@ -518,26 +573,42 @@ export function AppShell({
                   <ItemNavLink key={item.id} item={item} activo={item.id === seccionActiva} />
                 ))}
               </GrupoNav>
-            )}
 
-            {ITEMS_NAV.map((item) => (
-              <ItemNavLink key={item.id} item={item} activo={item.id === seccionActiva} />
-            ))}
-
-            {usuario?.tipoCuenta === 'administrador' ? (
               <GrupoNav
-                claveAlmacenamiento="co3.nav.administracion.abierto"
-                etiqueta="Administración"
-                Icono={IconoAdministracion}
-                contieneActivo={ITEMS_NAV_ADMIN.some((item) => item.id === seccionActiva)}
-                variante="seccion"
+                claveAlmacenamiento="co3.nav.aprende.abierto"
+                etiqueta="Aprende colaborando"
+                Icono={IconoRecursos}
+                contieneActivo={ITEMS_NAV_APRENDE.some((item) => item.id === seccionActiva)}
+                variante="principal"
               >
-                {ITEMS_NAV_ADMIN.map((item) => (
+                {ITEMS_NAV_APRENDE.map((item) => (
                   <ItemNavLink key={item.id} item={item} activo={item.id === seccionActiva} />
                 ))}
+                {PENDIENTES_APRENDE.map((etiqueta) => (
+                  <span
+                    key={etiqueta}
+                    className={[styles.navItem, styles.navItemPendiente].join(' ')}
+                  >
+                    {etiqueta}
+                  </span>
+                ))}
               </GrupoNav>
-            ) : null}
-          </nav>
+
+              {usuario?.tipoCuenta === 'administrador' ? (
+                <GrupoNav
+                  claveAlmacenamiento="co3.nav.administracion.abierto"
+                  etiqueta="Administración"
+                  Icono={IconoAdministracion}
+                  contieneActivo={ITEMS_NAV_ADMIN.some((item) => item.id === seccionActiva)}
+                  variante="seccion"
+                >
+                  {ITEMS_NAV_ADMIN.map((item) => (
+                    <ItemNavLink key={item.id} item={item} activo={item.id === seccionActiva} />
+                  ))}
+                </GrupoNav>
+              ) : null}
+            </nav>
+          )}
         </div>
 
         <div className={styles.cuenta}>

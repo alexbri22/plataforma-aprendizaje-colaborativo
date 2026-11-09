@@ -3,7 +3,9 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import {
   EntradaActividades,
   PantallaConfiguracion,
+  PantallaConfirmarCierre,
   PantallaCrearActividad,
+  PantallaInscripcion,
   PantallaMisActividades,
   PantallaResumenActividad,
   PantallaUnirseConClave,
@@ -95,14 +97,29 @@ export function App() {
               </RutaProtegida>
             }
           />
-          {/* El resumen explícito: "Acerca de la actividad" para quien
-              participa. A diferencia de /actividades/:id, nunca lleva
-              directo al espacio del equipo. */}
+          {/* Datos de la actividad, desde la barra lateral. A diferencia de
+              /actividades/:id, nunca lleva a la pantalla de la etapa. */}
           <Route
             path="/actividades/:id/resumen"
             element={
               <RutaProtegida>
                 <PantallaResumenActividad soloResumen />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="/actividades/:id/inscripcion"
+            element={
+              <RutaProtegida>
+                <PantallaInscripcion />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="/actividades/:id/cierre"
+            element={
+              <RutaProtegida>
+                <PantallaConfirmarCierre />
               </RutaProtegida>
             }
           />

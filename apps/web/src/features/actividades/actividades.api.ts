@@ -198,6 +198,24 @@ export async function iniciarCierre(id: string): Promise<Actividad> {
   return actividad
 }
 
+// POST /api/actividades/{id}/archivo (docs/diseno-desarrollo-nucleo.md §7.4 y
+// §7.7): archiva la actividad antes de que venza el plazo de cierre. La
+// muestra PantallaConfirmarCierre cuando 'archivar' está en las capacidades.
+export async function archivarActividad(id: string): Promise<Actividad> {
+  const respuesta = await pedir(`/api/actividades/${encodeURIComponent(id)}/archivo`, {
+    method: 'POST',
+  })
+
+  if (!respuesta.ok) {
+    throw new ErrorActividad(
+      await leerMensajeError(respuesta, 'No pudimos archivar la actividad. Intenta de nuevo.'),
+    )
+  }
+
+  const { actividad } = (await respuesta.json()) as { actividad: Actividad }
+  return actividad
+}
+
 // PUT /api/actividades/{id}/configuracion/{funcion} (docs/diseno-desarrollo-nucleo.md
 // §7.7): fija el estado de una función. `cuerpo` es {estado} para las siete
 // funciones simples, o {metas, avances, recursos} para espacio_equipo

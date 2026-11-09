@@ -192,7 +192,9 @@ export function PantallaEquipos() {
   return (
     <AppShell
       seccionActiva="actividades"
-      titulo="Equipos"
+      // El nombre de la entrada de la barra lateral por la que se llega en
+      // cada etapa (construirNavActividad).
+      titulo={fasePrevia ? 'Conformación de equipos' : 'Equipos'}
       contexto={{ idActividad: id, seccion: 'equipos' }}
       ayuda="equipos"
     >

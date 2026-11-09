@@ -5,6 +5,7 @@ export const IDS_PISTA = [
   'bienvenida',
   'resumen',
   'planificar',
+  'inscripcion',
   'equipos',
   'metas',
   'planeacion',

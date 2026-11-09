@@ -877,6 +877,29 @@ export async function iniciarCierre(
   return obtenerActividadPorId(idActividad, membresiaActor)
 }
 
+// POST /api/actividades/{id}/archivo (nucleo §7.4): adelanta Cierre →
+// Archivada, que ocurre sola al vencer el plazo de cierre
+// (transicionarActividadesVencidas). Desde ahí la actividad es de solo
+// lectura, y el reconocimiento entre compañeros se aplica en ese momento
+// (insignias.service.ts, ventana()).
+export async function archivar(
+  idActividad: string,
+  idUsuarioActor: string,
+  membresiaActor: MembresiaActor,
+): Promise<ActividadConCapacidades> {
+  const actividad = await cargarActividadConMembresiasYConfiguracion(idActividad)
+  exigirAccion(membresiaActor, 'archivar', actividad.estado, 'La actividad no está en cierre.')
+
+  const archivada = await prisma.$transaction((tx) =>
+    escribirArchivado(tx, idActividad, { tipo: 'usuario', idUsuario: idUsuarioActor }),
+  )
+  // Otro disparo ganó entre la lectura de arriba y la escritura: mismo caso
+  // que cerrarInscripcion.
+  if (!archivada) throw new ErrorFaseNoPermiteAccion('La actividad no está en cierre.')
+
+  return obtenerActividadPorId(idActividad, membresiaActor)
+}
+
 // PUT /api/actividades/{id}/configuracion/{funcion} (docs/diseno-desarrollo-nucleo.md
 // §7.7 y general §6.2): fija el estado de una función. `estadoNuevo` ya
 // llegó validado contra el catálogo de la función (validarDatosConfigurarFuncion).

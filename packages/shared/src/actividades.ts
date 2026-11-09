@@ -30,6 +30,8 @@ export const ACCIONES_ACTIVIDAD = [
   // fase: abrir calificación/evaluaciones y caducar invitaciones pendientes
   // no tienen qué hacer todavía porque esos módulos no existen.
   'iniciar_cierre',
+  // Cierre → Archivada antes de que venza el plazo de cierre (nucleo §7.4).
+  'archivar',
   'agregar_coorganizador',
   // Equipos (nucleo §8). Sus permisos salen del rol, del permiso de
   // co-organizador y del estado de `formacion_equipos`; nunca de un tipo de

@@ -665,6 +665,99 @@ describe('POST /api/actividades/:id/cierre', () => {
   })
 })
 
+describe('POST /api/actividades/:id/archivo', () => {
+  async function actividadEnCierre(correo = 'ada@ejemplo.com') {
+    const cookie = await registrarYObtenerCookie(correo)
+    const { id } = await crearActividad(cookie)
+    await prisma.actividad.update({ where: { idActividad: id }, data: { estado: 'cierre' } })
+    return { cookie, id }
+  }
+
+  it('archiva una actividad en cierre antes de que venza el plazo', async () => {
+    const { cookie, id } = await actividadEnCierre()
+
+    const respuesta = await request(app)
+      .post(`/api/actividades/${id}/archivo`)
+      .set('Cookie', cookie)
+
+    expect(respuesta.status).toBe(200)
+    expect(respuesta.body.actividad.fase).toBe('archivada')
+    const actividadEnBD = await prisma.actividad.findUniqueOrThrow({ where: { idActividad: id } })
+    expect(actividadEnBD.estado).toBe('archivada')
+  })
+
+  it('en cierre quien organiza tiene la capacidad archivar; ya archivada, ninguna', async () => {
+    const { cookie, id } = await actividadEnCierre()
+
+    const antes = await request(app).get(`/api/actividades/${id}`).set('Cookie', cookie)
+    expect(antes.body.actividad.capacidades).toContain('archivar')
+
+    await request(app).post(`/api/actividades/${id}/archivo`).set('Cookie', cookie)
+
+    const despues = await request(app).get(`/api/actividades/${id}`).set('Cookie', cookie)
+    expect(despues.body.actividad.capacidades).not.toContain('archivar')
+  })
+
+  it('responde 403 a un participante que intenta archivar', async () => {
+    const cookieOrganizador = await registrarYObtenerCookie('ada@ejemplo.com')
+    const cookieParticipante = await registrarYObtenerCookie('grace@ejemplo.com')
+    const { id, claveIngreso } = await crearActividad(cookieOrganizador)
+    await unirseComoParticipante(claveIngreso, cookieParticipante)
+    await prisma.actividad.update({ where: { idActividad: id }, data: { estado: 'cierre' } })
+
+    const respuesta = await request(app)
+      .post(`/api/actividades/${id}/archivo`)
+      .set('Cookie', cookieParticipante)
+
+    expect(respuesta.status).toBe(403)
+  })
+
+  it('responde 409 si la actividad no está en cierre', async () => {
+    const cookie = await registrarYObtenerCookie('ada@ejemplo.com')
+    const { id } = await crearActividad(cookie)
+    await prisma.actividad.update({ where: { idActividad: id }, data: { estado: 'desarrollo' } })
+
+    const respuesta = await request(app)
+      .post(`/api/actividades/${id}/archivo`)
+      .set('Cookie', cookie)
+
+    expect(respuesta.status).toBe(409)
+    expect(respuesta.body.codigo).toBe('fase_no_permite_accion')
+  })
+
+  it('responde 401 sin sesión', async () => {
+    const respuesta = await request(app).post('/api/actividades/cualquiera/archivo')
+
+    expect(respuesta.status).toBe(401)
+  })
+
+  it('registra un evento de historial con la persona como actor', async () => {
+    const { cookie, id } = await actividadEnCierre()
+
+    await request(app).post(`/api/actividades/${id}/archivo`).set('Cookie', cookie)
+
+    const eventos = await prisma.historial.findMany({
+      where: { idActividad: id, tipoEvento: 'fase_avanzada' },
+    })
+    expect(eventos).toHaveLength(1)
+    expect(eventos[0]).toMatchObject({ tipoActor: 'usuario', categoria: 'estructura' })
+  })
+
+  it('dos archivados simultáneos ejecutan la transición una sola vez', async () => {
+    const { cookie, id } = await actividadEnCierre()
+
+    const respuestas = await Promise.all(
+      [1, 2].map(() => request(app).post(`/api/actividades/${id}/archivo`).set('Cookie', cookie)),
+    )
+
+    expect(respuestas.map((r) => r.status).sort()).toEqual([200, 409])
+    const eventos = await prisma.historial.findMany({
+      where: { idActividad: id, tipoEvento: 'fase_avanzada' },
+    })
+    expect(eventos).toHaveLength(1)
+  })
+})
+
 describe('PUT /api/actividades/:id/coorganizadores/:idUsuario', () => {
   it('agrega a un usuario sin membresía previa como co-organizador con el conjunto de permisos por defecto', async () => {
     const cookieOrganizador = await registrarYObtenerCookie('ada@ejemplo.com')

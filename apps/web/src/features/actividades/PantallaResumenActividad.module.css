@@ -80,15 +80,3 @@
 
 /* La clave es un dato más de la lista, no un bloque aparte — el monoespaciado
    basta para señalar que es un código, sin subir tamaño, color ni fondo. */
-.clave {
-  font-family: var(--font-family-mono);
-  font-weight: var(--font-weight-medium);
-  letter-spacing: 0.02em;
-}
-
-.detalleNota {
-  display: block;
-  margin-top: var(--space-1);
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
-}

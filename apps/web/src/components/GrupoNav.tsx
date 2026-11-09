@@ -48,9 +48,15 @@ export interface GrupoNavProps {
    * y sin separador (p. ej. Actividades). 'seccion': grupo aparte, separado
    * por línea y en versalitas (p. ej. Administración, Proceso colaborativo).
    * 'subgrupo': encabezado discreto, sin línea ni versalitas, para agrupar
-   * dentro del nivel de una actividad (p. ej. Proyecto colaborativo). Todas
-   * las variantes indentan a sus hijos por igual. */
-  variante?: 'principal' | 'seccion' | 'subgrupo'
+   * dentro del nivel de una actividad (p. ej. Proyecto colaborativo).
+   * 'etapa': las etapas de una actividad (Creación, Desarrollo, Cierre), en
+   * el color del texto y con su estado a la derecha. Todas las variantes
+   * indentan a sus hijos por igual. */
+  variante?: 'principal' | 'seccion' | 'subgrupo' | 'etapa'
+  /** Junto a la etiqueta, a la derecha (el estado de una etapa). */
+  marca?: ReactNode
+  /** Siempre abierto y sin chevron: la etapa en curso no se pliega. */
+  fijo?: boolean
   /** Cómo arranca la primera vez, antes de que la persona lo abra o lo
    * cierre: abierto, salvo que se pida lo contrario. */
   plegadoPorDefecto?: boolean
@@ -68,6 +74,8 @@ export function GrupoNav({
   contieneActivo = false,
   variante = 'seccion',
   plegadoPorDefecto = false,
+  marca,
+  fijo = false,
   children,
 }: GrupoNavProps) {
   const idPanel = useId()
@@ -93,8 +101,28 @@ export function GrupoNav({
     principal: [styles.grupoPrincipal, styles.grupoEncabezadoPrincipal],
     seccion: [styles.grupo, styles.grupoEncabezado],
     subgrupo: [styles.grupoPrincipal, styles.grupoEncabezadoSubgrupo],
+    etapa: [styles.grupoPrincipal, styles.grupoEncabezadoEtapa],
   } as const
   const [claseGrupo, claseEncabezado] = clasesPorVariante[variante]
+  const claseSangria = Icono
+    ? null
+    : variante === 'etapa'
+      ? styles.grupoItemsEtapa
+      : styles.grupoItemsSinIcono
+
+  if (fijo) {
+    return (
+      <div className={claseGrupo}>
+        <div className={[claseEncabezado, styles.grupoEncabezadoFijo].join(' ')}>
+          <span className={styles.grupoEtiqueta}>{etiqueta}</span>
+          {marca}
+        </div>
+        <div className={[styles.grupoItems, claseSangria].filter(Boolean).join(' ')}>
+          {children}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className={claseGrupo}>
@@ -108,10 +136,15 @@ export function GrupoNav({
         onClick={alternar}
       >
         {/* Sin ícono, el chevron va delante: es lo único que dice que la
-            etiqueta se pliega. */}
-        {Icono ? <Icono /> : <IconoChevron className={styles.grupoChevron} />}
+            etiqueta se pliega. Las etapas lo llevan al final, tras su estado. */}
+        {Icono ? (
+          <Icono />
+        ) : variante === 'etapa' ? null : (
+          <IconoChevron className={styles.grupoChevron} />
+        )}
         <span className={styles.grupoEtiqueta}>{etiqueta}</span>
-        {Icono ? <IconoChevron className={styles.grupoChevron} /> : null}
+        {marca}
+        {Icono || variante === 'etapa' ? <IconoChevron className={styles.grupoChevron} /> : null}
       </button>
 
       <div
@@ -121,11 +154,7 @@ export function GrupoNav({
           .join(' ')}
         inert={!abierto}
       >
-        <div
-          className={[styles.grupoItems, Icono ? null : styles.grupoItemsSinIcono]
-            .filter(Boolean)
-            .join(' ')}
-        >
+        <div className={[styles.grupoItems, claseSangria].filter(Boolean).join(' ')}>
           {children}
         </div>
       </div>

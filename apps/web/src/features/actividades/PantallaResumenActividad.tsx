@@ -1,30 +1,52 @@
 import { Navigate, useParams } from 'react-router-dom'
 import { AppShell } from '../../components/AppShell'
 import { Card, IconoCargando } from '../../components/ui'
+import { useRitual } from '../insignias/useReconocimientos'
 import { primeraSeccionHabilitada } from './espacioEquipo'
 import { EtapasActividad } from './EtapasActividad'
 import { formatearFecha, sumarDias } from './formato'
 import { useActividad } from './useActividades'
+import type { Actividad } from './tipos'
 import styles from './PantallaResumenActividad.module.css'
 
-// Fases en que quien participa ya trabaja con su equipo: abrir la actividad
-// lo lleva directo ahí en vez de hacerle buscar su equipo entre los demás.
-const FASES_DE_TRABAJO_EN_EQUIPO = ['desarrollo', 'cierre']
+const TITULO = 'Datos de la actividad'
+
+// Abrir una actividad (/actividades/:id) lleva a la pantalla de su etapa en
+// curso; en Creación y ya archivada, a sus datos (null).
+function pantallaDeEtapa(actividad: Actividad, ritualAbierto: boolean): string | null {
+  const reconocer = `/actividades/${actividad.id}/reconocer`
+  if (actividad.rol !== 'participante') {
+    if (actividad.fase === 'desarrollo') return `/actividades/${actividad.id}/equipos`
+    if (actividad.fase === 'cierre') {
+      return ritualAbierto ? reconocer : `/actividades/${actividad.id}/cierre`
+    }
+    return null
+  }
+  if (actividad.fase === 'desarrollo' && actividad.idMiEquipo) {
+    const seccion = primeraSeccionHabilitada(actividad)
+    return seccion ? `/equipos/${actividad.idMiEquipo}/${seccion}` : null
+  }
+  if (actividad.fase === 'cierre' && ritualAbierto) return reconocer
+  return null
+}
 
 export interface PantallaResumenActividadProps {
-  /** /actividades/:id/resumen (Resumen, desde la barra lateral): se queda aquí
-   * siempre, sin llevar al espacio del equipo. */
+  /** /actividades/:id/resumen (Datos de la actividad, desde la barra
+   * lateral): se queda aquí siempre, sin llevar a la pantalla de la etapa. */
   soloResumen?: boolean
 }
 
 export function PantallaResumenActividad({ soloResumen = false }: PantallaResumenActividadProps) {
   const { id = '' } = useParams<{ id: string }>()
   const actividadQuery = useActividad(id)
+  // Solo para decidir a dónde lleva abrir la actividad en Cierre.
+  const enCierre = actividadQuery.data?.fase === 'cierre'
+  const ritualQuery = useRitual(id, { enabled: !soloResumen && enCierre })
   const contexto = { idActividad: id, seccion: 'resumen' } as const
 
-  if (actividadQuery.isPending) {
+  if (actividadQuery.isPending || (!soloResumen && enCierre && ritualQuery.isPending)) {
     return (
-      <AppShell seccionActiva="actividades" titulo="Resumen" contexto={contexto}>
+      <AppShell seccionActiva="actividades" titulo={TITULO} contexto={contexto}>
         <div className={styles.cargando} role="status" aria-label="Cargando la actividad">
           <IconoCargando size={24} />
         </div>
@@ -42,18 +64,13 @@ export function PantallaResumenActividad({ soloResumen = false }: PantallaResume
 
   const actividad = actividadQuery.data
 
-  if (
-    !soloResumen &&
-    actividad.rol === 'participante' &&
-    actividad.idMiEquipo &&
-    FASES_DE_TRABAJO_EN_EQUIPO.includes(actividad.fase)
-  ) {
-    const seccion = primeraSeccionHabilitada(actividad)
-    if (seccion) return <Navigate to={`/equipos/${actividad.idMiEquipo}/${seccion}`} replace />
-  }
+  const destino = soloResumen
+    ? null
+    : pantallaDeEtapa(actividad, Boolean(ritualQuery.data?.contexto.abierto))
+  if (destino) return <Navigate to={destino} replace />
 
   return (
-    <AppShell seccionActiva="actividades" titulo="Resumen" contexto={contexto} ayuda="resumen">
+    <AppShell seccionActiva="actividades" titulo={TITULO} contexto={contexto} ayuda="resumen">
       <div className={styles.contenido}>
         <EtapasActividad actividad={actividad} />
 
@@ -96,15 +113,6 @@ export function PantallaResumenActividad({ soloResumen = false }: PantallaResume
                     : `${actividad.numParticipantes} se han unido`}
               </dd>
             </div>
-            <div className={styles.detalle}>
-              <dt className={styles.detalleEtiqueta}>Clave de ingreso</dt>
-              <dd className={styles.detalleValor}>
-                <span className={styles.clave}>{actividad.claveIngreso ?? '—'}</span>
-                {actividad.claveIngreso && actividad.fase === 'inscripcion' ? (
-                  <span className={styles.detalleNota}>Compártela para que se unan.</span>
-                ) : null}
-              </dd>
-            </div>
             {actividad.fechaInicio && actividad.fechaTermino ? (
               <div className={styles.detalle}>
                 <dt className={styles.detalleEtiqueta}>Fechas</dt>
@@ -117,7 +125,9 @@ export function PantallaResumenActividad({ soloResumen = false }: PantallaResume
               <div className={styles.detalle}>
                 <dt className={styles.detalleEtiqueta}>Inscripción</dt>
                 <dd className={styles.detalleValor}>
-                  {actividad.fase === 'inscripcion' ? 'Hasta el' : 'Cerró el'}{' '}
+                  {actividad.fase === 'configuracion' || actividad.fase === 'inscripcion'
+                    ? 'Hasta el'
+                    : 'Cerró el'}{' '}
                   {formatearFecha(actividad.fechaLimiteInscripcion)}
                 </dd>
               </div>

@@ -646,7 +646,7 @@ describe('PantallaConfiguracion', () => {
     expect(await screen.findByLabelText('Periodicidad de las entregas')).toBeDisabled()
   })
 
-  it('se ubica con la barra: Planificar marcado y Resumen a un clic', async () => {
+  it('se ubica con la barra: Planificar marcado y Datos de la actividad a un clic', async () => {
     vi.mocked(obtenerActividad).mockResolvedValueOnce(ACTIVIDAD_BASE)
     renderPantalla(ACTIVIDAD_BASE.id)
 
@@ -654,9 +654,28 @@ describe('PantallaConfiguracion', () => {
       'aria-current',
       'page',
     )
-    expect(screen.getByRole('link', { name: 'Resumen' })).toHaveAttribute(
+    expect(screen.getByRole('heading', { name: 'Planificar', level: 1 })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Datos de la actividad' })).toHaveAttribute(
       'href',
-      `/actividades/${ACTIVIDAD_BASE.id}`,
+      `/actividades/${ACTIVIDAD_BASE.id}/resumen`,
     )
+  })
+
+  it('pasada la Creación se llama Editar planificación, y Planificar ya no es un enlace', async () => {
+    vi.mocked(obtenerActividad).mockResolvedValueOnce({
+      ...ACTIVIDAD_BASE,
+      fase: 'desarrollo',
+      capacidades: ['ajustar_periodos'],
+    })
+    renderPantalla(ACTIVIDAD_BASE.id)
+
+    expect(await screen.findByRole('link', { name: 'Editar planificación' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    expect(
+      screen.getByRole('heading', { name: 'Editar planificación', level: 1 }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Planificar' })).not.toBeInTheDocument()
   })
 })

@@ -10,6 +10,7 @@ import {
   crearActividad,
   fijarLimitesEquipo,
   iniciarCierre,
+  archivar,
   listarActividadesDeUsuario,
   listarParticipantes,
   nombreCompleto,
@@ -111,6 +112,20 @@ actividadesRouter.post(
     const { membresia } = req.contextoActividad!
     const actor = req.actor as UsuarioPublico
     const actividad = await iniciarCierre(req.params.id as string, actor.idUsuario, membresia)
+    res.status(200).json({ actividad })
+  },
+)
+
+// POST /api/actividades/{id}/archivo (nucleo §7.4): archiva la actividad
+// antes de que venza el plazo de cierre.
+actividadesRouter.post(
+  '/actividades/:id/archivo',
+  exigirSesion,
+  cargarContextoActividad,
+  async (req, res) => {
+    const { membresia } = req.contextoActividad!
+    const actor = req.actor as UsuarioPublico
+    const actividad = await archivar(req.params.id as string, actor.idUsuario, membresia)
     res.status(200).json({ actividad })
   },
 )
