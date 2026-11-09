@@ -1,0 +1,12 @@
+/* Lo propio de la ficha de ruta; el resto viene de PantallaCurso.module.css
+   para que ruta y curso se lean igual. */
+
+.descripcion {
+  white-space: pre-line;
+}
+
+.enCurso {
+  color: var(--color-primary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}

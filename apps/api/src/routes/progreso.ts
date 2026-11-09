@@ -16,6 +16,12 @@ import {
   listarRecursosGuardados,
   quitarRecursoGuardado,
 } from '../services/formacion/recursos.service.js'
+import {
+  guardarPreferencias,
+  obtenerPreferencias,
+  obtenerRecomendaciones,
+  validarPreferencias,
+} from '../services/formacion/recomendacion.service.js'
 import { validarPaginacion } from '../services/formacion/validacion.js'
 
 // Progreso personal y biblioteca personal (docs/diseno-desarrollo-formacion.md
@@ -121,4 +127,36 @@ progresoRouter.put('/me/recursos-guardados/:id', exigirSesion, async (req, res) 
 progresoRouter.delete('/me/recursos-guardados/:id', exigirSesion, async (req, res) => {
   await quitarRecursoGuardado(idDe(req), req.params.id as string)
   res.status(204).end()
+})
+
+// GET y PUT /api/me/preferencias-formativas { elementos }: lo que la persona
+// quiere fortalecer (hasta dos elementos). Privado; solo lo usa el
+// recomendador.
+progresoRouter.get('/me/preferencias-formativas', exigirSesion, async (req, res) => {
+  res.status(200).json({ preferencias: await obtenerPreferencias(idDe(req)) })
+})
+
+progresoRouter.put('/me/preferencias-formativas', exigirSesion, async (req, res) => {
+  const preferencias = await guardarPreferencias(idDe(req), validarPreferencias(req.body))
+  res.status(200).json({ preferencias })
+})
+
+const LIMITE_RECOMENDACIONES = { porDefecto: 3, maximo: 10 }
+
+// GET /api/me/rutas/recomendadas?limite: las rutas que más le convienen, con
+// su puntaje, sus señales y las razones (docs/diseno-desarrollo-formacion.md,
+// nota del incremento 4).
+progresoRouter.get('/me/rutas/recomendadas', exigirSesion, async (req, res) => {
+  const crudo = req.query.limite
+  let limite = LIMITE_RECOMENDACIONES.porDefecto
+  if (crudo !== undefined) {
+    const n = Number(crudo)
+    if (!Number.isInteger(n) || n < 1 || n > LIMITE_RECOMENDACIONES.maximo) {
+      throw new ErrorValidacion({
+        limite: `El límite debe ser un entero entre 1 y ${LIMITE_RECOMENDACIONES.maximo}.`,
+      })
+    }
+    limite = n
+  }
+  res.status(200).json(await obtenerRecomendaciones(idDe(req), limite))
 })

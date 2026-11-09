@@ -15,9 +15,11 @@ export type SeccionApp =
   | 'actividades-participo'
   | 'perfil'
   | 'recursos'
+  | 'mi-formacion'
   | 'cuentas'
   | 'contenido'
   | 'cursos'
+  | 'rutas'
 
 interface ItemNav {
   id: SeccionApp
@@ -108,6 +110,35 @@ function IconoRecursos() {
     <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
       <path
         d="M3 4.5c1.8-1 4.3-1 6 0v11c-1.7-1-4.2-1-6 0v-11ZM17 4.5c-1.8-1-4.3-1-6 0v11c1.7-1 4.2-1 6 0v-11Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function IconoRutas() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <path
+        d="M4.5 16.5a2 2 0 1 0 0-.01M15.5 5.5a2 2 0 1 0 0-.01M6.5 16h5a3 3 0 0 0 0-6h-3a3 3 0 0 1 0-6h5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function IconoMiFormacion() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <path
+        d="M5.5 3h9v14L10 13.5 5.5 17V3Z"
         fill="none"
         stroke="currentColor"
         strokeWidth="1.5"
@@ -221,8 +252,11 @@ const ITEMS_NAV_ACTIVIDADES: ItemNav[] = [
 
 // Mi perfil no es un ítem de la navegación: se abre desde el nombre de la
 // cuenta, al pie del menú, que es donde se busca lo que es de uno.
+// Mi formación va junto a Recursos: es lo que la persona empezó o guardó
+// del catálogo (docs/diseno-desarrollo-formacion.md §7.2).
 const ITEMS_NAV: ItemNav[] = [
   { id: 'recursos', etiqueta: 'Recursos', to: '/recursos', Icono: IconoRecursos },
+  { id: 'mi-formacion', etiqueta: 'Mi formación', to: '/mi-formacion', Icono: IconoMiFormacion },
 ]
 
 // Solo se muestra a administradores. Es conveniencia de navegación: la
@@ -232,6 +266,7 @@ const ITEMS_NAV_ADMIN: ItemNav[] = [
   { id: 'cuentas', etiqueta: 'Cuentas', to: '/admin/cuentas', Icono: IconoCuentas },
   { id: 'contenido', etiqueta: 'Contenido', to: '/admin/contenido', Icono: IconoRecursos },
   { id: 'cursos', etiqueta: 'Cursos', to: '/admin/cursos', Icono: IconoCursos },
+  { id: 'rutas', etiqueta: 'Rutas', to: '/admin/rutas', Icono: IconoRutas },
 ]
 
 function ItemNavLink({ item, activo }: { item: ItemNav; activo: boolean }) {

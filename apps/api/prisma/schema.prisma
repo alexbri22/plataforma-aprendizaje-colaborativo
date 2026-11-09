@@ -169,6 +169,7 @@ model Usuario {
   inscripcionesCurso InscripcionCurso[]
   recursosGuardados  RecursoGuardado[]
   rutasFormativas    RutaFormativa[]
+  preferencias       PreferenciasFormativas?
 
   @@map("usuarios")
 }
@@ -849,4 +850,18 @@ model CursoRuta {
   @@unique([idRuta, orden])
   @@index([idCurso])
   @@map("cursos_ruta")
+}
+
+// Lo que la persona dijo que quiere fortalecer: hasta dos de los cinco
+// elementos de Johnson y Johnson (nota del incremento 4). Es una declaración
+// propia y privada, no una medición; el recomendador de rutas la usa como
+// señal de interés.
+model PreferenciasFormativas {
+  idUsuario          String   @id @map("id_usuario")
+  elementos          String[] @default([])
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+
+  usuario Usuario @relation(fields: [idUsuario], references: [idUsuario], onDelete: Cascade)
+
+  @@map("preferencias_formativas")
 }

@@ -68,6 +68,7 @@ let admin: { id: string; cookie: string }
 let usuario: { id: string; cookie: string }
 
 beforeAll(async () => {
+  await prisma.rutaFormativa.deleteMany()
   await prisma.inscripcionCurso.deleteMany()
   await prisma.curso.deleteMany()
   await prisma.recursoFormativo.deleteMany()
@@ -83,6 +84,7 @@ beforeAll(async () => {
 })
 
 beforeEach(async () => {
+  await prisma.rutaFormativa.deleteMany()
   await prisma.inscripcionCurso.deleteMany()
   await prisma.curso.deleteMany()
   await prisma.recursoFormativo.deleteMany()

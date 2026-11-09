@@ -70,6 +70,7 @@ let beto: { id: string; cookie: string }
 async function limpiar() {
   // Primero el progreso: la llave RESTRICT de inscripciones impide borrar
   // cursos que alguien empezó, y la de lecciones impide borrar recursos.
+  await prisma.rutaFormativa.deleteMany()
   await prisma.inscripcionCurso.deleteMany()
   await prisma.recursoGuardado.deleteMany()
   await prisma.curso.deleteMany()

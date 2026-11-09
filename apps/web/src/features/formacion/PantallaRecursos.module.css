@@ -497,17 +497,6 @@
   font-weight: var(--font-weight-semibold);
 }
 
-.proximamente {
-  margin: var(--space-4) 0 0;
-  color: var(--color-text-muted);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-}
-
-.tarjeta .proximamente {
-  margin: 0;
-}
-
 .estado {
   display: flex;
   flex-direction: column;
@@ -598,4 +587,108 @@
   .flecha {
     transition: none;
   }
+}
+
+/* "Continúa aprendiendo" (incremento 3): progreso sobrio, texto y barra. */
+.continuarAvance {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.continuarAvance p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.enlaceTarjeta {
+  border-radius: var(--radius-sm);
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.enlaceTarjeta:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Ruta recomendada (incremento 4): las razones del recomendador y el resto
+   de las rutas. */
+.rutaRazones {
+  margin-top: var(--space-5);
+}
+
+.rutaRazones ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding-left: var(--space-5);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+}
+
+.rutaRazonesTitulo {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.rutaAcciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+}
+
+.rutaLateral {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+.otrasRutas ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.otrasRutas li {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.otrasRutas a {
+  width: fit-content;
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+}
+
+.otrasRutas a:hover {
+  color: var(--color-primary);
+}
+
+.otrasRutas a:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.otrasRutas span {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
 }

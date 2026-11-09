@@ -1,10 +1,17 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSesion } from '../cuentas'
 import {
+  cambiarGuardado,
+  estaGuardado,
+  guardarPreferencias,
   guardarReflexion,
   inscribirse,
+  listarRecursosGuardados,
   marcarLeccion,
+  obtenerMiFormacion,
   obtenerMiProgreso,
+  obtenerPreferencias,
+  obtenerRecomendaciones,
   type MiProgresoCurso,
 } from './formacion.api'
 
@@ -14,6 +21,10 @@ import {
 // que el progreso de una persona nunca se le muestra a otra.
 const RAIZ_PROPIA = ['formacion', 'me'] as const
 const claveProgreso = (idCurso: string) => [...RAIZ_PROPIA, 'curso', idCurso] as const
+const CLAVE_MIS_CURSOS = [...RAIZ_PROPIA, 'cursos'] as const
+const RAIZ_GUARDADOS = [...RAIZ_PROPIA, 'guardados'] as const
+const CLAVE_RECOMENDACIONES = [...RAIZ_PROPIA, 'recomendaciones'] as const
+const CLAVE_PREFERENCIAS = [...RAIZ_PROPIA, 'preferencias'] as const
 
 /** Mi progreso en un curso. Sin sesión no se pide: el visor se lee igual. */
 export function useMiProgreso(idCurso: string) {
@@ -30,11 +41,10 @@ function useGuardarProgreso(idCurso: string) {
   const queryClient = useQueryClient()
   return (progreso: MiProgresoCurso) => {
     queryClient.setQueryData(claveProgreso(idCurso), progreso)
-    // "Mi formación" y "Continúa aprendiendo" dependen de esto.
-    void queryClient.invalidateQueries({
-      queryKey: RAIZ_PROPIA,
-      predicate: (q) => q.queryKey[2] !== 'curso',
-    })
+    // "Mi formación", "Continúa aprendiendo" y la ruta recomendada dependen
+    // de esto.
+    void queryClient.invalidateQueries({ queryKey: CLAVE_MIS_CURSOS })
+    void queryClient.invalidateQueries({ queryKey: CLAVE_RECOMENDACIONES })
   }
 }
 
@@ -74,7 +84,80 @@ export function useGuardarReflexion(idCurso: string) {
             }
           : actual,
       )
-      void queryClient.invalidateQueries({ queryKey: RAIZ_PROPIA })
+      void queryClient.invalidateQueries({ queryKey: claveProgreso(idCurso) })
+      void queryClient.invalidateQueries({ queryKey: CLAVE_MIS_CURSOS })
+    },
+  })
+}
+
+/** Mis cursos en curso y terminados. Sin sesión no se pide. */
+export function useMiFormacion() {
+  const { usuario } = useSesion()
+  return useQuery({
+    queryKey: CLAVE_MIS_CURSOS,
+    queryFn: obtenerMiFormacion,
+    enabled: usuario !== null,
+  })
+}
+
+/** Mis recursos guardados; `pagina` empieza en 1, como en la API. */
+export function useRecursosGuardados(pagina: number, porPagina: number) {
+  return useQuery({
+    queryKey: [...RAIZ_GUARDADOS, 'lista', { pagina, porPagina }],
+    queryFn: () => listarRecursosGuardados(pagina, porPagina),
+    placeholderData: keepPreviousData,
+  })
+}
+
+export function useRecursoGuardado(idRecurso: string) {
+  const { usuario } = useSesion()
+  return useQuery({
+    queryKey: [...RAIZ_GUARDADOS, 'estado', idRecurso],
+    queryFn: () => estaGuardado(idRecurso),
+    enabled: usuario !== null && idRecurso !== '',
+  })
+}
+
+/** Guardar o quitar un recurso. Guardar no inicia ningún curso. */
+export function useCambiarGuardado() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ idRecurso, guardar }: { idRecurso: string; guardar: boolean }) =>
+      cambiarGuardado(idRecurso, guardar),
+    onSuccess: (_, { idRecurso, guardar }) => {
+      queryClient.setQueryData([...RAIZ_GUARDADOS, 'estado', idRecurso], guardar)
+      void queryClient.invalidateQueries({ queryKey: [...RAIZ_GUARDADOS, 'lista'] })
+    },
+  })
+}
+
+/** Las rutas que más le convienen a la persona, con sus razones. */
+export function useRecomendaciones() {
+  const { usuario } = useSesion()
+  return useQuery({
+    queryKey: CLAVE_RECOMENDACIONES,
+    queryFn: () => obtenerRecomendaciones(3),
+    enabled: usuario !== null,
+  })
+}
+
+/** Lo que la persona quiere fortalecer (hasta dos elementos). */
+export function usePreferencias() {
+  const { usuario } = useSesion()
+  return useQuery({
+    queryKey: CLAVE_PREFERENCIAS,
+    queryFn: obtenerPreferencias,
+    enabled: usuario !== null,
+  })
+}
+
+export function useGuardarPreferencias() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: guardarPreferencias,
+    onSuccess: (elementos) => {
+      queryClient.setQueryData(CLAVE_PREFERENCIAS, elementos)
+      void queryClient.invalidateQueries({ queryKey: CLAVE_RECOMENDACIONES })
     },
   })
 }

@@ -599,3 +599,260 @@ export async function guardarReflexion(
   )
   return reflexion
 }
+
+export interface MiCurso {
+  idCurso: string
+  titulo: string
+  /** Un curso retirado sigue en la lista de quien lo empezó, sin "Seguir". */
+  estatus: 'publicado' | 'retirado'
+  fechaInicio: string
+  fechaFinalizacion: string | null
+  fechaUltimaActividad: string
+  total: number
+  completadas: number
+  porcentaje: number
+  siguiente: SiguienteLeccion | null
+}
+
+export interface MiFormacion {
+  /** El más reciente primero: el primero publicado es "Continúa aprendiendo". */
+  enCurso: MiCurso[]
+  completados: MiCurso[]
+}
+
+export function obtenerMiFormacion(): Promise<MiFormacion> {
+  return pedir<MiFormacion>('/api/me/formacion', 'No pudimos cargar tus cursos. Intenta de nuevo.')
+}
+
+// ---- Recursos guardados (biblioteca personal) ----
+
+function rutaGuardado(idRecurso: string): string {
+  return `/api/me/recursos-guardados/${encodeURIComponent(idRecurso)}`
+}
+
+export function listarRecursosGuardados(
+  pagina: number,
+  porPagina: number,
+): Promise<PaginaDe<ResumenRecurso>> {
+  return pedir<PaginaDe<ResumenRecurso>>(
+    `/api/me/recursos-guardados?pagina=${pagina}&porPagina=${porPagina}`,
+    'No pudimos cargar tus recursos guardados. Intenta de nuevo.',
+  )
+}
+
+export async function estaGuardado(idRecurso: string): Promise<boolean> {
+  const { guardado } = await pedir<{ guardado: boolean }>(
+    rutaGuardado(idRecurso),
+    'No pudimos saber si guardaste este recurso.',
+  )
+  return guardado
+}
+
+export function cambiarGuardado(idRecurso: string, guardar: boolean): Promise<void> {
+  return pedir<void>(
+    rutaGuardado(idRecurso),
+    guardar
+      ? 'No pudimos guardar el recurso. Intenta de nuevo.'
+      : 'No pudimos quitar el recurso de tus guardados. Intenta de nuevo.',
+    { method: guardar ? 'PUT' : 'DELETE' },
+  )
+}
+
+// ---- Rutas de aprendizaje: administración (espejo de rutas.service.ts) ----
+
+export interface CursoDeRuta extends ResumenCursoPublico {
+  estatus: EstatusRecurso
+  /** False si el curso ya no está publicado: sigue en la ruta pero no se abre. */
+  disponible: boolean
+}
+
+/** Lo que se calcula de los cursos disponibles de la ruta. */
+export interface DerivadoRuta {
+  elementos: { elemento: ElementoColaboracion; cursos: number }[]
+  nivelInicial: NivelCurso | null
+  duracionMin: number
+  numCursos: number
+}
+
+export interface ResumenRutaAdmin {
+  idRuta: string
+  titulo: string
+  finalidad: string
+  estatus: EstatusRecurso
+  destacada: boolean
+  orden: number
+  numCursos: number
+  fechaActualizacion: string
+}
+
+export interface RutaAdmin extends ResumenRutaAdmin {
+  descripcion: string
+  versionFicha: number
+  fechaCreacion: string
+  autor: { idUsuario: string; nombre: string } | null
+  cursos: CursoDeRuta[]
+  derivado: DerivadoRuta
+}
+
+export interface DatosRuta {
+  titulo: string
+  finalidad: string
+  descripcion: string
+  destacada: boolean
+  orden: number
+  estatus: EstatusRecurso
+}
+
+export interface PaginaDeRutas {
+  rutas: ResumenRutaAdmin[]
+  paginacion: Paginacion
+}
+
+function rutaRutaAdmin(idRuta: string): string {
+  return `/api/admin/rutas/${encodeURIComponent(idRuta)}`
+}
+
+async function pedirRuta(ruta: string, porDefecto: string, opciones?: RequestInit) {
+  const respuesta = await pedir<{ ruta: RutaAdmin }>(ruta, porDefecto, opciones)
+  return respuesta.ruta
+}
+
+export function listarRutasAdmin(pagina: number): Promise<PaginaDeRutas> {
+  return pedir<PaginaDeRutas>(
+    `/api/admin/rutas?pagina=${pagina}`,
+    'No pudimos cargar las rutas. Intenta de nuevo.',
+  )
+}
+
+export function obtenerRutaAdmin(idRuta: string): Promise<RutaAdmin> {
+  return pedirRuta(rutaRutaAdmin(idRuta), 'No pudimos cargar la ruta. Intenta de nuevo.')
+}
+
+export function crearRuta(datos: Partial<DatosRuta>): Promise<RutaAdmin> {
+  return pedirRuta(
+    '/api/admin/rutas',
+    'No pudimos crear la ruta. Revisa los campos e intenta de nuevo.',
+    json('POST', datos),
+  )
+}
+
+export function actualizarRuta(
+  idRuta: string,
+  cambios: Partial<DatosRuta> & { versionFicha?: number },
+): Promise<RutaAdmin> {
+  return pedirRuta(
+    rutaRutaAdmin(idRuta),
+    'No pudimos guardar la ruta. Intenta de nuevo.',
+    json('PATCH', cambios),
+  )
+}
+
+export function reemplazarCursosRuta(
+  idRuta: string,
+  cursos: string[],
+  versionFicha?: number,
+): Promise<RutaAdmin> {
+  return pedirRuta(
+    `${rutaRutaAdmin(idRuta)}/cursos`,
+    'No pudimos guardar los cursos de la ruta. Intenta de nuevo.',
+    json('PUT', { cursos, versionFicha }),
+  )
+}
+
+export function eliminarRuta(idRuta: string): Promise<void> {
+  return pedir<void>(rutaRutaAdmin(idRuta), 'No pudimos eliminar la ruta. Intenta de nuevo.', {
+    method: 'DELETE',
+  })
+}
+
+// ---- Rutas de aprendizaje: público, recomendación y preferencias ----
+
+export interface CursoDeRutaPublico {
+  idCurso: string
+  titulo: string
+  nivel: NivelCurso | null
+  duracionMin: number
+  disponible: boolean
+}
+
+export interface ResumenRutaPublica {
+  idRuta: string
+  titulo: string
+  finalidad: string
+  destacada: boolean
+  derivado: DerivadoRuta
+  cursos: CursoDeRutaPublico[]
+}
+
+export interface RutaPublica extends ResumenRutaPublica {
+  descripcion: string
+}
+
+export function listarRutas(): Promise<{ rutas: ResumenRutaPublica[]; paginacion: Paginacion }> {
+  return pedir(
+    '/api/rutas?porPagina=50',
+    'No pudimos cargar las rutas de aprendizaje. Intenta de nuevo.',
+  )
+}
+
+export async function obtenerRuta(idRuta: string): Promise<RutaPublica> {
+  const { ruta } = await pedir<{ ruta: RutaPublica }>(
+    `/api/rutas/${encodeURIComponent(idRuta)}`,
+    'No pudimos cargar la ruta. Intenta de nuevo.',
+  )
+  return ruta
+}
+
+export type SenalRecomendacion = 'interes' | 'brecha' | 'continuidad' | 'nivel'
+
+export interface RutaRecomendada {
+  idRuta: string
+  /** De 0 a 100. */
+  puntaje: number
+  senales: Record<SenalRecomendacion, number | null>
+  razones: string[]
+  avance: { completados: number; total: number }
+  ruta: {
+    idRuta: string
+    titulo: string
+    finalidad: string
+    destacada: boolean
+    derivado: DerivadoRuta
+    cursos: (Omit<CursoDeRutaPublico, 'disponible'> & {
+      disponible: boolean
+      estado: 'pendiente' | 'en_curso' | 'completado'
+    })[]
+  }
+}
+
+export interface Recomendaciones {
+  /** "editorial" si todavía no hay datos de la persona. */
+  modo: 'personalizado' | 'editorial'
+  recomendaciones: RutaRecomendada[]
+}
+
+export function obtenerRecomendaciones(limite = 3): Promise<Recomendaciones> {
+  return pedir<Recomendaciones>(
+    `/api/me/rutas/recomendadas?limite=${limite}`,
+    'No pudimos cargar tus recomendaciones. Intenta de nuevo.',
+  )
+}
+
+export async function obtenerPreferencias(): Promise<ElementoColaboracion[]> {
+  const { preferencias } = await pedir<{ preferencias: { elementos: ElementoColaboracion[] } }>(
+    '/api/me/preferencias-formativas',
+    'No pudimos cargar lo que quieres fortalecer.',
+  )
+  return preferencias.elementos
+}
+
+export async function guardarPreferencias(
+  elementos: ElementoColaboracion[],
+): Promise<ElementoColaboracion[]> {
+  const { preferencias } = await pedir<{ preferencias: { elementos: ElementoColaboracion[] } }>(
+    '/api/me/preferencias-formativas',
+    'No pudimos guardar lo que quieres fortalecer. Intenta de nuevo.',
+    json('PUT', { elementos }),
+  )
+  return preferencias.elementos
+}

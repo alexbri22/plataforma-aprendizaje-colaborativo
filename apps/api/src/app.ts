@@ -18,6 +18,7 @@ import { adminCursosRouter, cursosRouter } from './routes/cursos.js'
 import { healthRouter } from './routes/health.js'
 import { periodosRouter } from './routes/periodos.js'
 import { progresoRouter } from './routes/progreso.js'
+import { adminRutasRouter, rutasRouter } from './routes/rutas.js'
 import { tareasRouter } from './routes/tareas.js'
 import { LIMITE_JSON_FORMACION, adminRecursosRouter, recursosRouter } from './routes/recursos.js'
 
@@ -75,6 +76,7 @@ export function createApp(): Express {
   app.use('/api/admin', adminRouter)
   app.use('/api/admin', adminRecursosRouter)
   app.use('/api/admin', adminCursosRouter)
+  app.use('/api/admin', adminRutasRouter)
   app.use('/api', actividadesRouter)
   app.use('/api', clavesRouter)
   app.use('/api', periodosRouter)
@@ -88,6 +90,7 @@ export function createApp(): Express {
   app.use('/api', recursosRouter)
   app.use('/api', cursosRouter)
   app.use('/api', progresoRouter)
+  app.use('/api', rutasRouter)
 
   app.use(manejadorErrores)
 
