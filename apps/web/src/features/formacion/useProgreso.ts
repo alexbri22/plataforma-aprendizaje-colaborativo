@@ -1,4 +1,10 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from '@tanstack/react-query'
 import { useSesion } from '../cuentas'
 import {
   cambiarGuardado,
@@ -15,65 +21,102 @@ import {
   type MiProgresoCurso,
 } from './formacion.api'
 
-// El progreso cuelga de ['formacion', 'me'], aparte de ['cursos']: un cambio
-// del administrador no tiene por qué releerlo, y una marca no relee el
-// catálogo. Al cambiar de cuenta, useSesion borra todo menos la sesión, así
-// que el progreso de una persona nunca se le muestra a otra.
-const RAIZ_PROPIA = ['formacion', 'me'] as const
-const claveProgreso = (idCurso: string) => [...RAIZ_PROPIA, 'curso', idCurso] as const
-const CLAVE_MIS_CURSOS = [...RAIZ_PROPIA, 'cursos'] as const
-const RAIZ_GUARDADOS = [...RAIZ_PROPIA, 'guardados'] as const
-const CLAVE_RECOMENDACIONES = [...RAIZ_PROPIA, 'recomendaciones'] as const
-const CLAVE_PREFERENCIAS = [...RAIZ_PROPIA, 'preferencias'] as const
+/*
+ * Datos privados de la persona: progreso, reflexiones, Mi formación,
+ * guardados, preferencias y recomendaciones. Cuelgan de
+ * ['formacion', 'me', idUsuario], aparte de ['cursos']: un cambio del
+ * administrador no tiene por qué releerlos, y una marca no relee el catálogo.
+ *
+ * El id de la persona va en cada clave. Al cambiar de cuenta, useSesion borra
+ * la caché, pero eso no detiene una mutación que ya iba en camino: si la
+ * respuesta de A llega cuando ya entró B, escribirla en una clave sin dueño
+ * se la mostraría a B. Por eso cada mutación anota al empezar (onMutate) de
+ * quién es, y al terminar escribe solo en las claves de esa persona.
+ */
+
+const raizPropia = (idUsuario: string) => ['formacion', 'me', idUsuario] as const
+const claves = (idUsuario: string) => ({
+  progreso: (idCurso: string) => [...raizPropia(idUsuario), 'curso', idCurso] as const,
+  misCursos: [...raizPropia(idUsuario), 'cursos'] as const,
+  guardados: [...raizPropia(idUsuario), 'guardados'] as const,
+  recomendaciones: [...raizPropia(idUsuario), 'recomendaciones'] as const,
+  preferencias: [...raizPropia(idUsuario), 'preferencias'] as const,
+})
+
+/** El id de la sesión actual, o '' sin sesión (las consultas no se piden). */
+function useIdUsuario(): string {
+  const { usuario } = useSesion()
+  return usuario?.idUsuario ?? ''
+}
+
+/** Contexto de una mutación: de quién era la sesión cuando empezó. */
+interface Dueno {
+  idUsuario: string
+}
+
+/** Para onMutate: anota la sesión con la que empieza la mutación. */
+function useAnotarDueno(): () => Dueno {
+  const idUsuario = useIdUsuario()
+  return () => ({ idUsuario })
+}
+
+function guardarProgreso(queryClient: QueryClient, idUsuario: string, progreso: MiProgresoCurso) {
+  if (!idUsuario) return
+  const c = claves(idUsuario)
+  queryClient.setQueryData(c.progreso(progreso.idCurso), progreso)
+  // "Mi formación", "Continúa aprendiendo" y la ruta recomendada dependen de
+  // esto.
+  void queryClient.invalidateQueries({ queryKey: c.misCursos })
+  void queryClient.invalidateQueries({ queryKey: c.recomendaciones })
+}
 
 /** Mi progreso en un curso. Sin sesión no se pide: el visor se lee igual. */
 export function useMiProgreso(idCurso: string) {
-  const { usuario } = useSesion()
+  const idUsuario = useIdUsuario()
   return useQuery({
-    queryKey: claveProgreso(idCurso),
+    queryKey: claves(idUsuario).progreso(idCurso),
     queryFn: () => obtenerMiProgreso(idCurso),
-    enabled: usuario !== null && idCurso !== '',
+    enabled: idUsuario !== '' && idCurso !== '',
     retry: false,
   })
 }
 
-function useGuardarProgreso(idCurso: string) {
-  const queryClient = useQueryClient()
-  return (progreso: MiProgresoCurso) => {
-    queryClient.setQueryData(claveProgreso(idCurso), progreso)
-    // "Mi formación", "Continúa aprendiendo" y la ruta recomendada dependen
-    // de esto.
-    void queryClient.invalidateQueries({ queryKey: CLAVE_MIS_CURSOS })
-    void queryClient.invalidateQueries({ queryKey: CLAVE_RECOMENDACIONES })
-  }
-}
-
 export function useInscribirse(idCurso: string) {
-  const guardar = useGuardarProgreso(idCurso)
+  const queryClient = useQueryClient()
+  const anotar = useAnotarDueno()
   return useMutation({
     mutationFn: () => inscribirse(idCurso),
-    onSuccess: guardar,
+    onMutate: anotar,
+    onSuccess: (progreso, _variables, dueno) =>
+      guardarProgreso(queryClient, dueno?.idUsuario ?? '', progreso),
   })
 }
 
 export function useMarcarLeccion(idCurso: string) {
-  const guardar = useGuardarProgreso(idCurso)
+  const queryClient = useQueryClient()
+  const anotar = useAnotarDueno()
   return useMutation({
     mutationFn: ({ idLeccion, completada }: { idLeccion: string; completada: boolean }) =>
       marcarLeccion(idCurso, idLeccion, completada),
-    onSuccess: (resultado) => guardar(resultado.progreso),
+    onMutate: anotar,
+    onSuccess: (resultado, _variables, dueno) =>
+      guardarProgreso(queryClient, dueno?.idUsuario ?? '', resultado.progreso),
   })
 }
 
 export function useGuardarReflexion(idCurso: string) {
   const queryClient = useQueryClient()
+  const anotar = useAnotarDueno()
   return useMutation({
     mutationFn: ({ idLeccion, texto }: { idLeccion: string; texto: string }) =>
       guardarReflexion(idCurso, idLeccion, texto),
-    onSuccess: (reflexion, { idLeccion }) => {
+    onMutate: anotar,
+    onSuccess: (reflexion, { idLeccion }, dueno) => {
+      if (!dueno?.idUsuario) return
+      const c = claves(dueno.idUsuario)
       // La reflexión inscribe al curso si no lo estaba: se relee el progreso
       // para tener la inscripción, y mientras tanto se pone la respuesta.
-      queryClient.setQueryData<MiProgresoCurso>(claveProgreso(idCurso), (actual) =>
+      queryClient.setQueryData<MiProgresoCurso>(c.progreso(idCurso), (actual) =>
         actual
           ? {
               ...actual,
@@ -84,80 +127,90 @@ export function useGuardarReflexion(idCurso: string) {
             }
           : actual,
       )
-      void queryClient.invalidateQueries({ queryKey: claveProgreso(idCurso) })
-      void queryClient.invalidateQueries({ queryKey: CLAVE_MIS_CURSOS })
+      void queryClient.invalidateQueries({ queryKey: c.progreso(idCurso) })
+      void queryClient.invalidateQueries({ queryKey: c.misCursos })
     },
   })
 }
 
 /** Mis cursos en curso y terminados. Sin sesión no se pide. */
 export function useMiFormacion() {
-  const { usuario } = useSesion()
+  const idUsuario = useIdUsuario()
   return useQuery({
-    queryKey: CLAVE_MIS_CURSOS,
+    queryKey: claves(idUsuario).misCursos,
     queryFn: obtenerMiFormacion,
-    enabled: usuario !== null,
+    enabled: idUsuario !== '',
   })
 }
 
 /** Mis recursos guardados; `pagina` empieza en 1, como en la API. */
 export function useRecursosGuardados(pagina: number, porPagina: number) {
+  const idUsuario = useIdUsuario()
   return useQuery({
-    queryKey: [...RAIZ_GUARDADOS, 'lista', { pagina, porPagina }],
+    queryKey: [...claves(idUsuario).guardados, 'lista', { pagina, porPagina }],
     queryFn: () => listarRecursosGuardados(pagina, porPagina),
+    enabled: idUsuario !== '',
     placeholderData: keepPreviousData,
   })
 }
 
 export function useRecursoGuardado(idRecurso: string) {
-  const { usuario } = useSesion()
+  const idUsuario = useIdUsuario()
   return useQuery({
-    queryKey: [...RAIZ_GUARDADOS, 'estado', idRecurso],
+    queryKey: [...claves(idUsuario).guardados, 'estado', idRecurso],
     queryFn: () => estaGuardado(idRecurso),
-    enabled: usuario !== null && idRecurso !== '',
+    enabled: idUsuario !== '' && idRecurso !== '',
   })
 }
 
 /** Guardar o quitar un recurso. Guardar no inicia ningún curso. */
 export function useCambiarGuardado() {
   const queryClient = useQueryClient()
+  const anotar = useAnotarDueno()
   return useMutation({
     mutationFn: ({ idRecurso, guardar }: { idRecurso: string; guardar: boolean }) =>
       cambiarGuardado(idRecurso, guardar),
-    onSuccess: (_, { idRecurso, guardar }) => {
-      queryClient.setQueryData([...RAIZ_GUARDADOS, 'estado', idRecurso], guardar)
-      void queryClient.invalidateQueries({ queryKey: [...RAIZ_GUARDADOS, 'lista'] })
+    onMutate: anotar,
+    onSuccess: (_, { idRecurso, guardar }, dueno) => {
+      if (!dueno?.idUsuario) return
+      const { guardados } = claves(dueno.idUsuario)
+      queryClient.setQueryData([...guardados, 'estado', idRecurso], guardar)
+      void queryClient.invalidateQueries({ queryKey: [...guardados, 'lista'] })
     },
   })
 }
 
 /** Las rutas que más le convienen a la persona, con sus razones. */
 export function useRecomendaciones() {
-  const { usuario } = useSesion()
+  const idUsuario = useIdUsuario()
   return useQuery({
-    queryKey: CLAVE_RECOMENDACIONES,
+    queryKey: claves(idUsuario).recomendaciones,
     queryFn: () => obtenerRecomendaciones(3),
-    enabled: usuario !== null,
+    enabled: idUsuario !== '',
   })
 }
 
 /** Lo que la persona quiere fortalecer (hasta dos elementos). */
 export function usePreferencias() {
-  const { usuario } = useSesion()
+  const idUsuario = useIdUsuario()
   return useQuery({
-    queryKey: CLAVE_PREFERENCIAS,
+    queryKey: claves(idUsuario).preferencias,
     queryFn: obtenerPreferencias,
-    enabled: usuario !== null,
+    enabled: idUsuario !== '',
   })
 }
 
 export function useGuardarPreferencias() {
   const queryClient = useQueryClient()
+  const anotar = useAnotarDueno()
   return useMutation({
     mutationFn: guardarPreferencias,
-    onSuccess: (elementos) => {
-      queryClient.setQueryData(CLAVE_PREFERENCIAS, elementos)
-      void queryClient.invalidateQueries({ queryKey: CLAVE_RECOMENDACIONES })
+    onMutate: anotar,
+    onSuccess: (elementos, _variables, dueno) => {
+      if (!dueno?.idUsuario) return
+      const c = claves(dueno.idUsuario)
+      queryClient.setQueryData(c.preferencias, elementos)
+      void queryClient.invalidateQueries({ queryKey: c.recomendaciones })
     },
   })
 }

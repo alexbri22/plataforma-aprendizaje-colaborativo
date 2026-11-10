@@ -119,7 +119,9 @@ function aMiProgreso(
  * 1. El curso, compartido (FOR SHARE): varias personas avanzan a la vez, pero
  *    un cambio del administrador sobre el curso (que lo bloquea FOR UPDATE)
  *    espera a que terminen, y al revés.
- * 2. La inscripción, exclusiva (FOR UPDATE): dos pestañas de la misma persona
+ * 2. Los recursos de sus lecciones, compartidos: retirar un recurso los
+ *    bloquea FOR UPDATE, así que la marca y el retiro se forman (ver abajo).
+ * 3. La inscripción, exclusiva (FOR UPDATE): dos pestañas de la misma persona
  *    se forman. Sin esto, marcar a la vez las dos últimas lecciones hacía que
  *    cada petición viera a la otra sin terminar y el curso nunca se cerraba.
  */
@@ -138,6 +140,18 @@ async function conInscripcion<T>(
       WHERE id_curso = ${idCurso} AND estatus = 'publicado'
       FOR SHARE`
     if (curso.length === 0) throw new ErrorCursoNoEncontrado()
+
+    // Los recursos de sus lecciones, también compartidos: retirar uno los
+    // bloquea FOR UPDATE, así que el retiro y esta marca se forman. Sin esto,
+    // en la primera marca (la inscripción aún no existe para el recálculo del
+    // retiro) la marca leía el recurso como publicado, el retiro no veía la
+    // inscripción, y el curso quedaba completo sin fecha de finalización.
+    await tx.$queryRaw`
+      SELECT r.id_recurso FROM recursos_formativos r
+      JOIN lecciones_curso l ON l.id_recurso = r.id_recurso
+      WHERE l.id_curso = ${idCurso}
+      ORDER BY r.id_recurso
+      FOR SHARE OF r`
 
     // ON CONFLICT: dos peticiones que inscriben a la vez no chocan en la
     // unicidad (usuario, curso); la segunda simplemente no inserta.

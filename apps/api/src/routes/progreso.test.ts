@@ -659,4 +659,34 @@ describe('cambios simultáneos sobre el progreso', () => {
 
     expect((await marca)?.status).toBe(404)
   })
+
+  // La transacción de la prueba hace de un administrador que está retirando
+  // el recurso de una lección (aún no confirma). A la vez, la persona marca
+  // su PRIMERA lección: su inscripción todavía no existe, así que el recálculo
+  // del retiro no puede verla. Sin el bloqueo compartido de los recursos del
+  // curso, la marca lee el recurso como publicado, no da el curso por
+  // terminado, y nadie fija la finalización.
+  it('retirar un recurso mientras alguien hace su primera marca termina el curso', async () => {
+    const c = await cursoPublicado()
+    // La reflexión opcional: con el recurso retirado, solo cuenta la práctica.
+    await como(admin)
+      .patch(`/api/admin/cursos/${c.idCurso}/lecciones/${c.lecciones[2]}`, { obligatoria: false })
+      .expect(200)
+
+    let marca: Promise<Response> | undefined
+    await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`
+        SELECT id_recurso FROM recursos_formativos WHERE id_recurso = ${c.idRecurso} FOR UPDATE`
+      await tx.recursoFormativo.update({
+        where: { idRecurso: c.idRecurso },
+        data: { estatus: 'retirado' },
+      })
+      marca = marcar(ana, c, c.lecciones[1]).then((r) => r)
+      await esperar(300)
+    })
+
+    expect((await marca)?.status).toBe(200)
+    expect((await marca)?.body.cursoCompletadoAhora).toBe(true)
+    expect((await miProgreso(ana, c.idCurso)).fechaFinalizacion).not.toBeNull()
+  })
 })

@@ -236,7 +236,7 @@ function calcular(
   if (sinCubrir.length > 0) {
     candidatas.push({
       aporte: PESOS_RECOMENDACION.brecha * senalBrecha,
-      texto: `Cubre ${nombres(sinCubrir)}, que aún no has trabajado en ningún curso.`,
+      texto: `Cubre ${nombres(sinCubrir)}, que aún no has trabajado en ningún curso completado.`,
     })
   }
   if (senalContinuidad > 0) {

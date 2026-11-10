@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import {
   ELEMENTOS_COLABORACION,
   ETIQUETAS_ELEMENTO,
@@ -214,6 +214,20 @@ function Guardados() {
   }
 
   const { recursos, paginacion } = consulta.data
+  // Una página que ya no tiene nada (por ejemplo, al quitar el último
+  // recurso de la página 2) se cambia por la última que sí existe: si no,
+  // quedaría un panel vacío y Paginacion, que se oculta cuando todo cabe en
+  // una página, no daría forma de volver. Solo con una respuesta real, no
+  // con la anterior que se sigue mostrando mientras llega la nueva.
+  if (recursos.length === 0 && pagina > 1 && !consulta.isPlaceholderData) {
+    const ultima = Math.max(1, paginacion.totalPaginas)
+    return (
+      <Navigate
+        replace
+        to={ultima === 1 ? '?vista=guardados' : `?vista=guardados&pagina=${ultima}`}
+      />
+    )
+  }
   if (paginacion.total === 0) {
     return (
       <Vacio texto="Aún no guardas recursos. Usa «Guardar para después» en cualquier recurso y aparecerá aquí." />

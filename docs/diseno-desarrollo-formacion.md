@@ -656,7 +656,7 @@ Progreso del alumno: inscripción, lecciones completadas, reflexión privada, "C
 - **Recursos guardados.** Solo se guardan recursos publicados. Uno retirado se oculta de la lista y vuelve si se publica de nuevo.
 - **Navegación.** "Mi formación" (`/mi-formacion`) es un ítem de la barra lateral, junto a Recursos, con dos pestañas: Mis cursos y Guardados (`?vista=guardados`). No vive en el perfil, que es de Persona C, para no mezclar formación con insignias (ESP-02).
 - **Insignias (Persona C).** Formación no emite `curso.completado` ni crea señales: el historial exige una actividad y un bus de eventos es parte de B6. Para cuando haga falta, `cursosCompletadosDe(idUsuario)` en `progreso.service.ts` es la lectura que Insignias puede consumir (documento general §3.4 y §4.5). Una prueba confirma que terminar un curso no crea otorgamientos.
-- **Concurrencia.** Marcar bloquea el curso en modo compartido (`FOR SHARE`) y la inscripción en exclusivo (`FOR UPDATE`); el recálculo tras un cambio del administrador bloquea las inscripciones abiertas antes de leer el progreso. Cada bloqueo tiene una prueba que falla sin él.
+- **Concurrencia.** Marcar bloquea el curso y los recursos de sus lecciones en modo compartido (`FOR SHARE`) y la inscripción en exclusivo (`FOR UPDATE`). El bloqueo de los recursos forma en fila al retiro de un recurso con la primera marca de una persona, cuya inscripción todavía no existe para el recálculo; el recálculo tras un cambio del administrador bloquea las inscripciones abiertas antes de leer el progreso. Cada bloqueo tiene una prueba que falla sin él.
 - **Interfaz.** Progreso sobrio: texto ("2 de 4 lecciones · 50 %") con barra en Study Ink y Confirmed Green al terminar; lo completado se marca con "✓ Completada", nunca solo con color. Sin rachas, puntos ni confeti; nunca Apothecary Amber (DESIGN.md, "Course progress").
 
 ### Modelo implementado
@@ -702,7 +702,7 @@ Rutas de aprendizaje con un recomendador explicable. Sustituye la vista previa f
 - **Ruta destacada:** a lo más una. Es la que ve quien entra sin sesión o sin datos para recomendar (arranque en frío). Marcar otra desmarca la anterior.
 - **Progreso de la ruta calculado:** no hay inscripción a rutas. Una ruta está terminada cuando lo están sus cursos disponibles.
 - **Lo que la persona quiere fortalecer:** elige hasta 2 de los 5 elementos en Mi formación. Es privado, opcional y no es una evaluación.
-- **Concurrencia:** igual que cursos, toda modificación de una ruta bloquea su fila y usa `versionFicha` (409 `ruta_desactualizada`). Armar la lista de cursos los bloquea en modo compartido, para que no se eliminen ni cambien de estatus a la mitad, y marcar la destacada usa un candado consultivo. Cada bloqueo tiene una prueba que falla sin él.
+- **Concurrencia:** igual que cursos, toda modificación de una ruta bloquea su fila y usa `versionFicha` (409 `ruta_desactualizada`). Armar la lista de cursos los bloquea en modo compartido, para que no se eliminen ni cambien de estatus a la mitad, y marcar la destacada usa un candado consultivo. Cada bloqueo tiene una prueba que falla sin él. Desmarcar la destacada anterior sube su versión (un editor viejo de esa ruta recibe 409 en lugar de volver a marcarla), y guardar la ruta que ya es la destacada no pide el candado, para no invertir el orden de bloqueos con quien marca otra.
 
 ### Algoritmo de recomendación
 
@@ -716,12 +716,12 @@ Rutas de aprendizaje con un recomendador explicable. Sustituye la vista previa f
 
 **Señales.** Cada una entre 0 y 1, calculadas sobre los cursos disponibles de la ruta. Sea `parte(e)` la fracción de esos cursos que trabaja el elemento `e`.
 
-| Señal          | Peso | Definición                                                                                                                                                                                                    | Por qué                                                                   |
-| -------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| Interés        | 0.40 | Promedio de `parte(e)` sobre los elementos que eligió. Si no eligió ninguno, se usan los de sus cursos en curso (interés implícito). Si tampoco hay, la señal no aplica y su peso se reparte entre las demás. | Lo que la persona dice necesitar pesa más que cualquier inferencia.       |
-| Brecha         | 0.25 | `Σ parte(e) · (1 − cobertura(e)) / Σ parte(e)`. `cobertura(e)` es 1 con 2 cursos terminados que trabajan `e`, 0.5 con uno y 0 con ninguno.                                                                    | Los cinco elementos se necesitan juntos (§3): conviene llenar los huecos. |
-| Continuidad    | 0.20 | `(cursos de la ruta terminados + 0.5 · empezados) / cursos disponibles`.                                                                                                                                      | Seguir lo empezado es mejor que dispersarse.                              |
-| Nivel adecuado | 0.15 | 1 si la ruta empieza en el nivel que le toca o más abajo, 0.5 si empieza uno arriba, 0 si empieza dos arriba. "Le toca" es el nivel siguiente al más alto que terminó; inicial si no ha terminado nada.       | Evita frustrar con una ruta avanzada a quien empieza.                     |
+| Señal          | Peso | Definición                                                                                                                                                                                                                                                 | Por qué                                                                   |
+| -------------- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Interés        | 0.40 | Promedio de `parte(e)` sobre los elementos que eligió. Si no eligió ninguno, se usan los de sus cursos en curso (interés implícito). Si tampoco hay, la señal no aplica y su peso se reparte entre las demás.                                              | Lo que la persona dice necesitar pesa más que cualquier inferencia.       |
+| Brecha         | 0.25 | `Σ parte(e) · (1 − cobertura(e)) / Σ parte(e)`. `cobertura(e)` es 1 con 2 cursos terminados que trabajan `e`, 0.5 con uno y 0 con ninguno. Solo cuentan cursos terminados: un elemento que se está estudiando sin un curso completado sigue siendo brecha. | Los cinco elementos se necesitan juntos (§3): conviene llenar los huecos. |
+| Continuidad    | 0.20 | `(cursos de la ruta terminados + 0.5 · empezados) / cursos disponibles`.                                                                                                                                                                                   | Seguir lo empezado es mejor que dispersarse.                              |
+| Nivel adecuado | 0.15 | 1 si la ruta empieza en el nivel que le toca o más abajo, 0.5 si empieza uno arriba, 0 si empieza dos arriba. "Le toca" es el nivel siguiente al más alto que terminó; inicial si no ha terminado nada.                                                    | Evita frustrar con una ruta avanzada a quien empieza.                     |
 
 **Puntaje.** `Σ peso · señal / Σ peso` sobre las señales que aplican, de 0 a 100.
 
@@ -729,7 +729,7 @@ Rutas de aprendizaje con un recomendador explicable. Sustituye la vista previa f
 - Empates: primero la destacada, luego el orden editorial.
 - Arranque en frío: sin preferencias ni cursos, el modo es `editorial`, la destacada va primero y su razón lo dice.
 
-**Explicación.** Cada recomendación trae hasta 3 razones, de la señal que más aportó a la que menos. Por ejemplo: "Trabaja Procesamiento del grupo, que elegiste fortalecer", "Cubre Interacción promotora, que aún no has trabajado en ningún curso", "Ya terminaste 1 de 2 cursos de esta ruta" o "Empieza en nivel inicial, adecuado para ti".
+**Explicación.** Cada recomendación trae hasta 3 razones, de la señal que más aportó a la que menos. Por ejemplo: "Trabaja Procesamiento del grupo, que elegiste fortalecer", "Cubre Interacción promotora, que aún no has trabajado en ningún curso completado", "Ya terminaste 1 de 2 cursos de esta ruta" o "Empieza en nivel inicial, adecuado para ti".
 
 **Ejemplo con los datos de las semillas.** Una persona terminó _Acuerdos y responsabilidades claras_ (Responsabilidades e Interdependencia, inicial) y tiene en curso _Reuniones breves que producen decisiones_ (Interacción promotora y Responsabilidades, inicial). Las rutas son _Organización y corresponsabilidad_ (Acuerdos → Reuniones) y _Mejora continua del equipo_ (Reuniones → Retrospectivas, intermedio).
 

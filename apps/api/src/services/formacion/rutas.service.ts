@@ -245,7 +245,10 @@ async function hacerDestacada(tx: Prisma.TransactionClient, idRuta: string): Pro
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('rutas_formativas.destacada'))`
   await tx.rutaFormativa.updateMany({
     where: { destacada: true, idRuta: { not: idRuta } },
-    data: { destacada: false },
+    // Desmarcarla cambia su ficha: sube la versión para que un editor que la
+    // tenía abierta reciba ruta_desactualizada y no la vuelva a marcar sin
+    // saberlo.
+    data: { destacada: false, versionFicha: { increment: 1 } },
   })
 }
 
@@ -345,7 +348,11 @@ export async function actualizarRuta(
       )
     }
 
-    if (cambios.destacada) await hacerDestacada(tx, idRuta)
+    // Solo si deja de no serlo. El editor manda destacada: true en cada
+    // guardado de la ruta destacada; pedir el candado aquí, con la fila ya
+    // bloqueada, invierte el orden de quien marca otra ruta (candado y luego
+    // filas) y los dos se esperan.
+    if (cambios.destacada && !actual.destacada) await hacerDestacada(tx, idRuta)
     await tx.rutaFormativa.update({
       where: { idRuta },
       data: {

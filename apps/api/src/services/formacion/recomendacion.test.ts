@@ -290,7 +290,7 @@ describe('ejemplo documentado (nota del incremento 4)', () => {
     expect(
       recomendarRutas(p, [ORGANIZACION_SEMILLA, MEJORA_SEMILLA]).recomendaciones[0].razones,
     ).toEqual([
-      'Cubre Interacción promotora y Procesamiento del grupo, que aún no has trabajado en ningún curso.',
+      'Cubre Interacción promotora y Procesamiento del grupo, que aún no has trabajado en ningún curso completado.',
       'Trabaja Procesamiento del grupo, que elegiste fortalecer.',
       'Empieza en nivel inicial, adecuado para ti.',
     ])

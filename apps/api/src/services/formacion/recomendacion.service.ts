@@ -156,9 +156,11 @@ export async function obtenerRecomendaciones(
           derivado: derivarRuta(cursos),
           cursos: cursos.map((c) => ({
             idCurso: c.idCurso,
-            titulo: c.titulo,
-            nivel: c.nivel,
-            duracionMin: c.duracionMin,
+            // Mismo cuidado que el catálogo público (aCursoPublico): el título
+            // de un curso retirado no se expone.
+            titulo: c.disponible ? c.titulo : 'Curso no disponible',
+            nivel: c.disponible ? c.nivel : null,
+            duracionMin: c.disponible ? c.duracionMin : 0,
             disponible: c.disponible,
             estado: estado.get(c.idCurso) ?? 'pendiente',
           })),

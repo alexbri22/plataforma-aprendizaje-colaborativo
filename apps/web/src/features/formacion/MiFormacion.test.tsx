@@ -276,6 +276,18 @@ describe('Mi formación: guardados', () => {
     expect(cambiarGuardado).toHaveBeenCalledWith('r1', false)
   })
 
+  it('si la página quedó vacía (se quitó su último recurso), vuelve a la última que existe', async () => {
+    vi.mocked(listarRecursosGuardados).mockImplementation(async (numero) =>
+      numero === 1
+        ? { recursos: [ARTICULO], paginacion: { ...pagina([ARTICULO], 10), totalPaginas: 1 } }
+        : { recursos: [], paginacion: { ...pagina([], 10), pagina: 2, totalPaginas: 1 } },
+    )
+    renderEn('/mi-formacion?vista=guardados&pagina=2')
+
+    expect(await screen.findByRole('link', { name: 'Los cinco elementos' })).toBeInTheDocument()
+    expect(screen.getByTestId('ubicacion')).toHaveTextContent('/mi-formacion?vista=guardados')
+  })
+
   it('sin guardados lo explica', async () => {
     renderEn('/mi-formacion?vista=guardados')
 
@@ -377,7 +389,7 @@ const RECOMENDADA: RutaRecomendada = {
   senales: { interes: 1, brecha: 1, continuidad: 0, nivel: 1 },
   razones: [
     'Trabaja Interacción promotora, que elegiste fortalecer.',
-    'Cubre Interacción promotora, que aún no has trabajado en ningún curso.',
+    'Cubre Interacción promotora, que aún no has trabajado en ningún curso completado.',
   ],
   avance: { completados: 0, total: 2 },
   ruta: {
@@ -496,6 +508,18 @@ describe('ficha de ruta', () => {
     // El curso retirado no tiene enlace ni cuenta.
     expect(screen.queryByRole('link', { name: 'Curso no disponible' })).not.toBeInTheDocument()
     expect(screen.getByText(/no cuenta para terminar la ruta/)).toBeInTheDocument()
+  })
+
+  it('si no se puede leer el avance, no lo inventa: ofrece reintentar', async () => {
+    vi.mocked(obtenerMiFormacion).mockRejectedValue(new Error('Sin conexión'))
+    renderEn('/rutas/rc')
+
+    expect(await screen.findByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
+    expect(screen.getByText('Sin conexión')).toBeInTheDocument()
+    expect(screen.queryByText(/0 %/)).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('link', { name: /Empezar la ruta|Seguir con la ruta/ }),
+    ).not.toBeInTheDocument()
   })
 
   it('sin sesión no hay avance y empieza por el primer curso', async () => {

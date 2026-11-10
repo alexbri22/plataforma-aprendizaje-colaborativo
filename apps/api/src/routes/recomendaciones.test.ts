@@ -272,6 +272,26 @@ describe('rutas recomendadas', () => {
     expect(ids).not.toContain(borrador)
   })
 
+  it('un curso retirado dentro de una ruta no expone su título', async () => {
+    const c = await catalogo()
+    await como(admin)
+      .patch(`/api/admin/cursos/${c.clara.idCurso}`, { estatus: 'retirado' })
+      .expect(200)
+
+    const respuesta = await como(ana).get('/api/me/rutas/recomendadas?limite=10').expect(200)
+    const comunicacion = respuesta.body.recomendaciones.find(
+      (r: { idRuta: string }) => r.idRuta === c.comunicacion,
+    )
+    expect(comunicacion.ruta.cursos[0]).toMatchObject({
+      idCurso: c.clara.idCurso,
+      titulo: 'Curso no disponible',
+      nivel: null,
+      duracionMin: 0,
+      disponible: false,
+    })
+    expect(JSON.stringify(respuesta.body)).not.toContain('Comunicación clara')
+  })
+
   it('respeta el límite y lo valida', async () => {
     await catalogo()
     expect((await recomendaciones(ana, '?limite=1')).recomendaciones).toHaveLength(1)

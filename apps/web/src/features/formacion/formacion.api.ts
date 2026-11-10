@@ -788,11 +788,34 @@ export interface RutaPublica extends ResumenRutaPublica {
   descripcion: string
 }
 
-export function listarRutas(): Promise<{ rutas: ResumenRutaPublica[]; paginacion: Paginacion }> {
-  return pedir(
-    '/api/rutas?porPagina=50',
-    'No pudimos cargar las rutas de aprendizaje. Intenta de nuevo.',
+/** Por página al pedir el catálogo de rutas: el máximo que admite la API. */
+const POR_PAGINA_RUTAS = 50
+
+/**
+ * El catálogo completo de rutas publicadas. La API pagina (máximo 50 por
+ * página) y la sección de /recursos las muestra todas, así que se recorren
+ * todas las páginas: con solo la primera, desde la ruta 51 las demás
+ * desaparecían sin forma de llegar a ellas.
+ */
+export async function listarRutas(): Promise<{
+  rutas: ResumenRutaPublica[]
+  paginacion: Paginacion
+}> {
+  const pedirPagina = (pagina: number) =>
+    pedir<{ rutas: ResumenRutaPublica[]; paginacion: Paginacion }>(
+      `/api/rutas?pagina=${pagina}&porPagina=${POR_PAGINA_RUTAS}`,
+      'No pudimos cargar las rutas de aprendizaje. Intenta de nuevo.',
+    )
+  const primera = await pedirPagina(1)
+  const resto = await Promise.all(
+    Array.from({ length: Math.max(0, primera.paginacion.totalPaginas - 1) }, (_, i) =>
+      pedirPagina(i + 2),
+    ),
   )
+  return {
+    rutas: [primera, ...resto].flatMap((p) => p.rutas),
+    paginacion: primera.paginacion,
+  }
 }
 
 export async function obtenerRuta(idRuta: string): Promise<RutaPublica> {

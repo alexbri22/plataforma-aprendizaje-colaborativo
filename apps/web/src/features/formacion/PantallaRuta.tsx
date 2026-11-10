@@ -3,7 +3,7 @@ import { ETIQUETAS_ELEMENTO, ETIQUETAS_NIVEL_CURSO } from '@plataforma/shared'
 import { AvisoError, Badge, Button, Card, IconoCargando } from '../../components/ui'
 import { useSesion } from '../cuentas'
 import { BarraProgreso } from './BarraProgreso'
-import { ErrorFormacion, type RutaPublica } from './formacion.api'
+import { ErrorFormacion, type MiFormacion, type RutaPublica } from './formacion.api'
 import { MarcoFormacion } from './MarcoFormacion'
 import { useDentroDeApp } from './marcoContexto'
 import { useMiFormacion } from './useProgreso'
@@ -26,10 +26,8 @@ export function PantallaRuta() {
 
 type EstadoCurso = 'pendiente' | 'en_curso' | 'completado'
 
-function useEstadoDeCursos(): Map<string, EstadoCurso> {
-  const { usuario } = useSesion()
-  const { data } = useMiFormacion()
-  if (!usuario || !data) return new Map()
+function estadosDe(data: MiFormacion | undefined): Map<string, EstadoCurso> {
+  if (!data) return new Map()
   return new Map([
     ...data.enCurso.map((c) => [c.idCurso, 'en_curso'] as const),
     ...data.completados.map((c) => [c.idCurso, 'completado'] as const),
@@ -39,7 +37,11 @@ function useEstadoDeCursos(): Map<string, EstadoCurso> {
 function Contenido({ ruta }: { ruta: RutaPublica }) {
   const Titulo = useDentroDeApp() ? 'h2' : 'h1'
   const { usuario } = useSesion()
-  const estados = useEstadoDeCursos()
+  // Sin respuesta de Mi formación (cargando o con error) no se sabe el
+  // avance: no se calcula ni se ofrece un destino personalizado, porque un
+  // mapa vacío se leería como "no ha empezado nada".
+  const miFormacion = useMiFormacion()
+  const estados = estadosDe(miFormacion.data)
   const disponibles = ruta.cursos.filter((c) => c.disponible)
   const completados = disponibles.filter((c) => estados.get(c.idCurso) === 'completado').length
   const siguiente = disponibles.find((c) => estados.get(c.idCurso) !== 'completado')
@@ -145,7 +147,24 @@ function Contenido({ ruta }: { ruta: RutaPublica }) {
             </div>
           </dl>
 
-          {usuario ? (
+          {usuario && !miFormacion.data ? (
+            miFormacion.isError ? (
+              <div className={styles.avance}>
+                <AvisoError mensaje={miFormacion.error.message} />
+                <Button variant="secondary" size="sm" onClick={() => void miFormacion.refetch()}>
+                  Reintentar
+                </Button>
+              </div>
+            ) : (
+              <div
+                className={styles.cargandoProgreso}
+                role="status"
+                aria-label="Cargando tu avance"
+              >
+                <IconoCargando size={16} />
+              </div>
+            )
+          ) : usuario ? (
             <div className={styles.avance}>
               {terminada ? (
                 <p className={styles.terminado}>

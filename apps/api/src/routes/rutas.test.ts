@@ -324,6 +324,26 @@ describe('publicar', () => {
 })
 
 describe('ruta destacada', () => {
+  it('desmarcar otra ruta sube su versión: un editor viejo de esa ruta recibe 409', async () => {
+    const a = await crearRuta({ titulo: 'A', destacada: true })
+    const { body } = await comoAdmin.get(`/api/admin/rutas/${a}`).expect(200)
+    const versionLeida = body.ruta.versionFicha as number
+
+    const b = await crearRuta({ titulo: 'B' })
+    await comoAdmin.patch(`/api/admin/rutas/${b}`, { destacada: true }).expect(200)
+
+    // El editor de A sigue con su formulario viejo (destacada: true).
+    const viejo = await comoAdmin.patch(`/api/admin/rutas/${a}`, {
+      titulo: 'A editada',
+      destacada: true,
+      versionFicha: versionLeida,
+    })
+    expect(viejo.status).toBe(409)
+    expect(viejo.body.codigo).toBe('ruta_desactualizada')
+    const destacadas = await prisma.rutaFormativa.findMany({ where: { destacada: true } })
+    expect(destacadas.map((r) => r.idRuta)).toEqual([b])
+  })
+
   it('marcar una desmarca la anterior', async () => {
     const a = await crearRuta({ titulo: 'A', destacada: true })
     const b = await crearRuta({ titulo: 'B' })
@@ -351,6 +371,32 @@ describe('eliminar', () => {
 })
 
 describe('cambios simultáneos', () => {
+  // La transacción de la prueba hace de otro administrador que está marcando
+  // una ruta B: ya tiene el candado y le falta desmarcar la destacada A. A la
+  // vez se guarda A (que el editor manda con destacada: true). Si ese
+  // guardado pide el candado después de bloquear la fila de A, cada uno
+  // espera al otro y Postgres aborta uno de los dos.
+  it('guardar la ruta que ya es destacada no se traba con quien marca otra', async () => {
+    const a = await crearRuta({ titulo: 'A', destacada: true })
+    const b = await crearRuta({ titulo: 'B' })
+
+    let guardarA: Promise<Response> | undefined
+    await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('rutas_formativas.destacada'))`
+      guardarA = comoAdmin
+        .patch(`/api/admin/rutas/${a}`, { titulo: 'A editada', destacada: true })
+        .then((r) => r)
+      await esperar(300)
+      await tx.rutaFormativa.updateMany({
+        where: { destacada: true, idRuta: { not: b } },
+        data: { destacada: false, versionFicha: { increment: 1 } },
+      })
+      await tx.rutaFormativa.update({ where: { idRuta: b }, data: { destacada: true } })
+    })
+
+    expect((await guardarA)?.status).toBe(200)
+  })
+
   // La transacción de la prueba hace de otro administrador que está marcando
   // la ruta A como destacada (ya desmarcó las demás, aún no confirma). Sin el
   // candado consultivo, marcar B a la vez no ve a A y quedan dos destacadas.
