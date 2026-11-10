@@ -31,6 +31,16 @@ contraseña_:
   Comparte la misma consulta de sesión (`queryKey: ['sesion']`) que `RutaAdmin`,
   así que no repite la petición. Igual que el guard, es solo UX.
 
+## Contenido formativo
+
+Además de Cuentas, el panel administra el contenido del módulo Formación
+(`docs/diseno-desarrollo-formacion.md`), siempre a través de su API:
+
+- `PantallaContenido` y `PantallaEditarRecurso` — biblioteca de recursos.
+- `PantallaCursos` y `PantallaEditarCurso` — cursos y sus lecciones.
+- `PantallaRutas` y `PantallaEditarRuta` — rutas de aprendizaje: ficha, cursos
+  en orden, ruta destacada y lo que se calcula de los cursos.
+
 ## Cómo se crea el primer administrador
 
 El registro público solo crea cuentas de tipo `usuario`

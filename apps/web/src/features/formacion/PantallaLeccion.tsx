@@ -1,20 +1,31 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ETIQUETAS_TIPO_LECCION } from '@plataforma/shared'
-import { AvisoError, Button, IconoCargando } from '../../components/ui'
+import { ETIQUETAS_TIPO_LECCION, LARGO_MAXIMO_REFLEXION } from '@plataforma/shared'
+import { AvisoError, Button, IconoCargando, Textarea } from '../../components/ui'
+import { useSesion } from '../cuentas'
+import { BarraProgreso } from './BarraProgreso'
 import { CuerpoRecurso } from './CuerpoRecurso'
-import { etiquetaLeccion } from './formato'
-import { ErrorFormacion, type CursoPublico, type LeccionPublica } from './formacion.api'
+import { etiquetaLeccion, formatoFecha, textoProgreso } from './formato'
+import {
+  ErrorFormacion,
+  type CursoPublico,
+  type LeccionPublica,
+  type MiProgresoCurso,
+  type ReflexionPropia,
+} from './formacion.api'
 import { MarcoFormacion } from './MarcoFormacion'
 import { useDentroDeApp } from './marcoContexto'
 import { Markdown } from './Markdown'
 import { useCursoPublico, useLeccionPublica } from './useCursos'
+import { useGuardarReflexion, useMarcarLeccion, useMiProgreso } from './useProgreso'
 import styles from './PantallaLeccion.module.css'
 
 /*
  * Visor de lecciones (docs/diseno-desarrollo-formacion.md §2.3 y §10.1):
- * lectura calmada con el índice del curso al lado. Es público; todavía no
- * guarda progreso, que llega con la inscripción y exigirá sesión.
+ * lectura calmada con el índice del curso al lado. Es público. Con sesión,
+ * además se marca la lección como completada, el índice señala las hechas y
+ * la reflexión se guarda en privado. Progreso sobrio: texto y porcentaje,
+ * Confirmed Green al terminar, sin rachas ni celebraciones.
  */
 export function PantallaLeccion() {
   return (
@@ -32,7 +43,15 @@ function indiceAbiertoAlInicio(): boolean {
   return window.matchMedia?.(ANCHO_CON_INDICE).matches ?? true
 }
 
-function Indice({ curso, idActual }: { curso: CursoPublico; idActual: string }) {
+function Indice({
+  curso,
+  idActual,
+  completadas,
+}: {
+  curso: CursoPublico
+  idActual: string
+  completadas: ReadonlySet<string>
+}) {
   return (
     <nav aria-label="Lecciones del curso">
       <ol className={styles.indice}>
@@ -48,6 +67,11 @@ function Indice({ curso, idActual }: { curso: CursoPublico; idActual: string }) 
                     .filter(Boolean)
                     .join(' · ')}
                 </span>
+                {completadas.has(l.idLeccion) ? (
+                  <span className={styles.indiceCompletada}>
+                    <span aria-hidden="true">✓ </span>Completada
+                  </span>
+                ) : null}
               </span>
             </>
           )
@@ -72,7 +96,61 @@ function Indice({ curso, idActual }: { curso: CursoPublico; idActual: string }) 
   )
 }
 
-function CuerpoLeccion({ leccion }: { leccion: LeccionPublica }) {
+/** La respuesta privada a una reflexión. Se monta ya con lo guardado y con
+ * una llave por lección, para que el borrador empiece desde ahí. */
+function RespuestaReflexion({
+  idCurso,
+  idLeccion,
+  guardada,
+}: {
+  idCurso: string
+  idLeccion: string
+  guardada: ReflexionPropia | undefined
+}) {
+  const [texto, setTexto] = useState(guardada?.texto ?? '')
+  const guardar = useGuardarReflexion(idCurso)
+  const sinCambios = texto.trim() === (guardada?.texto ?? '')
+
+  function enviar(evento: FormEvent) {
+    evento.preventDefault()
+    guardar.mutate({ idLeccion, texto })
+  }
+
+  return (
+    <form className={styles.respuesta} onSubmit={enviar}>
+      <Textarea
+        label="Tu respuesta"
+        rows={5}
+        maxLength={LARGO_MAXIMO_REFLEXION}
+        value={texto}
+        onChange={(e) => setTexto(e.target.value)}
+      />
+      <p className={styles.reflexionNota}>
+        Solo tú puedes leerla. No se califica ni se comparte con nadie.
+      </p>
+      {guardar.isError ? <AvisoError mensaje={guardar.error.message} /> : null}
+      <div className={styles.respuestaAcciones}>
+        <Button type="submit" size="sm" disabled={sinCambios || guardar.isPending}>
+          {guardada && texto.trim() === '' ? 'Borrar reflexión' : 'Guardar reflexión'}
+        </Button>
+        <span role="status" className={styles.respuestaEstado}>
+          {guardada && sinCambios ? `Guardada el ${formatoFecha(guardada.fechaActualizacion)}` : ''}
+        </span>
+      </div>
+    </form>
+  )
+}
+
+function CuerpoLeccion({
+  leccion,
+  idCurso,
+  progreso,
+}: {
+  leccion: LeccionPublica
+  idCurso: string
+  /** Con sesión y ya leído; undefined sin sesión o mientras carga. */
+  progreso: MiProgresoCurso | undefined
+}) {
   if (!leccion.disponible) {
     return (
       <div className={styles.noDisponible} role="status">
@@ -87,9 +165,18 @@ function CuerpoLeccion({ leccion }: { leccion: LeccionPublica }) {
       <div className={styles.reflexion}>
         <p className={styles.reflexionTitulo}>Para reflexionar</p>
         <Markdown fuente={leccion.contenido} />
-        <p className={styles.reflexionNota}>
-          Esta reflexión es personal y no se califica. Tómate un momento para pensarla o anotarla.
-        </p>
+        {progreso ? (
+          <RespuestaReflexion
+            key={leccion.idLeccion}
+            idCurso={idCurso}
+            idLeccion={leccion.idLeccion}
+            guardada={progreso.reflexiones.find((r) => r.idLeccion === leccion.idLeccion)}
+          />
+        ) : (
+          <p className={styles.reflexionNota}>
+            Esta reflexión es personal y no se califica. Tómate un momento para pensarla o anotarla.
+          </p>
+        )}
       </div>
     )
   }
@@ -110,13 +197,67 @@ function CuerpoLeccion({ leccion }: { leccion: LeccionPublica }) {
   )
 }
 
+/** Marcar la lección como hecha (o devolverla a pendiente). */
+function ControlCompletar({
+  idCurso,
+  idLeccion,
+  completada,
+  alTerminarCurso,
+}: {
+  idCurso: string
+  idLeccion: string
+  completada: boolean
+  alTerminarCurso: () => void
+}) {
+  const marcar = useMarcarLeccion(idCurso)
+  const cambiar = (valor: boolean) =>
+    marcar.mutate(
+      { idLeccion, completada: valor },
+      { onSuccess: (r) => (r.cursoCompletadoAhora ? alTerminarCurso() : undefined) },
+    )
+
+  return (
+    <div className={styles.completar}>
+      {marcar.isError ? (
+        <div className={styles.completarError}>
+          <AvisoError mensaje={marcar.error.message} />
+        </div>
+      ) : null}
+      {completada ? (
+        <>
+          <p className={styles.completadaTexto}>
+            <span aria-hidden="true">✓ </span>Completaste esta lección
+          </p>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => cambiar(false)}
+            disabled={marcar.isPending}
+          >
+            Marcar como pendiente
+          </Button>
+        </>
+      ) : (
+        <Button onClick={() => cambiar(true)} disabled={marcar.isPending}>
+          Marcar como completada
+        </Button>
+      )}
+    </div>
+  )
+}
+
 function VisorLeccion() {
   const { id = '', idLeccion = '' } = useParams()
   const Titulo = useDentroDeApp() ? 'h2' : 'h1'
   const curso = useCursoPublico(id)
   const leccion = useLeccionPublica(id, idLeccion)
+  const { usuario } = useSesion()
+  // Sin sesión no se pide; si falla, el visor se sigue leyendo sin progreso.
+  const progreso = useMiProgreso(id).data
   const error = curso.error ?? leccion.error
   const [indiceAbierto, setIndiceAbierto] = useState(indiceAbiertoAlInicio)
+  // Solo la marca que terminó el curso lo avisa, y solo en esa lección.
+  const [terminoEn, setTerminoEn] = useState<string | null>(null)
 
   // La ruta no cambia de pantalla al pasar de lección: sin esto, "Siguiente"
   // dejaría a la persona al final de la lección nueva.
@@ -159,6 +300,8 @@ function VisorLeccion() {
   const l = leccion.data
   const rutaDe = (idL: string) => `/cursos/${c.idCurso}/lecciones/${idL}`
   const posicion = c.lecciones.findIndex((x) => x.idLeccion === l.idLeccion) + 1
+  const conProgreso = usuario !== null ? progreso : undefined
+  const completadas = new Set(conProgreso?.leccionesCompletadas ?? [])
 
   return (
     <div className={styles.pagina}>
@@ -168,6 +311,16 @@ function VisorLeccion() {
 
       <div className={styles.visor}>
         <aside className={styles.lateral}>
+          {conProgreso?.inscrito ? (
+            <div className={styles.avance}>
+              <BarraProgreso
+                porcentaje={conProgreso.porcentaje}
+                completo={conProgreso.fechaFinalizacion !== null}
+                etiqueta={`Progreso en ${c.titulo}`}
+              />
+              <p>{textoProgreso(conProgreso)}</p>
+            </div>
+          ) : null}
           <details
             className={styles.plegable}
             open={indiceAbierto}
@@ -176,7 +329,7 @@ function VisorLeccion() {
             <summary>
               Lección {posicion} de {c.lecciones.length}
             </summary>
-            <Indice curso={c} idActual={l.idLeccion} />
+            <Indice curso={c} idActual={l.idLeccion} completadas={completadas} />
           </details>
         </aside>
 
@@ -195,8 +348,29 @@ function VisorLeccion() {
           </header>
 
           <div className={styles.cuerpo}>
-            <CuerpoLeccion leccion={l} />
+            <CuerpoLeccion leccion={l} idCurso={c.idCurso} progreso={conProgreso} />
           </div>
+
+          {conProgreso && l.disponible ? (
+            <ControlCompletar
+              key={l.idLeccion}
+              idCurso={c.idCurso}
+              idLeccion={l.idLeccion}
+              completada={completadas.has(l.idLeccion)}
+              alTerminarCurso={() => setTerminoEn(l.idLeccion)}
+            />
+          ) : null}
+
+          {terminoEn === l.idLeccion ? (
+            <div className={styles.cursoTerminado} role="status">
+              <p className={styles.cursoTerminadoTitulo}>Completaste el curso</p>
+              <p>
+                Terminaste todas las lecciones de «{c.titulo}». Puedes volver a ellas cuando
+                quieras.
+              </p>
+              <Link to={`/cursos/${c.idCurso}`}>Volver al curso</Link>
+            </div>
+          ) : null}
 
           <nav className={styles.navegacion} aria-label="Navegación entre lecciones">
             {l.anterior ? (

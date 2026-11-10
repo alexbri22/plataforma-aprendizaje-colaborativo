@@ -310,3 +310,99 @@
     transition: none;
   }
 }
+
+/* ---- Progreso con sesión (incremento 3) ---- */
+
+.avance {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+
+.avance p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+/* Lo hecho se dice con texto y ✓, no solo con color. */
+.indiceCompletada {
+  color: var(--color-success-ink);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.completar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-10);
+}
+
+.completarError {
+  flex-basis: 100%;
+}
+
+.completadaTexto {
+  margin: 0;
+  color: var(--color-success-ink);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.cursoTerminado {
+  margin-top: var(--space-6);
+  padding: var(--space-5);
+  border: 1px solid var(--color-success);
+  border-radius: var(--radius-lg);
+  background: var(--color-success-subtle);
+  color: var(--color-success-ink);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+}
+
+.cursoTerminado p {
+  margin: 0 0 var(--space-2);
+}
+
+.cursoTerminado .cursoTerminadoTitulo {
+  margin-bottom: var(--space-1);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+}
+
+.cursoTerminado a {
+  color: var(--color-success-ink);
+  font-weight: var(--font-weight-semibold);
+  border-radius: var(--radius-sm);
+}
+
+.cursoTerminado a:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.respuesta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.respuesta .reflexionNota {
+  margin: 0;
+}
+
+.respuestaAcciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.respuestaEstado {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}

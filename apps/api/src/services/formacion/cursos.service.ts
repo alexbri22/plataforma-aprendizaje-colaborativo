@@ -16,13 +16,17 @@ import {
 } from '@plataforma/shared'
 import { prisma } from '../../data/prisma.js'
 import {
+  ErrorCursoConInscripciones,
+  ErrorCursoEnRuta,
   ErrorCursoDesactualizado,
   ErrorCursoNoEncontrado,
   ErrorLeccionNoEncontrada,
   ErrorRecursoNoEncontrado,
   ErrorValidacion,
 } from '../../errores.js'
+import { fijarFinalizaciones } from './calculoProgreso.js'
 import type { DatosCurso, DatosLeccion, FiltrosCursos } from './cursos.validacion.js'
+import { rutasQueUsanCurso } from './usoDeRecursos.js'
 import { obtenerRecursoPublicado, type RecursoPublico } from './recursos.service.js'
 import type { PeticionPagina } from './validacion.js'
 
@@ -121,7 +125,7 @@ const SELECT_RECURSO_DE_LECCION = {
 } satisfies Prisma.RecursoFormativoSelect
 
 /** Para los listados: solo lo que hace falta para contar y sumar la duración. */
-const INCLUIR_RESUMEN = {
+export const INCLUIR_RESUMEN = {
   lecciones: {
     select: { duracionMin: true, recurso: { select: { duracionMin: true } } },
   },
@@ -139,7 +143,7 @@ const INCLUIR_INDICE = {
 
 type FilaCurso = Prisma.CursoGetPayload<{ include: typeof INCLUIR_CURSO }>
 type FilaLeccion = FilaCurso['lecciones'][number]
-type FilaResumen = Prisma.CursoGetPayload<{ include: typeof INCLUIR_RESUMEN }>
+export type FilaResumen = Prisma.CursoGetPayload<{ include: typeof INCLUIR_RESUMEN }>
 type FilaIndice = Prisma.CursoGetPayload<{ include: typeof INCLUIR_INDICE }>
 type LeccionDeIndice = FilaIndice['lecciones'][number]
 type Cliente = Prisma.TransactionClient | typeof prisma
@@ -291,7 +295,9 @@ function fichaDe(fila: FilaCurso): FichaCurso {
 
 /** Después de tocar las lecciones de un curso: si está publicado, debe
  * seguir siendo publicable (si no, lanza y la transacción se deshace). Además
- * marca el curso como actualizado. */
+ * marca el curso como actualizado y termina el curso de quien ya cumple con
+ * las lecciones que quedan (quitar una lección o volverla opcional puede
+ * dejar a alguien con todo hecho). */
 async function cerrarCambioDeLecciones(
   tx: Prisma.TransactionClient,
   idCurso: string,
@@ -305,6 +311,7 @@ async function cerrarCambioDeLecciones(
   if (curso.estatus === 'publicado') {
     validarPublicable(fichaDe(curso), curso.lecciones, leccionTocada ? [leccionTocada] : [])
   }
+  await fijarFinalizaciones(tx, idCurso)
   return curso
 }
 
@@ -432,10 +439,27 @@ export async function actualizarCurso(
   return aAdmin(fila)
 }
 
-/** Borra el curso y sus lecciones. Los recursos que usaba no se tocan. */
+/** Borra el curso y sus lecciones. Los recursos que usaba no se tocan. Si
+ * alguien ya lo empezó no se borra, para no perder su progreso; si forma
+ * parte de una ruta, tampoco: en los dos casos se retira. El bloqueo del
+ * curso hace esperar a quien se inscribe o lo agrega a una ruta en ese
+ * momento, y las llaves RESTRICT cubren lo que quede. */
 export async function eliminarCurso(idCurso: string): Promise<void> {
-  const { count } = await prisma.curso.deleteMany({ where: { idCurso } })
-  if (count === 0) throw new ErrorCursoNoEncontrado()
+  await conCursoBloqueado(idCurso, async (tx) => {
+    if ((await tx.inscripcionCurso.count({ where: { idCurso } })) > 0) {
+      throw new ErrorCursoConInscripciones()
+    }
+    const rutas = await rutasQueUsanCurso(idCurso, tx)
+    if (rutas.length > 0) throw new ErrorCursoEnRuta(rutas)
+    try {
+      await tx.curso.delete({ where: { idCurso } })
+    } catch (error) {
+      if ((error as { code?: string }).code !== 'P2003') throw error
+      // Algo se agregó después de las comprobaciones: se responde igual.
+      const enRutas = await rutasQueUsanCurso(idCurso)
+      throw enRutas.length > 0 ? new ErrorCursoEnRuta(enRutas) : new ErrorCursoConInscripciones()
+    }
+  })
 }
 
 // ---- Lecciones ----
@@ -636,7 +660,7 @@ function aIndice(fila: LeccionDeIndice): LeccionEnIndice {
   }
 }
 
-function aResumenPublico(fila: FilaResumen): ResumenCursoPublico {
+export function aResumenPublico(fila: FilaResumen): ResumenCursoPublico {
   const { idCurso, titulo, resumen, area, nivel, numLecciones, duracionMin, fechaActualizacion } =
     aResumen(fila)
   return {

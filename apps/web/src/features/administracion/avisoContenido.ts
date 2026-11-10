@@ -109,3 +109,53 @@ export function mensajeDeAvisoCurso({ titulo, accion }: AvisoCurso): {
       }
   }
 }
+
+/** Lo mismo para una ruta de aprendizaje. Eliminarla no toca sus cursos ni
+ * el avance de nadie, que se calcula de los cursos. */
+export interface AvisoRuta {
+  idRuta: string
+  titulo: string
+  accion: AccionRecurso
+  estatus: EstatusRecurso | null
+}
+
+export function esAvisoRuta(valor: unknown): valor is AvisoRuta {
+  if (!valor || typeof valor !== 'object') return false
+  const v = valor as Record<string, unknown>
+  return (
+    typeof v.idRuta === 'string' && typeof v.titulo === 'string' && typeof v.accion === 'string'
+  )
+}
+
+export function mensajeDeAvisoRuta({ titulo, accion }: AvisoRuta): {
+  titulo: string
+  detalle: string
+} {
+  const nombre = `«${titulo}»`
+  switch (accion) {
+    case 'creado':
+      return { titulo: 'Ruta creada', detalle: `${nombre} se guardó como borrador.` }
+    case 'publicado':
+      return {
+        titulo: 'Ruta publicada',
+        detalle: `${nombre} ya se puede recomendar en Recursos.`,
+      }
+    case 'republicado':
+      return {
+        titulo: 'Ruta publicada de nuevo',
+        detalle: `${nombre} vuelve a poder recomendarse.`,
+      }
+    case 'guardado':
+      return { titulo: 'Cambios guardados', detalle: `Se guardaron los cambios de ${nombre}.` }
+    case 'retirado':
+      return {
+        titulo: 'Ruta retirada',
+        detalle: `${nombre} ya no se recomienda. Puedes volver a publicarla cuando quieras.`,
+      }
+    case 'eliminado':
+      return {
+        titulo: 'Ruta eliminada',
+        detalle: `Se eliminó ${nombre}. Sus cursos siguen en el catálogo.`,
+      }
+  }
+}

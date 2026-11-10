@@ -1,18 +1,21 @@
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ETIQUETAS_AREA, ETIQUETAS_ELEMENTO, ETIQUETAS_NIVEL_CURSO } from '@plataforma/shared'
 import { AvisoError, Badge, Button, Card, IconoCargando } from '../../components/ui'
-import { etiquetaLeccion } from './formato'
-import { ErrorFormacion, type CursoPublico } from './formacion.api'
+import { useSesion } from '../cuentas'
+import { BarraProgreso } from './BarraProgreso'
+import { etiquetaLeccion, formatoFecha, textoProgreso } from './formato'
+import { ErrorFormacion, type CursoPublico, type MiProgresoCurso } from './formacion.api'
 import { MarcoFormacion } from './MarcoFormacion'
 import { useDentroDeApp } from './marcoContexto'
 import { useCursoPublico } from './useCursos'
+import { useInscribirse, useMiProgreso } from './useProgreso'
 import styles from './PantallaCurso.module.css'
-
-const FECHA = new Intl.DateTimeFormat('es-MX', { dateStyle: 'long' })
 
 /*
  * Ficha de un curso (docs/diseno-desarrollo-formacion.md §5.3): lo que la
  * persona necesita saber antes de empezar. Es pública, como las lecciones.
+ * Con sesión, además muestra el avance y "Empezar curso" crea la
+ * inscripción; sin sesión, empezar solo abre la primera lección.
  */
 export function PantallaCurso() {
   return (
@@ -22,9 +25,94 @@ export function PantallaCurso() {
   )
 }
 
+function rutaLeccion(idCurso: string, idLeccion: string): string {
+  return `/cursos/${idCurso}/lecciones/${idLeccion}`
+}
+
+/** El botón principal de la tarjeta y, con sesión, el avance. */
+function AccionesCurso({ curso }: { curso: CursoPublico }) {
+  const { usuario } = useSesion()
+  const progreso = useMiProgreso(curso.idCurso)
+  const inscribir = useInscribirse(curso.idCurso)
+  const navigate = useNavigate()
+  const primera = curso.lecciones.find((l) => l.disponible)
+
+  if (!primera) return null
+
+  // Sin sesión se lee igual: el aviso de arriba explica que no se guarda.
+  if (!usuario) {
+    return <Button to={rutaLeccion(curso.idCurso, primera.idLeccion)}>Empezar curso</Button>
+  }
+
+  if (progreso.isPending) {
+    return (
+      <div className={styles.cargandoProgreso} role="status" aria-label="Cargando tu progreso">
+        <IconoCargando size={16} />
+      </div>
+    )
+  }
+  if (progreso.isError) return <AvisoError mensaje={progreso.error.message} />
+
+  const p = progreso.data
+  if (!p.inscrito) {
+    const idPrimera = primera.idLeccion
+    const empezar = () =>
+      inscribir.mutate(undefined, {
+        onSuccess: (nuevo) =>
+          navigate(rutaLeccion(curso.idCurso, nuevo.siguiente?.idLeccion ?? idPrimera)),
+      })
+    return (
+      <>
+        {inscribir.isError ? <AvisoError mensaje={inscribir.error.message} /> : null}
+        <Button onClick={empezar} disabled={inscribir.isPending}>
+          Empezar curso
+        </Button>
+      </>
+    )
+  }
+
+  return <AvanceCurso curso={curso} progreso={p} />
+}
+
+function AvanceCurso({ curso, progreso: p }: { curso: CursoPublico; progreso: MiProgresoCurso }) {
+  const terminado = p.fechaFinalizacion !== null
+  const primera = curso.lecciones.find((l) => l.disponible)
+  const destino = p.siguiente ?? (terminado ? primera : null)
+
+  return (
+    <div className={styles.avance}>
+      {terminado ? (
+        <p className={styles.terminado}>
+          <span aria-hidden="true">✓ </span>Completaste este curso el{' '}
+          <time dateTime={p.fechaFinalizacion as string}>
+            {formatoFecha(p.fechaFinalizacion as string)}
+          </time>
+        </p>
+      ) : (
+        <p className={styles.avanceTitulo}>Tu avance</p>
+      )}
+      <BarraProgreso
+        porcentaje={p.porcentaje}
+        completo={terminado}
+        etiqueta={`Progreso en ${curso.titulo}`}
+      />
+      <p className={styles.avanceTexto}>{textoProgreso(p)}</p>
+      {destino ? (
+        <Button
+          variant={terminado ? 'secondary' : 'primary'}
+          to={rutaLeccion(curso.idCurso, destino.idLeccion)}
+        >
+          {terminado ? (p.siguiente ? 'Ver lo nuevo' : 'Repasar el curso') : 'Continuar'}
+        </Button>
+      ) : null}
+    </div>
+  )
+}
+
 function Contenido({ curso }: { curso: CursoPublico }) {
   const Titulo = useDentroDeApp() ? 'h2' : 'h1'
-  const primera = curso.lecciones.find((l) => l.disponible) ?? curso.lecciones[0]
+  const progreso = useMiProgreso(curso.idCurso)
+  const completadas = new Set(progreso.data?.leccionesCompletadas ?? [])
 
   return (
     <article className={styles.ficha}>
@@ -56,10 +144,15 @@ function Contenido({ curso }: { curso: CursoPublico }) {
                 <span className={styles.numero}>{String(i + 1).padStart(2, '0')}</span>
                 <div className={styles.temarioTexto}>
                   {l.disponible ? (
-                    <Link to={`/cursos/${curso.idCurso}/lecciones/${l.idLeccion}`}>{l.titulo}</Link>
+                    <Link to={rutaLeccion(curso.idCurso, l.idLeccion)}>{l.titulo}</Link>
                   ) : (
                     <span className={styles.noDisponible}>{l.titulo}</span>
                   )}
+                  {completadas.has(l.idLeccion) ? (
+                    <span className={styles.completada}>
+                      <span aria-hidden="true">✓ </span>Completada
+                    </span>
+                  ) : null}
                   <span className={styles.temarioMeta}>
                     {[
                       etiquetaLeccion(l),
@@ -91,7 +184,7 @@ function Contenido({ curso }: { curso: CursoPublico }) {
           <p>
             Actualizado el{' '}
             <time dateTime={curso.fechaActualizacion}>
-              {FECHA.format(new Date(curso.fechaActualizacion))}
+              {formatoFecha(curso.fechaActualizacion)}
             </time>
           </p>
         </footer>
@@ -119,11 +212,7 @@ function Contenido({ curso }: { curso: CursoPublico }) {
             <p className={styles.resultadoTitulo}>Lo que te llevas</p>
             <p>{curso.practicaFinal}</p>
           </div>
-          {primera?.disponible ? (
-            <Button to={`/cursos/${curso.idCurso}/lecciones/${primera.idLeccion}`}>
-              Empezar curso
-            </Button>
-          ) : null}
+          <AccionesCurso curso={curso} />
         </Card>
       </aside>
     </article>

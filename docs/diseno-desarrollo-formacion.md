@@ -637,4 +637,147 @@ Lo que no está publicado responde 404, igual que un id inexistente.
 ### Siguientes incrementos
 
 - **Incremento 2:** cursos, lecciones y rutas, con ficha y visor públicos. Hechos modelo, API, panel, catálogo, ficha y visor. Falta solo la ruta de aprendizaje, que sigue siendo una vista previa fija. Falta sustituir `ruta.fixtures.ts`.
-- **Incremento 3:** inscripción, progreso, "Continúa aprendiendo", Mis cursos y recursos guardados.
+- **Incremento 3:** inscripción, progreso, "Continúa aprendiendo", Mis cursos y recursos guardados. Hecho (ver la nota siguiente).
+
+## Nota de implementación: incremento 3 (3 de noviembre de 2026)
+
+Progreso del alumno: inscripción, lecciones completadas, reflexión privada, "Continúa aprendiendo", Mi formación y recursos guardados. Leer sigue siendo libre; todo lo de esta nota exige sesión.
+
+### Decisiones
+
+- **Progreso por lección, no por versión.** No hay versiones de curso (el administrador edita en sitio), así que CUR-02 se cumple por lección: el porcentaje se calcula al leer, con las lecciones actuales. Cuentan las obligatorias disponibles; si un curso no tiene ninguna, cuentan todas las disponibles, para que nadie lo termine sin hacer nada.
+- **Cambios del administrador sobre un curso empezado.** Una lección nueva baja el porcentaje de quien no ha terminado; quien ya terminó conserva su finalización. Quitar una lección borra su progreso. Si quitarla, volverla opcional o retirar su recurso deja a alguien con todo hecho, el curso se le da por terminado en ese momento. Reordenar o cambiar el recurso de una lección conserva el progreso, porque la lección sigue siendo la misma.
+- **Lección no disponible.** Una lección cuyo recurso se retiró no se puede marcar (409 `leccion_no_disponible`) y no cuenta para terminar.
+- **La finalización se fija una vez** y no se borra: ni al desmarcar una lección ni si el curso cambia después.
+- **Inscripción.** Se crea al empezar el curso desde su ficha, o al marcar una lección o escribir una reflexión; leer una lección no inscribe. Solo en cursos publicados.
+- **Curso retirado.** Sigue en Mi formación para quien lo empezó, con la etiqueta "Retirado" y sin "Seguir", porque sus lecciones ya no se abren. "Continúa aprendiendo" lo ignora.
+- **Un curso con inscripciones no se elimina** (409 `curso_con_inscripciones`); se retira. La llave RESTRICT de `inscripciones_curso` lo respalda.
+- **Reflexión.** Privada y no calificable. Guardarla no marca la lección; guardarla vacía la borra. Si el administrador quita la lección, la reflexión se borra con ella.
+- **Recursos guardados.** Solo se guardan recursos publicados. Uno retirado se oculta de la lista y vuelve si se publica de nuevo.
+- **Navegación.** "Mi formación" (`/mi-formacion`) es un ítem de la barra lateral, junto a Recursos, con dos pestañas: Mis cursos y Guardados (`?vista=guardados`). No vive en el perfil, que es de Persona C, para no mezclar formación con insignias (ESP-02).
+- **Insignias (Persona C).** Formación no emite `curso.completado` ni crea señales: el historial exige una actividad y un bus de eventos es parte de B6. Para cuando haga falta, `cursosCompletadosDe(idUsuario)` en `progreso.service.ts` es la lectura que Insignias puede consumir (documento general §3.4 y §4.5). Una prueba confirma que terminar un curso no crea otorgamientos.
+- **Concurrencia.** Marcar bloquea el curso y los recursos de sus lecciones en modo compartido (`FOR SHARE`) y la inscripción en exclusivo (`FOR UPDATE`). El bloqueo de los recursos forma en fila al retiro de un recurso con la primera marca de una persona, cuya inscripción todavía no existe para el recálculo; el recálculo tras un cambio del administrador bloquea las inscripciones abiertas antes de leer el progreso. Cada bloqueo tiene una prueba que falla sin él.
+- **Interfaz.** Progreso sobrio: texto ("2 de 4 lecciones · 50 %") con barra en Study Ink y Confirmed Green al terminar; lo completado se marca con "✓ Completada", nunca solo con color. Sin rachas, puntos ni confeti; nunca Apothecary Amber (DESIGN.md, "Course progress").
+
+### Modelo implementado
+
+`inscripciones_curso`, `progreso_leccion`, `reflexiones_formativas` y `recursos_guardados`. El detalle está en el documento general, §4.4 y §5.5.
+
+### API implementada (con sesión)
+
+| Método           | Ruta                                            | Propósito                                                          |
+| ---------------- | ----------------------------------------------- | ------------------------------------------------------------------ |
+| POST             | /api/cursos/:id/inscripcion                     | Empezar el curso: 201 si se creó, 200 si ya existía                |
+| PUT, DELETE      | /api/cursos/:id/lecciones/:idLeccion/completada | Marcar o desmarcar; dice si esa marca terminó el curso             |
+| PUT              | /api/cursos/:id/lecciones/:idLeccion/reflexion  | Guardar la reflexión; un texto vacío la borra                      |
+| GET              | /api/me/cursos/:id                              | Mi progreso y mis reflexiones en un curso; en cero si no lo empecé |
+| GET              | /api/me/formacion                               | Mis cursos en curso y completados                                  |
+| GET              | /api/me/recursos-guardados?pagina&porPagina     | Mis recursos guardados                                             |
+| GET, PUT, DELETE | /api/me/recursos-guardados/:id                  | Saber si está guardado, guardarlo o quitarlo                       |
+
+Ninguna ruta recibe el id de otra persona: todo se resuelve con la sesión.
+
+### Pantallas
+
+- Ficha del curso: "Empezar curso" inscribe; con el curso empezado muestra el avance y "Continuar"; terminado, la fecha y "Repasar el curso".
+- Visor: "Marcar como completada", lecciones hechas en el índice, avance lateral, aviso al terminar el curso y respuesta a la reflexión.
+- `/recursos`: "Continúa aprendiendo" en el hero cuando hay un curso a medias; si no, "Empieza por aquí".
+- `/mi-formacion`: Mis cursos y Guardados.
+- `/recursos/:id`: "Guardar para después".
+
+### Pendiente
+
+- Rutas de aprendizaje: la "Ruta recomendada" sigue fija en `ruta.fixtures.ts`; el progreso por curso ya permite sumarla después.
+- Versión de ficha en recursos, filtro del catálogo por duración y vista previa de un curso en borrador. Las rutas de progreso solo aceptan cursos publicados, así que una vista previa nunca creará inscripciones.
+
+## Nota de implementación: incremento 4 (4 de noviembre de 2026)
+
+Rutas de aprendizaje con un recomendador explicable. Sustituye la vista previa fija de `ruta.fixtures.ts` y responde a la pregunta de §4.1 sobre cómo recomendar sin invadir a Persona C.
+
+### Decisiones
+
+- **Una ruta es editorial y se calcula de sus cursos.** El administrador escribe título, finalidad y descripción, y elige de 2 a 5 cursos en orden. Elementos, nivel inicial y duración no se capturan: se derivan de los cursos, para que la ruta nunca contradiga lo que contiene.
+- **Publicar** exige finalidad y de 2 a 5 cursos, todos publicados. Al editar una ruta ya publicada solo se exige "publicado" a los cursos que se agregan. Un curso que se retira después no saca a la ruta del catálogo: se ve como "Curso no disponible", sin título, y no cuenta para terminarla.
+- **Un curso que forma parte de una ruta no se elimina** (409 `curso_en_ruta`, con el nombre de las rutas); se quita de la ruta o se retira. Borrar una ruta no toca sus cursos ni el avance de nadie.
+- **Ruta destacada:** a lo más una. Es la que ve quien entra sin sesión o sin datos para recomendar (arranque en frío). Marcar otra desmarca la anterior.
+- **Progreso de la ruta calculado:** no hay inscripción a rutas. Una ruta está terminada cuando lo están sus cursos disponibles.
+- **Lo que la persona quiere fortalecer:** elige hasta 2 de los 5 elementos en Mi formación. Es privado, opcional y no es una evaluación.
+- **Concurrencia:** igual que cursos, toda modificación de una ruta bloquea su fila y usa `versionFicha` (409 `ruta_desactualizada`). Armar la lista de cursos los bloquea en modo compartido, para que no se eliminen ni cambien de estatus a la mitad, y marcar la destacada usa un candado consultivo. Cada bloqueo tiene una prueba que falla sin él. Desmarcar la destacada anterior sube su versión (un editor viejo de esa ruta recibe 409 en lugar de volver a marcarla), y guardar la ruta que ya es la destacada no pide el candado, para no invertir el orden de bloqueos con quien marca otra.
+
+### Algoritmo de recomendación
+
+**Tipo de recomendador.** Basado en contenido y explicable: a cada ruta le da un puntaje con una fórmula fija y dice por qué. Se descartó el filtrado colaborativo ("quienes tomaron X también tomaron Y") porque con pocos usuarios no hay de qué aprender (arranque en frío), es opaco y exigiría observar el comportamiento de otras personas. También se descartó usar calificaciones, insignias o actividades: medir desempeño es de Persona C (§1, §4.1 y §11.3). El recomendador solo lee datos formativos de la propia persona.
+
+**Entradas.**
+
+- Lo que la persona eligió fortalecer: hasta 2 elementos.
+- Sus cursos empezados y terminados, con sus elementos y su nivel. Cuentan también los que se retiraron después: lo aprendido sigue valiendo.
+- Las rutas publicadas, con sus cursos disponibles.
+
+**Señales.** Cada una entre 0 y 1, calculadas sobre los cursos disponibles de la ruta. Sea `parte(e)` la fracción de esos cursos que trabaja el elemento `e`.
+
+| Señal          | Peso | Definición                                                                                                                                                                                                                                                 | Por qué                                                                   |
+| -------------- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Interés        | 0.40 | Promedio de `parte(e)` sobre los elementos que eligió. Si no eligió ninguno, se usan los de sus cursos en curso (interés implícito). Si tampoco hay, la señal no aplica y su peso se reparte entre las demás.                                              | Lo que la persona dice necesitar pesa más que cualquier inferencia.       |
+| Brecha         | 0.25 | `Σ parte(e) · (1 − cobertura(e)) / Σ parte(e)`. `cobertura(e)` es 1 con 2 cursos terminados que trabajan `e`, 0.5 con uno y 0 con ninguno. Solo cuentan cursos terminados: un elemento que se está estudiando sin un curso completado sigue siendo brecha. | Los cinco elementos se necesitan juntos (§3): conviene llenar los huecos. |
+| Continuidad    | 0.20 | `(cursos de la ruta terminados + 0.5 · empezados) / cursos disponibles`.                                                                                                                                                                                   | Seguir lo empezado es mejor que dispersarse.                              |
+| Nivel adecuado | 0.15 | 1 si la ruta empieza en el nivel que le toca o más abajo, 0.5 si empieza uno arriba, 0 si empieza dos arriba. "Le toca" es el nivel siguiente al más alto que terminó; inicial si no ha terminado nada.                                                    | Evita frustrar con una ruta avanzada a quien empieza.                     |
+
+**Puntaje.** `Σ peso · señal / Σ peso` sobre las señales que aplican, de 0 a 100.
+
+- No se recomiendan las rutas que la persona ya terminó ni las que no tienen cursos disponibles.
+- Empates: primero la destacada, luego el orden editorial.
+- Arranque en frío: sin preferencias ni cursos, el modo es `editorial`, la destacada va primero y su razón lo dice.
+
+**Explicación.** Cada recomendación trae hasta 3 razones, de la señal que más aportó a la que menos. Por ejemplo: "Trabaja Procesamiento del grupo, que elegiste fortalecer", "Cubre Interacción promotora, que aún no has trabajado en ningún curso completado", "Ya terminaste 1 de 2 cursos de esta ruta" o "Empieza en nivel inicial, adecuado para ti".
+
+**Ejemplo con los datos de las semillas.** Una persona terminó _Acuerdos y responsabilidades claras_ (Responsabilidades e Interdependencia, inicial) y tiene en curso _Reuniones breves que producen decisiones_ (Interacción promotora y Responsabilidades, inicial). Las rutas son _Organización y corresponsabilidad_ (Acuerdos → Reuniones) y _Mejora continua del equipo_ (Reuniones → Retrospectivas, intermedio).
+
+| Ruta                                                                           | Interés | Brecha | Continuidad | Nivel | Puntaje |
+| ------------------------------------------------------------------------------ | ------- | ------ | ----------- | ----- | ------- |
+| Sin elegir nada (interés implícito: Interacción promotora y Responsabilidades) |         |        |             |       |         |
+| Organización y corresponsabilidad                                              | 0.75    | 0.63   | 0.75        | 1     | **76**  |
+| Mejora continua del equipo                                                     | 0.50    | 0.83   | 0.25        | 1     | 61      |
+| Después de elegir Procesamiento del grupo                                      |         |        |             |       |         |
+| Organización y corresponsabilidad                                              | 0       | 0.63   | 0.75        | 1     | 46      |
+| Mejora continua del equipo                                                     | 0.50    | 0.83   | 0.25        | 1     | **61**  |
+
+Declarar un interés cambia la recomendación, y la razón principal pasa a ser la brecha y lo elegido. Esta tabla es también una prueba (`ejemplo documentado` en `recomendacion.test.ts`): si cambian los pesos o la fórmula, la prueba avisa que hay que actualizarla.
+
+**Propiedades que protegen las pruebas.** `recomendacion.test.ts` tiene 20 pruebas con perfiles sintéticos: persona nueva, interés declarado e implícito, elemento ya cubierto, ruta a medias, ruta terminada, niveles y cursos retirados. Comprueban además que el resultado es determinista e independiente del orden de entrada. `recomendaciones.test.ts` comprueba con la base que solo se usan los datos de quien pregunta, que solo entran rutas publicadas y que pedir recomendaciones no crea nada.
+
+**Límites y trabajo futuro.**
+
+- Los pesos son una decisión de diseño justificada, no calibrada con datos. Viven como constantes con nombre (`PESOS_RECOMENDACION`) para poder ajustarlos.
+- Una evaluación con usuarios (por ejemplo, un "¿Te sirvió?" opcional) se dejó fuera para no introducir medición en Formación. Si se agrega, debe evaluar al recomendador, no a la persona.
+- Recomendar a partir de desempeño seguiría siendo de Persona C. Formación solo entregaría el contenido etiquetado (§4.1).
+
+### Modelo implementado
+
+`rutas_formativas`, `cursos_ruta` y `preferencias_formativas`. El detalle está en el documento general, §4.4, §4.6 y §5.5.
+
+### API implementada
+
+| Método             | Ruta                              | Acceso                                                   |
+| ------------------ | --------------------------------- | -------------------------------------------------------- |
+| GET                | /api/rutas?pagina&porPagina       | Público: rutas publicadas, la destacada primero          |
+| GET                | /api/rutas/:id                    | Público: ficha con sus cursos en orden                   |
+| GET, PUT           | /api/me/preferencias-formativas   | Con sesión: lo que quiere fortalecer                     |
+| GET                | /api/me/rutas/recomendadas?limite | Con sesión: rutas con puntaje, señales, razones y avance |
+| GET, POST          | /api/admin/rutas                  | Administrador                                            |
+| GET, PATCH, DELETE | /api/admin/rutas/:id              | Administrador: ficha, estatus y destacada                |
+| PUT                | /api/admin/rutas/:id/cursos       | Administrador: reemplaza la lista completa de cursos     |
+
+### Pantallas
+
+- `/recursos`: "Ruta recomendada para ti" con sus razones y las demás rutas; sin sesión, la destacada.
+- `/rutas/:id`: ficha pública con el avance por curso y "Seguir con la ruta".
+- `/mi-formacion`: "¿Qué quieres fortalecer?".
+- Panel: `/admin/rutas`, con el editor de ficha y cursos, los requisitos en vivo y lo que se calcula de los cursos.
+- `npm run sembrar-rutas` carga dos rutas de ejemplo (requiere `sembrar-cursos`).
+
+### Pendiente
+
+- Constancias de finalización de cursos y rutas para el perfil, con la frontera con Persona C por acordar.
+- Autoría abierta con revisión del administrador (opción B de §13.1).
+- Versión de ficha en recursos, filtro por duración y vista previa de borradores.

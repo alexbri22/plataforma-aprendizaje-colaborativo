@@ -183,3 +183,28 @@
     transition: none;
   }
 }
+
+/* Guardar para después (incremento 3). */
+.guardar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.guardadoEstado {
+  color: var(--color-success-ink);
+  font-size: var(--font-size-sm);
+}
+
+.guardadoEstado a {
+  border-radius: var(--radius-sm);
+  color: var(--color-success-ink);
+  font-weight: var(--font-weight-semibold);
+}
+
+.guardadoEstado a:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
