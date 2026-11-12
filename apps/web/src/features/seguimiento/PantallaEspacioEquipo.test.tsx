@@ -14,6 +14,7 @@ import {
   eliminarElemento,
   ErrorElemento,
   obtenerElementos,
+  subirArchivoElemento,
 } from './elementos.api'
 import { PantallaEspacioEquipo } from './PantallaEspacioEquipo'
 
@@ -56,6 +57,7 @@ vi.mock('./elementos.api', async () => {
     crearElemento: vi.fn(),
     editarElemento: vi.fn(),
     eliminarElemento: vi.fn(),
+    subirArchivoElemento: vi.fn(),
   }
 })
 
@@ -138,6 +140,7 @@ describe('PantallaEspacioEquipo', () => {
       crearElemento,
       editarElemento,
       eliminarElemento,
+      subirArchivoElemento,
     ]) {
       vi.mocked(mock).mockReset()
     }
@@ -162,6 +165,32 @@ describe('PantallaEspacioEquipo', () => {
     await waitFor(() =>
       expect(crearElemento).toHaveBeenCalledWith('e1', 'metas', 'Nueva meta', null),
     )
+  })
+
+  it('si el archivo no se sube, el elemento ya creado no se vuelve a crear al reintentar', async () => {
+    vi.mocked(obtenerEquipoConActividad).mockResolvedValue(equipo())
+    vi.mocked(obtenerActividad).mockResolvedValue(actividad({ idMiEquipo: 'e1' }))
+    vi.mocked(obtenerElementos).mockResolvedValue([])
+    vi.mocked(crearElemento).mockResolvedValue(elemento({ id: 'el-2', contenido: 'Nueva meta' }))
+    vi.mocked(subirArchivoElemento).mockRejectedValue(
+      new ErrorElemento('No pudimos subir el archivo.'),
+    )
+    const usuario = userEvent.setup()
+    const { container } = renderPantalla()
+
+    await usuario.type(await screen.findByLabelText('Agregar a metas'), 'Nueva meta')
+    const entradaArchivo = container.querySelector('input[type="file"]') as HTMLInputElement
+    await usuario.upload(
+      entradaArchivo,
+      new File(['%PDF'], 'reporte.pdf', { type: 'application/pdf' }),
+    )
+    await usuario.click(screen.getByRole('button', { name: 'Agregar' }))
+
+    expect(await screen.findByText(/Se agregó, pero no el archivo/)).toBeInTheDocument()
+    // El formulario queda vacío: «Agregar» ya no puede crear un duplicado.
+    expect(screen.getByLabelText('Agregar a metas')).toHaveValue('')
+    expect(screen.getByRole('button', { name: 'Agregar' })).toBeDisabled()
+    expect(crearElemento).toHaveBeenCalledTimes(1)
   })
 
   it('cualquier integrante puede editar o eliminar un elemento ajeno', async () => {

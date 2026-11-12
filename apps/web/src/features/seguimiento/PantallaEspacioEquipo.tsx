@@ -28,6 +28,7 @@ import {
   useEditarElementoMutation,
   useEliminarElementoMutation,
   useElementos,
+  ErrorArchivoSinSubir,
   type DatosElemento,
 } from './useElementos'
 import styles from './PantallaEspacioEquipo.module.css'
@@ -89,6 +90,13 @@ function FormularioNuevoElemento({
       setEnlace('')
       setArchivo(null)
     } catch (e) {
+      // El elemento ya existe: se limpia el formulario para que «Agregar» no
+      // lo cree otra vez, y el aviso dice cómo adjuntar el archivo.
+      if (e instanceof ErrorArchivoSinSubir) {
+        setContenido('')
+        setEnlace('')
+        setArchivo(null)
+      }
       setError(mensajeDe(e))
     } finally {
       setGuardando(false)

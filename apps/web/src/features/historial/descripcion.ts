@@ -22,7 +22,7 @@ const DESCRIPCIONES: Partial<Record<string, (datos: Record<string, unknown>) => 
   integrantes_intercambiados: () => 'Intercambió a dos personas entre equipos',
   periodos_definidos: (d) =>
     d.numeroPeriodos ? `Definió ${d.numeroPeriodos} entregas` : 'Quitó el calendario de entregas',
-  periodo_modificado: (d) => `Cambió las fechas de la entrega ${d.orden ?? ''}`.trim(),
+  periodo_modificado: (d) => `${accionSobrePeriodo(d)} la entrega ${d.orden ?? ''}`.trim(),
   co_organizador_modificado: () => 'Cambió los permisos de un co-organizador',
   equipo_creado: (d) => `Creó el equipo "${d.nombre ?? ''}"`,
   equipo_modificado: (d) => `Editó el equipo "${d.nombre ?? ''}"`,
@@ -40,6 +40,17 @@ const DESCRIPCIONES: Partial<Record<string, (datos: Record<string, unknown>) => 
 
 // faseDestino viene del servidor tal cual ('formacion_equipos'): se muestra
 // con la misma etiqueta que la etapa tiene en el resto de la app.
+// Cancelar o reactivar una entrega emite el mismo evento que mover sus
+// fechas (periodos.service, actualizarPeriodo): lo que cambió se lee del
+// estado de antes y de después.
+function accionSobrePeriodo(datos: Record<string, unknown>): string {
+  const antes = (datos.antes as { estado?: string } | undefined)?.estado
+  const despues = (datos.despues as { estado?: string } | undefined)?.estado
+  if (antes !== 'cancelado' && despues === 'cancelado') return 'Canceló'
+  if (antes === 'cancelado' && despues === 'activo') return 'Reactivó'
+  return 'Cambió las fechas de'
+}
+
 function etiquetaEtapa(valor: unknown): string {
   if (typeof valor !== 'string') return 'siguiente'
   return infoFase(valor as FaseActividad)?.etiqueta ?? valor

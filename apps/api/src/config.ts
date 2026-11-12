@@ -62,7 +62,9 @@ export const config = {
   limiteIntentos: {
     registro: {
       ventanaMin: numero('RATE_LIMIT_REGISTRO_VENTANA_MIN', 15),
-      max: numero(nombreVariableRegistroMax, 20),
+      // Cuenta cada registro, exitoso o no, por IP: alcanza para un salón
+      // entero registrándose a la vez, con margen para errores.
+      max: numero(nombreVariableRegistroMax, 60),
     },
     sesion: {
       ventanaMin: numero('RATE_LIMIT_SESION_VENTANA_MIN', 15),

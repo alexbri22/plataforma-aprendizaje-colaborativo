@@ -16,8 +16,8 @@ declare module 'express-serve-static-core' {
 
 interface OpcionesLimitador {
   keyGenerator?: (req: Request) => string
-  // Solo cuentan los intentos fallidos (respuesta 4xx/5xx): un ingreso o un
-  // registro correcto no gasta cupo.
+  // Solo cuentan los intentos fallidos (respuesta 4xx/5xx): un ingreso
+  // correcto no gasta cupo.
   soloFallidos?: boolean
 }
 
@@ -56,8 +56,8 @@ export function crearLimitador(
 
 // Un salón entero suele salir a internet por la misma IP: contar por IP sola
 // bloqueaba a todo el grupo en cuanto se sumaban unos cuantos intentos de
-// personas distintas. Por eso los éxitos no cuentan, y el inicio de sesión
-// lleva su conteo por IP y correo: los errores de una persona no le quitan
+// personas distintas. Por eso en el inicio de sesión los éxitos no cuentan,
+// y el conteo va por IP y correo: los errores de una persona no le quitan
 // cupo a la de al lado. El correo se cuenta exista o no la cuenta, así que
 // el límite no revela cuáles están registradas.
 function claveIpYCorreo(req: Request): string {
@@ -65,10 +65,13 @@ function claveIpYCorreo(req: Request): string {
   return `${ipKeyGenerator(req.ip ?? '')}|${correo}`
 }
 
+// El registro sí cuenta los éxitos: cada uno crea una cuenta y una sesión,
+// así que no contarlos dejaría crear cuentas sin límite desde una misma IP
+// con solo variar el correo. Para que un salón pueda registrarse junto, el
+// tope por IP es holgado (config.limiteIntentos.registro).
 export const limitadorRegistro = crearLimitador(
   config.limiteIntentos.registro.ventanaMin,
   config.limiteIntentos.registro.max,
-  { soloFallidos: true },
 )
 
 export const limitadorSesion = crearLimitador(
