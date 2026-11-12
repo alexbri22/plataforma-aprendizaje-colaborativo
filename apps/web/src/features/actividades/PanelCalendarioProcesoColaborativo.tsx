@@ -35,7 +35,6 @@ export function PanelCalendarioProcesoColaborativo({
             key={`${periodo.id}:${periodo.fechaInicio}:${periodo.fechaFin}:${periodo.estado}`}
             periodo={periodo}
             deshabilitado={false}
-            nombreSingular="Periodo"
             onGuardar={onCambiarPeriodo}
           />
         ))}

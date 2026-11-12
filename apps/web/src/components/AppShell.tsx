@@ -1,8 +1,17 @@
-import type { ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type UIEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useCerrarSesionMutation, useSesion } from '../features/cuentas'
+import { Bienvenida, BotonAyuda, usePistas, type PistaDePantalla } from '../features/ayuda'
+import { PanelHistorial } from '../features/historial'
 import { GrupoNav } from './GrupoNav'
-import { Avatar } from './ui'
+import type {
+  ContextoNav,
+  EntradaNavActividad,
+  ItemNavActividad,
+  NavActividad,
+} from './navegacion/construirNavActividad'
+import { useNavActividad } from './navegacion/useNavActividad'
+import { Avatar, Badge, Button } from './ui'
 import styles from './AppShell.module.css'
 
 // 'actividades' es el valor genérico para las pantallas dentro de una
@@ -25,7 +34,7 @@ interface ItemNav {
   id: SeccionApp
   etiqueta: string
   to: string
-  Icono: () => ReactNode
+  Icono?: () => ReactNode
 }
 
 function IconoActividades() {
@@ -128,20 +137,6 @@ function IconoRutas() {
         stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
-function IconoMiFormacion() {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-      <path
-        d="M5.5 3h9v14L10 13.5 5.5 17V3Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
         strokeLinejoin="round"
       />
     </svg>
@@ -251,12 +246,21 @@ const ITEMS_NAV_ACTIVIDADES: ItemNav[] = [
 ]
 
 // Mi perfil no es un ítem de la navegación: se abre desde el nombre de la
-// cuenta, al pie del menú, que es donde se busca lo que es de uno.
-// Mi formación va junto a Recursos: es lo que la persona empezó o guardó
-// del catálogo (docs/diseno-desarrollo-formacion.md §7.2).
-const ITEMS_NAV: ItemNav[] = [
-  { id: 'recursos', etiqueta: 'Recursos', to: '/recursos', Icono: IconoRecursos },
-  { id: 'mi-formacion', etiqueta: 'Mi formación', to: '/mi-formacion', Icono: IconoMiFormacion },
+// cuenta, al pie del menú, que es donde se busca lo que es de uno. Los
+// cursos y la ruta recomendada se encuentran dentro de Recursos; Mi
+// formación es lo que la persona empezó o guardó del catálogo
+// (docs/diseno-desarrollo-formacion.md §7.2).
+const ITEMS_NAV_APRENDE: ItemNav[] = [
+  { id: 'recursos', etiqueta: 'Recursos', to: '/recursos' },
+  { id: 'mi-formacion', etiqueta: 'Mi formación', to: '/mi-formacion' },
+]
+
+// Del subsistema de formación, todavía sin pantalla: en el mapa, sin enlace.
+const PENDIENTES_APRENDE = [
+  'Recursos compartidos',
+  'Rutas de aprendizaje',
+  'Plantillas',
+  'Mis diplomas',
 ]
 
 // Solo se muestra a administradores. Es conveniencia de navegación: la
@@ -269,6 +273,36 @@ const ITEMS_NAV_ADMIN: ItemNav[] = [
   { id: 'rutas', etiqueta: 'Rutas', to: '/admin/rutas', Icono: IconoRutas },
 ]
 
+function IconoHistorial() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <path
+        d="M4.5 4.8 3.3 3.5M4.5 4.8 3.2 5.9"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M4.5 4.8A6.5 6.5 0 1 1 3.5 11"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <path
+        d="M10 7v3.3l2.3 1.6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 function ItemNavLink({ item, activo }: { item: ItemNav; activo: boolean }) {
   return (
     <Link
@@ -276,18 +310,191 @@ function ItemNavLink({ item, activo }: { item: ItemNav; activo: boolean }) {
       className={[styles.navItem, activo ? styles.navItemActivo : null].filter(Boolean).join(' ')}
       aria-current={activo ? 'page' : undefined}
     >
-      <item.Icono />
+      {item.Icono ? <item.Icono /> : null}
       {item.etiqueta}
     </Link>
   )
 }
 
+function ItemNivel({ item }: { item: ItemNavActividad }) {
+  if (!item.to) {
+    return (
+      <li>
+        <span className={[styles.nivelItem, styles.nivelItemPendiente].join(' ')}>
+          {item.etiqueta}
+        </span>
+      </li>
+    )
+  }
+  return (
+    <li>
+      <Link
+        to={item.to}
+        className={[styles.nivelItem, item.activo ? styles.navItemActivo : null]
+          .filter(Boolean)
+          .join(' ')}
+        aria-current={item.activo ? 'page' : undefined}
+      >
+        {item.etiqueta}
+      </Link>
+    </li>
+  )
+}
+
+function contieneActivo(entrada: EntradaNavActividad): boolean {
+  if (entrada.tipo === 'item') return entrada.activo
+  if (entrada.tipo === 'grupo') return entrada.items.some((item) => item.activo)
+  return entrada.entradas.some(contieneActivo)
+}
+
+const ETIQUETAS_ESTADO_ETAPA = { actual: 'Actual', hecha: 'Hecha', proxima: 'Próxima' } as const
+
+function EntradaNivel({ entrada }: { entrada: EntradaNavActividad }) {
+  if (entrada.tipo === 'item') return <ItemNivel item={entrada} />
+  if (entrada.tipo === 'bloque') {
+    return (
+      <li className={styles.nivelBloque}>
+        <span className={styles.nivelBloqueTitulo}>{entrada.etiqueta}</span>
+        <ul className={styles.nivelLista}>
+          {entrada.entradas.map((hija) => (
+            <EntradaNivel key={hija.clave} entrada={hija} />
+          ))}
+        </ul>
+      </li>
+    )
+  }
+  if (entrada.tipo === 'etapa') {
+    // Gris neutro para todas; la actual, en el tono primario.
+    return (
+      <li>
+        <GrupoNav
+          claveAlmacenamiento={`co3.nav.etapa.${entrada.clave}.abierto`}
+          etiqueta={entrada.etiqueta}
+          contieneActivo={contieneActivo(entrada)}
+          plegadoPorDefecto
+          fijo={entrada.estado === 'actual'}
+          variante="etapa"
+          marca={
+            <Badge variant={entrada.estado === 'actual' ? 'primary' : 'neutral'}>
+              {ETIQUETAS_ESTADO_ETAPA[entrada.estado]}
+            </Badge>
+          }
+        >
+          <ul className={styles.nivelLista}>
+            {entrada.entradas.map((hija) => (
+              <EntradaNivel key={hija.clave} entrada={hija} />
+            ))}
+          </ul>
+        </GrupoNav>
+      </li>
+    )
+  }
+  return (
+    <li>
+      <GrupoNav
+        claveAlmacenamiento={`co3.nav.actividad.${entrada.clave}.abierto`}
+        etiqueta={entrada.etiqueta}
+        contieneActivo={contieneActivo(entrada)}
+        plegadoPorDefecto={entrada.plegadoPorDefecto}
+        variante="subgrupo"
+      >
+        <ul className={styles.nivelLista}>
+          {entrada.items.map((item) => (
+            <ItemNivel key={item.clave} item={item} />
+          ))}
+        </ul>
+      </GrupoNav>
+    </li>
+  )
+}
+
+// Dentro de una actividad, la barra muestra solo ese nivel (la actividad
+// con sus etapas, o un equipo para quien organiza), con una flecha al de
+// arriba, en vez de un árbol: con varios niveles de sangría los nombres no
+// cabían y costaba saber en cuál se estaba.
+function NivelActividad({ nav }: { nav: NavActividad }) {
+  return (
+    <nav className={styles.nivel} aria-label={nav.titulo}>
+      <div className={styles.nivelCabecera}>
+        <p className={styles.nivelTitulo}>{nav.titulo}</p>
+        {nav.subtitulos.map((subtitulo) => (
+          <p key={subtitulo} className={styles.nivelSubtitulo}>
+            {subtitulo}
+          </p>
+        ))}
+      </div>
+
+      {nav.secciones.map((seccion) => (
+        <div key={seccion.clave} className={styles.nivelSeccion}>
+          {seccion.titulo ? <p className={styles.nivelSeccionTitulo}>{seccion.titulo}</p> : null}
+          <ul className={styles.nivelLista}>
+            {seccion.entradas.map((entrada) => (
+              <EntradaNivel key={entrada.clave} entrada={entrada} />
+            ))}
+          </ul>
+        </div>
+      ))}
+    </nav>
+  )
+}
+
+const CLAVE_DESPLAZAMIENTO = 'co3.barraLateral.desplazamiento'
+
+// Cada pantalla monta su propio AppShell, así que sin esto la barra lateral
+// volvería arriba con cada clic: se recuerda dónde estaba (por pestaña) y,
+// si el ítem actual quedó fuera de la vista, se lleva justo a ella. Se mide
+// a mano en vez de usar scrollIntoView, que también movería la página.
+function useDesplazamientoBarra(listo: boolean) {
+  const ref = useRef<HTMLDivElement>(null)
+
+  useLayoutEffect(() => {
+    const caja = ref.current
+    if (!caja || !listo) return
+    try {
+      const guardado = sessionStorage.getItem(CLAVE_DESPLAZAMIENTO)
+      if (guardado) caja.scrollTop = Number(guardado)
+    } catch {
+      // Sin almacenamiento la barra solo arranca desde arriba.
+    }
+    const activo = caja.querySelector<HTMLElement>('[aria-current="page"]')
+    if (!activo) return
+    const margen = 24
+    const limites = caja.getBoundingClientRect()
+    const item = activo.getBoundingClientRect()
+    if (item.top < limites.top) caja.scrollTop -= limites.top - item.top + margen
+    else if (item.bottom > limites.bottom) caja.scrollTop += item.bottom - limites.bottom + margen
+  }, [listo])
+
+  return ref
+}
+
+function guardarDesplazamiento(evento: UIEvent<HTMLDivElement>) {
+  try {
+    sessionStorage.setItem(CLAVE_DESPLAZAMIENTO, String(evento.currentTarget.scrollTop))
+  } catch {
+    // Sin almacenamiento la barra solo no recuerda su posición.
+  }
+}
+
 export interface AppShellProps {
   seccionActiva: SeccionApp
   titulo: string
-  /** Pantalla a la que regresa la flecha de la izquierda del título. Sin ella
-   * (las pantallas raíz) no hay flecha. */
+  /** Pantalla a la que regresa la flecha. Sin ella (las pantallas raíz) no
+   * hay flecha. Fuera de una actividad va junto al título; dentro, toma el
+   * lugar de la flecha de la barra lateral (pantallas de detalle, como la
+   * bitácora de alguien), para que nunca haya dos flechas. */
   volverA?: string
+  /** Sin un destino fijo (un perfil se abre desde varios lugares): la flecha
+   * regresa a la pantalla anterior, o a Actividades si se llegó directo. */
+  volverAlAnterior?: boolean
+  /** Nombre de la pantalla a la que regresa la flecha, para lectores de
+   * pantalla ("Volver a Participantes"). */
+  volverEtiqueta?: string
+  /** La actividad (o el equipo) en que se está: la barra lateral muestra ese
+   * nivel y la barra superior agrega el Historial. */
+  contexto?: ContextoNav
+  /** El "?" junto al título, con la ayuda de esta pantalla (features/ayuda). */
+  ayuda?: PistaDePantalla
   acciones?: ReactNode
   children: ReactNode
 }
@@ -297,10 +504,40 @@ export interface AppShellProps {
 // Linear: compacto, orientado a etiqueta, activo con fondo primary-subtle;
 // cromo de navegación en Paper/Shelf, nunca un bloque de color). Las
 // pantallas públicas (Inicio, Ingresar, Registrarse) siguen usando Encabezado.
-export function AppShell({ seccionActiva, titulo, volverA, acciones, children }: AppShellProps) {
+export function AppShell({
+  seccionActiva,
+  titulo,
+  volverA,
+  volverAlAnterior = false,
+  volverEtiqueta,
+  contexto,
+  ayuda,
+  acciones,
+  children,
+}: AppShellProps) {
   const navigate = useNavigate()
   const { usuario } = useSesion()
   const cerrarSesionMutacion = useCerrarSesionMutation()
+  const navActividad = useNavActividad(contexto)
+  const pistas = usePistas()
+  // Si la actividad no se pudo cargar, vuelve la navegación general: mejor
+  // eso que una barra vacía.
+  const nivelVisible = Boolean(contexto) && (navActividad.nav !== null || navActividad.cargando)
+  const [historialAbierto, setHistorialAbierto] = useState(false)
+  const nombreActividad = navActividad.nav?.nombreActividad
+  // Dentro de una actividad hay una sola flecha, la de la barra lateral: sube
+  // al nivel de arriba (construirNavActividad), o al destino explícito de una
+  // pantalla de detalle.
+  const volverBarra = volverA
+    ? { etiqueta: volverEtiqueta ?? 'Volver', to: volverA }
+    : navActividad.nav?.volver
+  const refBarra = useDesplazamientoBarra(!nivelVisible || navActividad.nav !== null)
+
+  // Cada pestaña y cada entrada del historial del navegador dice dónde lleva
+  // ("Equipos · Taller de Ecología · Co3"), no el mismo nombre para todo.
+  useEffect(() => {
+    document.title = [titulo, nombreActividad, 'Co3'].filter(Boolean).join(' · ')
+  }, [titulo, nombreActividad])
 
   async function manejarCerrarSesion() {
     await cerrarSesionMutacion.mutateAsync()
@@ -314,44 +551,88 @@ export function AppShell({ seccionActiva, titulo, volverA, acciones, children }:
       </a>
 
       <aside className={styles.sidebar}>
-        <Link to="/actividades" className={styles.marca}>
-          <img src="/co3-marca.png" alt="Co3" className={styles.marcaImg} />
-        </Link>
+        {/* Arriba y abajo quedan fijos (marca, regreso, cuenta); solo se
+            desplaza la lista de en medio, que es la que puede crecer. */}
+        <div className={styles.sidebarCabecera}>
+          <Link to="/actividades" className={styles.marca}>
+            <img src="/co3-marca.png" alt="Co3" className={styles.marcaImg} />
+          </Link>
 
-        <nav className={styles.nav} aria-label="Principal">
-          <GrupoNav
-            claveAlmacenamiento="co3.nav.actividades.abierto"
-            etiqueta="Actividades"
-            Icono={IconoActividades}
-            contieneActivo={
-              ITEMS_NAV_ACTIVIDADES.some((item) => item.id === seccionActiva) ||
-              seccionActiva === 'actividades'
-            }
-            variante="principal"
-          >
-            {ITEMS_NAV_ACTIVIDADES.map((item) => (
-              <ItemNavLink key={item.id} item={item} activo={item.id === seccionActiva} />
-            ))}
-          </GrupoNav>
-
-          {ITEMS_NAV.map((item) => (
-            <ItemNavLink key={item.id} item={item} activo={item.id === seccionActiva} />
-          ))}
-
-          {usuario?.tipoCuenta === 'administrador' ? (
-            <GrupoNav
-              claveAlmacenamiento="co3.nav.administracion.abierto"
-              etiqueta="Administración"
-              Icono={IconoAdministracion}
-              contieneActivo={ITEMS_NAV_ADMIN.some((item) => item.id === seccionActiva)}
-              variante="seccion"
+          {nivelVisible && navActividad.nav && volverBarra ? (
+            <Link
+              to={volverBarra.to}
+              className={[styles.navItem, styles.navItemAncestro].join(' ')}
+              aria-label={`Volver a ${volverBarra.etiqueta}`}
             >
-              {ITEMS_NAV_ADMIN.map((item) => (
-                <ItemNavLink key={item.id} item={item} activo={item.id === seccionActiva} />
-              ))}
-            </GrupoNav>
+              <IconoVolver />
+              {volverBarra.etiqueta}
+            </Link>
           ) : null}
-        </nav>
+        </div>
+
+        <div ref={refBarra} className={styles.sidebarDesplazable} onScroll={guardarDesplazamiento}>
+          {nivelVisible ? (
+            navActividad.nav ? (
+              <NivelActividad nav={navActividad.nav} />
+            ) : (
+              <div className={styles.nivelCargando} aria-hidden="true" />
+            )
+          ) : null}
+
+          {/* Al entrar a una actividad, su nivel reemplaza a la barra global. */}
+          {nivelVisible ? null : (
+            <nav className={styles.nav} aria-label="Principal">
+              <GrupoNav
+                claveAlmacenamiento="co3.nav.actividades.abierto"
+                etiqueta="Actividades"
+                Icono={IconoActividades}
+                contieneActivo={
+                  ITEMS_NAV_ACTIVIDADES.some((item) => item.id === seccionActiva) ||
+                  seccionActiva === 'actividades'
+                }
+                variante="principal"
+              >
+                {ITEMS_NAV_ACTIVIDADES.map((item) => (
+                  <ItemNavLink key={item.id} item={item} activo={item.id === seccionActiva} />
+                ))}
+              </GrupoNav>
+
+              <GrupoNav
+                claveAlmacenamiento="co3.nav.aprende.abierto"
+                etiqueta="Aprende colaborando"
+                Icono={IconoRecursos}
+                contieneActivo={ITEMS_NAV_APRENDE.some((item) => item.id === seccionActiva)}
+                variante="principal"
+              >
+                {ITEMS_NAV_APRENDE.map((item) => (
+                  <ItemNavLink key={item.id} item={item} activo={item.id === seccionActiva} />
+                ))}
+                {PENDIENTES_APRENDE.map((etiqueta) => (
+                  <span
+                    key={etiqueta}
+                    className={[styles.navItem, styles.navItemPendiente].join(' ')}
+                  >
+                    {etiqueta}
+                  </span>
+                ))}
+              </GrupoNav>
+
+              {usuario?.tipoCuenta === 'administrador' ? (
+                <GrupoNav
+                  claveAlmacenamiento="co3.nav.administracion.abierto"
+                  etiqueta="Administración"
+                  Icono={IconoAdministracion}
+                  contieneActivo={ITEMS_NAV_ADMIN.some((item) => item.id === seccionActiva)}
+                  variante="seccion"
+                >
+                  {ITEMS_NAV_ADMIN.map((item) => (
+                    <ItemNavLink key={item.id} item={item} activo={item.id === seccionActiva} />
+                  ))}
+                </GrupoNav>
+              ) : null}
+            </nav>
+          )}
+        </div>
 
         <div className={styles.cuenta}>
           {usuario ? (
@@ -392,20 +673,75 @@ export function AppShell({ seccionActiva, titulo, volverA, acciones, children }:
       <div className={styles.columna}>
         <header className={styles.topbar}>
           <div className={styles.encabezadoTitulo}>
-            {volverA ? (
-              <Link to={volverA} className={styles.volver} aria-label="Volver">
+            {volverAlAnterior && !volverA && !nivelVisible ? (
+              <button
+                type="button"
+                className={styles.volver}
+                aria-label="Volver"
+                onClick={() => {
+                  // react-router guarda en history.state el índice de la
+                  // entrada; 0 es la primera de esta pestaña.
+                  const indice = (window.history.state as { idx?: number } | null)?.idx ?? 0
+                  if (indice > 0) navigate(-1)
+                  else navigate('/actividades')
+                }}
+              >
+                <IconoVolver />
+              </button>
+            ) : null}
+            {volverA && !nivelVisible ? (
+              <Link
+                to={volverA}
+                className={styles.volver}
+                aria-label={volverEtiqueta ? `Volver a ${volverEtiqueta}` : 'Volver'}
+              >
                 <IconoVolver />
               </Link>
             ) : null}
             <h1 className={styles.titulo}>{titulo}</h1>
+            {/* Espera a saber el rol en la actividad: el texto cambia según
+                se organice o se participe. */}
+            {ayuda && !(contexto && navActividad.cargando) ? (
+              <BotonAyuda
+                key={ayuda}
+                idPista={ayuda}
+                organiza={navActividad.nav?.rama !== 'participo'}
+                enPausa={pistas.pendiente('bienvenida')}
+              />
+            ) : null}
           </div>
-          {acciones ? <div className={styles.acciones}>{acciones}</div> : null}
+          {acciones || navActividad.idActividad ? (
+            <div className={styles.acciones}>
+              {acciones}
+              {/* Panel lateral y no una pantalla (decisión de producto): no
+                  saca a nadie de donde está. Dentro de un equipo se acota a
+                  ese equipo (nucleo §5.5). */}
+              {navActividad.idActividad ? (
+                <Button variant="ghost" size="sm" onClick={() => setHistorialAbierto(true)}>
+                  <IconoHistorial />
+                  Historial
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
         </header>
 
         <main id="contenido" className={styles.contenido}>
           {children}
         </main>
       </div>
+
+      <Bienvenida />
+
+      {navActividad.idActividad ? (
+        <PanelHistorial
+          idActividad={navActividad.idActividad}
+          idEquipo={navActividad.idEquipo ?? undefined}
+          idMiMembresia={navActividad.idMiMembresia}
+          abierto={historialAbierto}
+          onCerrar={() => setHistorialAbierto(false)}
+        />
+      ) : null}
     </div>
   )
 }

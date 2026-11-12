@@ -6,6 +6,7 @@ import {
 import { useState, type ChangeEvent } from 'react'
 import { useParams } from 'react-router-dom'
 import { AppShell } from '../../components/AppShell'
+import { etapaDeActividad } from '../../components/navegacion/construirNavActividad'
 import { Card, IconoCargando, Select, Switch } from '../../components/ui'
 import { ErrorActividad } from './actividades.api'
 import { FUNCIONES_SIMPLES } from './configuracionFunciones'
@@ -27,8 +28,10 @@ const FUNCIONES_ORDENADAS = [
 ]
 const ESPACIO_EQUIPO_POR_DEFECTO: EstadoEspacioEquipo = {
   metas: 'opcional',
+  planeacion: 'opcional',
   avances: 'opcional',
   recursos: 'opcional',
+  producto: 'opcional',
 }
 
 export function PantallaConfiguracion() {
@@ -61,7 +64,11 @@ export function PantallaConfiguracion() {
 
   if (actividadQuery.isPending) {
     return (
-      <AppShell seccionActiva="actividades" titulo="Configuración" volverA={`/actividades/${id}`}>
+      <AppShell
+        seccionActiva="actividades"
+        titulo="Planificar"
+        contexto={{ idActividad: id, seccion: 'planificar' }}
+      >
         <div className={styles.cargando} role="status" aria-label="Cargando la configuración">
           <IconoCargando size={24} />
         </div>
@@ -71,11 +78,7 @@ export function PantallaConfiguracion() {
 
   if (actividadQuery.isError || !actividadQuery.data) {
     return (
-      <AppShell
-        seccionActiva="actividades"
-        titulo="Actividad no encontrada"
-        volverA={`/actividades/${id}`}
-      >
+      <AppShell seccionActiva="actividades" titulo="Actividad no encontrada">
         <p className={styles.texto}>No encontramos esta actividad, o ya no formas parte de ella.</p>
       </AppShell>
     )
@@ -105,24 +108,27 @@ export function PantallaConfiguracion() {
   return (
     <AppShell
       seccionActiva="actividades"
-      titulo={`Configuración — ${actividad.nombre}`}
-      volverA={`/actividades/${id}`}
+      // El nombre de la entrada de la barra lateral por la que se llega en
+      // cada etapa (construirNavActividad).
+      titulo={etapaDeActividad(actividad) === 'creacion' ? 'Planificar' : 'Editar planificación'}
+      contexto={{ idActividad: id, seccion: 'planificar' }}
+      ayuda="planificar"
     >
       {!puedeConfigurar && !puedeAjustarPeriodos ? (
         <Card className={styles.seccionCard}>
-          <p className={styles.texto}>No tienes permiso para configurar esta actividad.</p>
+          <p className={styles.texto}>No tienes permiso para planificar esta actividad.</p>
         </Card>
       ) : (
         <div className={styles.contenido}>
           <p className={styles.introduccion}>
             Qué seguimiento y evaluación tendrá la actividad y con qué frecuencia se revisa el
-            trabajo. La formación de equipos se configura en Equipos.
+            trabajo. La formación de equipos se ajusta en Equipos.
           </p>
 
           {!puedeConfigurar ? (
             <p className={styles.aviso}>
-              Las funciones ya no pueden cambiarse en esta fase. Aún puedes ajustar el calendario de
-              avances.
+              Las funciones ya no pueden cambiarse en esta etapa. Aún puedes ajustar el calendario
+              de entregas.
             </p>
           ) : puedeAjustarFunciones ? (
             <p className={styles.aviso}>

@@ -22,6 +22,8 @@ export function PantallaReconocimientosDeParticipante() {
         seccionActiva="actividades"
         titulo="Reconocimientos"
         volverA={`/actividades/${id}/participantes`}
+        volverEtiqueta="Participantes"
+        contexto={{ idActividad: id, seccion: 'participantes' }}
       >
         <div className={styles.cargando} role="status" aria-label="Cargando reconocimientos">
           <IconoCargando size={24} />
@@ -36,6 +38,8 @@ export function PantallaReconocimientosDeParticipante() {
         seccionActiva="actividades"
         titulo="Reconocimientos"
         volverA={`/actividades/${id}/participantes`}
+        volverEtiqueta="Participantes"
+        contexto={{ idActividad: id, seccion: 'participantes' }}
       >
         <AvisoError mensaje={consulta.error?.message ?? 'No pudimos cargar esta vista.'} />
       </AppShell>
@@ -54,6 +58,8 @@ export function PantallaReconocimientosDeParticipante() {
       seccionActiva="actividades"
       titulo={participante.nombre}
       volverA={`/actividades/${id}/participantes`}
+      volverEtiqueta="Participantes"
+      contexto={{ idActividad: id, seccion: 'participantes' }}
       acciones={
         <Button variant="ghost" size="sm" to={`/usuarios/${participante.idUsuario}`}>
           Ver perfil

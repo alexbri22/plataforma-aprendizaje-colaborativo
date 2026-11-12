@@ -1,8 +1,11 @@
 import { QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import {
+  EntradaActividades,
   PantallaConfiguracion,
+  PantallaConfirmarCierre,
   PantallaCrearActividad,
+  PantallaInscripcion,
   PantallaMisActividades,
   PantallaResumenActividad,
   PantallaUnirseConClave,
@@ -38,6 +41,7 @@ import {
 import { PantallaPerfil, PantallaPerfilDeUsuario } from '../features/perfil'
 import {
   PantallaBitacoraDeParticipante,
+  PantallaBitacorasDeEquipo,
   PantallaEspacioEquipo,
   PantallaMiBitacora,
 } from '../features/seguimiento'
@@ -55,8 +59,16 @@ export function App() {
           {/* Organizo y Participo son ramificaciones propias del mapa del sitio
               (barra lateral), no pestañas de una misma pantalla: cada una
               tiene su única acción posible (crear / unirse con clave). La
-              ruta sin ramificación conserva los enlaces y marcadores viejos. */}
-          <Route path="/actividades" element={<Navigate to="/actividades/organizo" replace />} />
+              ruta sin ramificación elige la rama que la persona usa
+              (EntradaActividades). */}
+          <Route
+            path="/actividades"
+            element={
+              <RutaProtegida>
+                <EntradaActividades />
+              </RutaProtegida>
+            }
+          />
           <Route
             path="/actividades/organizo"
             element={
@@ -88,6 +100,37 @@ export function App() {
                 <PantallaResumenActividad />
               </RutaProtegida>
             }
+          />
+          {/* Datos de la actividad, desde la barra lateral. A diferencia de
+              /actividades/:id, nunca lleva a la pantalla de la etapa. */}
+          <Route
+            path="/actividades/:id/resumen"
+            element={
+              <RutaProtegida>
+                <PantallaResumenActividad soloResumen />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="/actividades/:id/inscripcion"
+            element={
+              <RutaProtegida>
+                <PantallaInscripcion />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="/actividades/:id/cierre"
+            element={
+              <RutaProtegida>
+                <PantallaConfirmarCierre />
+              </RutaProtegida>
+            }
+          />
+          {/* "Planificar" es el nombre visible de Configuración. */}
+          <Route
+            path="/actividades/:id/planificar"
+            element={<Navigate to="../configuracion" relative="path" replace />}
           />
           <Route
             path="/actividades/:id/configuracion"
@@ -135,6 +178,22 @@ export function App() {
               </RutaProtegida>
             }
           />
+          <Route
+            path="/equipos/:idEquipo/planeacion"
+            element={
+              <RutaProtegida>
+                <PantallaEspacioEquipo tipo="planeacion" />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="/equipos/:idEquipo/producto"
+            element={
+              <RutaProtegida>
+                <PantallaEspacioEquipo tipo="producto" />
+              </RutaProtegida>
+            }
+          />
           {/* Bitácora individual (nucleo §9.3, §9.5): vinculada a la propia
               membresía, no al equipo, pero vive bajo /equipos (decisión de
               producto): se llega aquí desde el espacio de equipo y el
@@ -148,6 +207,14 @@ export function App() {
             element={
               <RutaProtegida>
                 <PantallaMiBitacora />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="/equipos/:idEquipo/bitacoras"
+            element={
+              <RutaProtegida>
+                <PantallaBitacorasDeEquipo />
               </RutaProtegida>
             }
           />

@@ -32,12 +32,59 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
-  padding: var(--space-5) var(--space-4);
+  gap: var(--space-4);
+  padding: var(--space-5) 0 var(--space-4);
   box-sizing: border-box;
   background: var(--color-bg);
   border-right: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+.sidebarCabecera {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: 0 var(--space-4);
+}
+
+/* La única parte que se desplaza. Barra delgada que solo aparece al pasar
+   el cursor o con el foco dentro (como Linear o Notion), sin mover el
+   contenido al aparecer (scrollbar-gutter). Las sombras de arriba y abajo
+   avisan que hay más: los degradados "local" viajan con el contenido y
+   tapan las sombras "scroll" (fijas) cuando ya se llegó a ese extremo. */
+.sidebarDesplazable {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-1) var(--space-2) var(--space-1) var(--space-4);
   overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  scrollbar-gutter: stable;
+  background:
+    linear-gradient(var(--color-bg) 30%, transparent) center top / 100% 2.5rem no-repeat local,
+    linear-gradient(transparent, var(--color-bg) 70%) center bottom / 100% 2.5rem no-repeat local,
+    radial-gradient(
+        farthest-side at 50% 0,
+        color-mix(in srgb, var(--color-text) 12%, transparent),
+        transparent
+      )
+      center top / 100% 0.75rem no-repeat scroll,
+    radial-gradient(
+        farthest-side at 50% 100%,
+        color-mix(in srgb, var(--color-text) 12%, transparent),
+        transparent
+      )
+      center bottom / 100% 0.75rem no-repeat scroll;
+  background-color: var(--color-bg);
+}
+
+.sidebarDesplazable:hover,
+.sidebarDesplazable:focus-within {
+  scrollbar-color: var(--color-border-strong) transparent;
 }
 
 .marca {
@@ -108,8 +155,7 @@
   flex-direction: column;
   gap: var(--space-2);
   border-top: 1px solid var(--color-border);
-  padding-top: var(--space-4);
-  margin-top: var(--space-4);
+  padding: var(--space-4) var(--space-4) 0;
 }
 
 .cuentaInfo {
@@ -201,6 +247,8 @@
 }
 
 .encabezadoTitulo {
+  /* Ancla del globo de ayuda (BotonAyuda): se alinea con el título. */
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -216,8 +264,12 @@
   width: 2.25rem;
   height: 2.25rem;
   flex-shrink: 0;
+  padding: 0;
+  border: none;
   border-radius: var(--radius-md);
+  background: none;
   color: var(--color-text);
+  cursor: pointer;
   transition: background-color 0.15s ease;
 }
 
@@ -267,8 +319,25 @@
     flex-direction: row;
     align-items: center;
     flex-wrap: wrap;
+    padding: var(--space-5) var(--space-4);
+    overflow: visible;
     border-right: none;
     border-bottom: 1px solid var(--color-border);
+  }
+
+  .sidebarCabecera {
+    flex-direction: row;
+    align-items: center;
+    padding: 0;
+  }
+
+  .sidebarDesplazable {
+    flex: 1 1 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 0;
+    overflow: visible;
+    background: none;
   }
 
   .nav {
@@ -278,7 +347,165 @@
 
   .cuenta {
     border-top: none;
-    padding-top: 0;
-    margin-top: 0;
+    padding: 0;
+  }
+}
+
+/* La flecha al nivel de arriba (Organizo, Participo o Equipos) conserva el
+   color de la rama, sin fondo: el único ítem con fondo es la pantalla actual. */
+.navItemAncestro {
+  color: var(--color-primary);
+}
+
+/* Nivel de la actividad (o de uno de sus equipos): una sola lista, sin
+   árbol. Los nombres se ven completos, en varias líneas si hace falta. */
+.nivel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.nivelTitulo {
+  margin: 0;
+  padding: 0 var(--space-3);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.nivelCabecera {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.nivelSubtitulo {
+  margin: 0;
+  padding: 0 var(--space-3);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-tight);
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+/* "Mi equipo: Alfa" dentro de Desarrollo: un título sin enlace, con lo del
+   equipo sangrado debajo. */
+.nivelBloque {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nivelBloqueTitulo {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.nivelBloque > .nivelLista {
+  padding-left: var(--space-3);
+}
+
+.nivelSeccion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* A partir del segundo bloque (el equipo de quien participa), una línea y
+   un título dicen a qué pertenece cada ítem. */
+.nivelSeccion + .nivelSeccion {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.nivelSeccionTitulo {
+  margin: 0;
+  padding: 0 var(--space-3);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.nivelLista {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nivelItem {
+  display: block;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  color: var(--color-text-muted);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+a.nivelItem:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.nivelItem:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Entrada global sin pantalla todavía (Aprende colaborando). */
+.navItemPendiente {
+  font-weight: var(--font-weight-regular);
+  cursor: default;
+}
+
+.navItemPendiente:hover {
+  background: none;
+  color: var(--color-text-muted);
+}
+
+/* Aspecto sin pantalla todavía: está en el mapa, pero no es un enlace. */
+.nivelItemPendiente {
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-muted);
+  cursor: default;
+}
+
+/* Mientras la actividad carga: reserva el alto aproximado del nivel para
+   que la barra no salte cuando aparece. */
+.nivelCargando {
+  height: 14rem;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-hover);
+  opacity: 0.5;
+}
+
+@media (max-width: 860px) {
+  .nivel {
+    width: 100%;
+  }
+
+  .nivelLista {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .nivelCargando {
+    display: none;
   }
 }

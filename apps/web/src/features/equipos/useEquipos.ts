@@ -34,10 +34,11 @@ export function claveEquipo(idEquipo: string) {
   return ['equipos', idEquipo] as const
 }
 
-export function useEquipo(idEquipo: string) {
+export function useEquipo(idEquipo: string, opciones?: { enabled?: boolean }) {
   return useQuery({
     queryKey: claveEquipo(idEquipo),
     queryFn: () => obtenerEquipoConActividad(idEquipo),
+    enabled: opciones?.enabled ?? true,
   })
 }
 

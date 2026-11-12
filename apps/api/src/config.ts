@@ -62,11 +62,20 @@ export const config = {
   limiteIntentos: {
     registro: {
       ventanaMin: numero('RATE_LIMIT_REGISTRO_VENTANA_MIN', 15),
-      max: numero(nombreVariableRegistroMax, 20),
+      // Cuenta cada registro, exitoso o no, por IP: alcanza para un salón
+      // entero registrándose a la vez, con margen para errores.
+      max: numero(nombreVariableRegistroMax, 60),
     },
     sesion: {
       ventanaMin: numero('RATE_LIMIT_SESION_VENTANA_MIN', 15),
       max: numero('RATE_LIMIT_SESION_MAX', 10),
+    },
+    // Tope de intentos fallidos por IP, sin importar el correo (ver
+    // limitadorSesionPorIp): holgado para que un salón detrás de una sola IP
+    // no lo alcance.
+    sesionPorIp: {
+      ventanaMin: numero('RATE_LIMIT_SESION_IP_VENTANA_MIN', 15),
+      max: numero('RATE_LIMIT_SESION_IP_MAX', 100),
     },
     // Consulta por clave de ingreso (docs/diseno-desarrollo-nucleo.md §3.2 y
     // §3.3): el espacio de claves es grande, pero sin límite de intentos

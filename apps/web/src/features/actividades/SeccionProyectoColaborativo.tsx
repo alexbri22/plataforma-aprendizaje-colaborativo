@@ -144,7 +144,7 @@ export function SeccionProyectoColaborativo({
     return (
       <>
         <Select
-          label="Periodicidad de Avances"
+          label="Periodicidad de las entregas"
           ocultarEtiqueta
           value={inferida}
           disabled={!puedeRegenerarCalendario || definirMutacion.isPending}
@@ -172,7 +172,8 @@ export function SeccionProyectoColaborativo({
         Proyecto colaborativo
       </h2>
       <p className={styles.descripcion}>
-        Qué comparten los equipos mientras trabajan y con qué frecuencia se revisa su avance.
+        Qué comparten los equipos mientras trabajan y con qué frecuencia entregan avances.
+        Obligatorio no bloquea nada: solo se le recuerda al equipo si falta.
       </p>
 
       <Card className={styles.tarjeta}>
@@ -181,7 +182,7 @@ export function SeccionProyectoColaborativo({
             <thead>
               <tr>
                 <th scope="col" className={styles.encabezadoColumna}>
-                  Tarea
+                  Elemento
                 </th>
                 <th scope="col" className={styles.encabezadoColumna}>
                   Estado

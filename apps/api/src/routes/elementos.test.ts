@@ -129,7 +129,13 @@ describe('POST /api/equipos/:id/elementos', () => {
     await request(app)
       .put(`/api/actividades/${e.id}/configuracion/espacio_equipo`)
       .set('Cookie', e.organizador.cookie)
-      .send({ metas: 'opcional', avances: 'opcional', recursos: 'deshabilitado' })
+      .send({
+        metas: 'opcional',
+        planeacion: 'opcional',
+        avances: 'opcional',
+        recursos: 'deshabilitado',
+        producto: 'opcional',
+      })
 
     const idEquipo = await idEquipoCreado(e.id, e.organizador.cookie, 'Alfa')
     await asignar(idEquipo, e.participantes[0].idMembresia, e.organizador.cookie)
@@ -249,8 +255,10 @@ describe('PATCH /api/elementos/:id', () => {
       data: {
         estado: JSON.stringify({
           metas: 'deshabilitado',
+          planeacion: 'opcional',
           avances: 'opcional',
           recursos: 'opcional',
+          producto: 'opcional',
         }),
       },
     })
@@ -298,8 +306,10 @@ describe('DELETE /api/elementos/:id', () => {
       data: {
         estado: JSON.stringify({
           metas: 'opcional',
+          planeacion: 'opcional',
           avances: 'opcional',
           recursos: 'deshabilitado',
+          producto: 'opcional',
         }),
       },
     })
@@ -317,7 +327,13 @@ describe('ajustar_funciones: espacio_equipo con contenido', () => {
     const respuesta = await request(app)
       .put(`/api/actividades/${e.id}/configuracion/espacio_equipo`)
       .set('Cookie', e.organizador.cookie)
-      .send({ metas: 'deshabilitado', avances: 'opcional', recursos: 'opcional' })
+      .send({
+        metas: 'deshabilitado',
+        planeacion: 'opcional',
+        avances: 'opcional',
+        recursos: 'opcional',
+        producto: 'opcional',
+      })
 
     expect(respuesta.status).toBe(422)
   })
@@ -330,7 +346,13 @@ describe('ajustar_funciones: espacio_equipo con contenido', () => {
         await request(app)
           .put(`/api/actividades/${e.id}/configuracion/espacio_equipo`)
           .set('Cookie', e.organizador.cookie)
-          .send({ metas: 'opcional', avances: 'opcional', recursos: 'deshabilitado' })
+          .send({
+            metas: 'opcional',
+            planeacion: 'opcional',
+            avances: 'opcional',
+            recursos: 'deshabilitado',
+            producto: 'opcional',
+          })
       ).status,
     ).toBe(200)
 
@@ -345,7 +367,13 @@ describe('ajustar_funciones: espacio_equipo con contenido', () => {
     const respuesta = await request(app)
       .put(`/api/actividades/${e.id}/configuracion/espacio_equipo`)
       .set('Cookie', e.organizador.cookie)
-      .send({ metas: 'opcional', avances: 'opcional', recursos: 'opcional' })
+      .send({
+        metas: 'opcional',
+        planeacion: 'opcional',
+        avances: 'opcional',
+        recursos: 'opcional',
+        producto: 'opcional',
+      })
 
     expect(respuesta.status).toBe(200)
   })

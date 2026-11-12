@@ -3,6 +3,10 @@ import styles from './Select.module.css'
 
 export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   label: string
+  /** Una línea bajo la etiqueta que dice para qué se usa el dato (no lo
+   * define). Siempre visible: no se esconde en un placeholder ni en un
+   * tooltip, porque se necesita para llenar el campo. */
+  ayuda?: string
   error?: string
   children: ReactNode
   ocultarEtiqueta?: boolean
@@ -25,6 +29,7 @@ function ChevronIcono() {
 
 export function Select({
   label,
+  ayuda,
   error,
   id,
   className,
@@ -45,6 +50,11 @@ export function Select({
       >
         {label}
       </label>
+      {ayuda ? (
+        <span id={`${selectId}-ayuda`} className={styles.ayuda}>
+          {ayuda}
+        </span>
+      ) : null}
       <div className={styles.selectWrapper}>
         <select
           id={selectId}
@@ -52,7 +62,11 @@ export function Select({
             .filter(Boolean)
             .join(' ')}
           aria-invalid={Boolean(error)}
-          aria-describedby={error ? `${selectId}-error` : undefined}
+          aria-describedby={
+            [ayuda ? `${selectId}-ayuda` : null, error ? `${selectId}-error` : null]
+              .filter(Boolean)
+              .join(' ') || undefined
+          }
           {...props}
         >
           {children}

@@ -5,7 +5,69 @@
 .formulario {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-6);
+}
+
+/* Bloques del formulario: cada uno agrupa campos que se deciden juntos. */
+.seccion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.seccion + .seccion {
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--color-border);
+}
+
+.seccionTitulo {
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+/* Las fechas, calculadas con lo que se lleva escrito. Lista neutra, sin
+   caja de color (DESIGN.md): etiqueta a la izquierda, valor a la derecha. */
+.resumenFechas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.tramo {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-4);
+  font-size: var(--font-size-sm);
+}
+
+.tramo dt {
+  color: var(--color-text-muted);
+}
+
+.tramo dd {
+  margin: 0;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+}
+
+.opcional {
+  margin-left: var(--space-2);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-muted);
+}
+
+.nota {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
 }
 
 .filaDos {
@@ -18,9 +80,9 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  min-width: 0;
   border: none;
-  border-top: 1px solid var(--color-border);
-  padding: var(--space-3) 0 0;
+  padding: 0;
   margin: 0;
 }
 
@@ -47,4 +109,13 @@
 
 .enviar {
   width: 100%;
+}
+
+/* La ayuda compartida por inicio y término va pegada al par, no a la
+   distancia de un campo más. */
+.ayudaPar {
+  margin: calc(var(--space-2) * -1) 0 0;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-muted);
 }

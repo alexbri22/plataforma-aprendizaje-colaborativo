@@ -174,7 +174,7 @@ describe('PantallaEquipos', () => {
     it('nombra cómo se forman los equipos y lista quiénes no tienen equipo', async () => {
       renderPantalla()
 
-      expect(await screen.findByText('Autogestionada')).toBeInTheDocument()
+      expect(await screen.findByText('Cada quien elige su equipo')).toBeInTheDocument()
       expect(screen.getByText('Sin equipo (1)')).toBeInTheDocument()
       expect(screen.getByText(textoCompleto('Ana García (tú)'))).toBeInTheDocument()
       // Cada nombre lleva al perfil de esa persona. El menú lateral también
@@ -200,7 +200,7 @@ describe('PantallaEquipos', () => {
         await screen.findByRole('button', { name: 'Crear equipo y unirme' }),
       ).toBeInTheDocument()
       expect(screen.getAllByRole('button', { name: 'Unirme' })).toHaveLength(2)
-      expect(screen.queryByRole('button', { name: 'Cerrar la formación' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Confirmar equipos' })).not.toBeInTheDocument()
       expect(screen.queryByText('Asignación de personas')).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Eliminar' })).not.toBeInTheDocument()
     })
@@ -282,7 +282,7 @@ describe('PantallaEquipos', () => {
     )
     renderPantalla()
 
-    expect(await screen.findByText('Asignación manual')).toBeInTheDocument()
+    expect(await screen.findByText('Tú asignas los equipos')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Unirme|Crear equipo/ })).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Nombre del equipo')).not.toBeInTheDocument()
   })
@@ -360,9 +360,9 @@ describe('PantallaEquipos', () => {
       renderPantalla()
 
       expect(await screen.findByText('2 sin equipo')).toBeInTheDocument()
-      await usuario.click(screen.getByRole('button', { name: 'Cerrar la formación' }))
+      await usuario.click(screen.getByRole('button', { name: 'Confirmar equipos' }))
       expect(cerrarFormacion).not.toHaveBeenCalled()
-      await usuario.click(screen.getByRole('button', { name: 'Confirmar cierre' }))
+      await usuario.click(screen.getByRole('button', { name: 'Sí, confirmar equipos' }))
 
       await waitFor(() => expect(cerrarFormacion).toHaveBeenCalledWith('act-1'))
     })
@@ -371,8 +371,8 @@ describe('PantallaEquipos', () => {
       vi.mocked(obtenerEquipos).mockResolvedValue(lista([equipo('e1', 'Alfa')]))
       renderPantalla()
 
-      await screen.findByRole('button', { name: 'Cerrar la formación' })
-      expect(screen.queryByRole('heading', { name: 'Cerrar la formación' })).not.toBeInTheDocument()
+      await screen.findByRole('button', { name: 'Confirmar equipos' })
+      expect(screen.queryByRole('heading', { name: 'Confirmar equipos' })).not.toBeInTheDocument()
       expect(
         screen.queryByRole('heading', { name: 'Propuesta del sistema' }),
       ).not.toBeInTheDocument()
@@ -383,12 +383,12 @@ describe('PantallaEquipos', () => {
       const usuario = userEvent.setup()
       renderPantalla()
 
-      await usuario.click(await screen.findByRole('button', { name: 'Cerrar la formación' }))
-      expect(screen.getByText('¿Cerrar la formación?')).toBeInTheDocument()
+      await usuario.click(await screen.findByRole('button', { name: 'Confirmar equipos' }))
+      expect(screen.getByText('¿Confirmar los equipos?')).toBeInTheDocument()
       await usuario.click(screen.getByRole('button', { name: 'Cancelar' }))
 
-      expect(screen.queryByText('¿Cerrar la formación?')).not.toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Cerrar la formación' })).toBeInTheDocument()
+      expect(screen.queryByText('¿Confirmar los equipos?')).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Confirmar equipos' })).toBeInTheDocument()
       expect(cerrarFormacion).not.toHaveBeenCalled()
     })
 
@@ -396,9 +396,9 @@ describe('PantallaEquipos', () => {
       vi.mocked(obtenerEquipos).mockResolvedValue(lista([]))
       renderPantalla()
 
-      await screen.findByText('Aún no hay equipos.')
-      expect(screen.getByRole('button', { name: 'Cerrar la formación' })).toBeDisabled()
-      expect(screen.getByText('Aún no hay equipos.')).toBeInTheDocument()
+      await screen.findByText(/^Aún no hay equipos\./)
+      expect(screen.getByRole('button', { name: 'Confirmar equipos' })).toBeDisabled()
+      expect(screen.getByText(/^Aún no hay equipos\./)).toBeInTheDocument()
     })
 
     it('elimina un equipo, aunque tenga integrantes, desde su panel y tras confirmar', async () => {
@@ -413,8 +413,10 @@ describe('PantallaEquipos', () => {
       const panel = await screen.findByRole('dialog')
       await usuario.click(within(panel).getByRole('button', { name: 'Eliminar equipo' }))
       expect(eliminarEquipo).not.toHaveBeenCalled()
-      expect(within(panel).getByText('Sus integrantes quedan sin equipo.')).toBeInTheDocument()
-      await usuario.click(within(panel).getByRole('button', { name: 'Eliminar equipo' }))
+      expect(
+        within(panel).getByText('¿Eliminar este equipo? Sus integrantes quedan sin equipo.'),
+      ).toBeInTheDocument()
+      await usuario.click(within(panel).getByRole('button', { name: 'Sí, eliminar' }))
 
       await waitFor(() => expect(eliminarEquipo).toHaveBeenCalledWith('e1'))
     })
@@ -497,11 +499,14 @@ describe('PantallaEquipos', () => {
       const usuario = userEvent.setup()
       renderPantalla()
 
-      await usuario.click(await screen.findByRole('button', { name: 'Configurar' }))
+      await usuario.click(await screen.findByRole('button', { name: 'Ajustes de formación' }))
       const panel = await screen.findByRole('dialog')
       expect(within(panel).getByLabelText('Cómo se forman')).toHaveValue('manual')
 
-      await usuario.selectOptions(within(panel).getByLabelText('Cómo se forman'), 'Autogestionada')
+      await usuario.selectOptions(
+        within(panel).getByLabelText('Cómo se forman'),
+        'Cada quien elige su equipo',
+      )
       await waitFor(() =>
         expect(configurarFuncion).toHaveBeenCalledWith('act-1', 'formacion_equipos', {
           estado: 'autogestionado',
@@ -525,9 +530,9 @@ describe('PantallaEquipos', () => {
       renderPantalla()
 
       expect(
-        await screen.findByText('La formación empieza al cerrar la inscripción.'),
+        await screen.findByText('Los equipos se forman al cerrar la inscripción.'),
       ).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Configurar' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Ajustes de formación' })).toBeInTheDocument()
     })
 
     it('un valor de tamaño inválido se rechaza en el campo, sin llamar al servidor', async () => {
@@ -538,7 +543,7 @@ describe('PantallaEquipos', () => {
       const usuario = userEvent.setup()
       renderPantalla()
 
-      await usuario.click(await screen.findByRole('button', { name: 'Configurar' }))
+      await usuario.click(await screen.findByRole('button', { name: 'Ajustes de formación' }))
       const panel = await screen.findByRole('dialog')
       await usuario.type(within(panel).getByLabelText('Máximo de integrantes'), '0')
       await usuario.tab()
@@ -554,8 +559,8 @@ describe('PantallaEquipos', () => {
       vi.mocked(obtenerEquipos).mockResolvedValue(lista([]))
       renderPantalla()
 
-      await screen.findByText('Autogestionada')
-      expect(screen.queryByRole('button', { name: 'Configurar' })).not.toBeInTheDocument()
+      await screen.findByText('Cada quien elige su equipo')
+      expect(screen.queryByRole('button', { name: 'Ajustes de formación' })).not.toBeInTheDocument()
     })
 
     it('puede integrar un equipo y salir de él; los participantes no salen', async () => {
@@ -623,7 +628,7 @@ describe('PantallaEquipos', () => {
       renderPantalla()
 
       expect(
-        await screen.findByText('La formación empieza al cerrar la inscripción.'),
+        await screen.findByText('Los equipos se forman al cerrar la inscripción.'),
       ).toBeInTheDocument()
     })
 
@@ -634,7 +639,7 @@ describe('PantallaEquipos', () => {
       vi.mocked(obtenerEquipos).mockResolvedValue(lista([]))
       renderPantalla()
 
-      expect(await screen.findByText('Aún no hay equipos.')).toBeInTheDocument()
+      expect(await screen.findByText(/^Aún no hay equipos\./)).toBeInTheDocument()
       expect(screen.queryByRole('button', { name: /Crear equipo/ })).not.toBeInTheDocument()
     })
   })
@@ -689,10 +694,10 @@ describe('PantallaEquipos', () => {
       const usuario = userEvent.setup()
       renderPantalla()
 
-      await usuario.click(await screen.findByRole('button', { name: 'Generar propuesta' }))
+      await usuario.click(await screen.findByRole('button', { name: 'Sugerir equipos' }))
 
       await waitFor(() => expect(generarPropuesta).toHaveBeenCalledWith('act-1'))
-      expect(await screen.findByText('Propuesta generada: 3 equipos.')).toBeInTheDocument()
+      expect(await screen.findByText('Sugerencia lista: 3 equipos.')).toBeInTheDocument()
       expect(screen.queryByText(/semilla/i)).not.toBeInTheDocument()
     })
 
@@ -704,10 +709,10 @@ describe('PantallaEquipos', () => {
       const usuario = userEvent.setup()
       renderPantalla()
 
-      await usuario.click(await screen.findByRole('button', { name: 'Generar otra propuesta' }))
+      await usuario.click(await screen.findByRole('button', { name: 'Sugerir otros' }))
       expect(generarPropuesta).not.toHaveBeenCalled()
       expect(screen.getByText('Reemplaza los 2 equipos actuales.')).toBeInTheDocument()
-      await usuario.click(screen.getByRole('button', { name: 'Reemplazar' }))
+      await usuario.click(screen.getByRole('button', { name: 'Sí, reemplazar' }))
 
       await waitFor(() => expect(generarPropuesta).toHaveBeenCalledWith('act-1'))
     })
@@ -722,7 +727,7 @@ describe('PantallaEquipos', () => {
       const usuario = userEvent.setup()
       renderPantalla()
 
-      await usuario.click(await screen.findByRole('button', { name: 'Generar propuesta' }))
+      await usuario.click(await screen.findByRole('button', { name: 'Sugerir equipos' }))
 
       expect(await screen.findByText(/No hay participantes activos/)).toBeInTheDocument()
     })
@@ -737,7 +742,7 @@ describe('PantallaEquipos', () => {
       vi.mocked(obtenerEquipos).mockResolvedValue(lista([]))
       renderPantalla()
 
-      await screen.findByText('Asignación manual')
+      await screen.findByText('Tú asignas los equipos')
       expect(screen.queryByRole('button', { name: /Generar/ })).not.toBeInTheDocument()
     })
   })
@@ -881,11 +886,11 @@ describe('PantallaEquipos', () => {
       const panel = await screen.findByRole('dialog')
       const boton = within(panel).getByRole('button', { name: 'Intercambiar' })
       expect(boton).toBeDisabled()
-      expect(within(panel).getByLabelText('Con')).toBeDisabled()
+      expect(within(panel).getByLabelText('Intercambiar con')).toBeDisabled()
 
       await usuario.selectOptions(within(panel).getByLabelText('Persona'), 'Ana A · Alfa')
       // Solo se ofrecen personas de otros equipos.
-      const con = within(panel).getByLabelText('Con')
+      const con = within(panel).getByLabelText('Intercambiar con')
       expect(within(con).queryByRole('option', { name: 'Bea B · Alfa' })).not.toBeInTheDocument()
       await usuario.selectOptions(con, 'Cai C · Beta')
       await usuario.click(boton)
@@ -905,7 +910,7 @@ describe('PantallaEquipos', () => {
       await usuario.click(await screen.findByRole('button', { name: 'Intercambiar' }))
       const panel = await screen.findByRole('dialog')
       await usuario.selectOptions(within(panel).getByLabelText('Persona'), 'Ana A · Alfa')
-      await usuario.selectOptions(within(panel).getByLabelText('Con'), 'Dan D · Beta')
+      await usuario.selectOptions(within(panel).getByLabelText('Intercambiar con'), 'Dan D · Beta')
       await usuario.click(within(panel).getByRole('button', { name: 'Intercambiar' }))
 
       expect(
@@ -1013,9 +1018,9 @@ describe('PantallaEquipos', () => {
       const usuario = userEvent.setup()
       renderConRutaDeEquipo()
 
-      const tarjetas = await screen.findAllByRole('link', { name: /Entrar al espacio de/ })
+      const tarjetas = await screen.findAllByRole('link', { name: /^Entrar a / })
       expect(tarjetas).toHaveLength(1)
-      expect(tarjetas[0]).toHaveAccessibleName('Entrar al espacio de Alfa')
+      expect(tarjetas[0]).toHaveAccessibleName('Entrar a Alfa')
 
       await usuario.click(tarjetas[0])
       expect(await screen.findByText('Espacio de equipo abierto')).toBeInTheDocument()
@@ -1033,7 +1038,47 @@ describe('PantallaEquipos', () => {
       )
       renderConRutaDeEquipo()
 
-      expect(await screen.findAllByRole('link', { name: /Entrar al espacio de/ })).toHaveLength(2)
+      // Quien organiza consulta los equipos (observación de las coordinadoras).
+      expect(await screen.findAllByRole('link', { name: /Consultar el espacio de/ })).toHaveLength(
+        2,
+      )
+    })
+
+    it('en desarrollo, quien organiza consulta los equipos y no se le ofrece unirse', async () => {
+      vi.mocked(obtenerActividad).mockResolvedValue(
+        actividad({
+          rol: 'organizador',
+          fase: 'desarrollo',
+          capacidades: ['asignar_integrantes', 'editar_equipo'],
+        }),
+      )
+      vi.mocked(obtenerEquipos).mockResolvedValue(
+        lista([equipo('e1', 'Alfa', [persona('m2', 'Luis Pérez')])]),
+      )
+      renderConRutaDeEquipo()
+
+      expect(await screen.findByText(/Consultar/)).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Unirme' })).not.toBeInTheDocument()
+    })
+
+    it('con bitácoras habilitadas, el nombre de un participante abre su bitácora', async () => {
+      vi.mocked(obtenerActividad).mockResolvedValue(
+        actividad({
+          rol: 'organizador',
+          fase: 'desarrollo',
+          capacidades: [],
+          configuracion: { formacion_equipos: 'autogestionado', bitacora_individual: 'habilitada' },
+        }),
+      )
+      vi.mocked(obtenerEquipos).mockResolvedValue(
+        lista([equipo('e1', 'Alfa', [persona('m2', 'Luis Pérez')])]),
+      )
+      renderConRutaDeEquipo()
+
+      expect(await screen.findByRole('link', { name: 'Bitácora de Luis Pérez' })).toHaveAttribute(
+        'href',
+        '/equipos/e1/participantes/m2/bitacora',
+      )
     })
 
     it('un clic en Unirme no dispara también la navegación de la tarjeta', async () => {
@@ -1052,16 +1097,35 @@ describe('PantallaEquipos', () => {
     })
   })
 
-  it('tiene una flecha para volver a la actividad, en lugar de un botón con texto', async () => {
+  it('se ubica con la barra: Equipos marcado y la actividad arriba', async () => {
     vi.mocked(obtenerActividad).mockResolvedValue(actividad({ capacidades: [] }))
     vi.mocked(obtenerEquipos).mockResolvedValue(lista([]))
     renderPantalla()
 
-    expect(await screen.findByRole('link', { name: 'Volver' })).toHaveAttribute(
-      'href',
-      '/actividades/act-1',
+    // En Creación la pantalla es Conformación de equipos; desde Desarrollo, Equipos.
+    expect(await screen.findByRole('link', { name: 'Conformación de equipos' })).toHaveAttribute(
+      'aria-current',
+      'page',
     )
+    expect(
+      screen.getByRole('heading', { name: 'Conformación de equipos', level: 1 }),
+    ).toBeInTheDocument()
     expect(screen.queryByText('Volver a la actividad')).not.toBeInTheDocument()
+  })
+
+  it('en desarrollo se llama Equipos y esa es la entrada marcada', async () => {
+    vi.mocked(obtenerActividad).mockResolvedValue(
+      actividad({ fase: 'desarrollo', capacidades: [] }),
+    )
+    vi.mocked(obtenerEquipos).mockResolvedValue(lista([]))
+    renderPantalla()
+
+    expect(await screen.findByRole('link', { name: 'Equipos' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    expect(screen.getByRole('heading', { name: 'Equipos', level: 1 })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Conformación de equipos' })).not.toBeInTheDocument()
   })
 
   it('muestra un aviso si no se pueden cargar los equipos', async () => {
@@ -1070,10 +1134,6 @@ describe('PantallaEquipos', () => {
     renderPantalla()
 
     expect(await screen.findByText('No pudimos cargar los equipos.')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Volver' })).toHaveAttribute(
-      'href',
-      '/actividades/act-1',
-    )
   })
 
   it('muestra un aviso si la actividad no existe o no se es miembro', async () => {

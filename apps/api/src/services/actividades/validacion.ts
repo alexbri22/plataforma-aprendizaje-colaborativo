@@ -75,17 +75,22 @@ export function validarDatosCrearActividad(cuerpo: unknown): DatosCrearActividad
   const fechaLimiteInscripcion = fecha(datos.fechaLimiteInscripcion)
   if (!fechaLimiteInscripcion) {
     detallePorCampo.fechaLimiteInscripcion = 'La fecha límite de inscripción es requerida.'
+  } else if (fechaTermino && fechaLimiteInscripcion >= fechaTermino) {
+    // Inscribirse después del término dejaría a esa persona sin trabajo en
+    // equipo ni cierre: la actividad ya habría terminado.
+    detallePorCampo.fechaLimiteInscripcion = 'Debe ser anterior a la fecha de término.'
   }
 
   const plazoCierreDias = enteroPositivo(datos.plazoCierreDias)
   if (!plazoCierreDias) {
-    detallePorCampo.plazoCierreDias = 'El plazo de cierre debe ser un número entero mayor a cero.'
+    detallePorCampo.plazoCierreDias =
+      'Los días para reconocer deben ser un número entero mayor a cero.'
   }
 
   const numeroEquiposEsperado = enteroPositivo(datos.numeroEquiposEsperado)
   if (!numeroEquiposEsperado) {
     detallePorCampo.numeroEquiposEsperado =
-      'El número de equipos esperado debe ser un número entero mayor a cero.'
+      'Los equipos esperados deben ser un número entero mayor a cero.'
   }
 
   if (Object.keys(detallePorCampo).length > 0) {

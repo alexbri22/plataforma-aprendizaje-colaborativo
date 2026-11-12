@@ -4,6 +4,7 @@ import { AvisoError, Button, IconoCargando, Input } from '../../components/ui'
 import { CampoContrasena } from './CampoContrasena'
 import { PantallaAutenticacion } from './PantallaAutenticacion'
 import { ErrorCuenta } from './api'
+import { describirEspera, formatearCuentaRegresiva, useEsperaReintento } from './useEsperaReintento'
 import { useIniciarSesionMutation } from './useSesion'
 import { validarContrasena, validarCorreo } from './validacion'
 import styles from './PantallaIngresar.module.css'
@@ -27,6 +28,12 @@ export function PantallaIngresar() {
   const [contrasena, setContrasena] = useState('')
   const [errores, setErrores] = useState<Errores>({})
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null)
+  // El aviso de espera dice "en N minutos": al terminar la espera ya no es
+  // cierto, así que se retira junto con el bloqueo del botón.
+  const [errorEsDeEspera, setErrorEsDeEspera] = useState(false)
+  const espera = useEsperaReintento()
+
+  const errorVisible = errorEsDeEspera && !espera.esperando ? null : errorEnvio
 
   function obtenerError(campo: keyof Errores): string | undefined {
     if (campo === 'correo') return validarCorreo(correo)
@@ -59,6 +66,15 @@ export function PantallaIngresar() {
       await mutacion.mutateAsync({ correo, contrasena })
       navigate(destino, { replace: true })
     } catch (error) {
+      if (error instanceof ErrorCuenta && error.reintentarEnSegundos) {
+        espera.iniciar(error.reintentarEnSegundos)
+        setErrorEsDeEspera(true)
+        setErrorEnvio(
+          `${error.message} Vuelve a intentarlo en ${describirEspera(error.reintentarEnSegundos)}.`,
+        )
+        return
+      }
+      setErrorEsDeEspera(false)
       setErrorEnvio(error instanceof ErrorCuenta ? error.message : MENSAJE_ERROR_GENERICO)
     }
   }
@@ -69,12 +85,12 @@ export function PantallaIngresar() {
       subtitulo="Entra a tu cuenta para continuar con tus actividades."
       pie={
         <>
-          ¿No tienes cuenta? <Link to="/registrarse">Regístrate</Link>
+          ¿No tienes cuenta? <Link to="/registrarse">Crea una</Link>
         </>
       }
     >
       <form className={styles.formulario} onSubmit={manejarEnvio} noValidate>
-        {errorEnvio ? <AvisoError mensaje={errorEnvio} /> : null}
+        {errorVisible ? <AvisoError mensaje={errorVisible} /> : null}
 
         <Input
           id="correo"
@@ -100,12 +116,18 @@ export function PantallaIngresar() {
           disabled={mutacion.isPending}
         />
 
-        <Button type="submit" disabled={mutacion.isPending} className={styles.enviar}>
+        <Button
+          type="submit"
+          disabled={mutacion.isPending || espera.esperando}
+          className={styles.enviar}
+        >
           {mutacion.isPending ? (
             <>
               <IconoCargando />
               Ingresando…
             </>
+          ) : espera.esperando ? (
+            `Espera ${formatearCuentaRegresiva(espera.segundosRestantes)}`
           ) : (
             'Ingresar'
           )}

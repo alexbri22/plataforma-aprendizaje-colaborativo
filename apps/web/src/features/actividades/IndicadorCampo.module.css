@@ -12,3 +12,24 @@
   color: var(--color-danger-ink);
   white-space: normal;
 }
+
+.indicadorGuardado {
+  color: var(--color-success);
+  animation: desvanecer 2.5s ease-in forwards;
+}
+
+@keyframes desvanecer {
+  0%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .indicadorGuardado {
+    animation: none;
+  }
+}

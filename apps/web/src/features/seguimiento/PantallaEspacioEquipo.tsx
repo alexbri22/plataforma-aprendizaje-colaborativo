@@ -1,5 +1,6 @@
 import {
   LONGITUD_MAXIMA_CONTENIDO_ELEMENTO,
+  esUrlSegura,
   parsearEstadoEspacioEquipo,
   type AccionActividad,
   type ElementoEspacioEquipo,
@@ -18,26 +19,34 @@ import {
   rebanar,
 } from '../../components/ui'
 import { useActividad } from '../actividades'
+import { IntegrantesEquipo } from '../equipos/IntegrantesEquipo'
 import { useEquipo } from '../equipos/useEquipos'
+import { CamposAdjuntos } from './AdjuntosElemento'
 import { TarjetaElemento } from './TarjetaElemento'
 import {
   useCrearElementoMutation,
   useEditarElementoMutation,
   useEliminarElementoMutation,
   useElementos,
+  ErrorArchivoSinSubir,
+  type DatosElemento,
 } from './useElementos'
 import styles from './PantallaEspacioEquipo.module.css'
 
 const TITULOS: Record<ElementoEspacioEquipo, string> = {
   metas: 'Metas',
+  planeacion: 'Planeación',
   avances: 'Avances',
-  recursos: 'Recursos',
+  recursos: 'Materiales',
+  producto: 'Producto',
 }
 
 const AYUDA: Record<ElementoEspacioEquipo, string> = {
   metas: 'Qué se propone lograr el equipo.',
+  planeacion: 'Cómo se organiza el equipo: tareas, responsables y fechas.',
   avances: 'Qué ha avanzado el equipo y cuándo.',
   recursos: 'Enlaces o notas que el equipo necesita a la mano.',
+  producto: 'Lo que el equipo entrega como resultado final.',
 }
 
 // Las tarjetas ahora empiezan colapsadas (TarjetaElemento): una fila
@@ -56,20 +65,38 @@ function FormularioNuevoElemento({
   onCrear,
 }: {
   tipo: ElementoEspacioEquipo
-  onCrear: (contenido: string) => Promise<void>
+  onCrear: (datos: DatosElemento) => Promise<void>
 }) {
   const [contenido, setContenido] = useState('')
+  const [enlace, setEnlace] = useState('')
+  const [archivo, setArchivo] = useState<File | null>(null)
+  const [errorEnlace, setErrorEnlace] = useState<string | undefined>()
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function manejarEnviar(evento: FormEvent) {
     evento.preventDefault()
+    const enlaceLimpio = enlace.trim()
+    if (enlaceLimpio && !esUrlSegura(enlaceLimpio)) {
+      setErrorEnlace('Debe ser un enlace completo que empiece con https://')
+      return
+    }
+    setErrorEnlace(undefined)
     setGuardando(true)
     setError(null)
     try {
-      await onCrear(contenido)
+      await onCrear({ contenido, enlace: enlaceLimpio || null, archivo: archivo ?? undefined })
       setContenido('')
+      setEnlace('')
+      setArchivo(null)
     } catch (e) {
+      // El elemento ya existe: se limpia el formulario para que «Agregar» no
+      // lo cree otra vez, y el aviso dice cómo adjuntar el archivo.
+      if (e instanceof ErrorArchivoSinSubir) {
+        setContenido('')
+        setEnlace('')
+        setArchivo(null)
+      }
       setError(mensajeDe(e))
     } finally {
       setGuardando(false)
@@ -85,6 +112,14 @@ function FormularioNuevoElemento({
           onChange={(e) => setContenido(e.target.value)}
           maxLength={LONGITUD_MAXIMA_CONTENIDO_ELEMENTO}
           placeholder={AYUDA[tipo]}
+        />
+        <CamposAdjuntos
+          enlace={enlace}
+          onEnlace={setEnlace}
+          archivoNuevo={archivo}
+          onArchivoNuevo={setArchivo}
+          errorEnlace={errorEnlace}
+          disabled={guardando}
         />
         {error ? <AvisoError mensaje={error} /> : null}
         <Button type="submit" size="sm" disabled={guardando || contenido.trim() === ''}>
@@ -176,21 +211,23 @@ export function PantallaEspacioEquipo({ tipo }: PantallaEspacioEquipoProps) {
     <AppShellEquipo
       idEquipo={id}
       seccionActiva={tipo}
-      titulo={`${TITULOS[tipo]} de ${equipo.nombre}`}
+      titulo={TITULOS[tipo]}
+      ayuda={tipo === 'recursos' ? 'materiales' : tipo}
     >
+      <IntegrantesEquipo integrantes={equipo.integrantes} />
       {estado === 'deshabilitado' ? (
-        <p className={styles.ayuda}>{TITULOS[tipo]} no está habilitado en esta actividad.</p>
+        <p className={styles.ayuda}>Esta sección no se usa en esta actividad.</p>
       ) : (
         <div className={styles.contenido}>
           {estado === 'obligatorio' && elementosQuery.data?.length === 0 ? (
-            <Badge variant="warning">Obligatorio: todavía no hay nada aquí</Badge>
+            <Badge variant="warning">Obligatorio: falta agregar algo aquí</Badge>
           ) : null}
 
           {puedeEscribir ? (
             <FormularioNuevoElemento
               tipo={tipo}
-              onCrear={async (contenido) => {
-                await crear.mutateAsync(contenido)
+              onCrear={async (datos) => {
+                await crear.mutateAsync(datos)
               }}
             />
           ) : null}
@@ -231,10 +268,10 @@ export function PantallaEspacioEquipo({ tipo }: PantallaEspacioEquipoProps) {
                       idMiMembresia={equipo.idMiMembresia}
                       puedeComentar={puedeComentar}
                       expandidaInicial={elemento.id === idAAbrir}
-                      onGuardar={async (contenido) => {
+                      onGuardar={async (datos) => {
                         limpiarError(elemento.id)
                         try {
-                          await editar.mutateAsync({ idElemento: elemento.id, contenido })
+                          await editar.mutateAsync({ idElemento: elemento.id, ...datos })
                         } catch (e) {
                           alFallar(elemento.id, e)
                           throw e

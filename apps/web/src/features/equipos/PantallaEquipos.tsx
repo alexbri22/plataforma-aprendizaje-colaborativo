@@ -91,11 +91,19 @@ function FormularioCrearEquipo({
   )
 }
 
+// Qué hacer cuando todavía no hay equipos depende de quién mira y de cómo se
+// forman: a quien participa no le sirve "usa Sugerir equipos".
 function textoSinEquipos(actividad: Actividad): string {
   if (actividad.fase === 'configuracion' || actividad.fase === 'inscripcion') {
-    return 'La formación empieza al cerrar la inscripción.'
+    return 'Los equipos se forman al cerrar la inscripción.'
   }
-  return actividad.fase === 'formacion_equipos' ? 'Aún no hay equipos.' : 'Sin equipos.'
+  if (actividad.fase !== 'formacion_equipos') return 'Esta actividad no tuvo equipos.'
+  if (actividad.rol !== 'participante') {
+    return 'Aún no hay equipos. Usa «Sugerir equipos» o crea uno con su nombre.'
+  }
+  return actividad.configuracion?.formacion_equipos === 'manual'
+    ? 'Aún no hay equipos. Quien organiza los formará.'
+    : 'Aún no hay equipos. Crea uno con su nombre o espera a que alguien lo haga.'
 }
 
 export function PantallaEquipos() {
@@ -119,7 +127,11 @@ export function PantallaEquipos() {
 
   if (actividadQuery.isPending || equiposQuery.isPending) {
     return (
-      <AppShell seccionActiva="actividades" titulo="Equipos" volverA={`/actividades/${id}`}>
+      <AppShell
+        seccionActiva="actividades"
+        titulo="Equipos"
+        contexto={{ idActividad: id, seccion: 'equipos' }}
+      >
         <div className={styles.cargando} role="status" aria-label="Cargando los equipos">
           <IconoCargando size={24} />
         </div>
@@ -129,11 +141,7 @@ export function PantallaEquipos() {
 
   if (actividadQuery.isError || !actividadQuery.data) {
     return (
-      <AppShell
-        seccionActiva="actividades"
-        titulo="Actividad no encontrada"
-        volverA={`/actividades/${id}`}
-      >
+      <AppShell seccionActiva="actividades" titulo="Actividad no encontrada">
         <p className={styles.texto}>No encontramos esta actividad, o ya no formas parte de ella.</p>
       </AppShell>
     )
@@ -147,8 +155,8 @@ export function PantallaEquipos() {
     return (
       <AppShell
         seccionActiva="actividades"
-        titulo={`Equipos de ${actividad.nombre}`}
-        volverA={`/actividades/${id}`}
+        titulo="Equipos"
+        contexto={{ idActividad: id, seccion: 'equipos' }}
       >
         <AvisoError mensaje="No pudimos cargar los equipos." />
       </AppShell>
@@ -184,8 +192,11 @@ export function PantallaEquipos() {
   return (
     <AppShell
       seccionActiva="actividades"
-      titulo={`Equipos de ${actividad.nombre}`}
-      volverA={`/actividades/${actividad.id}`}
+      // El nombre de la entrada de la barra lateral por la que se llega en
+      // cada etapa (construirNavActividad).
+      titulo={fasePrevia ? 'Conformación de equipos' : 'Equipos'}
+      contexto={{ idActividad: id, seccion: 'equipos' }}
+      ayuda="equipos"
     >
       <div className={styles.contenido}>
         {fasePrevia ? (
@@ -231,6 +242,8 @@ export function PantallaEquipos() {
                 miRol={rolIntegrante(actividad.rol)}
                 capacidades={capacidades}
                 limites={limites}
+                enFormacion={enFormacion}
+                bitacorasHabilitadas={actividad.configuracion?.bitacora_individual === 'habilitada'}
                 ocupado={ocupado}
                 onUnirme={unirme}
                 onSalir={salir}

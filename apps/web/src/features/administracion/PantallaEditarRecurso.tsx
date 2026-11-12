@@ -791,7 +791,7 @@ function Editor({ recurso }: { recurso: RecursoAdminDetalle | null }) {
             variant={confirmar === 'eliminar' ? 'danger' : 'primary'}
             onClick={() => void alConfirmar()}
           >
-            {confirmar === 'eliminar' ? 'Eliminar definitivamente' : 'Retirar'}
+            {confirmar === 'eliminar' ? 'Sí, eliminar' : 'Sí, retirar'}
           </Button>
         </div>
       </Modal>
