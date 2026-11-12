@@ -124,7 +124,15 @@ export async function cerrarSesion(idSesion: string): Promise<void> {
   await prisma.sesion.deleteMany({ where: { id: idSesion } })
 }
 
-export async function obtenerActorPorSesion(idSesion: string): Promise<UsuarioPublico> {
+/**
+ * Resuelve la sesión a su usuario. `renovar` en false comprueba la sesión sin
+ * contarla como actividad: las lecturas automáticas (sondeos) no deben impedir
+ * el cierre por inactividad de un equipo que nadie está usando (§3.2).
+ */
+export async function obtenerActorPorSesion(
+  idSesion: string,
+  { renovar = true }: { renovar?: boolean } = {},
+): Promise<UsuarioPublico> {
   const sesion = await prisma.sesion.findUnique({
     where: { id: idSesion },
     include: { usuario: { include: INCLUIR_FOTO } },
@@ -142,7 +150,9 @@ export async function obtenerActorPorSesion(idSesion: string): Promise<UsuarioPu
     throw new ErrorSinSesion()
   }
 
-  await prisma.sesion.update({ where: { id: idSesion }, data: { ultimaActividad: ahora } })
+  if (renovar) {
+    await prisma.sesion.update({ where: { id: idSesion }, data: { ultimaActividad: ahora } })
+  }
 
   return aUsuarioPublico(sesion.usuario)
 }

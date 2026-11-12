@@ -18,6 +18,10 @@ contraseña_:
   usuario afectado. Es la vía de soporte de respaldo, no la principal: el
   autoservicio por correo depende de P-24 (`docs/diseno-desarrollo-nucleo.md`
   §6.7) y todavía no existe.
+- `SolicitudesNombre` — arriba de la tabla, las solicitudes de cambio de
+  nombre pendientes (nombre actual → solicitado) con Aprobar y Rechazar. No
+  aparece si no hay ninguna, y se relee sola cada 2 s para mostrar las nuevas. `ModalRechazarSolicitud` pide un motivo opcional
+  que la persona ve en su perfil (`docs/diseno-desarrollo-nucleo.md` §6.3).
 - `RutaAdmin` — guard **solo de UX**: consulta `GET /api/sesion` y evita
   mostrar el panel a quien no es administrador. La autorización real la impone
   el servidor con `exigirAdministrador` (§3.5 del general); el cliente nunca es
@@ -26,6 +30,16 @@ contraseña_:
   **Cuentas** (`/admin/cuentas`) solo cuando la sesión es de administrador.
   Comparte la misma consulta de sesión (`queryKey: ['sesion']`) que `RutaAdmin`,
   así que no repite la petición. Igual que el guard, es solo UX.
+
+## Contenido formativo
+
+Además de Cuentas, el panel administra el contenido del módulo Formación
+(`docs/diseno-desarrollo-formacion.md`), siempre a través de su API:
+
+- `PantallaContenido` y `PantallaEditarRecurso` — biblioteca de recursos.
+- `PantallaCursos` y `PantallaEditarCurso` — cursos y sus lecciones.
+- `PantallaRutas` y `PantallaEditarRuta` — rutas de aprendizaje: ficha, cursos
+  en orden, ruta destacada y lo que se calcula de los cursos.
 
 ## Cómo se crea el primer administrador
 

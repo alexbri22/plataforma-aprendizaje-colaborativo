@@ -6,7 +6,9 @@ import { etiquetaTipo, formatoDuracion } from './formato'
 import { MarcoFormacion } from './MarcoFormacion'
 import { useDentroDeApp } from './marcoContexto'
 import { ErrorFormacion } from './formacion.api'
+import { useSesion } from '../cuentas'
 import { useRecursoPublico } from './useRecursos'
+import { useCambiarGuardado, useRecursoGuardado } from './useProgreso'
 import styles from './PantallaRecurso.module.css'
 
 const FECHA = new Intl.DateTimeFormat('es-MX', { dateStyle: 'long' })
@@ -16,6 +18,39 @@ export function PantallaRecurso() {
     <MarcoFormacion titulo="Recursos">
       <DetalleRecurso />
     </MarcoFormacion>
+  )
+}
+
+/** Guardar para después (REC-02): solo con sesión. Es un marcador, no
+ * inicia ningún curso ni mide nada. */
+function GuardarRecurso({ idRecurso }: { idRecurso: string }) {
+  const { usuario } = useSesion()
+  const estado = useRecursoGuardado(idRecurso)
+  const cambiar = useCambiarGuardado()
+
+  if (!usuario || estado.data === undefined) return null
+  const guardado = estado.data
+
+  return (
+    <div className={styles.guardar}>
+      <Button
+        variant="secondary"
+        size="sm"
+        disabled={cambiar.isPending}
+        onClick={() => cambiar.mutate({ idRecurso, guardar: !guardado })}
+      >
+        {guardado ? 'Quitar de guardados' : 'Guardar para después'}
+      </Button>
+      <span role="status" className={styles.guardadoEstado}>
+        {guardado ? (
+          <>
+            <span aria-hidden="true">✓ </span>Guardado en{' '}
+            <Link to="/mi-formacion?vista=guardados">Mi formación</Link>
+          </>
+        ) : null}
+      </span>
+      {cambiar.isError ? <AvisoError mensaje={cambiar.error.message} /> : null}
+    </div>
   )
 }
 
@@ -83,6 +118,7 @@ function DetalleRecurso() {
               ) : null}
               <span>{ETIQUETAS_SECCION[consulta.data.seccion]}</span>
             </div>
+            <GuardarRecurso idRecurso={consulta.data.idRecurso} />
             {consulta.data.elementos.length > 0 ? (
               <ul className={styles.elementos} aria-label="Elementos de colaboración">
                 {consulta.data.elementos.map((e) => (

@@ -27,6 +27,14 @@ export function Modal({ abierto, onCerrar, titulo, children, descripcion, amplio
   const tituloId = useId()
   const descripcionId = useId()
 
+  // El efecto de foco depende solo de `abierto`: si dependiera de onCerrar, un
+  // callback nuevo en cada render del padre (p. ej. una lista que se relee
+  // sola) volvería a enfocar el primer campo a mitad de la navegación.
+  const onCerrarRef = useRef(onCerrar)
+  useEffect(() => {
+    onCerrarRef.current = onCerrar
+  }, [onCerrar])
+
   useEffect(() => {
     if (!abierto) return
 
@@ -45,7 +53,7 @@ export function Modal({ abierto, onCerrar, titulo, children, descripcion, amplio
     function alPresionarTecla(evento: KeyboardEvent) {
       if (evento.key === 'Escape') {
         evento.stopPropagation()
-        onCerrar()
+        onCerrarRef.current()
         return
       }
 
@@ -78,7 +86,7 @@ export function Modal({ abierto, onCerrar, titulo, children, descripcion, amplio
       // Devuelve el foco a quien abrió el diálogo.
       elementoPrevio?.focus()
     }
-  }, [abierto, onCerrar])
+  }, [abierto])
 
   if (!abierto) return null
 

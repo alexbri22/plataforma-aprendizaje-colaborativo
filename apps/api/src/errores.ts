@@ -41,6 +41,12 @@ export type CodigoError =
   | 'leccion_no_encontrada'
   | 'recurso_en_uso'
   | 'curso_desactualizado'
+  | 'curso_con_inscripciones'
+  | 'leccion_no_disponible'
+  | 'ruta_no_encontrada'
+  | 'ruta_desactualizada'
+  | 'curso_en_ruta'
+  | 'solicitud_no_encontrada'
 
 export abstract class ErrorDominio extends Error {
   abstract readonly codigo: CodigoError
@@ -470,5 +476,74 @@ export class ErrorCursoDesactualizado extends ErrorDominio {
 
   constructor() {
     super('Otro administrador modificó este curso mientras lo editabas.')
+  }
+}
+
+// La solicitud de cambio de nombre ya no existe o ya no está pendiente: la
+// persona la canceló, envió otra que la reemplazó, u otro administrador la
+// resolvió primero (docs/diseno-desarrollo-nucleo.md §6.3).
+export class ErrorSolicitudNoEncontrada extends ErrorDominio {
+  readonly codigo = 'solicitud_no_encontrada' as const
+  readonly status = 404
+
+  constructor(mensaje = 'Esta solicitud ya no está pendiente.') {
+    super(mensaje)
+  }
+}
+
+// Un curso que alguien ya empezó no se elimina: se borraría su progreso y sus
+// reflexiones. Se puede retirar (docs/diseno-desarrollo-formacion.md, nota del
+// incremento 3).
+export class ErrorCursoConInscripciones extends ErrorDominio {
+  readonly codigo = 'curso_con_inscripciones' as const
+  readonly status = 409
+
+  constructor() {
+    super('No se puede eliminar: hay personas que ya empezaron este curso. Puedes retirarlo.')
+  }
+}
+
+// La lección usa un recurso que ya no está publicado: no se puede completar
+// y tampoco cuenta para terminar el curso.
+export class ErrorLeccionNoDisponible extends ErrorDominio {
+  readonly codigo = 'leccion_no_disponible' as const
+  readonly status = 409
+
+  constructor() {
+    super('Esta lección no está disponible por ahora.')
+  }
+}
+
+export class ErrorRutaNoEncontrada extends ErrorDominio {
+  readonly codigo = 'ruta_no_encontrada' as const
+  readonly status = 404
+
+  constructor() {
+    super('No encontramos esta ruta de aprendizaje.')
+  }
+}
+
+export class ErrorRutaDesactualizada extends ErrorDominio {
+  readonly codigo = 'ruta_desactualizada' as const
+  readonly status = 409
+
+  constructor() {
+    super('Otro administrador modificó esta ruta mientras la editabas.')
+  }
+}
+
+// Mismo criterio que ErrorRecursoEnUso: un curso que forma parte de una ruta
+// no se elimina, y el mensaje nombra las rutas para saber de dónde quitarlo.
+export class ErrorCursoEnRuta extends ErrorDominio {
+  readonly codigo = 'curso_en_ruta' as const
+  readonly status = 409
+
+  constructor(readonly rutas: { idRuta: string; titulo: string }[]) {
+    const nombres = rutas.map((r) => `«${r.titulo}»`).join(', ')
+    super(
+      `No se puede eliminar: este curso forma parte de ${
+        rutas.length === 1 ? 'la ruta' : 'las rutas'
+      } ${nombres}. Quítalo de ${rutas.length === 1 ? 'esa ruta' : 'esas rutas'} primero, o retíralo.`,
+    )
   }
 }

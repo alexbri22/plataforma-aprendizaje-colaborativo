@@ -32,11 +32,27 @@ export interface Usuario {
   fotoUrl: string | null
 }
 
+/** Cambio de nombre pedido por una cuenta de usuario: a la espera de un
+ * administrador, o ya resuelto y por avisar (docs/diseno-desarrollo-nucleo.md
+ * §6.3). */
+export interface SolicitudNombre {
+  idSolicitud: string
+  nombre: string
+  apellidoPaterno: string
+  apellidoMaterno: string
+  estado: 'pendiente' | 'aprobada' | 'rechazada'
+  motivoRechazo: string | null
+  creadaEn: string
+  resueltaEn: string | null
+}
+
 export interface PerfilPropio extends Usuario {
   nivelEstudios: NivelEstudios
   institucionEducativa: string
   /** Si otras personas ven el correo en el perfil básico. */
   correoPublico: boolean
+  /** null si no hay solicitud de cambio de nombre pendiente ni por avisar. */
+  solicitudNombre: SolicitudNombre | null
   acumulado: PuntosPorCategoria
 }
 
@@ -286,6 +302,42 @@ export async function actualizarDatosPerfil(datos: DatosPerfil): Promise<Usuario
   if (!respuesta.ok) throw await errorDePerfil(respuesta, 'No pudimos guardar tus datos.')
   const { usuario } = (await respuesta.json()) as { usuario: Usuario }
   return conFotoAbsoluta(usuario)
+}
+
+export async function solicitarCambioNombre(datos: DatosPerfil): Promise<SolicitudNombre> {
+  const respuesta = await pedir('/api/usuarios/yo/solicitud-nombre', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(datos),
+  })
+  if (!respuesta.ok) throw await errorDePerfil(respuesta, 'No pudimos enviar tu solicitud.')
+  const { solicitud } = (await respuesta.json()) as { solicitud: SolicitudNombre }
+  return solicitud
+}
+
+/** Cabecera que marca una lectura automática: el API comprueba la sesión sin
+ * contarla como actividad, para no impedir el cierre por inactividad. */
+export const CABECERA_SONDEO = { 'X-Sondeo': '1' } as const
+
+/** Solo la solicitud vigente, o null: lo que se sondea mientras está
+ * pendiente, en lugar del perfil completo. */
+export async function obtenerSolicitudNombre(): Promise<SolicitudNombre | null> {
+  const respuesta = await pedir('/api/usuarios/yo/solicitud-nombre', { headers: CABECERA_SONDEO })
+  if (!respuesta.ok) throw await errorDePerfil(respuesta, 'No pudimos consultar tu solicitud.')
+  const { solicitud } = (await respuesta.json()) as { solicitud: SolicitudNombre | null }
+  return solicitud
+}
+
+/** Cancela la solicitud pendiente o descarta el aviso de una resuelta. Lleva
+ * el estado que se ve: si cambió mientras tanto, el API no borra nada. */
+export async function descartarSolicitudNombre(
+  solicitud: Pick<SolicitudNombre, 'idSolicitud' | 'estado'>,
+): Promise<void> {
+  const respuesta = await pedir(
+    `/api/usuarios/yo/solicitud-nombre/${solicitud.idSolicitud}?estado=${solicitud.estado}`,
+    { method: 'DELETE' },
+  )
+  if (!respuesta.ok) throw await errorDePerfil(respuesta, 'No pudimos quitar tu solicitud.')
 }
 
 export async function cambiarVisibilidadCorreo(correoPublico: boolean): Promise<Usuario> {

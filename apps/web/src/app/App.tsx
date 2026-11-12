@@ -15,6 +15,8 @@ import {
   PantallaCuentas,
   PantallaCursos,
   PantallaEditarCurso,
+  PantallaEditarRuta,
+  PantallaRutas,
   PantallaEditarRecurso,
   RutaAdmin,
 } from '../features/administracion'
@@ -24,8 +26,10 @@ import { PantallaEquipos } from '../features/equipos'
 import {
   PantallaCurso,
   PantallaLeccion,
+  PantallaMiFormacion,
   PantallaRecurso,
   PantallaRecursos,
+  PantallaRuta,
 } from '../features/formacion'
 import {
   PantallaMisReconocimientos,
@@ -232,6 +236,16 @@ export function App() {
           />
           {/* El perfil propio y el básico de otra persona
               (docs/diseno-desarrollo-nucleo.md §6.6). */}
+          {/* Espacio individual de formación: cursos empezados y recursos
+              guardados (docs/diseno-desarrollo-formacion.md §7.2). */}
+          <Route
+            path="/mi-formacion"
+            element={
+              <RutaProtegida>
+                <PantallaMiFormacion />
+              </RutaProtegida>
+            }
+          />
           <Route
             path="/perfil"
             element={
@@ -349,11 +363,36 @@ export function App() {
               </RutaAdmin>
             }
           />
+          <Route
+            path="/admin/rutas"
+            element={
+              <RutaAdmin>
+                <PantallaRutas />
+              </RutaAdmin>
+            }
+          />
+          <Route
+            path="/admin/rutas/nuevo"
+            element={
+              <RutaAdmin>
+                <PantallaEditarRuta />
+              </RutaAdmin>
+            }
+          />
+          <Route
+            path="/admin/rutas/:id"
+            element={
+              <RutaAdmin>
+                <PantallaEditarRuta />
+              </RutaAdmin>
+            }
+          />
           {/* Públicas, sin RutaProtegida (docs/diseno-desarrollo-nucleo.md §4.1:
               "contenido formativo" no exige sesión). */}
           <Route path="/recursos" element={<PantallaRecursos />} />
           <Route path="/recursos/:id" element={<PantallaRecurso />} />
           <Route path="/cursos/:id" element={<PantallaCurso />} />
+          <Route path="/rutas/:id" element={<PantallaRuta />} />
           <Route path="/cursos/:id/lecciones/:idLeccion" element={<PantallaLeccion />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

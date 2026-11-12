@@ -239,7 +239,11 @@ Soft-edged and calm is the default register — generous internal padding, comfo
 
 ### Progress toward a level (features/insignias)
 
-The only progress bar in the system, and it compares a person against their own history — never against anyone else. Track in `surface` with a `border` outline; fill in Apothecary Amber (solid, because this _is_ recognition at rest, not a status). Always accompanied by the text it summarizes ("Faltan 5 pts para Plata"); the bar alone is not enough.
+The only amber progress bar in the system, and it compares a person against their own history — never against anyone else. Track in `surface` with a `border` outline; fill in Apothecary Amber (solid, because this _is_ recognition at rest, not a status). Always accompanied by the text it summarizes ("Faltan 5 pts para Plata"); the bar alone is not enough.
+
+### Course progress (features/formacion)
+
+The second progress bar, and deliberately the quieter one: it is navigation ("where was I?"), not recognition. Same shape as the level bar — track in `surface` with a `border` outline — but the fill is Study Ink while the course is in progress and Confirmed Green once it is completed. Never Apothecary Amber: finishing a course is not a badge. Always accompanied by its text ("2 de 3 lecciones · 66 %"), and completed lessons are marked with "✓ Completada" in `success-ink`, never color alone. No streaks, points, confetti or animation beyond the width transition (none with reduced motion).
 
 ### Rank Insignia (features/insignias)
 

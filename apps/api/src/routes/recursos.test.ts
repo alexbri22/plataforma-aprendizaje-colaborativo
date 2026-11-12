@@ -79,6 +79,8 @@ let usuario: { id: string; cookie: string }
 
 beforeAll(async () => {
   // Primero los cursos: sus lecciones impiden borrar los recursos que usan.
+  await prisma.rutaFormativa.deleteMany()
+  await prisma.inscripcionCurso.deleteMany()
   await prisma.curso.deleteMany()
   await prisma.recursoFormativo.deleteMany()
   await prisma.sesion.deleteMany()
@@ -89,6 +91,8 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   // Primero los cursos: sus lecciones impiden borrar los recursos que usan.
+  await prisma.rutaFormativa.deleteMany()
+  await prisma.inscripcionCurso.deleteMany()
   await prisma.curso.deleteMany()
   await prisma.recursoFormativo.deleteMany()
 })

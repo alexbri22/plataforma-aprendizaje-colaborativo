@@ -26,12 +26,17 @@ import {
   Paginacion,
   Select,
 } from '../../components/ui'
-import { etiquetaTipo, formatoDuracion } from './formato'
+import { useSesion } from '../cuentas'
+import { BarraProgreso } from './BarraProgreso'
+import type { MiCurso } from './formacion.api'
+import { etiquetaTipo, formatoDuracion, textoProgreso } from './formato'
 import { IconoFlecha, IconoLibro } from './iconos'
 import { MarcoFormacion } from './MarcoFormacion'
 import { useDentroDeApp } from './marcoContexto'
-import { RUTA_DESTACADA } from './ruta.fixtures'
+import { SeccionRutas } from './SeccionRutas'
 import { useCursosPublicos } from './useCursos'
+import { useHayRutas } from './useRutas'
+import { useMiFormacion } from './useProgreso'
 import { useRecursosPublicos } from './useRecursos'
 import { useValorDiferido } from './useValorDiferido'
 import styles from './PantallaRecursos.module.css'
@@ -53,8 +58,8 @@ function irA(selector: string) {
 /*
  * Centro de formación (docs/diseno-desarrollo-formacion.md §2 y §10.1), con
  * el diseño de la rama plataforma-formativaV1. Cursos, artículos y recursos
- * breves vienen de la API, filtrados y paginados en el servidor; la ruta aún
- * es una vista previa editorial (ver ruta.fixtures.ts). Los filtros de arriba
+ * breves vienen de la API, filtrados y paginados en el servidor; la ruta es la
+ * que recomienda el recomendador (ver SeccionRutas). Los filtros de arriba
  * aplican a todo a la vez; nivel y elemento, solo a los cursos.
  */
 export function PantallaRecursos() {
@@ -140,14 +145,20 @@ function CentroFormacion() {
   }
 
   // "Empieza por aquí": el primer artículo de Qué es colaborar, sin filtros.
-  // Cuando exista el progreso (incremento 3), quien tenga un curso iniciado
-  // verá aquí "Continúa aprendiendo".
+  // Con sesión y un curso a medias, en su lugar va "Continúa aprendiendo"
+  // con el que se tocó más recientemente. Mientras se sabe, la tarjeta
+  // espera, para no mostrar una y cambiarla por la otra.
   const destacado = useRecursosPublicos({
     seccion: 'que_es_colaborar',
     tipos: TIPOS_LECTURA,
     porPagina: 1,
   })
   const inicial = destacado.data?.recursos[0]
+  const { usuario } = useSesion()
+  const hayRutas = useHayRutas()
+  const miFormacion = useMiFormacion()
+  const enCurso = miFormacion.data?.enCurso.find((c) => c.siguiente !== null)
+  const esperandoProgreso = usuario !== null && miFormacion.isPending
 
   // Los cursos no pertenecen a una sección: elegir una los oculta.
   const totalCursos = seccion === 'todas' ? (cursos.data?.paginacion.total ?? 0) : 0
@@ -203,13 +214,17 @@ function CentroFormacion() {
           </p>
           <div className={styles.presentacionAcciones}>
             <Button onClick={() => irA('#catalogo')}>Explorar recursos</Button>
-            <Button variant="secondary" onClick={() => irA('#ruta-destacada')}>
-              Ver rutas de aprendizaje
-            </Button>
+            {hayRutas ? (
+              <Button variant="secondary" onClick={() => irA('#ruta-destacada')}>
+                Ver rutas de aprendizaje
+              </Button>
+            ) : null}
           </div>
         </div>
 
-        {inicial ? (
+        {enCurso ? (
+          <TarjetaContinuar curso={enCurso} />
+        ) : inicial && !esperandoProgreso ? (
           <Card className={styles.destacado}>
             <div className={styles.destacadoCabecera}>
               <span className={styles.iconoCurso}>
@@ -238,26 +253,7 @@ function CentroFormacion() {
         ) : null}
       </section>
 
-      <section id="ruta-destacada" className={styles.ruta} aria-labelledby="titulo-ruta">
-        <div className={styles.rutaIntroduccion}>
-          <p className={styles.eyebrow}>Ruta recomendada</p>
-          <h2 id="titulo-ruta">{RUTA_DESTACADA.titulo}</h2>
-          <p>{RUTA_DESTACADA.descripcion}</p>
-          <p className={styles.proximamente}>Los cursos de esta ruta estarán disponibles pronto.</p>
-        </div>
-
-        <ol className={styles.rutaPasos}>
-          {RUTA_DESTACADA.pasos.map((paso, i) => (
-            <li key={paso.titulo}>
-              <span className={styles.numeroPaso}>{String(i + 1).padStart(2, '0')}</span>
-              <div>
-                <strong>{paso.titulo}</strong>
-                <span>{paso.detalle}</span>
-              </div>
-            </li>
-          ))}
-        </ol>
-      </section>
+      <SeccionRutas />
 
       <section id="catalogo" className={styles.catalogo} aria-labelledby="titulo-catalogo">
         <div className={styles.catalogoCabecera}>
@@ -527,5 +523,37 @@ function CentroFormacion() {
         </section>
       ) : null}
     </div>
+  )
+}
+
+/** La tarjeta del hero con el curso a medias (diseño V1: con su barra). */
+function TarjetaContinuar({ curso }: { curso: MiCurso }) {
+  const siguiente = curso.siguiente
+  if (!siguiente) return null
+  return (
+    <Card className={styles.destacado}>
+      <div className={styles.destacadoCabecera}>
+        <span className={styles.iconoCurso}>
+          <IconoLibro />
+        </span>
+        <div>
+          <p className={styles.sobretituloTarjeta}>Continúa aprendiendo</p>
+          <h2>{curso.titulo}</h2>
+        </div>
+      </div>
+      <div className={styles.continuarAvance}>
+        <BarraProgreso porcentaje={curso.porcentaje} etiqueta={`Progreso en ${curso.titulo}`} />
+        <p>{textoProgreso(curso)}</p>
+      </div>
+      <p className={styles.destacadoDescripcion}>Sigue con: {siguiente.titulo}</p>
+      <div className={styles.destacadoPie}>
+        <Link to="/mi-formacion" className={styles.enlaceTarjeta}>
+          Ver mis cursos
+        </Link>
+        <Button size="sm" to={`/cursos/${curso.idCurso}/lecciones/${siguiente.idLeccion}`}>
+          Seguir
+        </Button>
+      </div>
+    </Card>
   )
 }

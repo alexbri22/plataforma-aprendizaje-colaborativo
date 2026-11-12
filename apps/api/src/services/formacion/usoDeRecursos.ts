@@ -15,3 +15,17 @@ export async function cursosQueUsanRecurso(
     orderBy: { titulo: 'asc' },
   })
 }
+
+/** Rutas (sin repetir) que incluyen un curso, para explicar por qué no se
+ * puede eliminar. Vive aquí por la misma razón: rutas.service usa
+ * cursos.service. */
+export async function rutasQueUsanCurso(
+  idCurso: string,
+  cliente: Prisma.TransactionClient | typeof prisma = prisma,
+): Promise<{ idRuta: string; titulo: string }[]> {
+  return cliente.rutaFormativa.findMany({
+    where: { cursos: { some: { idCurso } } },
+    select: { idRuta: true, titulo: true },
+    orderBy: { titulo: 'asc' },
+  })
+}

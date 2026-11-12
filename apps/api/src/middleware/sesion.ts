@@ -10,6 +10,10 @@ declare module 'express-serve-static-core' {
   }
 }
 
+/** Cabecera con la que el cliente marca una lectura automática (un sondeo
+ * periódico): comprueba la sesión pero no renueva su actividad. */
+export const CABECERA_SONDEO = 'X-Sondeo'
+
 // Resuelve la cookie a un usuario (docs/diseno-desarrollo-nucleo.md §2.1,
 // paso "Sesión"). No rechaza nada por sí sola: deja el contexto en la
 // petición y exigirSesion es quien exige que exista para las rutas que lo
@@ -23,7 +27,9 @@ export async function resolverSesion(req: Request, _res: Response, next: NextFun
 
   req.idSesion = idSesion
   try {
-    req.actor = await obtenerActorPorSesion(idSesion)
+    req.actor = await obtenerActorPorSesion(idSesion, {
+      renovar: req.get(CABECERA_SONDEO) !== '1',
+    })
   } catch (error) {
     if (!(error instanceof ErrorSinSesion)) {
       next(error)

@@ -8,6 +8,7 @@ import { normalizarBusqueda } from '@plataforma/shared'
 import {
   listarCursos,
   listarRecursos,
+  listarRutas,
   type ConsultaCursos,
   type ConsultaRecursos,
   type ResumenCursoPublico,
@@ -22,7 +23,7 @@ vi.mock('../cuentas/api', async () => {
 
 vi.mock('./formacion.api', async () => {
   const real = await vi.importActual<typeof import('./formacion.api')>('./formacion.api')
-  return { ...real, listarRecursos: vi.fn(), listarCursos: vi.fn() }
+  return { ...real, listarRecursos: vi.fn(), listarCursos: vi.fn(), listarRutas: vi.fn() }
 })
 
 function recurso(parcial: Partial<ResumenRecurso> & Pick<ResumenRecurso, 'idRecurso' | 'titulo'>) {
@@ -157,6 +158,10 @@ describe('PantallaRecursos', () => {
     vi.mocked(listarRecursos).mockImplementation(servidor(RECURSOS))
     vi.mocked(listarCursos).mockReset()
     vi.mocked(listarCursos).mockImplementation(servidorCursos(CURSOS))
+    vi.mocked(listarRutas).mockResolvedValue({
+      rutas: [],
+      paginacion: { pagina: 1, porPagina: 50, total: 0, totalPaginas: 0 },
+    })
   })
 
   it('lista los cursos publicados con enlace a su ficha', async () => {
