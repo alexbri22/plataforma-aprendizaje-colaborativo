@@ -21,6 +21,9 @@ interface TarjetaEquipoProps {
    * participante desde su nombre. */
   bitacorasHabilitadas: boolean
   ocupado: boolean
+  /** Equipos enlaza al espacio de cada equipo; Conformación de equipos no:
+   * ahí solo se arman y se editan. */
+  conEspacio?: boolean
   onUnirme: (idEquipo: string) => void
   onSalir: (idEquipo: string) => void
   onEditar: (equipo: Equipo) => void
@@ -46,6 +49,7 @@ export function TarjetaEquipo({
   enFormacion,
   bitacorasHabilitadas,
   ocupado,
+  conEspacio = true,
   onUnirme,
   onSalir,
   onEditar,
@@ -85,7 +89,7 @@ export function TarjetaEquipo({
   const mostrarEditar = puede('editar_equipo') && (miRol !== 'participante' || soyIntegrante)
   // Espacio de equipo (nucleo §9.1, general §7.3): un participante solo entra
   // al suyo; quien organiza o co-organiza entra a cualquiera, a revisarlo.
-  const mostrarEspacio = miRol !== 'participante' || soyIntegrante
+  const mostrarEspacio = conEspacio && (miRol !== 'participante' || soyIntegrante)
 
   return (
     <Card

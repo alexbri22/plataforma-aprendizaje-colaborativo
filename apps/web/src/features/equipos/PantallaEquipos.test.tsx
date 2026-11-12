@@ -71,15 +71,17 @@ vi.mock('./equipos.api', async () => {
   }
 })
 
-function renderPantalla(id = 'act-1') {
+// Casi todo lo de esta pantalla es de Conformación de equipos (armar,
+// editar, reasignar); Equipos es la vista para entrar a cada espacio.
+function renderPantalla(id = 'act-1', vista: 'conformacion' | 'equipos' = 'conformacion') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={[`/actividades/${id}/equipos`]}>
+      <MemoryRouter initialEntries={[`/actividades/${id}/${vista}`]}>
         <Routes>
-          <Route path="/actividades/:id/equipos" element={<PantallaEquipos />} />
+          <Route path="/actividades/:id/:vista" element={<PantallaEquipos vista={vista} />} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -221,7 +223,9 @@ describe('PantallaEquipos', () => {
       const usuario = userEvent.setup()
       renderPantalla()
 
-      await usuario.type(await screen.findByLabelText('Nombre del equipo'), '  Gamma ')
+      // El formulario está cerrado de entrada: se abre con su botón.
+      await usuario.click(await screen.findByRole('button', { name: 'Crear equipo y unirme' }))
+      await usuario.type(screen.getByLabelText('Nombre del equipo'), '  Gamma ')
       await usuario.click(screen.getByRole('button', { name: 'Crear equipo y unirme' }))
 
       await waitFor(() => expect(crearEquipo).toHaveBeenCalledWith('act-1', 'Gamma'))
@@ -234,7 +238,8 @@ describe('PantallaEquipos', () => {
       const usuario = userEvent.setup()
       renderPantalla()
 
-      await usuario.type(await screen.findByLabelText('Nombre del equipo'), 'Alfa')
+      await usuario.click(await screen.findByRole('button', { name: 'Crear equipo y unirme' }))
+      await usuario.type(screen.getByLabelText('Nombre del equipo'), 'Alfa')
       await usuario.click(screen.getByRole('button', { name: 'Crear equipo y unirme' }))
 
       expect(
@@ -997,7 +1002,10 @@ describe('PantallaEquipos', () => {
         <QueryClientProvider client={queryClient}>
           <MemoryRouter initialEntries={[`/actividades/${id}/equipos`]}>
             <Routes>
-              <Route path="/actividades/:id/equipos" element={<PantallaEquipos />} />
+              <Route
+                path="/actividades/:id/equipos"
+                element={<PantallaEquipos vista="equipos" />}
+              />
               <Route path="/equipos/:idEquipo" element={<p>Espacio de equipo abierto</p>} />
             </Routes>
           </MemoryRouter>
@@ -1067,7 +1075,7 @@ describe('PantallaEquipos', () => {
           rol: 'organizador',
           fase: 'desarrollo',
           capacidades: [],
-          configuracion: { formacion_equipos: 'autogestionado', bitacora_individual: 'habilitada' },
+          configuracion: { formacion_equipos: 'autogestionado', bitacora_individual: 'guiada' },
         }),
       )
       vi.mocked(obtenerEquipos).mockResolvedValue(
@@ -1081,19 +1089,43 @@ describe('PantallaEquipos', () => {
       )
     })
 
-    it('un clic en Unirme no dispara también la navegación de la tarjeta', async () => {
+    it('en Equipos no se edita nada: ni unirse, ni editar, ni asignar', async () => {
       vi.mocked(obtenerActividad).mockResolvedValue(
-        actividad({ rol: 'organizador', capacidades: ['formar_equipos', 'asignar_integrantes'] }),
+        actividad({
+          rol: 'organizador',
+          fase: 'desarrollo',
+          capacidades: ['asignar_integrantes', 'editar_equipo'],
+        }),
       )
-      vi.mocked(obtenerEquipos).mockResolvedValue(lista([equipo('e1', 'Alfa')]))
-      vi.mocked(asignarIntegrante).mockResolvedValue(equipo('e1', 'Alfa'))
-      const usuario = userEvent.setup()
+      vi.mocked(obtenerEquipos).mockResolvedValue(
+        lista([equipo('e1', 'Alfa', [persona('m2', 'Luis Pérez')])]),
+      )
       renderConRutaDeEquipo()
 
-      await usuario.click(await screen.findByRole('button', { name: 'Unirme' }))
+      expect(
+        await screen.findByRole('link', { name: 'Consultar el espacio de Alfa' }),
+      ).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Editar' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Unirme' })).not.toBeInTheDocument()
+    })
 
-      await waitFor(() => expect(asignarIntegrante).toHaveBeenCalled())
-      expect(screen.queryByText('Espacio de equipo abierto')).not.toBeInTheDocument()
+    it('en Conformación las tarjetas no llevan al espacio: ahí solo se arman y editan', async () => {
+      vi.mocked(obtenerActividad).mockResolvedValue(
+        actividad({
+          rol: 'organizador',
+          fase: 'desarrollo',
+          capacidades: ['asignar_integrantes', 'editar_equipo'],
+        }),
+      )
+      vi.mocked(obtenerEquipos).mockResolvedValue(
+        lista([equipo('e1', 'Alfa', [persona('m2', 'Luis Pérez')])]),
+      )
+      renderPantalla()
+
+      expect(await screen.findByRole('button', { name: 'Editar' })).toBeInTheDocument()
+      expect(
+        screen.queryByRole('link', { name: 'Consultar el espacio de Alfa' }),
+      ).not.toBeInTheDocument()
     })
   })
 
@@ -1113,19 +1145,22 @@ describe('PantallaEquipos', () => {
     expect(screen.queryByText('Volver a la actividad')).not.toBeInTheDocument()
   })
 
-  it('en desarrollo se llama Equipos y esa es la entrada marcada', async () => {
+  it('en desarrollo, Equipos y Conformación de equipos son dos entradas abiertas', async () => {
     vi.mocked(obtenerActividad).mockResolvedValue(
-      actividad({ fase: 'desarrollo', capacidades: [] }),
+      actividad({ rol: 'organizador', fase: 'desarrollo', capacidades: [] }),
     )
     vi.mocked(obtenerEquipos).mockResolvedValue(lista([]))
-    renderPantalla()
+    renderPantalla('act-1', 'equipos')
 
     expect(await screen.findByRole('link', { name: 'Equipos' })).toHaveAttribute(
       'aria-current',
       'page',
     )
     expect(screen.getByRole('heading', { name: 'Equipos', level: 1 })).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Conformación de equipos' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Conformación de equipos' })).toHaveAttribute(
+      'href',
+      '/actividades/act-1/conformacion',
+    )
   })
 
   it('muestra un aviso si no se pueden cargar los equipos', async () => {

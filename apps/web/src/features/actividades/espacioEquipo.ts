@@ -1,4 +1,8 @@
-import { parsearEstadoEspacioEquipo, type ElementoEspacioEquipo } from '@plataforma/shared'
+import {
+  parsearEstadoEspacioEquipo,
+  type ElementoEspacioEquipo,
+  bitacoraHabilitada,
+} from '@plataforma/shared'
 import type { Actividad } from './tipos'
 
 // Orden fijo del espacio de equipo, independiente del orden en que
@@ -24,7 +28,7 @@ export function estaHabilitada(actividad: Actividad, seccion: ElementoEspacioEqu
 export function bitacoraPropiaHabilitada(actividad: Actividad): boolean {
   return (
     actividad.rol === 'participante' &&
-    actividad.configuracion?.bitacora_individual === 'habilitada'
+    bitacoraHabilitada(actividad.configuracion?.bitacora_individual)
   )
 }
 

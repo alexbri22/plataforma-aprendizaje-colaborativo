@@ -1,4 +1,4 @@
-import type { EntradaBitacora, RespuestasBitacora } from '@plataforma/shared'
+import type { ContenidoBitacora, EntradaBitacora } from '@plataforma/shared'
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? ''
 
@@ -57,15 +57,14 @@ export async function obtenerBitacora(
   return ((await respuesta.json()) as { entradas: EntradaBitacora[] }).entradas
 }
 
-// POST /api/actividades/{id}/bitacora: una entrada guiada (nucleo §9.3).
+// POST /api/actividades/{id}/bitacora: una entrada guiada o libre (nucleo
+// §9.3), según el formato de la función.
 export async function crearEntradaBitacora(
   idActividad: string,
-  respuestas: RespuestasBitacora,
+  contenido: ContenidoBitacora,
 ): Promise<EntradaBitacora> {
   const respuesta = await exigirOk(
-    await pedir(`/api/actividades/${encodeURIComponent(idActividad)}/bitacora`, 'POST', {
-      respuestas,
-    }),
+    await pedir(`/api/actividades/${encodeURIComponent(idActividad)}/bitacora`, 'POST', contenido),
     'No pudimos guardar la entrada. Intenta de nuevo.',
   )
   return ((await respuesta.json()) as { entrada: EntradaBitacora }).entrada
@@ -74,10 +73,10 @@ export async function crearEntradaBitacora(
 // PATCH /api/bitacora/{id}.
 export async function editarEntradaBitacora(
   idEntrada: string,
-  respuestas: RespuestasBitacora,
+  contenido: ContenidoBitacora,
 ): Promise<EntradaBitacora> {
   const respuesta = await exigirOk(
-    await pedir(`/api/bitacora/${encodeURIComponent(idEntrada)}`, 'PATCH', { respuestas }),
+    await pedir(`/api/bitacora/${encodeURIComponent(idEntrada)}`, 'PATCH', contenido),
     'No pudimos guardar los cambios. Intenta de nuevo.',
   )
   return ((await respuesta.json()) as { entrada: EntradaBitacora }).entrada

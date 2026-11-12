@@ -1,11 +1,12 @@
-import { validarRespuestasBitacora, type RespuestasBitacora } from '@plataforma/shared'
+import { corregibleHoy, bitacoraHabilitada, type ContenidoBitacora } from '@plataforma/shared'
 import { useState, type FormEvent } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { AppShellEquipo } from '../../components/AppShellEquipo'
 import { AvisoError, Button, Card, IconoCargando, Paginacion, rebanar } from '../../components/ui'
 import { useActividad } from '../actividades'
 import { useEquipo } from '../equipos/useEquipos'
-import { CamposBitacora } from './CamposBitacora'
+import { borradorSinTexto, borradorVacio, validarBorrador } from './borradorBitacora'
+import { CamposEntradaBitacora } from './CamposBitacora'
 import { TarjetaEntradaBitacora } from './TarjetaEntradaBitacora'
 import {
   useBitacora,
@@ -25,31 +26,32 @@ function mensajeDe(error: unknown): string {
     : 'No pudimos completar la acción. Intenta de nuevo.'
 }
 
-// Entrada guiada (nucleo §9.3): plegada tras un botón, porque son diez
-// preguntas y abiertas siempre empujarían las entradas fuera de la vista.
+// Entrada nueva en el formato de la función (nucleo §9.3): plegada tras un
+// botón, porque guiada son diez preguntas y abiertas siempre empujarían las
+// entradas fuera de la vista.
 function FormularioNuevaEntrada({
+  formato,
   onCrear,
 }: {
-  onCrear: (respuestas: RespuestasBitacora) => Promise<void>
+  formato: 'guiada' | 'libre'
+  onCrear: (contenido: ContenidoBitacora) => Promise<void>
 }) {
   const [abierto, setAbierto] = useState(false)
-  const [respuestas, setRespuestas] = useState<RespuestasBitacora>({})
+  const [borrador, setBorrador] = useState<ContenidoBitacora>(() => borradorVacio(formato))
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [errores, setErrores] = useState<Record<string, string>>({})
 
-  const algunaRespuesta = Object.values(respuestas).some((texto) => texto?.trim())
-
   function cerrar() {
     setAbierto(false)
-    setRespuestas({})
+    setBorrador(borradorVacio(formato))
     setError(null)
     setErrores({})
   }
 
   async function manejarEnviar(evento: FormEvent) {
     evento.preventDefault()
-    const validacion = validarRespuestasBitacora(respuestas)
+    const validacion = validarBorrador(borrador)
     if ('errores' in validacion) {
       setErrores(validacion.errores)
       setError(validacion.errores.respuestas ?? null)
@@ -59,7 +61,7 @@ function FormularioNuevaEntrada({
     setError(null)
     setErrores({})
     try {
-      await onCrear(validacion.respuestas)
+      await onCrear(validacion)
       cerrar()
     } catch (e) {
       setError(mensajeDe(e))
@@ -81,14 +83,10 @@ function FormularioNuevaEntrada({
   return (
     <Card className={styles.formularioNuevo}>
       <form onSubmit={manejarEnviar} className={styles.formulario}>
-        <CamposBitacora
-          respuestas={respuestas}
-          errores={errores}
-          onCambiar={(clave, texto) => setRespuestas((previas) => ({ ...previas, [clave]: texto }))}
-        />
+        <CamposEntradaBitacora borrador={borrador} errores={errores} onCambiar={setBorrador} />
         {error ? <AvisoError mensaje={error} /> : null}
         <div className={styles.acciones}>
-          <Button type="submit" size="sm" disabled={guardando || !algunaRespuesta}>
+          <Button type="submit" size="sm" disabled={guardando || borradorSinTexto(borrador)}>
             {guardando ? <IconoCargando size={14} /> : 'Guardar entrada'}
           </Button>
           <Button type="button" variant="secondary" size="sm" disabled={guardando} onClick={cerrar}>
@@ -161,7 +159,7 @@ export function PantallaMiBitacora() {
   // bitácora deshabilitada se mostraría un formulario que siempre da 409.
   const puedeEscribir =
     capacidades.includes('escribir_bitacora') &&
-    actividad.configuracion?.bitacora_individual === 'habilitada'
+    bitacoraHabilitada(actividad.configuracion?.bitacora_individual)
   const puedeComentar = capacidades.includes('comentar')
 
   const alFallar = (idEntrada: string, error: unknown) =>
@@ -181,8 +179,12 @@ export function PantallaMiBitacora() {
       <div className={styles.contenido}>
         {puedeEscribir ? (
           <FormularioNuevaEntrada
-            onCrear={async (respuestas) => {
-              await crear.mutateAsync(respuestas)
+            // Si la función cambia de formato, el formulario empieza de nuevo
+            // en el formato vigente.
+            key={actividad.configuracion?.bitacora_individual}
+            formato={actividad.configuracion?.bitacora_individual === 'libre' ? 'libre' : 'guiada'}
+            onCrear={async (contenido) => {
+              await crear.mutateAsync(contenido)
             }}
           />
         ) : null}
@@ -212,16 +214,18 @@ export function PantallaMiBitacora() {
                   <TarjetaEntradaBitacora
                     key={entrada.id}
                     entrada={entrada}
-                    puedeEditar={puedeEscribir}
+                    // Solo se corrige el mismo día: la bitácora muestra cómo
+                    // progresa quien la escribe.
+                    puedeEditar={puedeEscribir && corregibleHoy(entrada.fechaCreacion)}
                     guardando={editar.isPending && editar.variables?.idEntrada === entrada.id}
                     error={errorPorId[entrada.id] ?? null}
                     idMiMembresia={actividad.idMiMembresia}
                     puedeComentar={puedeComentar}
                     expandidaInicial={entrada.id === idAAbrir}
-                    onGuardar={async (respuestas) => {
+                    onGuardar={async (contenido) => {
                       limpiarError(entrada.id)
                       try {
-                        await editar.mutateAsync({ idEntrada: entrada.id, respuestas })
+                        await editar.mutateAsync({ idEntrada: entrada.id, contenido })
                       } catch (e) {
                         alFallar(entrada.id, e)
                         throw e

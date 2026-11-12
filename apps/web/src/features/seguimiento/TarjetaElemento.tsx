@@ -1,4 +1,5 @@
 import {
+  fueEditada,
   LONGITUD_MAXIMA_CONTENIDO_ELEMENTO,
   esUrlSegura,
   type ElementoDeEspacioEquipo,
@@ -113,7 +114,8 @@ export function TarjetaElemento({
         <span className={styles.contenidoPreview}>{elemento.contenido}</span>
         {elemento.enlace || elemento.archivo ? <MarcaAdjunto /> : null}
         <span className={styles.autoria}>
-          {elemento.autor} · {formatearFechaHora(elemento.fechaActualizacion)}
+          {elemento.autor} · {formatearFechaHora(elemento.fechaCreacion)}
+          {fueEditada(elemento.fechaCreacion, elemento.fechaActualizacion) ? ' · editada' : ''}
         </span>
         <IconoChevron className={styles.chevron} />
       </button>

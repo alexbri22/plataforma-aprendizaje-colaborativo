@@ -1,7 +1,10 @@
-import type { Bitacora as FilaBitacora, EstadoActividad, Prisma } from '@prisma/client'
+import { Prisma, type Bitacora as FilaBitacora, type EstadoActividad } from '@prisma/client'
 import {
+  bitacoraHabilitada,
+  corregibleHoy,
   mismasRespuestasBitacora,
-  primeraRespuestaBitacora,
+  resumenBitacora,
+  type ContenidoBitacora,
   type EntradaBitacora,
   type RespuestasBitacora,
 } from '@plataforma/shared'
@@ -27,16 +30,50 @@ import { registrarEvento } from '../historial/historial.service.js'
 // la membresía y no al equipo. Este módulo es el único que lee y escribe
 // `bitacoras`.
 
+const MENSAJE_CORRECCION =
+  'Solo se puede corregir el mismo día en que se escribió. Para corregirlo ahora, agrega una entrada nueva.'
+
 const MENSAJE_FASE = 'La bitácora no puede editarse en esta etapa.'
+
+// Cada fila tiene exactamente uno de los dos, según su formato (nucleo
+// §9.3). Escrito solo por este servicio, ya validado contra
+// PREGUNTAS_BITACORA.
+function contenidoDe(fila: FilaBitacora): ContenidoBitacora {
+  return fila.respuestas !== null
+    ? { respuestas: fila.respuestas as RespuestasBitacora }
+    : { contenido: fila.contenido ?? '' }
+}
 
 function aRespuesta(fila: FilaBitacora): EntradaBitacora {
   return {
     id: fila.idEntrada,
     idMembresia: fila.idMembresia,
-    // Escrito solo por este servicio, ya validado contra PREGUNTAS_BITACORA.
-    respuestas: fila.respuestas as RespuestasBitacora,
     fechaCreacion: fila.fechaCreacion.toISOString(),
     fechaActualizacion: fila.fechaActualizacion.toISOString(),
+    ...contenidoDe(fila),
+  }
+}
+
+function mismoContenido(a: ContenidoBitacora, b: ContenidoBitacora): boolean {
+  if ('respuestas' in a && 'respuestas' in b)
+    return mismasRespuestasBitacora(a.respuestas, b.respuestas)
+  return 'contenido' in a && 'contenido' in b && a.contenido === b.contenido
+}
+
+// Columnas de una entrada: la del formato lleva el valor y la otra queda
+// nula, para que nunca tenga las dos.
+function columnasDe(contenido: ContenidoBitacora) {
+  return 'respuestas' in contenido
+    ? { respuestas: contenido.respuestas, contenido: null }
+    : { respuestas: Prisma.DbNull, contenido: contenido.contenido }
+}
+
+function exigirFormato(contenido: ContenidoBitacora, formato: 'guiada' | 'libre'): void {
+  if (formato === 'guiada' && !('respuestas' in contenido)) {
+    throw new ErrorValidacion({ respuestas: 'Esta entrada es guiada: responde sus preguntas.' })
+  }
+  if (formato === 'libre' && !('contenido' in contenido)) {
+    throw new ErrorValidacion({ contenido: 'Esta entrada es libre: escribe su texto.' })
   }
 }
 
@@ -91,29 +128,30 @@ export async function listarBitacora(
 // (nucleo §4.3), pero eso no es la barrera de autorización (general §3.5):
 // el servidor repite la comprobación contra la configuración de
 // bitacora_individual, mismo criterio que crearElemento/editarElemento en
-// elementos.service.ts para espacio_equipo.
-async function exigirBitacoraHabilitada(idActividad: string): Promise<void> {
+// elementos.service.ts para espacio_equipo. Devuelve el formato vigente.
+async function exigirBitacoraHabilitada(idActividad: string): Promise<'guiada' | 'libre'> {
   const estado = await obtenerEstadoBitacoraIndividual(idActividad)
-  if (estado !== 'habilitada') {
+  if (!bitacoraHabilitada(estado ?? undefined)) {
     throw new ErrorFaseNoPermiteAccion(
       'No puedes escribir en la bitácora: está deshabilitada en esta actividad.',
     )
   }
+  return estado as 'guiada' | 'libre'
 }
 
 // POST /api/actividades/{id}/bitacora: solo quien participa (general §7.3,
 // "Escribir en la bitácora individual propia" es "—" para organizador y
 // co-organizador — ver ACCIONES_EXCLUSIVAS_DE_PARTICIPANTE en
 // capacidades.ts). Sin límite de una por día (nucleo §9.3): cada llamada
-// crea una entrada nueva.
+// crea una entrada nueva, en el formato vigente de la función.
 export async function crearEntradaBitacora(
   actividad: ActividadParaBitacora,
-  respuestas: RespuestasBitacora,
+  contenido: ContenidoBitacora,
   idUsuarioActor: string,
   membresiaActor: MembresiaActor,
 ): Promise<EntradaBitacora> {
   exigirAccion(membresiaActor, 'escribir_bitacora', actividad.estado, MENSAJE_FASE)
-  await exigirBitacoraHabilitada(actividad.idActividad)
+  exigirFormato(contenido, await exigirBitacoraHabilitada(actividad.idActividad))
 
   // idEquipo del autor al momento de escribir (nucleo §5.5): el historial
   // acotado a un equipo filtra categoría aportación por datos.idEquipo, así
@@ -123,7 +161,7 @@ export async function crearEntradaBitacora(
 
   const fila = await prisma.$transaction(async (tx) => {
     const creada = await tx.bitacora.create({
-      data: { idMembresia: membresiaActor.idMembresia, respuestas },
+      data: { idMembresia: membresiaActor.idMembresia, ...columnasDe(contenido) },
     })
 
     await registrarEvento(tx, {
@@ -138,7 +176,7 @@ export async function crearEntradaBitacora(
       // bitácora — el cliente lo usa para construir el enlace de vuelta
       // (la propia o la de otra persona) sin otra consulta.
       datos: {
-        extracto: primeraRespuestaBitacora(respuestas).slice(0, 140),
+        extracto: resumenBitacora(contenido).slice(0, 140),
         idMembresia: membresiaActor.idMembresia,
         ...(idEquipoAutor ? { idEquipo: idEquipoAutor } : {}),
       },
@@ -182,10 +220,11 @@ async function contextoDeEntradaPropia(
 }
 
 // PATCH /api/bitacora/{id} (nucleo §9.4): el autor edita una entrada propia.
-// Nucleo §9.4 no lista DELETE: no existe.
+// Nucleo §9.4 no lista DELETE: no existe. La entrada se edita en el formato
+// con que se escribió, aunque la función haya cambiado de formato después.
 export async function editarEntradaBitacora(
   idEntrada: string,
-  respuestas: RespuestasBitacora,
+  contenido: ContenidoBitacora,
   idUsuarioActor: string,
 ): Promise<EntradaBitacora> {
   const { entrada, idActividad, membresiaActor } = await contextoDeEntradaPropia(
@@ -195,14 +234,20 @@ export async function editarEntradaBitacora(
   const fase = await obtenerFaseDeActividad(idActividad)
   exigirAccion(membresiaActor, 'escribir_bitacora', fase, MENSAJE_FASE)
   await exigirBitacoraHabilitada(idActividad)
+  // La bitácora muestra cómo progresa: solo se corrige el mismo día.
+  if (!corregibleHoy(entrada.fechaCreacion)) throw new ErrorFaseNoPermiteAccion(MENSAJE_CORRECCION)
+  const anterior = contenidoDe(entrada)
+  exigirFormato(contenido, 'respuestas' in anterior ? 'guiada' : 'libre')
 
   const idEquipoAutor = await obtenerIdEquipoDeMembresia(membresiaActor.idMembresia)
 
   const fila = await prisma.$transaction(async (tx) => {
-    const anteriores = entrada.respuestas as RespuestasBitacora
-    if (mismasRespuestasBitacora(respuestas, anteriores)) return entrada
+    if (mismoContenido(contenido, anterior)) return entrada
 
-    const actualizada = await tx.bitacora.update({ where: { idEntrada }, data: { respuestas } })
+    const actualizada = await tx.bitacora.update({
+      where: { idEntrada },
+      data: columnasDe(contenido),
+    })
 
     await registrarEvento(tx, {
       idActividad,
@@ -211,11 +256,11 @@ export async function editarEntradaBitacora(
       tipoEvento: 'entrada_bitacora_modificada',
       tipoEntidad: 'bitacora',
       idEntidad: idEntrada,
-      // antes y despues son las respuestas completas: el historial conserva
-      // el valor anterior (general §8.2).
+      // antes y despues son la entrada completa: el historial conserva el
+      // valor anterior (general §8.2).
       datos: {
-        antes: entrada.respuestas,
-        despues: respuestas,
+        antes: 'respuestas' in anterior ? anterior.respuestas : anterior.contenido,
+        despues: 'respuestas' in contenido ? contenido.respuestas : contenido.contenido,
         idMembresia: membresiaActor.idMembresia,
         ...(idEquipoAutor ? { idEquipo: idEquipoAutor } : {}),
       },

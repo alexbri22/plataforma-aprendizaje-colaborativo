@@ -20,6 +20,9 @@ import {
   nombreCompleto,
 } from '../src/services/actividades/actividades.service.js'
 import { crearEntradaBitacora as crearEntradaBitacoraDeServicio } from '../src/services/seguimiento/bitacora.service.js'
+// Efecto de carga: registra la estructura de calificación por defecto que
+// recibe toda actividad al crearse (registrarAlCrearActividad).
+import '../src/services/evaluacion/ponderacion.service.js'
 import {
   crearComentarioSobreElemento,
   crearComentarioSobreEntrada,
@@ -175,7 +178,7 @@ async function crearElementoEspacio(
   return crearElementoDeServicio(idEquipo, tipo, contenido, null, idUsuarioAutor)
 }
 
-// La bitácora es guiada (nucleo §9.3): un texto suelto del sembrado va como
+// Las bitácoras del sembrado son guiadas (nucleo §9.3): un texto suelto del sembrado va como
 // respuesta a la primera pregunta.
 async function crearEntradaBitacora(
   idActividad: string,
@@ -190,7 +193,10 @@ async function crearEntradaBitacora(
   }
   return crearEntradaBitacoraDeServicio(
     { idActividad, estado: 'desarrollo' },
-    typeof respuestas === 'string' ? { conocimientos_adquiridos: respuestas } : respuestas,
+    {
+      respuestas:
+        typeof respuestas === 'string' ? { conocimientos_adquiridos: respuestas } : respuestas,
+    },
     idUsuarioAutor,
     membresiaActor,
   )
@@ -360,7 +366,7 @@ async function sembrarEnDesarrolloConContenido(idPorCorreo: IdPorCorreo) {
       estado: 'desarrollo',
       formacion: 'autogestionado',
       equiposEsperados: 2,
-      configuracion: { bitacora_individual: 'habilitada' },
+      configuracion: { bitacora_individual: 'guiada' },
       equipos: [
         { nombre: 'Alfa', integrantes: ['alumno01', 'alumno02', 'alumno03'] },
         { nombre: 'Beta', integrantes: ['alumno04', 'alumno05', 'alumno06'] },
@@ -534,7 +540,7 @@ async function sembrarEnDesarrolloEquipoGrande(idPorCorreo: IdPorCorreo) {
       estado: 'desarrollo',
       formacion: 'autogestionado',
       equiposEsperados: 1,
-      configuracion: { bitacora_individual: 'habilitada' },
+      configuracion: { bitacora_individual: 'guiada' },
       equipos: [{ nombre: 'Equipo único', integrantes: participantes }],
       fechaInicio: fecha(-35),
       fechaTermino: fecha(25),
@@ -685,7 +691,7 @@ async function sembrarBitacoraMuyCargada(idPorCorreo: IdPorCorreo) {
       estado: 'desarrollo',
       formacion: 'autogestionado',
       equiposEsperados: 1,
-      configuracion: { bitacora_individual: 'habilitada' },
+      configuracion: { bitacora_individual: 'guiada' },
       equipos: [{ nombre: 'Equipo denso', integrantes: participantes }],
       fechaInicio: fecha(-60),
       fechaTermino: fecha(30),

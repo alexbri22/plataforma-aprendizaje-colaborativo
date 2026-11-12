@@ -1,7 +1,9 @@
 import {
   BLOQUES_BITACORA,
+  LONGITUD_MAXIMA_CONTENIDO_BITACORA,
   LONGITUD_MAXIMA_RESPUESTA_BITACORA,
   type ClavePreguntaBitacora,
+  type ContenidoBitacora,
   type RespuestasBitacora,
 } from '@plataforma/shared'
 import { Textarea } from '../../components/ui'
@@ -65,5 +67,48 @@ export function RespuestasDeBitacora({ respuestas }: { respuestas: RespuestasBit
         )
       })}
     </div>
+  )
+}
+
+// Los campos de una entrada en su formato: las preguntas guía o un solo
+// texto libre.
+export function CamposEntradaBitacora({
+  borrador,
+  onCambiar,
+  errores,
+}: {
+  borrador: ContenidoBitacora
+  onCambiar: (borrador: ContenidoBitacora) => void
+  errores?: Record<string, string>
+}) {
+  if ('respuestas' in borrador) {
+    return (
+      <CamposBitacora
+        respuestas={borrador.respuestas}
+        errores={errores}
+        onCambiar={(clave, texto) =>
+          onCambiar({ respuestas: { ...borrador.respuestas, [clave]: texto } })
+        }
+      />
+    )
+  }
+  return (
+    <Textarea
+      label="Tu entrada"
+      rows={6}
+      value={borrador.contenido}
+      onChange={(e) => onCambiar({ contenido: e.target.value })}
+      maxLength={LONGITUD_MAXIMA_CONTENIDO_BITACORA}
+      error={errores?.contenido}
+    />
+  )
+}
+
+// Lectura de una entrada en su formato.
+export function ContenidoDeBitacora({ entrada }: { entrada: ContenidoBitacora }) {
+  return 'respuestas' in entrada ? (
+    <RespuestasDeBitacora respuestas={entrada.respuestas} />
+  ) : (
+    <p className={styles.textoLibre}>{entrada.contenido}</p>
   )
 }

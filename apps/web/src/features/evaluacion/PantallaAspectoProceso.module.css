@@ -1,0 +1,203 @@
+.cargando {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-12);
+}
+
+.tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.descripcion {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-muted);
+}
+
+.apagado {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.fila {
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.fila:last-child {
+  border-bottom: 0;
+}
+
+.cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.datos {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.nombre {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+}
+
+.detalle {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-muted);
+}
+
+.accionesFila {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+.enlace {
+  flex-shrink: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.enlace:hover {
+  text-decoration: underline;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+}
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.acciones {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.entrega {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.contenido {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--color-text);
+  white-space: pre-wrap;
+}
+
+.columna {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.celdaCompletada {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: var(--font-size-sm);
+  color: var(--color-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.celdaCompletada:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+  .cabecera {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+}
+
+.resultados {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.resultado {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.integrante {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.puntaje {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+}
+
+.contraste {
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-muted);
+}
+
+.numero {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.sinCorte {
+  white-space: nowrap;
+}
+
+.revision {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.puntajeCaptura {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}

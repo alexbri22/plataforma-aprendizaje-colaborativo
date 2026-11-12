@@ -31,12 +31,21 @@ export const CATALOGO_PISTAS: Record<PistaDePantalla, TextoPista> = {
     organiza:
       'Comparte la clave para que los participantes se unan. La inscripción cierra sola en su fecha, o puedes cerrarla antes.',
   },
+  conformacion: {
+    titulo: 'Conformación de equipos',
+    organiza:
+      'Al cerrar la inscripción, sugiere equipos o deja que cada quien elija el suyo. Después, aquí mismo reasignas integrantes o editas un equipo.',
+    participa: 'Si la formación es libre, únete al equipo que quieras mientras haya lugar.',
+  },
+  operacion: {
+    titulo: 'Operación de la planeación',
+    organiza: 'Lo planeado, por fecha: qué vence, qué sigue y cuánto llevan entregado los equipos.',
+    participa: 'Lo que te toca, por fecha: qué tienes pendiente y qué viene después.',
+  },
   equipos: {
     titulo: 'Equipos',
-    organiza:
-      'Al cerrar la inscripción, sugiere equipos o deja que cada quien elija el suyo. Al confirmarlos empieza el desarrollo.',
-    participa:
-      'Todos los equipos de la actividad. Si la formación es libre, únete al que quieras mientras haya lugar.',
+    organiza: 'Entra al espacio de cada equipo para revisar y comentar su trabajo.',
+    participa: 'Todos los equipos de la actividad. Desde aquí entras al tuyo.',
   },
   metas: {
     titulo: 'Metas',

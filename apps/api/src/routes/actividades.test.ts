@@ -236,6 +236,7 @@ describe('GET /api/actividades/:id', () => {
         'ajustar_periodos',
         'cerrar_inscripcion',
         'agregar_coorganizador',
+        'configurar_calificacion',
       ]),
     )
     expect(respuesta.body.actividad.configuracion.formacion_equipos).toBe('autogestionado')
@@ -377,10 +378,10 @@ describe('PUT /api/actividades/:id/configuracion/:funcion', () => {
     const respuesta = await request(app)
       .put(`/api/actividades/${id}/configuracion/bitacora_individual`)
       .set('Cookie', cookieOrganizador)
-      .send({ estado: 'habilitada' })
+      .send({ estado: 'guiada' })
 
     expect(respuesta.status).toBe(200)
-    expect(respuesta.body.actividad.configuracion.bitacora_individual).toBe('habilitada')
+    expect(respuesta.body.actividad.configuracion.bitacora_individual).toBe('guiada')
   })
 
   it('el organizador cambia el estado compuesto de espacio_equipo', async () => {
@@ -427,7 +428,7 @@ describe('PUT /api/actividades/:id/configuracion/:funcion', () => {
     const respuesta = await request(app)
       .put(`/api/actividades/${id}/configuracion/funcion_inventada`)
       .set('Cookie', cookieOrganizador)
-      .send({ estado: 'habilitada' })
+      .send({ estado: 'guiada' })
 
     expect(respuesta.status).toBe(400)
   })
@@ -441,7 +442,7 @@ describe('PUT /api/actividades/:id/configuracion/:funcion', () => {
     const respuesta = await request(app)
       .put(`/api/actividades/${id}/configuracion/bitacora_individual`)
       .set('Cookie', cookieParticipante)
-      .send({ estado: 'habilitada' })
+      .send({ estado: 'guiada' })
 
     expect(respuesta.status).toBe(403)
     expect(respuesta.body.codigo).toBe('accion_no_permitida')
@@ -1038,10 +1039,10 @@ describe('PUT /api/actividades/:id/configuracion/:funcion durante el desarrollo 
       const { cookie, id } = await actividadEn(estado, `${estado}@ejemplo.com`)
 
       const habilitar = await configurar(id, cookie, 'bitacora_individual', {
-        estado: 'habilitada',
+        estado: 'guiada',
       })
       expect(habilitar.status, estado).toBe(200)
-      expect(habilitar.body.actividad.configuracion.bitacora_individual).toBe('habilitada')
+      expect(habilitar.body.actividad.configuracion.bitacora_individual).toBe('guiada')
 
       const deshabilitar = await configurar(id, cookie, 'bitacora_individual', {
         estado: 'deshabilitada',
@@ -1056,11 +1057,11 @@ describe('PUT /api/actividades/:id/configuracion/:funcion durante el desarrollo 
         {
           funcion: 'bitacora_individual',
           estadoAnterior: 'deshabilitada',
-          estadoNuevo: 'habilitada',
+          estadoNuevo: 'guiada',
         },
         {
           funcion: 'bitacora_individual',
-          estadoAnterior: 'habilitada',
+          estadoAnterior: 'guiada',
           estadoNuevo: 'deshabilitada',
         },
       ])
@@ -1111,9 +1112,9 @@ describe('PUT /api/actividades/:id/configuracion/:funcion durante el desarrollo 
 
   it('en una actividad archivada sigue siendo de solo lectura: 409', async () => {
     const { cookie, id } = await actividadEn('archivada')
-    expect(
-      (await configurar(id, cookie, 'bitacora_individual', { estado: 'habilitada' })).status,
-    ).toBe(409)
+    expect((await configurar(id, cookie, 'bitacora_individual', { estado: 'guiada' })).status).toBe(
+      409,
+    )
   })
 
   it('un participante no puede: 403; y las capacidades incluyen ajustar_funciones para quien organiza', async () => {
@@ -1129,7 +1130,7 @@ describe('PUT /api/actividades/:id/configuracion/:funcion durante el desarrollo 
     })
 
     expect(
-      (await configurar(id, cookieParticipante, 'bitacora_individual', { estado: 'habilitada' }))
+      (await configurar(id, cookieParticipante, 'bitacora_individual', { estado: 'guiada' }))
         .status,
     ).toBe(403)
     const detalle = await request(app).get(`/api/actividades/${id}`).set('Cookie', cookie)

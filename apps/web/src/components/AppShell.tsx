@@ -35,7 +35,7 @@ interface ItemNav {
   Icono?: () => ReactNode
 }
 
-function IconoActividades() {
+function IconoConsultas() {
   return (
     <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
       <rect
@@ -208,12 +208,15 @@ function IconoSalir() {
   )
 }
 
-// Actividades es la primera ramificación del mapa del sitio: Organizo y
-// Participo son destinos propios (cada uno con su única acción posible), no
-// pestañas de una misma pantalla. El resto de las pantallas de una actividad
+// Consultas es la primera ramificación de la barra: Organizo y Participo son
+// destinos propios (cada uno con su única acción posible), no pestañas de una
+// misma pantalla. "Actividades" no es una entrada del menú: en el mapa de
+// navegación es el espacio interno de una actividad concreta (Creación,
+// Desarrollo, Cierre), al que se entra eligiendo una desde Organizo o
+// Participo, y ese nivel reemplaza a la barra global. El resto de las pantallas de una actividad
 // puntual (resumen, configuración, equipos...) siguen usando el valor
 // genérico 'actividades' y no marcan ninguno de los dos.
-const ITEMS_NAV_ACTIVIDADES: ItemNav[] = [
+const ITEMS_NAV_CONSULTAS: ItemNav[] = [
   {
     id: 'actividades-organizo',
     etiqueta: 'Organizo',
@@ -462,7 +465,7 @@ export interface AppShellProps {
    * bitácora de alguien), para que nunca haya dos flechas. */
   volverA?: string
   /** Sin un destino fijo (un perfil se abre desde varios lugares): la flecha
-   * regresa a la pantalla anterior, o a Actividades si se llegó directo. */
+   * regresa a la pantalla anterior, o a Consultas si se llegó directo. */
   volverAlAnterior?: boolean
   /** Nombre de la pantalla a la que regresa la flecha, para lectores de
    * pantalla ("Volver a Participantes"). */
@@ -560,16 +563,16 @@ export function AppShell({
           {nivelVisible ? null : (
             <nav className={styles.nav} aria-label="Principal">
               <GrupoNav
-                claveAlmacenamiento="co3.nav.actividades.abierto"
-                etiqueta="Actividades"
-                Icono={IconoActividades}
+                claveAlmacenamiento="co3.nav.consultas.abierto"
+                etiqueta="Consultas"
+                Icono={IconoConsultas}
                 contieneActivo={
-                  ITEMS_NAV_ACTIVIDADES.some((item) => item.id === seccionActiva) ||
+                  ITEMS_NAV_CONSULTAS.some((item) => item.id === seccionActiva) ||
                   seccionActiva === 'actividades'
                 }
                 variante="principal"
               >
-                {ITEMS_NAV_ACTIVIDADES.map((item) => (
+                {ITEMS_NAV_CONSULTAS.map((item) => (
                   <ItemNavLink key={item.id} item={item} activo={item.id === seccionActiva} />
                 ))}
               </GrupoNav>

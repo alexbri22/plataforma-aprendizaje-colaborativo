@@ -46,12 +46,25 @@ async function guardarArchivo(idElemento: string, archivo: File | null | undefin
   else await subirArchivoElemento(idElemento, archivo)
 }
 
+/** El elemento se creó, pero su archivo no se subió. Quien lo reciba no
+ * debe volver a crearlo: el archivo se adjunta editando el elemento. */
+export class ErrorArchivoSinSubir extends Error {
+  constructor(causa: unknown) {
+    const motivo = causa instanceof Error ? ` ${causa.message}` : ''
+    super(`Se agregó, pero no el archivo.${motivo} Ábrelo para adjuntarlo de nuevo.`)
+  }
+}
+
 export function useCrearElementoMutation(idEquipo: string, tipo: ElementoEspacioEquipo) {
   const invalidar = useInvalidarElementos(idEquipo, tipo)
   return useMutation({
     mutationFn: async ({ contenido, enlace, archivo }: DatosElemento) => {
       const creado = await crearElemento(idEquipo, tipo, contenido, enlace)
-      await guardarArchivo(creado.id, archivo)
+      try {
+        await guardarArchivo(creado.id, archivo)
+      } catch (error) {
+        throw new ErrorArchivoSinSubir(error)
+      }
     },
     onSettled: invalidar,
   })

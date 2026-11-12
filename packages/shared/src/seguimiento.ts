@@ -10,7 +10,7 @@
  *          docs/diseno-desarrollo-nucleo.md §9.1, §9.4.
  */
 
-import type { ElementoEspacioEquipo } from './actividades.js'
+import { ELEMENTOS_ESPACIO_EQUIPO, type ElementoEspacioEquipo } from './actividades.js'
 
 export const LONGITUD_MAXIMA_CONTENIDO_ELEMENTO = 2000
 
@@ -68,8 +68,8 @@ export interface ElementoDeEspacioEquipo {
 }
 
 /*
- * Bitácora individual (nucleo §9.3): entradas con fecha y contenido libre,
- * vinculadas a la membresía y no al equipo. Comentarios (nucleo §10.4): un
+ * Bitácora individual (nucleo §9.3): entradas con fecha, guiadas o libres
+ * según el formato que elige quien organiza, vinculadas a la membresía y no al equipo. Comentarios (nucleo §10.4): un
  * comentario sobre un elemento del espacio de equipo o sobre una entrada de
  * bitácora, con visibilidad heredada de lo comentado (concepto §5.3).
  *
@@ -203,21 +203,55 @@ export function primeraRespuestaBitacora(respuestas: RespuestasBitacora): string
   return ''
 }
 
+export const LONGITUD_MAXIMA_CONTENIDO_BITACORA = 4000
+
+/** Validación de una entrada libre, la misma en el cliente y en el servidor. */
+export function validarContenidoBitacora(
+  valor: unknown,
+): { contenido: string } | { errores: Record<string, string> } {
+  if (typeof valor !== 'string' || valor.trim() === '') {
+    return { errores: { contenido: 'Escribe algo antes de guardar.' } }
+  }
+  const contenido = valor.trim()
+  if (contenido.length > LONGITUD_MAXIMA_CONTENIDO_BITACORA) {
+    return {
+      errores: {
+        contenido: `Debe tener a lo más ${LONGITUD_MAXIMA_CONTENIDO_BITACORA} caracteres.`,
+      },
+    }
+  }
+  return { contenido }
+}
+
+/** Lo que dice una entrada, según su formato (nucleo §9.3): las respuestas
+ * por pregunta si es guiada, el texto si es libre. Cada entrada conserva el
+ * formato con que se escribió aunque después cambie el de la función. */
+export type ContenidoBitacora = { respuestas: RespuestasBitacora } | { contenido: string }
+
+/** El extracto del historial y la vista previa de la entrada. */
+export function resumenBitacora(entrada: ContenidoBitacora): string {
+  return 'respuestas' in entrada ? primeraRespuestaBitacora(entrada.respuestas) : entrada.contenido
+}
+
 /** Una entrada de bitácora (general §5.2: bitacoras). Privada: solo su autor
  * y quien organiza o co-organiza con `leer_bitacoras` la leen (P-06). */
-export interface EntradaBitacora {
+export type EntradaBitacora = {
   id: string
   idMembresia: string
-  respuestas: RespuestasBitacora
   fechaCreacion: string
   fechaActualizacion: string
-}
+} & ContenidoBitacora
 
 export const LONGITUD_MAXIMA_CONTENIDO_COMENTARIO = 2000
 
-/** Las dos entidades que puede comentarse hoy (nucleo §10.4): un elemento
- * del espacio de equipo o una entrada de bitácora. */
-export const TIPOS_ENTIDAD_COMENTARIO = ['elemento_espacio_equipo', 'bitacora'] as const
+/** A qué apunta un comentario (nucleo §10.4): un elemento del espacio de
+ * equipo o una entrada de bitácora; o, como retroalimentación, una sección
+ * del espacio de un equipo (o el equipo en general). */
+export const TIPOS_ENTIDAD_COMENTARIO = [
+  'elemento_espacio_equipo',
+  'bitacora',
+  'seccion_equipo',
+] as const
 export type TipoEntidadComentario = (typeof TIPOS_ENTIDAD_COMENTARIO)[number]
 
 /** Un comentario (general §5.3: comentarios). `idEntidad` es una referencia
@@ -235,4 +269,98 @@ export interface Comentario {
   contenido: string
   fechaCreacion: string
   fechaActualizacion: string
+}
+
+/*
+ * Retroalimentación: comentarios de quien organiza sobre cómo trabaja el
+ * equipo en una parte de su espacio, no sobre un elemento concreto ("supieron
+ * definir metas claras"). Puede haber varias por sección; el equipo las ve
+ * en cuanto se escriben.
+ */
+export const SECCIONES_RETROALIMENTACION = ['general', ...ELEMENTOS_ESPACIO_EQUIPO] as const
+export type SeccionRetroalimentacion = (typeof SECCIONES_RETROALIMENTACION)[number]
+
+export function esSeccionRetroalimentacion(valor: unknown): valor is SeccionRetroalimentacion {
+  return (
+    typeof valor === 'string' && (SECCIONES_RETROALIMENTACION as readonly string[]).includes(valor)
+  )
+}
+
+/** La retroalimentación a un equipo, con la sección a la que se refiere. */
+export interface RetroalimentacionDeEquipo extends Comentario {
+  idEquipo: string
+  seccion: SeccionRetroalimentacion
+}
+
+/** Contexto de una sección de un equipo para quien retroalimenta: cuánto
+ * ha agregado el equipo y cuántos comentarios recibió sobre eso. */
+export interface ResumenDeSeccion {
+  idEquipo: string
+  seccion: ElementoEspacioEquipo
+  elementos: number
+  comentarios: number
+}
+
+/** GET /api/actividades/{id}/retroalimentacion: quien organiza recibe la de
+ * todos los equipos, con el resumen de cada sección; quien participa, la de
+ * su equipo, sin resumen. */
+export interface RetroalimentacionDeActividad {
+  equipos: { id: string; nombre: string }[]
+  retroalimentacion: RetroalimentacionDeEquipo[]
+  resumen: ResumenDeSeccion[]
+}
+
+/*
+ * Registros en el tiempo: la bitácora y los avances muestran cómo progresa
+ * alguien, así que solo se corrigen el mismo día en que se escribieron (hora
+ * de la plataforma, Ciudad de México). Después, una corrección va en una
+ * entrada nueva. Metas, planeación, materiales y producto sí se ajustan
+ * libremente con la retroalimentación.
+ */
+export const ELEMENTOS_CON_HISTORIA: readonly ElementoEspacioEquipo[] = ['avances']
+
+// México no observa horario de verano desde 2022: siempre UTC-6.
+const DESPLAZAMIENTO_CDMX_MS = 6 * 60 * 60 * 1000
+
+/** El día (YYYY-MM-DD) de un instante en la zona horaria de la plataforma. */
+export function diaEnCDMX(instante: Date): string {
+  return new Date(instante.getTime() - DESPLAZAMIENTO_CDMX_MS).toISOString().slice(0, 10)
+}
+
+/** Si una entrada escrita en `fechaCreacion` todavía se puede corregir. */
+export function corregibleHoy(fechaCreacion: Date | string, ahora: Date = new Date()): boolean {
+  return diaEnCDMX(new Date(fechaCreacion)) === diaEnCDMX(ahora)
+}
+
+/** Si se editó después de escribirse (para marcarla como editada). Con
+ * margen: adjuntar el archivo justo después de crearla no cuenta. */
+export function fueEditada(fechaCreacion: string, fechaActualizacion: string): boolean {
+  return new Date(fechaActualizacion).getTime() - new Date(fechaCreacion).getTime() > 2 * 60 * 1000
+}
+
+/*
+ * Publicación de proyectos: el entregable final de cada equipo, una por
+ * equipo, que se sube en el cierre y ve toda la actividad. Un video va por
+ * enlace; un PDF o una imagen, como archivo (mismas reglas que los adjuntos
+ * del espacio de equipo).
+ */
+export const LONGITUD_MAXIMA_DESCRIPCION_PUBLICACION = 2000
+
+export interface PublicacionDeProyecto {
+  id: string
+  idEquipo: string
+  descripcion: string
+  enlace: string | null
+  archivo: ArchivoDeElemento | null
+  autor: string
+  fechaCreacion: string
+  fechaActualizacion: string
+}
+
+/** GET /api/actividades/{id}/publicaciones. */
+export interface PublicacionesDeActividad {
+  equipos: { id: string; nombre: string }[]
+  publicaciones: PublicacionDeProyecto[]
+  /** El equipo de quien participa, para saber cuál puede publicar. */
+  idMiEquipo: string | null
 }

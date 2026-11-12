@@ -22,14 +22,35 @@ const DESCRIPCIONES: Partial<Record<string, (datos: Record<string, unknown>) => 
   integrantes_intercambiados: () => 'Intercambió a dos personas entre equipos',
   periodos_definidos: (d) =>
     d.numeroPeriodos ? `Definió ${d.numeroPeriodos} entregas` : 'Quitó el calendario de entregas',
-  periodo_modificado: (d) => `Cambió las fechas de la entrega ${d.orden ?? ''}`.trim(),
+  periodo_modificado: (d) => `${accionSobrePeriodo(d)} la entrega ${d.orden ?? ''}`.trim(),
   co_organizador_modificado: () => 'Cambió los permisos de un co-organizador',
+  peso_modificado: (d) =>
+    `Cambió el porcentaje de ${d.nombre ?? 'una parte'} de ${d.antes ?? '?'} % a ${d.despues ?? '?'} %`,
+  instrumentos_definidos: (d) =>
+    (d.despues as { instancias?: number } | undefined)?.instancias
+      ? 'Cambió los instrumentos de un aspecto del proceso'
+      : 'Quitó los instrumentos de un aspecto del proceso',
+  instrumento_modificado: (d) => `Ajustó "${d.nombre ?? 'un instrumento'}"`,
   equipo_creado: (d) => `Creó el equipo "${d.nombre ?? ''}"`,
   equipo_modificado: (d) => `Editó el equipo "${d.nombre ?? ''}"`,
   equipo_eliminado: (d) => `Eliminó el equipo "${d.nombre ?? ''}"`,
   elemento_creado: (d) => `Agregó ${etiquetaTipo(d.tipo)}: "${recortar(d.extracto)}"`,
   elemento_modificado: (d) => `Editó ${etiquetaTipo(d.tipo)}`,
   elemento_eliminado: (d) => `Eliminó ${etiquetaTipo(d.tipo)}: "${recortar(d.contenido)}"`,
+  instrumento_respondido: (d) => `Respondió "${d.nombre}"`,
+  respuesta_modificada: (d) => `Cambió sus respuestas de "${d.nombre}"`,
+  puntaje_capturado: (d) =>
+    d.despues === null
+      ? `Retiró el puntaje de ${d.participante} en "${d.nombre}"`
+      : d.antes === null || d.antes === undefined
+        ? `Calificó con ${d.despues} a ${d.participante} en "${d.nombre}"`
+        : `Cambió el puntaje de ${d.participante} en "${d.nombre}" de ${d.antes} a ${d.despues}`,
+  puntaje_capturado_equipo: (d) =>
+    d.despues === null
+      ? `Retiró el puntaje de ${d.nombre} del equipo ${d.equipo}`
+      : `Calificó con ${d.despues} ${d.nombre} del equipo ${d.equipo}`,
+  entrega_registrada: (d) => `Entregó "${d.nombre}": "${recortar(d.extracto)}"`,
+  entrega_modificada: (d) => `Editó su entrega de "${d.nombre}"`,
   entrada_bitacora_creada: (d) => `Escribió en la bitácora: "${recortar(d.extracto)}"`,
   entrada_bitacora_modificada: () => 'Editó una entrada de bitácora',
   comentario_escrito: (d) =>
@@ -40,6 +61,17 @@ const DESCRIPCIONES: Partial<Record<string, (datos: Record<string, unknown>) => 
 
 // faseDestino viene del servidor tal cual ('formacion_equipos'): se muestra
 // con la misma etiqueta que la etapa tiene en el resto de la app.
+// Cancelar o reactivar una entrega emite el mismo evento que mover sus
+// fechas (periodos.service, actualizarPeriodo): lo que cambió se lee del
+// estado de antes y de después.
+function accionSobrePeriodo(datos: Record<string, unknown>): string {
+  const antes = (datos.antes as { estado?: string } | undefined)?.estado
+  const despues = (datos.despues as { estado?: string } | undefined)?.estado
+  if (antes !== 'cancelado' && despues === 'cancelado') return 'Canceló'
+  if (antes === 'cancelado' && despues === 'activo') return 'Reactivó'
+  return 'Cambió las fechas de'
+}
+
 function etiquetaEtapa(valor: unknown): string {
   if (typeof valor !== 'string') return 'siguiente'
   return infoFase(valor as FaseActividad)?.etiqueta ?? valor
@@ -47,6 +79,8 @@ function etiquetaEtapa(valor: unknown): string {
 
 function etiquetaFuncion(valor: unknown): string {
   if (valor === 'espacio_equipo') return 'Proyecto colaborativo'
+  // Eventos de cuando la evaluación por pares era una función (P-38).
+  if (valor === 'evaluacion_pares') return 'Evaluación por pares'
   const definicion = FUNCIONES_SIMPLES.find((f) => f.funcion === valor)
   return definicion ? definicion.titulo : 'una función'
 }
@@ -58,7 +92,9 @@ function nombreDe(valor: unknown): string {
 }
 
 function etiquetaEntidadComentada(valor: unknown): string {
-  return valor === 'bitacora' ? 'una entrada de bitácora' : 'un elemento del espacio de equipo'
+  if (valor === 'bitacora') return 'una entrada de bitácora'
+  if (valor === 'seccion_equipo') return 'el trabajo del equipo (retroalimentación)'
+  return 'un elemento del espacio de equipo'
 }
 
 function etiquetaTipo(valor: unknown): string {

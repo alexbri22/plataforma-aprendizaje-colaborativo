@@ -1,0 +1,128 @@
+.cargando {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-12);
+}
+
+.tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: var(--layout-content-max);
+}
+
+.nota {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Una fila por reactivo: el texto y las cuatro opciones en columnas, como
+   la tabla del documento de evaluaciones. En pantallas angostas las
+   opciones bajan debajo del texto, cada una con su etiqueta. */
+.encabezado,
+.reactivo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) repeat(4, 7rem);
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.encabezado {
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.opcionEncabezado {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.reactivo {
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.texto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--color-text);
+}
+
+.error {
+  font-size: var(--font-size-xs);
+  color: var(--color-danger-ink);
+}
+
+.opcion {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-min-height);
+  cursor: pointer;
+}
+
+.opcion input {
+  width: 1.125rem;
+  height: 1.125rem;
+  margin: 0;
+  accent-color: var(--color-primary);
+  cursor: inherit;
+}
+
+.etiquetaOpcion {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.acciones {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-top: var(--space-5);
+}
+
+.faltan {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 720px) {
+  .encabezado {
+    display: none;
+  }
+
+  .reactivo {
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
+  }
+
+  .opcion {
+    justify-content: flex-start;
+  }
+
+  .etiquetaOpcion {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+    font-size: var(--font-size-sm);
+    color: var(--color-text);
+  }
+}

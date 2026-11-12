@@ -56,19 +56,33 @@ describe('guiaEtapa', () => {
     expect(conEquipo.principal.texto).toMatch(/Ya tienes equipo/)
   })
 
-  it('en cierre, el plazo para reconocer es término + días de cierre', () => {
+  it('en cierre, quien participa publica el proyecto y reconoce hasta término + días de cierre', () => {
     const guia = guiaEtapa(actividad({ fase: 'cierre', rol: 'participante', idMiEquipo: 'e1' }))!
-    expect(guia.principal.donde).toBe('Cierre › Otorgar reconocimientos')
-    expect(guia.tambien.map((p) => p.donde)).toEqual(['Perfil › Insignias'])
+    expect(guia.principal.donde).toBe('Cierre › Publicación de proyectos')
+    expect(guia.tambien.map((p) => p.donde)).toEqual([
+      'Cierre › Otorgar reconocimientos',
+      'Perfil › Insignias',
+    ])
     expect(guia.nota).toBe('Se puede reconocer hasta el 10 dic 2026.')
   })
 
-  it('con reconocimientos deshabilitados no pide reconocer', () => {
+  it('con reconocimientos deshabilitados, quien organiza revisa lo publicado', () => {
     const guia = guiaEtapa(
       actividad({ fase: 'cierre', configuracion: { insignias: 'deshabilitado' } }),
     )!
-    expect(guia.principal.donde).toBe('Desarrollo › Equipos')
+    expect(guia.principal.donde).toBe('Cierre › Publicación de proyectos')
+    expect(guia.tambien.map((p) => p.donde)).not.toContain('Cierre › Otorgar reconocimientos')
     expect(guia.nota).toMatch(/se archiva sola/)
+  })
+
+  it('en desarrollo, quien organiza tiene la operación, la conformación y la planificación a mano', () => {
+    const guia = guiaEtapa(actividad({ fase: 'desarrollo' }))!
+    expect(guia.principal.donde).toBe('Desarrollo › Equipos')
+    expect(guia.tambien.map((p) => p.donde)).toEqual([
+      'Desarrollo › Operación de la planeación',
+      'Creación › Conformación de equipos',
+      'Creación › Planificar',
+    ])
   })
 
   it('en cierre, quien organiza sabe dónde archivar sin esperar la fecha', () => {

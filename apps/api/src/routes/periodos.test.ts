@@ -256,7 +256,11 @@ describe('PUT /api/actividades/:id/periodos', () => {
       where: { idActividad: id, tipoEvento: 'periodos_definidos' },
     })
     expect(evento?.tipoActor).toBe('usuario')
-    expect(evento?.datos).toEqual({ periodicidad: 'quincenal', numeroPeriodos: 4 })
+    expect(evento?.datos).toEqual({
+      elemento: 'avances',
+      periodicidad: 'quincenal',
+      numeroPeriodos: 4,
+    })
   })
 })
 

@@ -33,6 +33,8 @@ export type CodigoError =
   | 'intercambio_invalido'
   | 'foto_invalida'
   | 'elemento_no_encontrado'
+  | 'instrumento_no_encontrado'
+  | 'instrumento_con_respuestas'
   | 'entrada_bitacora_no_encontrada'
   | 'comentario_no_encontrado'
   | 'recurso_no_encontrado'
@@ -364,6 +366,29 @@ export class ErrorElementoNoEncontrado extends ErrorDominio {
 
   constructor() {
     super('No encontramos este elemento, o no formas parte de su equipo.')
+  }
+}
+
+// Un instrumento que no existe o que es de otra actividad se responden igual
+// (docs/diseno-desarrollo-nucleo.md §3.3).
+export class ErrorInstrumentoNoEncontrado extends ErrorDominio {
+  readonly codigo = 'instrumento_no_encontrado' as const
+  readonly status = 404
+
+  constructor() {
+    super('No encontramos este instrumento.')
+  }
+}
+
+// Un instrumento que ya tiene respuestas no se reemplaza ni cambia de
+// formato (docs/diseno-desarrollo-nucleo.md §10.1): es la regla de P-17, por
+// el mismo motivo.
+export class ErrorInstrumentoConRespuestas extends ErrorDominio {
+  readonly codigo = 'instrumento_con_respuestas' as const
+  readonly status = 422
+
+  constructor(mensaje: string) {
+    super(mensaje)
   }
 }
 

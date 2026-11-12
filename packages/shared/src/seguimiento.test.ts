@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
+  ELEMENTOS_CON_HISTORIA,
   LONGITUD_MAXIMA_RESPUESTA_BITACORA,
+  SECCIONES_RETROALIMENTACION,
+  corregibleHoy,
+  diaEnCDMX,
+  esSeccionRetroalimentacion,
+  fueEditada,
   PREGUNTAS_BITACORA,
   mismasRespuestasBitacora,
   primeraRespuestaBitacora,
@@ -97,5 +103,44 @@ describe('mismasRespuestasBitacora', () => {
         { conocimientos_adquiridos: 'a' },
       ),
     ).toBe(false)
+  })
+})
+
+describe('registros en el tiempo: corregir solo el mismo día', () => {
+  it('el día se cuenta en Ciudad de México (UTC-6), no en UTC', () => {
+    // 11 nov 23:30 en CDMX es 12 nov 05:30 UTC.
+    expect(diaEnCDMX(new Date('2026-11-12T05:30:00Z'))).toBe('2026-11-11')
+    expect(diaEnCDMX(new Date('2026-11-12T06:00:00Z'))).toBe('2026-11-12')
+  })
+
+  it('se corrige el mismo día y no al siguiente', () => {
+    const escrita = '2026-11-12T15:00:00Z' // 9:00 en CDMX
+    expect(corregibleHoy(escrita, new Date('2026-11-13T05:59:00Z'))).toBe(true) // 23:59
+    expect(corregibleHoy(escrita, new Date('2026-11-13T06:00:00Z'))).toBe(false) // 0:00
+  })
+
+  it('solo los avances, entre los elementos del espacio, son un registro en el tiempo', () => {
+    expect(ELEMENTOS_CON_HISTORIA).toEqual(['avances'])
+  })
+
+  it('cuenta como editada solo si cambió pasado el margen de dos minutos', () => {
+    const creada = '2026-11-12T15:00:00.000Z'
+    expect(fueEditada(creada, '2026-11-12T15:01:00.000Z')).toBe(false)
+    expect(fueEditada(creada, '2026-11-12T15:03:00.000Z')).toBe(true)
+  })
+})
+
+describe('retroalimentación', () => {
+  it('se da sobre el equipo en general o sobre una sección de su espacio', () => {
+    expect(SECCIONES_RETROALIMENTACION).toEqual([
+      'general',
+      'metas',
+      'planeacion',
+      'avances',
+      'recursos',
+      'producto',
+    ])
+    expect(esSeccionRetroalimentacion('metas')).toBe(true)
+    expect(esSeccionRetroalimentacion('bitacora')).toBe(false)
   })
 })

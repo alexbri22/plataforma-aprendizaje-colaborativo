@@ -76,7 +76,7 @@ export interface ActividadRespuesta {
 }
 
 // GET /api/actividades/{id} agrega el conjunto de capacidades del actor y la
-// configuración de las ocho funciones a la forma básica de
+// configuración de las funciones a la forma básica de
 // ActividadRespuesta (docs/diseno-desarrollo-nucleo.md §4.3 y §7.7). El
 // listado (GET /api/actividades) no los incluye: ninguna pantalla que lo
 // consume decide acciones por elemento (§4.2, clave de query por id).
@@ -122,6 +122,18 @@ function lanzarErrorDeAutorizacion(motivo: MotivoRechazo, mensajeFase: string): 
     )
   }
   throw new ErrorAccionNoPermitida()
+}
+
+// Lo que otros módulos siembran al crearse una actividad, dentro de la misma
+// transacción: hoy, la estructura de la calificación por defecto (Evaluación,
+// general §4.2). El módulo dueño se registra al cargarse, como los
+// comprobadores de cambiosDeFuncion.ts, porque importarlo aquí crearía un
+// ciclo (Actividades → Evaluación → Actividades).
+type AlCrearActividad = (tx: Prisma.TransactionClient, idActividad: string) => Promise<void>
+const AL_CREAR_ACTIVIDAD: AlCrearActividad[] = []
+
+export function registrarAlCrearActividad(alCrear: AlCrearActividad): void {
+  AL_CREAR_ACTIVIDAD.push(alCrear)
 }
 
 // Punto de entrada de autorización para otros módulos (Seguimiento
@@ -340,7 +352,7 @@ export async function crearActividad(
           },
         })
 
-        // Configuración por defecto de las ocho funciones (P-25, nucleo
+        // Configuración por defecto de cada función (P-25, nucleo
         // §7.1 y §7.9): se insertan aquí y no se dejan implícitas, porque
         // una función sin fila no tiene un estado que autorizar() ni el
         // cliente puedan leer.
@@ -351,6 +363,8 @@ export async function crearActividad(
             estado,
           })),
         })
+
+        for (const alCrear of AL_CREAR_ACTIVIDAD) await alCrear(tx, creada.idActividad)
 
         await registrarEvento(tx, {
           idActividad: creada.idActividad,
@@ -603,6 +617,15 @@ export async function obtenerEstadoBitacoraIndividual(idActividad: string): Prom
     where: { idActividad_funcion: { idActividad, funcion: 'bitacora_individual' } },
   })
   return fila?.estado ?? null
+}
+
+// La configuración completa, función por función: Evaluación la necesita
+// para saber qué partes de la calificación están apagadas (nucleo §10.3).
+export async function obtenerConfiguracionDeActividad(
+  idActividad: string,
+): Promise<Record<string, string>> {
+  const filas = await prisma.configuracionFuncion.findMany({ where: { idActividad } })
+  return Object.fromEntries(filas.map((f) => [f.funcion, f.estado]))
 }
 
 export type ActorTransicion = { tipo: 'usuario'; idUsuario: string } | { tipo: 'sistema' }

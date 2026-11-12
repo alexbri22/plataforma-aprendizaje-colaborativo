@@ -1,3 +1,4 @@
+import { bitacoraHabilitada } from '@plataforma/shared'
 import { formatearFecha, sumarDias } from './formato'
 import type { Actividad } from './tipos'
 
@@ -81,7 +82,7 @@ export function guiaEtapa(actividad: Actividad): GuiaEtapa | null {
             texto: 'Entra al espacio de cada equipo para revisar y comentar sus metas y avances.',
           },
           tambien: [
-            ...(actividad.configuracion?.bitacora_individual === 'habilitada'
+            ...(bitacoraHabilitada(actividad.configuracion?.bitacora_individual)
               ? [
                   {
                     donde: 'Desarrollo › Equipos › Bitácoras',
@@ -90,7 +91,15 @@ export function guiaEtapa(actividad: Actividad): GuiaEtapa | null {
                 ]
               : []),
             {
-              donde: 'Desarrollo › Editar planificación',
+              donde: 'Desarrollo › Operación de la planeación',
+              texto: 'Revisa qué vence y qué sigue, y cuánto llevan entregado.',
+            },
+            {
+              donde: 'Creación › Conformación de equipos',
+              texto: 'Reasigna integrantes o edita un equipo si hace falta.',
+            },
+            {
+              donde: 'Creación › Planificar',
               texto: 'Ajusta el calendario de entregas si hace falta.',
             },
           ],
@@ -105,13 +114,16 @@ export function guiaEtapa(actividad: Actividad): GuiaEtapa | null {
                 donde: 'Cierre › Otorgar reconocimientos',
                 texto: 'Reconoce lo que aportó cada participante.',
               }
-            : { donde: 'Desarrollo › Equipos', texto: 'Revisa el trabajo final de cada equipo.' },
+            : {
+                donde: 'Cierre › Publicación de proyectos',
+                texto: 'Revisa el entregable final de cada equipo.',
+              },
           tambien: [
             ...(reconocimientos
               ? [
                   {
-                    donde: 'Desarrollo › Participantes',
-                    texto: 'Revisa los reconocimientos que recibió cada quien.',
+                    donde: 'Cierre › Publicación de proyectos',
+                    texto: 'Revisa el entregable final de cada equipo.',
                   },
                 ]
               : []),
@@ -172,7 +184,7 @@ export function guiaEtapa(actividad: Actividad): GuiaEtapa | null {
             }
           : { texto: 'Pide a quien organiza que te asigne un equipo.' },
         tambien:
-          actividad.configuracion?.bitacora_individual === 'habilitada' && actividad.idMiEquipo
+          bitacoraHabilitada(actividad.configuracion?.bitacora_individual) && actividad.idMiEquipo
             ? [
                 {
                   donde: 'Desarrollo › Mi bitácora',
@@ -186,16 +198,19 @@ export function guiaEtapa(actividad: Actividad): GuiaEtapa | null {
       }
     case 'cierre':
       return {
-        principal:
-          reconocimientos && actividad.idMiEquipo
-            ? {
-                donde: 'Cierre › Otorgar reconocimientos',
-                texto: 'Reconoce lo que aportó cada compañero.',
-              }
-            : { texto: 'Tu equipo ya no puede agregar contenido.' },
+        principal: actividad.idMiEquipo
+          ? {
+              donde: 'Cierre › Publicación de proyectos',
+              texto: 'Sube con tu equipo el entregable final del proyecto.',
+            }
+          : { texto: 'Tu equipo ya no puede agregar contenido.' },
         tambien:
           reconocimientos && actividad.idMiEquipo
             ? [
+                {
+                  donde: 'Cierre › Otorgar reconocimientos',
+                  texto: 'Reconoce lo que aportó cada compañero.',
+                },
                 {
                   donde: 'Perfil › Insignias',
                   texto: 'Mira lo que te reconocieron tus compañeros.',

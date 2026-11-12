@@ -1,0 +1,73 @@
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: 36rem;
+}
+
+.encabezado {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.paso {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.accion {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.ejemplo {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.reparto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.integrante {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.integrante > :first-child {
+  flex: 1;
+}
+
+.porcentaje {
+  padding-bottom: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.suma,
+.sumaLista {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.suma {
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-muted);
+}
+
+.sumaLista {
+  color: var(--color-success-ink);
+}
+
+.acciones {
+  display: flex;
+  gap: var(--space-2);
+}

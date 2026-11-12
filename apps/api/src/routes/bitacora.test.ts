@@ -48,7 +48,7 @@ async function actividadConBitacora() {
   await prisma.actividad.update({ where: { idActividad: e.id }, data: { estado: 'desarrollo' } })
   await prisma.configuracionFuncion.update({
     where: { idActividad_funcion: { idActividad: e.id, funcion: 'bitacora_individual' } },
-    data: { estado: 'habilitada' },
+    data: { estado: 'guiada' },
   })
   return { ...e, idEquipo }
 }

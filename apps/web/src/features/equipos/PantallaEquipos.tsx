@@ -3,6 +3,7 @@ import {
   type AccionActividad,
   type Equipo,
   type RolIntegrante,
+  bitacoraHabilitada,
 } from '@plataforma/shared'
 import { useState, type FormEvent } from 'react'
 import { useParams } from 'react-router-dom'
@@ -62,6 +63,8 @@ function FormularioCrearEquipo({
   onError: (mensaje: string | null) => void
 }) {
   const [nombre, setNombre] = useState('')
+  // Cerrado de entrada: se abre con su botón.
+  const [abierto, setAbierto] = useState(false)
   const crear = useCrearEquipoMutation(idActividad)
 
   function enviar(evento: FormEvent) {
@@ -69,11 +72,24 @@ function FormularioCrearEquipo({
     if (nombre.trim() === '') return
     onError(null)
     crear.mutate(nombre.trim(), {
-      onSuccess: () => setNombre(''),
+      onSuccess: () => {
+        setNombre('')
+        setAbierto(false)
+      },
       onError: (e) => onError(mensajeDe(e)),
     })
   }
 
+  const accion = seUne ? 'Crear equipo y unirme' : 'Crear equipo'
+  if (!abierto) {
+    return (
+      <div>
+        <Button size="sm" onClick={() => setAbierto(true)}>
+          {accion}
+        </Button>
+      </div>
+    )
+  }
   return (
     <Card>
       <form className={styles.formularioCrear} onSubmit={enviar} noValidate>
@@ -82,9 +98,21 @@ function FormularioCrearEquipo({
           value={nombre}
           maxLength={LONGITUD_MAXIMA_NOMBRE_EQUIPO}
           onChange={(e) => setNombre(e.target.value)}
+          autoFocus
         />
         <Button type="submit" disabled={crear.isPending || nombre.trim() === ''}>
-          {seUne ? 'Crear equipo y unirme' : 'Crear equipo'}
+          {accion}
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={crear.isPending}
+          onClick={() => {
+            setNombre('')
+            setAbierto(false)
+          }}
+        >
+          Cancelar
         </Button>
       </form>
     </Card>
@@ -106,8 +134,18 @@ function textoSinEquipos(actividad: Actividad): string {
     : 'Aún no hay equipos. Crea uno con su nombre o espera a que alguien lo haga.'
 }
 
-export function PantallaEquipos() {
+export interface PantallaEquiposProps {
+  /** Dos entradas de la barra lateral sobre los mismos equipos.
+   * 'conformacion' (Creación, abierta toda la actividad): armarlos, editarlos
+   * y reasignar integrantes, con lo que permita la fase. 'equipos'
+   * (Desarrollo): entrar a revisar el espacio de cada uno. */
+  vista: 'conformacion' | 'equipos'
+}
+
+export function PantallaEquipos({ vista }: PantallaEquiposProps) {
   const { id = '' } = useParams<{ id: string }>()
+  const titulo = vista === 'conformacion' ? 'Conformación de equipos' : 'Equipos'
+  const contexto = { idActividad: id, seccion: vista } as const
   const actividadQuery = useActividad(id)
   const equiposQuery = useEquipos(id)
 
@@ -127,11 +165,7 @@ export function PantallaEquipos() {
 
   if (actividadQuery.isPending || equiposQuery.isPending) {
     return (
-      <AppShell
-        seccionActiva="actividades"
-        titulo="Equipos"
-        contexto={{ idActividad: id, seccion: 'equipos' }}
-      >
+      <AppShell seccionActiva="actividades" titulo={titulo} contexto={contexto}>
         <div className={styles.cargando} role="status" aria-label="Cargando los equipos">
           <IconoCargando size={24} />
         </div>
@@ -148,16 +182,14 @@ export function PantallaEquipos() {
   }
 
   const actividad = actividadQuery.data
-  const capacidades: readonly AccionActividad[] = actividad.capacidades ?? []
+  const conformacion = vista === 'conformacion'
+  // En Equipos no se edita nada: las acciones quedan en Conformación.
+  const capacidades: readonly AccionActividad[] = conformacion ? (actividad.capacidades ?? []) : []
   const puede = (accion: AccionActividad) => capacidades.includes(accion)
 
   if (equiposQuery.isError || !equiposQuery.data) {
     return (
-      <AppShell
-        seccionActiva="actividades"
-        titulo="Equipos"
-        contexto={{ idActividad: id, seccion: 'equipos' }}
-      >
+      <AppShell seccionActiva="actividades" titulo={titulo} contexto={contexto}>
         <AvisoError mensaje="No pudimos cargar los equipos." />
       </AppShell>
     )
@@ -190,16 +222,9 @@ export function PantallaEquipos() {
   }
 
   return (
-    <AppShell
-      seccionActiva="actividades"
-      // El nombre de la entrada de la barra lateral por la que se llega en
-      // cada etapa (construirNavActividad).
-      titulo={fasePrevia ? 'Conformación de equipos' : 'Equipos'}
-      contexto={{ idActividad: id, seccion: 'equipos' }}
-      ayuda="equipos"
-    >
+    <AppShell seccionActiva="actividades" titulo={titulo} contexto={contexto} ayuda={vista}>
       <div className={styles.contenido}>
-        {fasePrevia ? (
+        {!conformacion ? null : fasePrevia ? (
           <BarraFormacion
             idActividad={id}
             etiqueta={ETIQUETA_FORMACION[actividad.configuracion?.formacion_equipos ?? '']}
@@ -243,8 +268,11 @@ export function PantallaEquipos() {
                 capacidades={capacidades}
                 limites={limites}
                 enFormacion={enFormacion}
-                bitacorasHabilitadas={actividad.configuracion?.bitacora_individual === 'habilitada'}
+                bitacorasHabilitadas={bitacoraHabilitada(
+                  actividad.configuracion?.bitacora_individual,
+                )}
                 ocupado={ocupado}
+                conEspacio={!conformacion}
                 onUnirme={unirme}
                 onSalir={salir}
                 onEditar={abrirPanel}

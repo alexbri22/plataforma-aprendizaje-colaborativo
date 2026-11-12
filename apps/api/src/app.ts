@@ -17,6 +17,10 @@ import { cuentasRouter } from './routes/cuentas.js'
 import { adminCursosRouter, cursosRouter } from './routes/cursos.js'
 import { healthRouter } from './routes/health.js'
 import { periodosRouter } from './routes/periodos.js'
+import { publicacionesRouter } from './routes/publicaciones.js'
+import { ponderacionRouter } from './routes/ponderacion.js'
+import { respuestasRouter } from './routes/respuestas.js'
+import { calificacionesRouter } from './routes/calificaciones.js'
 import { tareasRouter } from './routes/tareas.js'
 import { LIMITE_JSON_FORMACION, adminRecursosRouter, recursosRouter } from './routes/recursos.js'
 
@@ -77,6 +81,10 @@ export function createApp(): Express {
   app.use('/api', actividadesRouter)
   app.use('/api', clavesRouter)
   app.use('/api', periodosRouter)
+  app.use('/api', publicacionesRouter)
+  app.use('/api', ponderacionRouter)
+  app.use('/api', respuestasRouter)
+  app.use('/api', calificacionesRouter)
   app.use('/api', equiposRouter)
   app.use('/api', elementosRouter)
   app.use('/api', bitacoraRouter)
