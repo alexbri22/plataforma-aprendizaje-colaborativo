@@ -174,6 +174,27 @@ export const LARGO_MAXIMO_LECCION = {
   contenido: 20_000,
 } as const
 
+// ---- Rutas de aprendizaje (§4.1 y nota del incremento 4) ----
+
+/** Una ruta reúne de 2 a 5 cursos con una misma finalidad. El máximo se
+ * aplica siempre; el mínimo, al publicar. */
+export const MIN_CURSOS_RUTA = 2
+export const MAX_CURSOS_RUTA = 5
+
+export const LARGO_MAXIMO_RUTA = {
+  titulo: 120,
+  finalidad: 300,
+  descripcion: 2_000,
+} as const
+
+/** Cuántos elementos de Johnson y Johnson puede elegir una persona como
+ * "lo que quiero fortalecer". Pocos a propósito: elegir los cinco no dice
+ * nada. */
+export const MAX_ELEMENTOS_PREFERIDOS = 2
+
+/** Respuesta privada a una lección de reflexión (CUR-03). */
+export const LARGO_MAXIMO_REFLEXION = 5_000
+
 export function esNivelCurso(valor: string): valor is NivelCurso {
   return (NIVELES_CURSO as readonly string[]).includes(valor)
 }

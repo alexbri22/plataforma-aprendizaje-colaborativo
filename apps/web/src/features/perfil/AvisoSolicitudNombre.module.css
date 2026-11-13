@@ -1,0 +1,52 @@
+/* Pendiente en el tono informativo de la marca, aprobada en el verde de
+   "hecho" y rechazada en advertencia, no en error: no falló nada, el
+   administrador decidió (DESIGN.md). */
+.pendiente,
+.aprobada,
+.rechazada {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+}
+
+.pendiente {
+  border: 1px solid var(--color-primary-border);
+  background: var(--color-primary-subtle);
+  color: var(--color-text);
+}
+
+.aprobada {
+  border: 1px solid var(--color-success);
+  background: var(--color-success-subtle);
+  color: var(--color-success-ink);
+}
+
+.rechazada {
+  border: 1px solid var(--color-warning);
+  background: var(--color-warning-subtle);
+  color: var(--color-warning-ink);
+}
+
+.texto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.texto p {
+  margin: 0;
+}
+
+.titulo {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+}
+
+.motivo {
+  overflow-wrap: anywhere;
+}

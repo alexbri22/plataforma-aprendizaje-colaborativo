@@ -21,6 +21,7 @@ import {
   ErrorRecursoNoEncontrado,
   ErrorValidacion,
 } from '../../errores.js'
+import { fijarFinalizaciones } from './calculoProgreso.js'
 import { cursosQueUsanRecurso } from './usoDeRecursos.js'
 import type { DatosRecurso, FiltrosRecursos, PeticionPagina } from './validacion.js'
 
@@ -217,6 +218,62 @@ export async function obtenerArchivoPublicado(
   })
   if (!archivo) throw new ErrorRecursoNoEncontrado()
   return archivo
+}
+
+// ---- Biblioteca personal (REC-02) ----
+//
+// Guardar un recurso para después. Es solo un marcador: no inicia un curso
+// ni genera medición, y nadie más ve qué guardó cada persona.
+
+/** Guarda un recurso publicado. Guardarlo otra vez no hace nada. */
+export async function guardarRecurso(idUsuario: string, idRecurso: string): Promise<void> {
+  const existe = await prisma.recursoFormativo.findFirst({
+    where: { idRecurso, estatus: 'publicado' },
+    select: { idRecurso: true },
+  })
+  if (!existe) throw new ErrorRecursoNoEncontrado()
+  await prisma.recursoGuardado.createMany({
+    data: [{ idUsuario, idRecurso }],
+    skipDuplicates: true,
+  })
+}
+
+/** Quita un recurso guardado, en cualquier estatus. Si no estaba, no pasa
+ * nada. */
+export async function quitarRecursoGuardado(idUsuario: string, idRecurso: string): Promise<void> {
+  await prisma.recursoGuardado.deleteMany({ where: { idUsuario, idRecurso } })
+}
+
+export async function estaGuardado(idUsuario: string, idRecurso: string): Promise<boolean> {
+  const fila = await prisma.recursoGuardado.findUnique({
+    where: { idUsuario_idRecurso: { idUsuario, idRecurso } },
+    select: { idRecurso: true },
+  })
+  return fila !== null
+}
+
+/** Mis recursos guardados, el más reciente primero. Solo los publicados: uno
+ * retirado se oculta (su título no se expone, igual que en un curso) y vuelve
+ * a aparecer si se publica de nuevo. */
+export async function listarRecursosGuardados(
+  idUsuario: string,
+  { pagina, porPagina }: PeticionPagina,
+): Promise<PaginaDe<ResumenRecurso>> {
+  const where: Prisma.RecursoGuardadoWhereInput = { idUsuario, recurso: { estatus: 'publicado' } }
+  const [total, filas] = await prisma.$transaction([
+    prisma.recursoGuardado.count({ where }),
+    prisma.recursoGuardado.findMany({
+      where,
+      include: { recurso: { include: INCLUIR_METADATOS } },
+      orderBy: [{ fechaGuardado: 'desc' }, { idRecurso: 'asc' }],
+      skip: (pagina - 1) * porPagina,
+      take: porPagina,
+    }),
+  ])
+  return {
+    recursos: filas.map((f) => aResumen(f.recurso)),
+    paginacion: { pagina, porPagina, total, totalPaginas: Math.ceil(total / porPagina) },
+  }
 }
 
 // ---- Administración ----
@@ -441,11 +498,19 @@ export async function actualizarRecurso(
     validarCoherencia(final)
 
     if (descartarArchivo) await tx.archivoRecurso.delete({ where: { idRecurso } })
-    return tx.recursoFormativo.update({
+    const actualizado = await tx.recursoFormativo.update({
       where: { idRecurso },
       data: { ...cambios, textoBusqueda: textoDeBusqueda(final) },
       include: INCLUIR_METADATOS,
     })
+    // Retirar un recurso hace que su lección deje de contar para terminar
+    // los cursos que lo usan: quien ya tenía hechas las demás los termina.
+    if (actualizado.estatus !== actual.estatus) {
+      for (const curso of await cursosQueUsanRecurso(idRecurso, tx)) {
+        await fijarFinalizaciones(tx, curso.idCurso)
+      }
+    }
+    return actualizado
   })
   return conUso(aAdmin(fila))
 }

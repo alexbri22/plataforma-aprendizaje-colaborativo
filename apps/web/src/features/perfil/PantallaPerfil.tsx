@@ -4,6 +4,7 @@ import { AppShell } from '../../components/AppShell'
 import { Avatar, AvisoError, Button, Card, IconoCargando, Switch } from '../../components/ui'
 import { usePistas } from '../ayuda'
 import { DetalleInsignia, VitrinaInsignias, useRecibidosEnPerfil } from '../insignias'
+import { AvisoSolicitudNombre } from './AvisoSolicitudNombre'
 import { FormularioContrasena } from './FormularioContrasena'
 import { FormularioDatosPerfil } from './FormularioDatosPerfil'
 import { ErrorFoto, TIPOS_ACEPTADOS, prepararFoto } from './foto'
@@ -112,7 +113,10 @@ export function PantallaPerfil() {
     )
   }
 
-  if (perfil.isError || !perfil.data) {
+  // Error de página solo si no hay nada que mostrar. Si falla una recarga en
+  // segundo plano, el perfil anterior sigue en pantalla con un aviso, y los
+  // formularios no se desmontan ni pierden lo que se estaba escribiendo.
+  if (!perfil.data) {
     return (
       <AppShell seccionActiva="perfil" titulo="Mi perfil">
         <AvisoError mensaje={perfil.error?.message ?? 'No pudimos cargar tu perfil.'} />
@@ -122,12 +126,16 @@ export function PantallaPerfil() {
 
   const usuario = perfil.data
   const ocupado = preparando || subir.isPending || quitar.isPending
+  const esAdministrador = usuario.tipoCuenta === 'administrador'
   const correoPublico = visibilidad.isPending
     ? (visibilidad.variables ?? usuario.correoPublico)
     : usuario.correoPublico
 
   return (
     <AppShell seccionActiva="perfil" titulo="Mi perfil">
+      {perfil.isError ? (
+        <AvisoError mensaje="No pudimos actualizar tu perfil. Lo que ves puede no estar al día." />
+      ) : null}
       <Card className={styles.cabecera}>
         <Avatar
           nombre={usuario.nombre}
@@ -193,17 +201,25 @@ export function PantallaPerfil() {
             Tus datos
           </h3>
           <Card>
-            {/* La key remonta el formulario cuando el servidor devuelve datos
-                nuevos, en vez de sincronizar el estado con un efecto. */}
+            {usuario.solicitudNombre ? (
+              <AvisoSolicitudNombre solicitud={usuario.solicitudNombre} />
+            ) : null}
+            {/* Sin key ligada al nombre: el formulario adopta el nombre vigente
+                cuando cambia, sin perder un borrador en curso. */}
             <FormularioDatosPerfil
-              key={`${usuario.nombre}|${usuario.apellidoPaterno}|${usuario.apellidoMaterno}`}
               inicial={{
                 nombre: usuario.nombre,
                 apellidoPaterno: usuario.apellidoPaterno,
                 apellidoMaterno: usuario.apellidoMaterno,
               }}
+              directo={esAdministrador}
             />
-            <p className={styles.nota}>El correo no se puede cambiar: es con el que ingresas.</p>
+            <p className={styles.nota}>
+              {esAdministrador
+                ? null
+                : 'Un cambio de nombre se aplica cuando un administrador lo aprueba. '}
+              El correo no se puede cambiar: es con el que ingresas.
+            </p>
             <div className={styles.visibilidadCorreo}>
               <Switch
                 label="Mostrar mi correo en mi perfil"

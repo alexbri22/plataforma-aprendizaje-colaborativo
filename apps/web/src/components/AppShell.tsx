@@ -24,9 +24,11 @@ export type SeccionApp =
   | 'actividades-participo'
   | 'perfil'
   | 'recursos'
+  | 'mi-formacion'
   | 'cuentas'
   | 'contenido'
   | 'cursos'
+  | 'rutas'
 
 interface ItemNav {
   id: SeccionApp
@@ -120,6 +122,21 @@ function IconoRecursos() {
         fill="none"
         stroke="currentColor"
         strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function IconoRutas() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <path
+        d="M4.5 16.5a2 2 0 1 0 0-.01M15.5 5.5a2 2 0 1 0 0-.01M6.5 16h5a3 3 0 0 0 0-6h-3a3 3 0 0 1 0-6h5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
         strokeLinejoin="round"
       />
     </svg>
@@ -233,8 +250,13 @@ const ITEMS_NAV_CONSULTAS: ItemNav[] = [
 
 // Mi perfil no es un ítem de la navegación: se abre desde el nombre de la
 // cuenta, al pie del menú, que es donde se busca lo que es de uno. Los
-// cursos se encuentran dentro de Recursos.
-const ITEMS_NAV_APRENDE: ItemNav[] = [{ id: 'recursos', etiqueta: 'Recursos', to: '/recursos' }]
+// cursos y la ruta recomendada se encuentran dentro de Recursos; Mi
+// formación es lo que la persona empezó o guardó del catálogo
+// (docs/diseno-desarrollo-formacion.md §7.2).
+const ITEMS_NAV_APRENDE: ItemNav[] = [
+  { id: 'recursos', etiqueta: 'Recursos', to: '/recursos' },
+  { id: 'mi-formacion', etiqueta: 'Mi formación', to: '/mi-formacion' },
+]
 
 // Del subsistema de formación, todavía sin pantalla: en el mapa, sin enlace.
 const PENDIENTES_APRENDE = [
@@ -251,6 +273,7 @@ const ITEMS_NAV_ADMIN: ItemNav[] = [
   { id: 'cuentas', etiqueta: 'Cuentas', to: '/admin/cuentas', Icono: IconoCuentas },
   { id: 'contenido', etiqueta: 'Contenido', to: '/admin/contenido', Icono: IconoRecursos },
   { id: 'cursos', etiqueta: 'Cursos', to: '/admin/cursos', Icono: IconoCursos },
+  { id: 'rutas', etiqueta: 'Rutas', to: '/admin/rutas', Icono: IconoRutas },
 ]
 
 function IconoHistorial() {

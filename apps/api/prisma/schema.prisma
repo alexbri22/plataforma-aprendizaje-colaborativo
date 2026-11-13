@@ -160,10 +160,15 @@ model Usuario {
   membresias       Membresia[]
   eventosHistorial Historial[]
   foto             FotoDePerfil?
+  solicitudNombre  SolicitudCambioNombre?
 
   recursosFormativos RecursoFormativo[]
   cursos             Curso[]
   pistasVistas       PistaVista[]
+  inscripcionesCurso InscripcionCurso[]
+  recursosGuardados  RecursoGuardado[]
+  rutasFormativas    RutaFormativa[]
+  preferencias       PreferenciasFormativas?
 
   @@map("usuarios")
 }
@@ -199,6 +204,37 @@ model FotoDePerfil {
   usuario Usuario @relation(fields: [idUsuario], references: [idUsuario], onDelete: Cascade)
 
   @@map("fotos_de_perfil")
+}
+
+// Solicitud de cambio de nombre (docs/diseno-desarrollo-nucleo.md §6.3). Una
+// cuenta de usuario no cambia su nombre directamente: lo pide y un
+// administrador lo aprueba. Una sola por persona (idUsuario único): enviar otra
+// reemplaza a la anterior, así que la fila es siempre la vigente. Aprobarla
+// aplica el nombre; aprobada o rechazada (con su motivo), la fila se conserva
+// para avisarle a la persona hasta que la descarte o envíe otra.
+model SolicitudCambioNombre {
+  idSolicitud     String                @id @default(uuid()) @map("id_solicitud")
+  idUsuario       String                @unique @map("id_usuario")
+  nombre          String
+  apellidoPaterno String                @map("apellido_paterno")
+  apellidoMaterno String                @map("apellido_materno")
+  estado          EstadoSolicitudNombre @default(pendiente)
+  motivoRechazo   String?               @map("motivo_rechazo")
+  creadaEn        DateTime              @default(now()) @map("creada_en")
+  resueltaEn      DateTime?             @map("resuelta_en")
+
+  usuario Usuario @relation(fields: [idUsuario], references: [idUsuario], onDelete: Cascade)
+
+  @@index([estado, creadaEn])
+  @@map("solicitudes_cambio_nombre")
+}
+
+enum EstadoSolicitudNombre {
+  pendiente
+  aprobada
+  rechazada
+
+  @@map("estado_solicitud_nombre")
 }
 
 // Sesión de servidor (docs/diseno-desarrollo-nucleo.md §3.2): la cookie solo
@@ -639,9 +675,10 @@ model RecursoFormativo {
   fechaCreacion      DateTime         @default(now()) @map("fecha_creacion")
   fechaActualizacion DateTime         @updatedAt @map("fecha_actualizacion")
 
-  autor     Usuario?        @relation(fields: [idUsuarioAutor], references: [idUsuario], onDelete: SetNull)
+  autor     Usuario?          @relation(fields: [idUsuarioAutor], references: [idUsuario], onDelete: SetNull)
   archivo   ArchivoRecurso?
   lecciones LeccionCurso[]
+  guardados RecursoGuardado[]
 
   @@index([estatus, orden])
   @@map("recursos_formativos")
@@ -713,8 +750,10 @@ model Curso {
   fechaCreacion      DateTime       @default(now()) @map("fecha_creacion")
   fechaActualizacion DateTime       @updatedAt @map("fecha_actualizacion")
 
-  autor     Usuario?       @relation(fields: [idUsuarioAutor], references: [idUsuario], onDelete: SetNull)
-  lecciones LeccionCurso[]
+  autor         Usuario?           @relation(fields: [idUsuarioAutor], references: [idUsuario], onDelete: SetNull)
+  lecciones     LeccionCurso[]
+  inscripciones InscripcionCurso[]
+  rutas         CursoRuta[]
 
   @@index([estatus, orden])
   @@map("cursos")
@@ -738,8 +777,10 @@ model LeccionCurso {
   obligatoria Boolean     @default(true)
   duracionMin Int?        @map("duracion_min")
 
-  curso   Curso             @relation(fields: [idCurso], references: [idCurso], onDelete: Cascade)
-  recurso RecursoFormativo? @relation(fields: [idRecurso], references: [idRecurso], onDelete: Restrict)
+  curso       Curso                @relation(fields: [idCurso], references: [idCurso], onDelete: Cascade)
+  recurso     RecursoFormativo?    @relation(fields: [idRecurso], references: [idRecurso], onDelete: Restrict)
+  progresos   ProgresoLeccion[]
+  reflexiones ReflexionFormativa[]
 
   @@unique([idCurso, orden])
   @@index([idRecurso])
@@ -930,4 +971,140 @@ model ArchivoPublicacion {
   publicacion PublicacionProyecto @relation(fields: [idPublicacion], references: [idPublicacion], onDelete: Cascade)
 
   @@map("archivos_publicacion")
+}
+
+// ---- Progreso del alumno (docs/diseno-desarrollo-formacion.md §9.1 y la
+// nota del incremento 3). Todo es privado de la persona: ningún otro usuario
+// ni el administrador lo consulta. Sin versiones de curso, el progreso se
+// guarda por lección y el porcentaje se calcula con las lecciones actuales.
+
+// Se crea (o se recupera) la primera vez que la persona toca el curso con
+// sesión. La finalización se fija una sola vez y no se borra aunque el curso
+// cambie después.
+model InscripcionCurso {
+  idInscripcion        String    @id @default(uuid()) @map("id_inscripcion")
+  idUsuario            String    @map("id_usuario")
+  idCurso              String    @map("id_curso")
+  fechaInicio          DateTime  @default(now()) @map("fecha_inicio")
+  fechaFinalizacion    DateTime? @map("fecha_finalizacion")
+  // Para "Continúa aprendiendo": el curso que se tocó más recientemente.
+  fechaUltimaActividad DateTime  @default(now()) @map("fecha_ultima_actividad")
+
+  usuario     Usuario              @relation(fields: [idUsuario], references: [idUsuario], onDelete: Cascade)
+  // RESTRICT: un curso con inscripciones no se elimina, solo se retira, para
+  // no borrar el progreso de nadie.
+  curso       Curso                @relation(fields: [idCurso], references: [idCurso], onDelete: Restrict)
+  progresos   ProgresoLeccion[]
+  reflexiones ReflexionFormativa[]
+
+  @@unique([idUsuario, idCurso])
+  @@index([idCurso])
+  @@map("inscripciones_curso")
+}
+
+// Una lección completada dentro de una inscripción. Si el administrador quita
+// la lección, su progreso se va con ella.
+model ProgresoLeccion {
+  idInscripcion   String   @map("id_inscripcion")
+  idLeccion       String   @map("id_leccion")
+  fechaCompletada DateTime @default(now()) @map("fecha_completada")
+
+  inscripcion InscripcionCurso @relation(fields: [idInscripcion], references: [idInscripcion], onDelete: Cascade)
+  leccion     LeccionCurso     @relation(fields: [idLeccion], references: [idLeccion], onDelete: Cascade)
+
+  @@id([idInscripcion, idLeccion])
+  @@index([idLeccion])
+  @@map("progreso_leccion")
+}
+
+// Respuesta privada a una lección de reflexión. Nunca se califica ni se
+// muestra a otra persona.
+model ReflexionFormativa {
+  idInscripcion      String   @map("id_inscripcion")
+  idLeccion          String   @map("id_leccion")
+  texto              String
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+
+  inscripcion InscripcionCurso @relation(fields: [idInscripcion], references: [idInscripcion], onDelete: Cascade)
+  leccion     LeccionCurso     @relation(fields: [idLeccion], references: [idLeccion], onDelete: Cascade)
+
+  @@id([idInscripcion, idLeccion])
+  @@index([idLeccion])
+  @@map("reflexiones_formativas")
+}
+
+// Biblioteca personal: guardar no inicia un curso ni genera medición.
+model RecursoGuardado {
+  idUsuario     String   @map("id_usuario")
+  idRecurso     String   @map("id_recurso")
+  fechaGuardado DateTime @default(now()) @map("fecha_guardado")
+
+  usuario Usuario          @relation(fields: [idUsuario], references: [idUsuario], onDelete: Cascade)
+  recurso RecursoFormativo @relation(fields: [idRecurso], references: [idRecurso], onDelete: Cascade)
+
+  @@id([idUsuario, idRecurso])
+  @@index([idRecurso])
+  @@map("recursos_guardados")
+}
+
+// ---- Rutas de aprendizaje (docs/diseno-desarrollo-formacion.md §4.1 y la
+// nota del incremento 4). Una ruta es una selección editorial ordenada de 2 a
+// 5 cursos con una misma finalidad. Área, elementos, nivel y duración no se
+// guardan: se calculan de sus cursos, para que nunca los contradigan. El
+// progreso de una ruta también se calcula, del de sus cursos.
+model RutaFormativa {
+  idRuta             String         @id @default(uuid()) @map("id_ruta")
+  titulo             String
+  // Para qué sirve la ruta: la frase que se lee en el catálogo.
+  finalidad          String         @default("")
+  descripcion        String         @default("")
+  orden              Int            @default(0)
+  estatus            EstatusRecurso @default(borrador)
+  // La ruta editorial que se muestra cuando no hay con qué recomendar (sin
+  // sesión o sin datos). A lo más una; marcar otra desmarca la anterior.
+  destacada          Boolean        @default(false)
+  textoBusqueda      String         @default("") @map("texto_busqueda")
+  // Mismo control de edición simultánea que en cursos.
+  versionFicha       Int            @default(0) @map("version_ficha")
+  idUsuarioAutor     String?        @map("id_usuario_autor")
+  fechaCreacion      DateTime       @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime       @updatedAt @map("fecha_actualizacion")
+
+  autor  Usuario?    @relation(fields: [idUsuarioAutor], references: [idUsuario], onDelete: SetNull)
+  cursos CursoRuta[]
+
+  @@index([estatus, orden])
+  @@map("rutas_formativas")
+}
+
+// Un curso dentro de una ruta, en su posición. Un curso puede estar en varias
+// rutas, pero una sola vez en cada una.
+model CursoRuta {
+  idRuta  String @map("id_ruta")
+  idCurso String @map("id_curso")
+  orden   Int
+
+  ruta  RutaFormativa @relation(fields: [idRuta], references: [idRuta], onDelete: Cascade)
+  // RESTRICT: un curso que forma parte de una ruta no se elimina; se quita
+  // de la ruta o se retira.
+  curso Curso         @relation(fields: [idCurso], references: [idCurso], onDelete: Restrict)
+
+  @@id([idRuta, idCurso])
+  @@unique([idRuta, orden])
+  @@index([idCurso])
+  @@map("cursos_ruta")
+}
+
+// Lo que la persona dijo que quiere fortalecer: hasta dos de los cinco
+// elementos de Johnson y Johnson (nota del incremento 4). Es una declaración
+// propia y privada, no una medición; el recomendador de rutas la usa como
+// señal de interés.
+model PreferenciasFormativas {
+  idUsuario          String   @id @map("id_usuario")
+  elementos          String[] @default([])
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+
+  usuario Usuario @relation(fields: [idUsuario], references: [idUsuario], onDelete: Cascade)
+
+  @@map("preferencias_formativas")
 }

@@ -1,8 +1,10 @@
 import type { CategoriaInsignia, NivelEstudios } from '@plataforma/shared'
+import { Prisma } from '@prisma/client'
 import { MAX_BYTES_FOTO_PERFIL, esTipoFotoPerfil } from '@plataforma/shared'
 import { prisma } from '../../data/prisma.js'
 import { ErrorFotoInvalida, ErrorUsuarioNoEncontrado, ErrorValidacion } from '../../errores.js'
 import { acumuladoDeUsuario } from '../insignias/insignias.service.js'
+import { CAMPOS_SOLICITUD, type SolicitudNombre } from './solicitudesNombre.service.js'
 import { hashContrasena, verificarContrasena } from './contrasena.js'
 import { INCLUIR_FOTO, aUsuarioPublico, type UsuarioPublico } from './cuentas.service.js'
 import type { CambioContrasenaValidado, DatosPerfilValidados } from './validacion.js'
@@ -21,6 +23,8 @@ export interface PerfilPropio extends UsuarioPublico {
   institucionEducativa: string
   /** Si otras personas ven el correo en el perfil básico. */
   correoPublico: boolean
+  /** Solicitud de cambio de nombre pendiente o rechazada; null si no hay. */
+  solicitudNombre: SolicitudNombre | null
   acumulado: Acumulado
 }
 
@@ -43,10 +47,17 @@ export interface PerfilBasico {
 }
 
 export async function obtenerPerfilPropio(idUsuario: string): Promise<PerfilPropio> {
-  const usuario = await prisma.usuario.findUnique({
-    where: { idUsuario },
-    include: INCLUIR_FOTO,
-  })
+  // El usuario y su solicitud de cambio de nombre se leen de la misma
+  // instantánea: una aprobación que se confirme entre las dos lecturas
+  // devolvería el nombre anterior con la solicitud ya aprobada, y el cliente
+  // dejaría de consultar con un nombre viejo (§6.3).
+  const [usuario, solicitudNombre] = await prisma.$transaction(
+    async (tx) => [
+      await tx.usuario.findUnique({ where: { idUsuario }, include: INCLUIR_FOTO }),
+      await tx.solicitudCambioNombre.findUnique({ where: { idUsuario }, select: CAMPOS_SOLICITUD }),
+    ],
+    { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+  )
   if (!usuario) throw new ErrorUsuarioNoEncontrado()
 
   return {
@@ -54,6 +65,7 @@ export async function obtenerPerfilPropio(idUsuario: string): Promise<PerfilProp
     nivelEstudios: usuario.nivelEstudios,
     institucionEducativa: usuario.institucionEducativa,
     correoPublico: usuario.correoPublico,
+    solicitudNombre,
     acumulado: await acumuladoDeUsuario(idUsuario),
   }
 }
