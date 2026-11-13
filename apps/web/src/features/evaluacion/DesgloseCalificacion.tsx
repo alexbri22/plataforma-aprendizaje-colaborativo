@@ -19,6 +19,14 @@ function nombreDe(instrumento: InstrumentoDelDesglose): string {
     : base
 }
 
+// Un aspecto con un solo instrumento de su mismo nombre (cada elemento del
+// proyecto, la bitácora, Aprendizaje) se muestra en una sola fila: dos filas
+// con el mismo nombre no dicen nada más.
+function instrumentoUnico(aspecto: Desglose['componentes'][number]['aspectos'][number]) {
+  const [unico] = aspecto.instrumentos
+  return aspecto.instrumentos.length === 1 && unico.nombre === aspecto.nombre ? unico : null
+}
+
 interface DesgloseProps {
   idActividad: string
   desglose: Desglose
@@ -41,6 +49,33 @@ export function DesgloseCalificacion({
 }: DesgloseProps) {
   const capturar = useCapturarPuntajeMutation(idActividad)
   const { parcial } = desglose
+
+  // El puntaje de un instrumento: su campo si quien organiza lo captura, o
+  // su valor.
+  function puntajeDe(instrumento: InstrumentoDelDesglose, etiqueta: string) {
+    if (puedeCapturar && instrumento.capturable && instrumento.puntaje.estado !== 'no_aplica') {
+      return (
+        <span className={styles.captura}>
+          <CampoPuntaje
+            etiqueta={`Puntaje de ${etiqueta}`}
+            valor={instrumento.puntaje.estado === 'valor' ? instrumento.puntaje.valor : null}
+            onGuardar={(valor) =>
+              capturar.mutateAsync({
+                idInstrumento: instrumento.id,
+                idMembresia: desglose.idMembresia,
+                valor,
+              })
+            }
+          />
+        </span>
+      )
+    }
+    return (
+      <span className={instrumento.puntaje.estado === 'valor' ? undefined : styles.apagado}>
+        {textoDePuntaje(instrumento.puntaje)}
+      </span>
+    )
+  }
   const cubre = `cubre ${formatearPuntaje(parcial.cubre)} % de la calificación`
   const principal = modo === 'parcial' ? parcial.valor : desglose.valor
   const nota =
@@ -84,64 +119,52 @@ export function DesgloseCalificacion({
               </TableRow>
             </thead>
             <tbody>
-              {componente.aspectos.map((aspecto) => [
-                <TableRow key={aspecto.id}>
-                  <TableHeaderCell scope="row" className={styles.aspecto}>
-                    {aspecto.nombre}
-                  </TableHeaderCell>
-                  <TableCell className={styles.numero}>
-                    {aspecto.valor === null ? '—' : `${formatearPuntaje(aspecto.pesoEfectivo)} %`}
-                  </TableCell>
-                  <TableCell className={`${styles.numero} ${styles.aspecto}`}>
-                    {aspecto.valor === null
-                      ? aspecto.instrumentos.length === 0
-                        ? 'Sin instrumento'
-                        : 'No aplica'
-                      : formatearPuntaje(aspecto.valor)}
-                  </TableCell>
-                </TableRow>,
-                ...aspecto.instrumentos.map((instrumento) => (
-                  <TableRow key={instrumento.id}>
-                    <TableCell className={styles.instrumento}>{nombreDe(instrumento)}</TableCell>
-                    <TableCell className={`${styles.numero} ${styles.apagado}`}>
-                      {instrumento.pesoEfectivo > 0
-                        ? `${formatearPuntaje(instrumento.pesoEfectivo)} %`
-                        : '—'}
+              {componente.aspectos.map((aspecto) => {
+                const pesa =
+                  aspecto.valor === null ? '—' : `${formatearPuntaje(aspecto.pesoEfectivo)} %`
+                const unico = instrumentoUnico(aspecto)
+                if (unico) {
+                  return (
+                    <TableRow key={aspecto.id}>
+                      <TableHeaderCell scope="row" className={styles.aspecto}>
+                        {aspecto.nombre}
+                      </TableHeaderCell>
+                      <TableCell className={styles.numero}>{pesa}</TableCell>
+                      <TableCell className={`${styles.numero} ${styles.aspecto}`}>
+                        {puntajeDe(unico, aspecto.nombre)}
+                      </TableCell>
+                    </TableRow>
+                  )
+                }
+                return [
+                  <TableRow key={aspecto.id}>
+                    <TableHeaderCell scope="row" className={styles.aspecto}>
+                      {aspecto.nombre}
+                    </TableHeaderCell>
+                    <TableCell className={styles.numero}>{pesa}</TableCell>
+                    <TableCell className={`${styles.numero} ${styles.aspecto}`}>
+                      {aspecto.valor === null
+                        ? aspecto.instrumentos.length === 0
+                          ? 'Sin instrumento'
+                          : 'No aplica'
+                        : formatearPuntaje(aspecto.valor)}
                     </TableCell>
-                    <TableCell className={styles.numero}>
-                      {puedeCapturar &&
-                      instrumento.capturable &&
-                      instrumento.puntaje.estado !== 'no_aplica' ? (
-                        <span className={styles.captura}>
-                          <CampoPuntaje
-                            etiqueta={`Puntaje de ${nombreDe(instrumento)}`}
-                            valor={
-                              instrumento.puntaje.estado === 'valor'
-                                ? instrumento.puntaje.valor
-                                : null
-                            }
-                            onGuardar={(valor) =>
-                              capturar.mutateAsync({
-                                idInstrumento: instrumento.id,
-                                idMembresia: desglose.idMembresia,
-                                valor,
-                              })
-                            }
-                          />
-                        </span>
-                      ) : (
-                        <span
-                          className={
-                            instrumento.puntaje.estado === 'valor' ? undefined : styles.apagado
-                          }
-                        >
-                          {textoDePuntaje(instrumento.puntaje)}
-                        </span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                )),
-              ])}
+                  </TableRow>,
+                  ...aspecto.instrumentos.map((instrumento) => (
+                    <TableRow key={instrumento.id}>
+                      <TableCell className={styles.instrumento}>{nombreDe(instrumento)}</TableCell>
+                      <TableCell className={`${styles.numero} ${styles.apagado}`}>
+                        {instrumento.pesoEfectivo > 0
+                          ? `${formatearPuntaje(instrumento.pesoEfectivo)} %`
+                          : '—'}
+                      </TableCell>
+                      <TableCell className={styles.numero}>
+                        {puntajeDe(instrumento, nombreDe(instrumento))}
+                      </TableCell>
+                    </TableRow>
+                  )),
+                ]
+              })}
             </tbody>
           </Table>
         </section>
