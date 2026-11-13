@@ -71,6 +71,7 @@ function renderConRutas(ruta: string) {
           />
           <Route path="/equipos/:idEquipo/:seccion" element={<p>Espacio del equipo</p>} />
           <Route path="/actividades/:id/equipos" element={<p>Pantalla de equipos</p>} />
+          <Route path="/actividades/:id/operacion" element={<p>Operación de la planeación</p>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -190,34 +191,26 @@ describe('PantallaResumenActividad', () => {
     expect(screen.queryByText('Clave de ingreso')).not.toBeInTheDocument()
   })
 
-  it('la barra ofrece Editar planificación si solo puede ajustar el calendario, como en desarrollo', async () => {
-    vi.mocked(obtenerActividad).mockResolvedValue({
-      ...ACTIVIDAD_BASE,
-      fase: 'desarrollo',
-      capacidades: ['ajustar_periodos', 'agregar_coorganizador'],
-    })
+  it('la barra ofrece Planificar durante toda la actividad, aunque solo se pueda ajustar algo', async () => {
+    for (const [fase, capacidad] of [
+      ['desarrollo', 'ajustar_periodos'],
+      ['cierre', 'ajustar_funciones'],
+    ] as const) {
+      vi.mocked(obtenerActividad).mockResolvedValue({
+        ...ACTIVIDAD_BASE,
+        fase,
+        capacidades: [capacidad, 'agregar_coorganizador'],
+      })
 
-    renderConRutas(`/actividades/${ACTIVIDAD_BASE.id}/resumen`)
+      const { unmount } = renderConRutas(`/actividades/${ACTIVIDAD_BASE.id}/resumen`)
 
-    expect(await screen.findByRole('link', { name: 'Editar planificación' })).toHaveAttribute(
-      'href',
-      `/actividades/${ACTIVIDAD_BASE.id}/configuracion`,
-    )
-  })
-
-  it('la barra ofrece Editar planificación si solo puede ajustar funciones, como en cierre', async () => {
-    vi.mocked(obtenerActividad).mockResolvedValue({
-      ...ACTIVIDAD_BASE,
-      fase: 'cierre',
-      capacidades: ['ajustar_funciones', 'agregar_coorganizador'],
-    })
-
-    renderConRutas(`/actividades/${ACTIVIDAD_BASE.id}/resumen`)
-
-    expect(await screen.findByRole('link', { name: 'Editar planificación' })).toHaveAttribute(
-      'href',
-      `/actividades/${ACTIVIDAD_BASE.id}/configuracion`,
-    )
+      expect(await screen.findByRole('link', { name: 'Planificar' })).toHaveAttribute(
+        'href',
+        `/actividades/${ACTIVIDAD_BASE.id}/configuracion`,
+      )
+      expect(screen.queryByRole('link', { name: 'Editar planificación' })).not.toBeInTheDocument()
+      unmount()
+    }
   })
 
   it('en formación dice qué se hace y dónde, sin botones que lleven ahí', async () => {
@@ -239,7 +232,7 @@ describe('PantallaResumenActividad', () => {
     expect(screen.queryByRole('listitem', { current: 'step' })).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Conformación de equipos' })).toHaveAttribute(
       'href',
-      `/actividades/${ACTIVIDAD_BASE.id}/equipos`,
+      `/actividades/${ACTIVIDAD_BASE.id}/conformacion`,
     )
   })
 
@@ -292,7 +285,7 @@ describe('PantallaResumenActividad', () => {
   })
 
   describe('quien organiza', () => {
-    it('en desarrollo, al abrir la actividad cae en Equipos', async () => {
+    it('en desarrollo, al abrir la actividad cae en Operación de la planeación', async () => {
       vi.mocked(obtenerActividad).mockResolvedValue({
         ...ACTIVIDAD_BASE,
         fase: 'desarrollo',
@@ -301,7 +294,7 @@ describe('PantallaResumenActividad', () => {
 
       renderConRutas(`/actividades/${ACTIVIDAD_BASE.id}`)
 
-      expect(await screen.findByText('Pantalla de equipos')).toBeInTheDocument()
+      expect(await screen.findByText('Operación de la planeación')).toBeInTheDocument()
     })
 
     it('en inscripción, al abrir la actividad se queda en Datos de la actividad', async () => {

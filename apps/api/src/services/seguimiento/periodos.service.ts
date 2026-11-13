@@ -1,9 +1,25 @@
 import type { EstadoActividad, Prisma, PeriodoReporte as FilaPeriodo } from '@prisma/client'
-import { generarPeriodos, LIMITE_PERIODOS, type PeriodoReporte } from '@plataforma/shared'
+import {
+  ELEMENTOS_ESPACIO_EQUIPO,
+  generarPeriodos,
+  LIMITE_PERIODOS,
+  type ElementoConCalendario,
+  type EntregasDePeriodo,
+  type PeriodoReporte,
+} from '@plataforma/shared'
 import { prisma } from '../../data/prisma.js'
 import { ErrorPeriodoNoEncontrado, ErrorPeriodoTraslapado, ErrorValidacion } from '../../errores.js'
-import { aFechaCalendario } from '../../utilidades/fechas.js'
-import { exigirAccion, type MembresiaConPermisos } from '../actividades/actividades.service.js'
+import { aFechaCalendario, finDeDiaEnCDMX, inicioDeDiaEnCDMX } from '../../utilidades/fechas.js'
+import {
+  exigirAccion,
+  type MembresiaActor,
+  type MembresiaConPermisos,
+} from '../actividades/actividades.service.js'
+import {
+  idsDeEquiposDeActividad,
+  obtenerIdEquipoDeMembresia,
+  participantesConEquipo,
+} from '../equipos/equipos.service.js'
 import { registrarEvento } from '../historial/historial.service.js'
 import type { CambiosPeriodo, PeriodicidadSolicitada } from './validacion.js'
 
@@ -23,6 +39,7 @@ export interface ActividadParaPeriodos {
 function aRespuesta(fila: FilaPeriodo): PeriodoReporte {
   return {
     id: fila.idPeriodo,
+    elemento: fila.elemento as ElementoConCalendario,
     orden: fila.orden,
     fechaInicio: aFechaCalendario(fila.fechaInicio),
     fechaFin: aFechaCalendario(fila.fechaFin),
@@ -53,9 +70,77 @@ async function bloquearPeriodosDeActividad(
 export async function listarPeriodos(idActividad: string): Promise<PeriodoReporte[]> {
   const filas = await prisma.periodoReporte.findMany({
     where: { idActividad },
-    orderBy: { orden: 'asc' },
+    orderBy: [{ elemento: 'asc' }, { orden: 'asc' }],
   })
   return filas.map(aRespuesta)
+}
+
+// GET /api/actividades/{id}/entregas-por-periodo (Operación de la
+// planeación): por cada periodo activo de cada calendario, cuánto se publicó
+// dentro de sus fechas. Mientras lo publicado no apunte a su periodo (nucleo
+// §9.2, Fase B) la fecha es lo único que los une; los días se cuentan en la
+// zona horaria de la plataforma, como los vencimientos. Los elementos del
+// espacio de equipo cuentan equipos; la bitácora, participantes.
+export async function entregasPorPeriodo(
+  idActividad: string,
+  membresia: MembresiaActor,
+): Promise<EntregasDePeriodo[]> {
+  const participa = membresia.rol === 'participante'
+  const [periodos, idsEquipos, participantes, idMiEquipo] = await Promise.all([
+    prisma.periodoReporte.findMany({
+      where: { idActividad, estado: 'activo' },
+      orderBy: [{ elemento: 'asc' }, { orden: 'asc' }],
+    }),
+    idsDeEquiposDeActividad(idActividad),
+    participantesConEquipo(idActividad),
+    participa ? obtenerIdEquipoDeMembresia(membresia.idMembresia) : Promise.resolve(null),
+  ])
+  const elementos = new Set(periodos.map((p) => p.elemento))
+  const tipos = ELEMENTOS_ESPACIO_EQUIPO.filter((e) => elementos.has(e))
+  const [delEquipo, entradasBitacora] = await Promise.all([
+    tipos.length && idsEquipos.length
+      ? prisma.elementoEspacioEquipo.findMany({
+          where: { idEquipo: { in: idsEquipos }, tipoElemento: { in: tipos } },
+          select: { idEquipo: true, tipoElemento: true, fechaCreacion: true },
+        })
+      : Promise.resolve([]),
+    elementos.has('bitacora') && participantes.length
+      ? prisma.bitacora.findMany({
+          where: { idMembresia: { in: participantes } },
+          select: { idMembresia: true, fechaCreacion: true },
+        })
+      : Promise.resolve([]),
+  ])
+
+  return periodos.map((periodo) => {
+    const desde = inicioDeDiaEnCDMX(periodo.fechaInicio)
+    const hasta = finDeDiaEnCDMX(periodo.fechaFin)
+    const dentro = (fecha: Date) => fecha >= desde && fecha <= hasta
+    if (periodo.elemento === 'bitacora') {
+      const quienes = new Set(
+        entradasBitacora.filter((e) => dentro(e.fechaCreacion)).map((e) => e.idMembresia),
+      )
+      return {
+        idPeriodo: periodo.idPeriodo,
+        hechos: quienes.size,
+        total: participantes.length,
+        unidad: 'participantes',
+        mio: participa ? quienes.has(membresia.idMembresia) : null,
+      }
+    }
+    const equipos = new Set(
+      delEquipo
+        .filter((e) => e.tipoElemento === periodo.elemento && dentro(e.fechaCreacion))
+        .map((e) => e.idEquipo),
+    )
+    return {
+      idPeriodo: periodo.idPeriodo,
+      hechos: equipos.size,
+      total: idsEquipos.length,
+      unidad: 'equipos',
+      mio: idMiEquipo ? equipos.has(idMiEquipo) : null,
+    }
+  })
 }
 
 // PUT /api/actividades/{id}/periodos: reemplaza el calendario completo.
@@ -66,6 +151,7 @@ export async function listarPeriodos(idActividad: string): Promise<PeriodoReport
 // reportes; hoy no hay dónde comprobarlo.
 export async function definirPeriodos(
   actividad: ActividadParaPeriodos,
+  elemento: ElementoConCalendario,
   periodicidad: PeriodicidadSolicitada,
   idUsuarioActor: string,
   membresiaActor: MembresiaConPermisos,
@@ -91,9 +177,9 @@ export async function definirPeriodos(
   const { idActividad } = actividad
   await prisma.$transaction(async (tx) => {
     await bloquearPeriodosDeActividad(tx, idActividad)
-    await tx.periodoReporte.deleteMany({ where: { idActividad } })
+    await tx.periodoReporte.deleteMany({ where: { idActividad, elemento } })
     await tx.periodoReporte.createMany({
-      data: periodos.map((periodo) => ({ idActividad, ...periodo })),
+      data: periodos.map((periodo) => ({ idActividad, elemento, ...periodo })),
     })
 
     await registrarEvento(tx, {
@@ -103,7 +189,7 @@ export async function definirPeriodos(
       tipoEvento: 'periodos_definidos',
       tipoEntidad: 'periodos_reporte',
       idEntidad: idActividad,
-      datos: { periodicidad, numeroPeriodos: periodos.length },
+      datos: { elemento, periodicidad, numeroPeriodos: periodos.length },
       categoria: 'estructura',
     })
   })
@@ -155,6 +241,7 @@ export async function actualizarPeriodo(
       const traslapado = await tx.periodoReporte.findFirst({
         where: {
           idActividad,
+          elemento: actual.elemento,
           idPeriodo: { not: idPeriodo },
           estado: 'activo',
           fechaInicio: { lte: siguiente.fechaFin },
@@ -174,6 +261,7 @@ export async function actualizarPeriodo(
       tipoEntidad: 'periodo_reporte',
       idEntidad: idPeriodo,
       datos: {
+        elemento: actual.elemento,
         orden: actual.orden,
         antes: {
           fechaInicio: aFechaCalendario(actual.fechaInicio),

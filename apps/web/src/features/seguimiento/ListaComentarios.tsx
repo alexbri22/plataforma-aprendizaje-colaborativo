@@ -109,6 +109,14 @@ export interface ListaComentariosProps {
   creando: boolean
   onCrear: (contenido: string) => Promise<void>
   onEditar: (idComentario: string, contenido: string) => Promise<void>
+  /** Para la retroalimentación: la etiqueta del campo y el botón. */
+  etiquetaNuevo?: string
+  textoBoton?: string
+  /** Qué mostrar si no hay ninguno y quien mira no puede escribir; sin
+   * esto, no se muestra nada. */
+  textoVacio?: string
+  /** Sin la línea de arriba: cuando la lista ya está en su propia tarjeta. */
+  sinSeparador?: boolean
 }
 
 // Comentarios sobre un elemento del espacio de equipo o una entrada de
@@ -125,7 +133,13 @@ export function ListaComentarios({
   creando,
   onCrear,
   onEditar,
+  etiquetaNuevo = 'Agregar comentario',
+  textoBoton = 'Comentar',
+  textoVacio,
+  sinSeparador = false,
 }: ListaComentariosProps) {
+  // El formulario no está abierto de entrada: se abre con su botón.
+  const [escribiendo, setEscribiendo] = useState(false)
   const [nuevo, setNuevo] = useState('')
   const [errorNuevo, setErrorNuevo] = useState<string | null>(null)
 
@@ -135,6 +149,7 @@ export function ListaComentarios({
     try {
       await onCrear(nuevo)
       setNuevo('')
+      setEscribiendo(false)
     } catch (e) {
       setErrorNuevo(mensajeDe(e))
     }
@@ -144,10 +159,12 @@ export function ListaComentarios({
   if (esError) return <AvisoError mensaje="No pudimos cargar los comentarios." />
 
   const lista = comentarios ?? []
-  if (lista.length === 0 && !puedeComentar) return null
+  if (lista.length === 0 && !puedeComentar) {
+    return textoVacio ? <p className={styles.vacio}>{textoVacio}</p> : null
+  }
 
   return (
-    <div className={styles.seccion}>
+    <div className={sinSeparador ? styles.seccionSinSeparador : styles.seccion}>
       {lista.length > 0 ? (
         <ul className={styles.lista}>
           {lista.map((comentario) => (
@@ -161,19 +178,45 @@ export function ListaComentarios({
         </ul>
       ) : null}
 
-      {puedeComentar ? (
+      {lista.length === 0 && textoVacio && !escribiendo ? (
+        <p className={styles.vacio}>{textoVacio}</p>
+      ) : null}
+
+      {puedeComentar && escribiendo ? (
         <form onSubmit={manejarCrear} className={styles.formulario}>
           <Textarea
-            label="Agregar comentario"
+            label={etiquetaNuevo}
             value={nuevo}
             onChange={(e) => setNuevo(e.target.value)}
             maxLength={LONGITUD_MAXIMA_CONTENIDO_COMENTARIO}
+            autoFocus
           />
           {errorNuevo ? <AvisoError mensaje={errorNuevo} /> : null}
-          <Button type="submit" size="sm" disabled={creando || nuevo.trim() === ''}>
-            {creando ? <IconoCargando size={14} /> : 'Comentar'}
-          </Button>
+          <div className={styles.acciones}>
+            <Button type="submit" size="sm" disabled={creando || nuevo.trim() === ''}>
+              {creando ? <IconoCargando size={14} /> : textoBoton}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={creando}
+              onClick={() => {
+                setNuevo('')
+                setErrorNuevo(null)
+                setEscribiendo(false)
+              }}
+            >
+              Cancelar
+            </Button>
+          </div>
         </form>
+      ) : puedeComentar ? (
+        <div className={styles.acciones}>
+          <Button type="button" variant="secondary" size="sm" onClick={() => setEscribiendo(true)}>
+            {etiquetaNuevo}
+          </Button>
+        </div>
       ) : null}
     </div>
   )

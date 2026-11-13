@@ -1,4 +1,9 @@
-import type { Comentario } from '@plataforma/shared'
+import type {
+  Comentario,
+  RetroalimentacionDeActividad,
+  RetroalimentacionDeEquipo,
+  SeccionRetroalimentacion,
+} from '@plataforma/shared'
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? ''
 
@@ -96,4 +101,33 @@ export async function editarComentario(
     'No pudimos guardar los cambios. Intenta de nuevo.',
   )
   return ((await respuesta.json()) as { comentario: Comentario }).comentario
+}
+
+// GET /api/actividades/{id}/retroalimentacion: la de todos los equipos para
+// quien organiza; la del propio equipo y la propia bitácora para quien
+// participa.
+export async function obtenerRetroalimentacion(
+  idActividad: string,
+): Promise<RetroalimentacionDeActividad> {
+  const respuesta = await exigirOk(
+    await pedir(`/api/actividades/${encodeURIComponent(idActividad)}/retroalimentacion`, 'GET'),
+    'No pudimos cargar la retroalimentación.',
+  )
+  return (await respuesta.json()) as RetroalimentacionDeActividad
+}
+
+// POST /api/equipos/{id}/retroalimentacion.
+export async function crearRetroalimentacionDeEquipo(
+  idEquipo: string,
+  seccion: SeccionRetroalimentacion,
+  contenido: string,
+): Promise<RetroalimentacionDeEquipo> {
+  const respuesta = await exigirOk(
+    await pedir(`/api/equipos/${encodeURIComponent(idEquipo)}/retroalimentacion`, 'POST', {
+      seccion,
+      contenido,
+    }),
+    'No pudimos guardar la retroalimentación. Intenta de nuevo.',
+  )
+  return ((await respuesta.json()) as { comentario: RetroalimentacionDeEquipo }).comentario
 }

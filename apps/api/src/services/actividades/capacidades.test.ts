@@ -343,11 +343,20 @@ const ACCIONES_DE_SEGUIMIENTO: AccionActividad[] = [
   'usar_espacio_equipo',
   'escribir_bitacora',
   'comentar',
+  'publicar_proyecto',
+]
+
+const ACCIONES_DE_EVALUACION: AccionActividad[] = [
+  'configurar_calificacion',
+  'responder_instrumento',
+  'capturar_puntaje',
 ]
 
 const ACCIONES_DE_EQUIPOS = ACCIONES_ACTIVIDAD.filter(
   (accion) =>
-    !ACCIONES_DE_ACTIVIDADES.includes(accion) && !ACCIONES_DE_SEGUIMIENTO.includes(accion),
+    !ACCIONES_DE_ACTIVIDADES.includes(accion) &&
+    !ACCIONES_DE_SEGUIMIENTO.includes(accion) &&
+    !ACCIONES_DE_EVALUACION.includes(accion),
 )
 
 describe('autorizar: acciones de Equipos, celda por celda', () => {
@@ -461,6 +470,26 @@ describe('autorizar: acciones de Equipos, celda por celda', () => {
     })
   })
 
+  describe('publicar_proyecto (Publicación de proyectos)', () => {
+    it('solo quien participa, y solo en el cierre', () => {
+      for (const fase of TODAS_LAS_FASES) {
+        expect(
+          autorizar(actor('participante'), 'publicar_proyecto', { estado: fase }).concedido,
+          fase,
+        ).toBe(fase === 'cierre')
+      }
+    })
+
+    it('quien organiza o co-organiza nunca publica: el proyecto es del equipo', () => {
+      for (const rol of ['organizador', 'co_con_permiso', 'co_sin_permiso'] as Rol[]) {
+        expect(
+          autorizar(contextoDeRol(rol), 'publicar_proyecto', { estado: 'cierre' }).concedido,
+          rol,
+        ).toBe(false)
+      }
+    })
+  })
+
   it('distingue el motivo: fase, estado de la función o rol', () => {
     const participante = actor('participante')
     expect(
@@ -506,6 +535,7 @@ describe('capacidadesDe', () => {
         'ajustar_periodos',
         'cerrar_inscripcion',
         'agregar_coorganizador',
+        'configurar_calificacion',
       ]),
     )
   })

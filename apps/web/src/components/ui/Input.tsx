@@ -9,15 +9,32 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   ayuda?: string
   error?: string
   endAdornment?: ReactNode
+  /** La etiqueta sigue ahí para el lector de pantalla, pero no se ve: para
+   * cuando el contexto visual ya la da (una fila con su nombre al lado). */
+  ocultarEtiqueta?: boolean
 }
 
-export function Input({ label, ayuda, error, id, className, endAdornment, ...props }: InputProps) {
+export function Input({
+  label,
+  ayuda,
+  error,
+  id,
+  className,
+  endAdornment,
+  ocultarEtiqueta,
+  ...props
+}: InputProps) {
   const generatedId = useId()
   const inputId = id ?? generatedId
 
   return (
     <div className={styles.field}>
-      <label className={styles.label} htmlFor={inputId}>
+      <label
+        className={[styles.label, ocultarEtiqueta ? styles.labelOculta : null]
+          .filter(Boolean)
+          .join(' ')}
+        htmlFor={inputId}
+      >
         {label}
       </label>
       {ayuda ? (

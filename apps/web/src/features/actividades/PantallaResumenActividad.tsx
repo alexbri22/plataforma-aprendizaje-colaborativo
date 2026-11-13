@@ -16,7 +16,7 @@ const TITULO = 'Datos de la actividad'
 function pantallaDeEtapa(actividad: Actividad, ritualAbierto: boolean): string | null {
   const reconocer = `/actividades/${actividad.id}/reconocer`
   if (actividad.rol !== 'participante') {
-    if (actividad.fase === 'desarrollo') return `/actividades/${actividad.id}/equipos`
+    if (actividad.fase === 'desarrollo') return `/actividades/${actividad.id}/operacion`
     if (actividad.fase === 'cierre') {
       return ritualAbierto ? reconocer : `/actividades/${actividad.id}/cierre`
     }

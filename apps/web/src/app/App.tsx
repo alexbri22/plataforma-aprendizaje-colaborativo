@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import {
   EntradaActividades,
   PantallaConfiguracion,
+  PantallaOperacion,
   PantallaConfirmarCierre,
   PantallaCrearActividad,
   PantallaInscripcion,
@@ -21,6 +22,11 @@ import {
   RutaAdmin,
 } from '../features/administracion'
 import { PantallaInicio } from '../features/contenido-publico/PantallaInicio.tsx'
+import { PantallaAspectoProceso } from '../features/evaluacion/PantallaAspectoProceso'
+import { PantallaCalificaciones } from '../features/evaluacion/PantallaCalificaciones'
+import { PantallaDesgloseParticipante } from '../features/evaluacion/PantallaDesgloseParticipante'
+import { PantallaMisResultados } from '../features/evaluacion/PantallaMisResultados'
+import { PantallaResponderPlantilla } from '../features/evaluacion/PantallaResponderPlantilla'
 import { PantallaIngresar, PantallaRegistrarse } from '../features/cuentas'
 import { PantallaEquipos } from '../features/equipos'
 import {
@@ -44,6 +50,8 @@ import {
   PantallaBitacorasDeEquipo,
   PantallaEspacioEquipo,
   PantallaMiBitacora,
+  PantallaPublicacion,
+  PantallaRetroalimentacion,
 } from '../features/seguimiento'
 import { queryClient } from './queryClient'
 import { RutaProtegida } from './RutaProtegida'
@@ -140,11 +148,46 @@ export function App() {
               </RutaProtegida>
             }
           />
+          {/* Conformación de equipos (Creación) sigue abierta toda la
+              actividad para reasignar y editar; Equipos (Desarrollo) es
+              para entrar a revisar el espacio de cada uno. */}
+          <Route
+            path="/actividades/:id/conformacion"
+            element={
+              <RutaProtegida>
+                <PantallaEquipos vista="conformacion" />
+              </RutaProtegida>
+            }
+          />
           <Route
             path="/actividades/:id/equipos"
             element={
               <RutaProtegida>
-                <PantallaEquipos />
+                <PantallaEquipos vista="equipos" />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="/actividades/:id/publicacion"
+            element={
+              <RutaProtegida>
+                <PantallaPublicacion />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="/actividades/:id/evaluacion"
+            element={
+              <RutaProtegida>
+                <PantallaRetroalimentacion />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="/actividades/:id/operacion"
+            element={
+              <RutaProtegida>
+                <PantallaOperacion />
               </RutaProtegida>
             }
           />
@@ -286,6 +329,46 @@ export function App() {
             element={
               <RutaProtegida>
                 <PantallaMisReconocimientos />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="/actividades/:id/calificaciones"
+            element={
+              <RutaProtegida>
+                <PantallaCalificaciones />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="/actividades/:id/calificaciones/:idMembresia"
+            element={
+              <RutaProtegida>
+                <PantallaDesgloseParticipante />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="/actividades/:id/resultados"
+            element={
+              <RutaProtegida>
+                <PantallaMisResultados />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="/equipos/:idEquipo/proceso/:aspecto"
+            element={
+              <RutaProtegida>
+                <PantallaAspectoProceso />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="/equipos/:idEquipo/proceso/:aspecto/:idInstrumento"
+            element={
+              <RutaProtegida>
+                <PantallaResponderPlantilla />
               </RutaProtegida>
             }
           />

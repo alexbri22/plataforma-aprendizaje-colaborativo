@@ -1,14 +1,13 @@
 import type { ElementoEspacioEquipo as FilaElementoBase, Prisma } from '@prisma/client'
 import {
-  MAX_BYTES_ARCHIVO_ELEMENTO,
-  esTipoArchivoElemento,
+  ELEMENTOS_CON_HISTORIA,
+  corregibleHoy,
   type ElementoDeEspacioEquipo,
   type ElementoEspacioEquipo,
 } from '@plataforma/shared'
 import { prisma } from '../../data/prisma.js'
 import {
   ErrorAccionNoPermitida,
-  ErrorArchivoInvalido,
   ErrorElementoNoEncontrado,
   ErrorFaseNoPermiteAccion,
 } from '../../errores.js'
@@ -22,6 +21,7 @@ import {
   obtenerFaseDeActividad,
 } from '../actividades/actividades.service.js'
 import { registrarComprobadorDeDatos } from '../actividades/cambiosDeFuncion.js'
+import { limpiarNombreArchivo, validarArchivoAdjunto } from '../../utilidades/archivos.js'
 import { registrarEvento } from '../historial/historial.service.js'
 
 // Contenido del espacio de equipo (docs/diseno-desarrollo-nucleo.md §9.1):
@@ -198,6 +198,19 @@ export async function contextoElementoParaComentario(
   return { ...contexto, idEquipo: actual.idEquipo, tipoElemento: actual.tipoElemento }
 }
 
+// Los avances son un registro en el tiempo: solo se corrigen (o se quitan)
+// el mismo día en que se publicaron.
+function exigirCorregible(actual: { tipoElemento: string; fechaCreacion: Date }): void {
+  if (
+    (ELEMENTOS_CON_HISTORIA as readonly string[]).includes(actual.tipoElemento) &&
+    !corregibleHoy(actual.fechaCreacion)
+  ) {
+    throw new ErrorFaseNoPermiteAccion(
+      'Solo se puede corregir el mismo día en que se escribió. Para corregirlo ahora, agrega una entrada nueva.',
+    )
+  }
+}
+
 // PATCH /api/elementos/{id}: cualquier integrante del equipo edita el
 // contenido de cualquier elemento, no solo el que creó (nucleo §9.1).
 export async function editarElemento(
@@ -222,6 +235,8 @@ export async function editarElemento(
       `No puedes editar ${actual.tipoElemento}: está deshabilitado en esta actividad.`,
     )
   }
+
+  exigirCorregible(actual)
 
   // Sin `enlace` en la petición, el enlace no cambia.
   const enlace = cambios.enlace === undefined ? actual.enlace : cambios.enlace
@@ -276,6 +291,7 @@ export async function eliminarElemento(idElemento: string, idUsuarioActor: strin
       `No puedes eliminar ${actual.tipoElemento}: está deshabilitado en esta actividad.`,
     )
   }
+  exigirCorregible(actual)
 
   await prisma.$transaction(async (tx) => {
     await tx.elementoEspacioEquipo.delete({ where: { idElemento } })
@@ -322,47 +338,6 @@ registrarComprobadorDeDatos('espacio_equipo', async (tx, idActividad) =>
 
 // ---- Archivo adjunto ----
 
-// Firmas de los primeros bytes de cada formato admitido: el tipo que manda
-// el navegador se puede falsear, el contenido no tanto. Los Office actuales
-// son un ZIP; los anteriores a 2007, un contenedor OLE.
-const FIRMAS: { tipos: string[]; firma: number[]; desde?: number }[] = [
-  { tipos: ['application/pdf'], firma: [0x25, 0x50, 0x44, 0x46] },
-  { tipos: ['image/png'], firma: [0x89, 0x50, 0x4e, 0x47] },
-  { tipos: ['image/jpeg'], firma: [0xff, 0xd8, 0xff] },
-  { tipos: ['image/gif'], firma: [0x47, 0x49, 0x46, 0x38] },
-  { tipos: ['image/webp'], firma: [0x57, 0x45, 0x42, 0x50], desde: 8 },
-  {
-    tipos: [
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    ],
-    firma: [0x50, 0x4b, 0x03, 0x04],
-  },
-  {
-    tipos: ['application/msword', 'application/vnd.ms-excel', 'application/vnd.ms-powerpoint'],
-    firma: [0xd0, 0xcf, 0x11, 0xe0],
-  },
-]
-
-function coincideConSuTipo(tipo: string, contenido: Buffer): boolean {
-  const regla = FIRMAS.find((f) => f.tipos.includes(tipo))
-  if (!regla) return false
-  const desde = regla.desde ?? 0
-  return regla.firma.every((byte, i) => contenido[desde + i] === byte)
-}
-
-function limpiarNombre(nombre: string): string {
-  const base = nombre
-    .split(/[\\/]/)
-    .pop()!
-    // eslint-disable-next-line no-control-regex
-    .replace(/[\x00-\x1f"]/g, '')
-    .trim()
-    .slice(0, 120)
-  return base || 'archivo'
-}
-
 // Mismas reglas que editar el elemento: integrante del equipo, etapa que lo
 // permite y el tipo de elemento habilitado.
 async function exigirElementoEditable(idElemento: string, idUsuarioActor: string) {
@@ -375,6 +350,7 @@ async function exigirElementoEditable(idElemento: string, idUsuarioActor: string
       `No puedes editar ${actual.tipoElemento}: está deshabilitado en esta actividad.`,
     )
   }
+  exigirCorregible(actual)
   return { actual, contexto }
 }
 
@@ -411,19 +387,10 @@ export async function guardarArchivoElemento(
   contenido: Buffer,
   idUsuarioActor: string,
 ): Promise<ElementoDeEspacioEquipo> {
-  if (!esTipoArchivoElemento(tipo)) {
-    throw new ErrorArchivoInvalido('Solo se admiten PDF, imágenes y documentos de Office.')
-  }
-  if (contenido.length === 0) throw new ErrorArchivoInvalido('El archivo llegó vacío.')
-  if (contenido.length > MAX_BYTES_ARCHIVO_ELEMENTO) {
-    throw new ErrorArchivoInvalido('El archivo pesa más de 4 MB. Súbelo a Drive y pega el enlace.')
-  }
-  if (!coincideConSuTipo(tipo, contenido)) {
-    throw new ErrorArchivoInvalido('El archivo no corresponde a su tipo o está dañado.')
-  }
+  validarArchivoAdjunto(tipo, contenido)
 
   const { actual, contexto } = await exigirElementoEditable(idElemento, idUsuarioActor)
-  const nombreLimpio = limpiarNombre(nombre)
+  const nombreLimpio = limpiarNombreArchivo(nombre)
   const datos = {
     contenido: new Uint8Array(contenido),
     tipo,

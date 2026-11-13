@@ -3,13 +3,16 @@ import type { ReactNode } from 'react'
 import type { PistaDePantalla } from '../features/ayuda'
 import { AppShell } from './AppShell'
 
-export type SeccionEquipo = ElementoEspacioEquipo | 'bitacora' | 'bitacoras' | 'bitacora-integrante'
+export type SeccionEquipo =
+  ElementoEspacioEquipo | 'proceso' | 'bitacora' | 'bitacoras' | 'bitacora-integrante'
 
 export interface AppShellEquipoProps {
   idEquipo: string
   seccionActiva: SeccionEquipo
   /** Solo con 'bitacora-integrante': de quién es la bitácora que se ve. */
   idMembresia?: string
+  /** Solo con 'proceso': la clave del aspecto que se ve. */
+  aspecto?: string
   titulo: string
   /** Pantallas de detalle (la bitácora de alguien): a dónde regresa la flecha
    * del título y cómo se llama ese lugar. */
@@ -28,6 +31,7 @@ export function AppShellEquipo({
   idEquipo,
   seccionActiva,
   idMembresia,
+  aspecto,
   titulo,
   volverA,
   volverEtiqueta,
@@ -43,7 +47,7 @@ export function AppShellEquipo({
       volverEtiqueta={volverEtiqueta}
       ayuda={ayuda}
       acciones={acciones}
-      contexto={{ idEquipo, seccion: seccionActiva, idMembresia }}
+      contexto={{ idEquipo, seccion: seccionActiva, idMembresia, aspecto }}
     >
       {children}
     </AppShell>

@@ -1,0 +1,59 @@
+.bloques {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* fieldset sin el marco del navegador: el bloque se separa por espacio y
+   por su título, no por un recuadro. */
+.bloque {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  border: none;
+  min-width: 0;
+}
+
+.titulo {
+  margin: 0;
+  padding: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.par {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.pregunta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.respuesta {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--color-text);
+  white-space: pre-wrap;
+}
+
+.textoLibre {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--color-text);
+  white-space: pre-wrap;
+}

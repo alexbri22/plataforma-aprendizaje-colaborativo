@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { claveActividad } from '../actividades'
+import type { ContenidoBitacora } from '@plataforma/shared'
 import { crearEntradaBitacora, editarEntradaBitacora, obtenerBitacora } from './bitacora.api'
 
 // Cuelga de ['actividades', idActividad] y no de una clave propia: es
@@ -20,7 +21,7 @@ export function useBitacora(idActividad: string, idMembresia?: string) {
 export function useCrearEntradaBitacoraMutation(idActividad: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (contenido: string) => crearEntradaBitacora(idActividad, contenido),
+    mutationFn: (contenido: ContenidoBitacora) => crearEntradaBitacora(idActividad, contenido),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: claveBitacora(idActividad) }),
   })
 }
@@ -28,7 +29,7 @@ export function useCrearEntradaBitacoraMutation(idActividad: string) {
 export function useEditarEntradaBitacoraMutation(idActividad: string, idMembresia?: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ idEntrada, contenido }: { idEntrada: string; contenido: string }) =>
+    mutationFn: ({ idEntrada, contenido }: { idEntrada: string; contenido: ContenidoBitacora }) =>
       editarEntradaBitacora(idEntrada, contenido),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: claveBitacora(idActividad, idMembresia) }),

@@ -6,6 +6,8 @@ export const IDS_PISTA = [
   'resumen',
   'planificar',
   'inscripcion',
+  'conformacion',
+  'operacion',
   'equipos',
   'metas',
   'planeacion',

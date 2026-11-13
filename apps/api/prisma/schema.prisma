@@ -73,19 +73,17 @@ enum EstadoMembresia {
   @@map("estado_membresia")
 }
 
-// docs/diseno-desarrollo-general.md §6.2: catálogo fijo de las ocho
+// docs/diseno-desarrollo-general.md §6.2: catálogo fijo de las cinco
 // funciones de seguimiento (el reporte de trabajo dejó de ser una función:
 // es el elemento `avances` de espacio_equipo, con su calendario en
-// PeriodoReporte). El valor de estado de cada una vive en
+// PeriodoReporte; la evaluación por pares, tampoco: es una plantilla de
+// instrumento). El valor de estado de cada una vive en
 // ConfiguracionFuncion.estado como texto (ver la nota de ese modelo): este
 // enum solo fija cuáles funciones existen, no sus estados posibles.
 enum FuncionSeguimiento {
   formacion_equipos
   bitacora_individual
   calificacion
-  autoevaluacion_individual
-  autoevaluacion_grupal
-  evaluacion_pares
   espacio_equipo
   insignias
 
@@ -282,6 +280,7 @@ model Actividad {
   configuracion    ConfiguracionFuncion[]
   periodos         PeriodoReporte[]
   equipos          Equipo[]
+  componentes      ComponenteCalificacion[]
   eventosHistorial Historial[]
 
   @@map("actividades")
@@ -302,12 +301,17 @@ model Membresia {
   usuario   Usuario                         @relation(fields: [idUsuario], references: [idUsuario], onDelete: Cascade)
   permisos  PermisoCoorganizadorMembresia[]
 
-  insigniasOtorgadas InsigniaOtorgada[]      @relation("otorgante")
-  insigniasRecibidas InsigniaOtorgada[]      @relation("receptor")
-  integranteEquipo   IntegranteEquipo?
-  elementosDeEquipo  ElementoEspacioEquipo[]
-  entradasBitacora   Bitacora[]
-  comentarios        Comentario[]
+  insigniasOtorgadas    InsigniaOtorgada[]      @relation("otorgante")
+  insigniasRecibidas    InsigniaOtorgada[]      @relation("receptor")
+  integranteEquipo      IntegranteEquipo?
+  elementosDeEquipo     ElementoEspacioEquipo[]
+  entradasBitacora      Bitacora[]
+  respuestasInstrumento RespuestaInstrumento[]
+  entregasInstrumento   EntregaInstrumento[]
+  puntajesRecibidos     PuntajeCapturado[]      @relation("puntajeRecibido")
+  puntajesCapturados    PuntajeCapturado[]      @relation("puntajeCapturado")
+  publicaciones         PublicacionProyecto[]
+  comentarios           Comentario[]
 
   @@unique([idActividad, idUsuario])
   @@map("membresias")
@@ -354,6 +358,10 @@ model ConfiguracionFuncion {
 model PeriodoReporte {
   idPeriodo   String        @id @default(uuid()) @map("id_periodo")
   idActividad String        @map("id_actividad")
+  // Qué se revisa en este calendario: un elemento del espacio de equipo o la
+  // bitácora (ELEMENTOS_CON_CALENDARIO de packages/shared). Cada uno tiene
+  // el suyo; el servicio valida el valor.
+  elemento    String
   orden       Int
   fechaInicio DateTime      @map("fecha_inicio")
   fechaFin    DateTime      @map("fecha_fin")
@@ -361,7 +369,7 @@ model PeriodoReporte {
 
   actividad Actividad @relation(fields: [idActividad], references: [idActividad], onDelete: Cascade)
 
-  @@unique([idActividad, orden])
+  @@unique([idActividad, elemento, orden])
   @@map("periodos_reporte")
 }
 
@@ -391,6 +399,7 @@ model Equipo {
   actividad   Actividad               @relation(fields: [idActividad], references: [idActividad], onDelete: Cascade)
   integrantes IntegranteEquipo[]
   elementos   ElementoEspacioEquipo[]
+  publicacion PublicacionProyecto?
 
   @@unique([idActividad, nombre])
   @@map("equipos")
@@ -477,10 +486,17 @@ enum TipoElemento {
 // §9.3. Vinculada a la membresía y no al equipo, de modo que acompaña a la
 // persona si se la reasigna. La propiedad es del módulo de Seguimiento, que
 // es el único que lee y escribe esta tabla.
+//
+// Cada entrada tiene exactamente uno de los dos (nucleo §9.3), según el
+// formato de la función al escribirla: guiada, `respuestas` guarda un texto
+// por clave de pregunta de PREGUNTAS_BITACORA (packages/shared); libre,
+// `contenido`. Las claves y la exclusión se validan en la capa de servicios,
+// no en el esquema.
 model Bitacora {
   idEntrada          String   @id @default(uuid()) @map("id_entrada")
   idMembresia        String   @map("id_membresia")
-  contenido          String
+  respuestas         Json?
+  contenido          String?
   fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
   fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
 
@@ -493,6 +509,9 @@ model Bitacora {
 enum TipoEntidadComentario {
   elemento_espacio_equipo
   bitacora
+  // Retroalimentación: id_entidad es "{idEquipo}:{sección}" (general o un
+  // elemento del espacio de equipo).
+  seccion_equipo
 
   @@map("tipo_entidad_comentario")
 }
@@ -766,6 +785,192 @@ model LeccionCurso {
   @@unique([idCurso, orden])
   @@index([idRecurso])
   @@map("lecciones_curso")
+}
+
+// docs/diseno-desarrollo-general.md §4.2, §4.4 y §5.3: la calificación se
+// calcula a partir de tres niveles con peso propio (componentes, aspectos e
+// instrumentos); ninguna tabla guarda la calificación final. Las sumas de
+// 100 por nivel (§4.6) y que un instrumento de plantilla use una plantilla
+// que su aspecto admite se verifican en services/evaluacion, no en el
+// esquema. La propiedad es del módulo de Evaluación.
+enum OrigenInstrumento {
+  plantilla
+  enlace
+  manual
+
+  @@map("origen_instrumento")
+}
+
+model ComponenteCalificacion {
+  idComponente String @id @default(uuid()) @map("id_componente")
+  idActividad  String @map("id_actividad")
+  clave        String
+  nombre       String
+  peso         Int
+  orden        Int
+
+  actividad Actividad             @relation(fields: [idActividad], references: [idActividad], onDelete: Cascade)
+  aspectos  AspectoCalificacion[]
+
+  @@unique([idActividad, clave])
+  @@map("componentes_calificacion")
+}
+
+model AspectoCalificacion {
+  idAspecto    String @id @default(uuid()) @map("id_aspecto")
+  idComponente String @map("id_componente")
+  clave        String
+  nombre       String
+  peso         Int
+  orden        Int
+
+  componente   ComponenteCalificacion @relation(fields: [idComponente], references: [idComponente], onDelete: Cascade)
+  instrumentos Instrumento[]
+
+  @@unique([idComponente, clave])
+  @@map("aspectos_calificacion")
+}
+
+// tipo: qué es (cuestionario, rúbrica…, TIPOS_INSTRUMENTO de packages/shared);
+// nulo en el proyecto y la bitácora. origen: el formato en que se aplica.
+// clave_plantilla solo con origen plantilla; enlace solo con origen enlace, y
+// nulo mientras quien organiza no lo escribe (general §4.4). Cada instancia
+// tiene el suyo. fecha_planificada, medianoche UTC como las demás fechas de
+// calendario, todavía sin efecto (P-41).
+model Instrumento {
+  idInstrumento    String            @id @default(uuid()) @map("id_instrumento")
+  idAspecto        String            @map("id_aspecto")
+  tipo             String?
+  origen           OrigenInstrumento
+  clavePlantilla   String?           @map("clave_plantilla")
+  nombre           String
+  enlace           String?
+  fechaPlanificada DateTime?         @map("fecha_planificada")
+  orden            Int
+
+  aspecto    AspectoCalificacion    @relation(fields: [idAspecto], references: [idAspecto], onDelete: Cascade)
+  respuestas RespuestaInstrumento[]
+  entregas   EntregaInstrumento[]
+  puntajes   PuntajeCapturado[]
+
+  @@index([idAspecto])
+  @@map("instrumentos")
+}
+
+// docs/diseno-desarrollo-general.md §4.4 y §5.3; nucleo §10.1. Una fila por
+// reactivo respondido de una plantilla. valor es JSON porque su forma
+// depende del tipo de campo del reactivo (PLANTILLAS_INSTRUMENTO): un entero
+// de la escala en las autoevaluaciones. Solo para instrumentos de origen
+// plantilla; que el instrumento con respuestas no se reemplace ni cambie de
+// formato lo protege el servicio (ponderacion.service.ts).
+model RespuestaInstrumento {
+  idRespuesta      String   @id @default(uuid()) @map("id_respuesta")
+  idInstrumento    String   @map("id_instrumento")
+  idMembresiaAutor String   @map("id_membresia_autor")
+  claveReactivo    String   @map("clave_reactivo")
+  valor            Json
+  fecha            DateTime @default(now())
+
+  instrumento    Instrumento @relation(fields: [idInstrumento], references: [idInstrumento], onDelete: Cascade)
+  membresiaAutor Membresia   @relation(fields: [idMembresiaAutor], references: [idMembresia], onDelete: Cascade)
+
+  @@unique([idInstrumento, idMembresiaAutor, claveReactivo])
+  @@index([idMembresiaAutor])
+  @@map("respuestas_instrumento")
+}
+
+// docs/diseno-desarrollo-general.md §4.4; nucleo §10.1. Con lo que quien
+// participa completa una actividad externa (origen enlace): una nota y, si
+// quiere, un enlace (la grabación de una entrevista) o un archivo (un PDF),
+// como un avance. Una por persona e instancia; se edita mientras la fase lo
+// permita. No es el puntaje: ese lo captura quien organiza.
+model EntregaInstrumento {
+  idEntrega          String   @id @default(uuid()) @map("id_entrega")
+  idInstrumento      String   @map("id_instrumento")
+  idMembresia        String   @map("id_membresia")
+  contenido          String
+  enlace             String?
+  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+
+  instrumento Instrumento     @relation(fields: [idInstrumento], references: [idInstrumento], onDelete: Cascade)
+  membresia   Membresia       @relation(fields: [idMembresia], references: [idMembresia], onDelete: Cascade)
+  archivo     ArchivoEntrega?
+
+  @@unique([idInstrumento, idMembresia])
+  @@index([idMembresia])
+  @@map("entregas_instrumento")
+}
+
+// docs/diseno-desarrollo-general.md §4.4; nucleo §10.3. El puntaje que quien
+// organiza captura en un instrumento que no se puntúa solo: una actividad
+// externa (origen enlace), un elemento del proyecto o la bitácora (origen
+// manual). Uno por persona e instrumento; los del proyecto se escriben por
+// equipo y se ajustan por persona. El origen lo verifica el servicio.
+model PuntajeCapturado {
+  idPuntaje              String   @id @default(uuid()) @map("id_puntaje")
+  idInstrumento          String   @map("id_instrumento")
+  idMembresia            String   @map("id_membresia")
+  valor                  Decimal  @db.Decimal(5, 2)
+  idMembresiaCalificador String   @map("id_membresia_calificador")
+  fechaAsignacion        DateTime @default(now()) @map("fecha_asignacion")
+
+  instrumento Instrumento @relation(fields: [idInstrumento], references: [idInstrumento], onDelete: Cascade)
+  membresia   Membresia   @relation("puntajeRecibido", fields: [idMembresia], references: [idMembresia], onDelete: Cascade)
+  calificador Membresia   @relation("puntajeCapturado", fields: [idMembresiaCalificador], references: [idMembresia], onDelete: Cascade)
+
+  @@unique([idInstrumento, idMembresia])
+  @@index([idMembresia])
+  @@map("puntajes_capturados")
+}
+
+// El archivo de una entrega, en su propia tabla como ArchivoElemento.
+model ArchivoEntrega {
+  idEntrega String   @id @map("id_entrega")
+  contenido Bytes
+  tipo      String
+  nombre    String
+  tamano    Int
+  subidoEn  DateTime @default(now()) @map("subido_en")
+
+  entrega EntregaInstrumento @relation(fields: [idEntrega], references: [idEntrega], onDelete: Cascade)
+
+  @@map("archivos_entrega")
+}
+
+// Publicación de proyectos: el entregable final de un equipo (un video por
+// enlace, un PDF con la tesina…), una por equipo, que se sube en el cierre y
+// ve toda la actividad. Distinta de la sección Producto del espacio de
+// equipo, que es el trabajo en curso durante el desarrollo. Propiedad del
+// módulo de Seguimiento.
+model PublicacionProyecto {
+  idPublicacion      String   @id @default(uuid()) @map("id_publicacion")
+  idEquipo           String   @unique @map("id_equipo")
+  descripcion        String
+  enlace             String?
+  idMembresiaAutor   String   @map("id_membresia_autor")
+  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+
+  equipo  Equipo              @relation(fields: [idEquipo], references: [idEquipo], onDelete: Cascade)
+  autor   Membresia           @relation(fields: [idMembresiaAutor], references: [idMembresia], onDelete: Cascade)
+  archivo ArchivoPublicacion?
+
+  @@map("publicaciones_proyecto")
+}
+
+// El archivo de una publicación, aparte como ArchivoElemento.
+model ArchivoPublicacion {
+  idPublicacion String   @id @map("id_publicacion")
+  contenido     Bytes
+  tipo          String
+  nombre        String
+  tamano        Int
+  subidoEn      DateTime @default(now()) @map("subido_en")
+
+  publicacion PublicacionProyecto @relation(fields: [idPublicacion], references: [idPublicacion], onDelete: Cascade)
+
+  @@map("archivos_publicacion")
 }
 
 // ---- Progreso del alumno (docs/diseno-desarrollo-formacion.md §9.1 y la

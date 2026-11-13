@@ -1,19 +1,27 @@
 import { describe, expect, it } from 'vitest'
 import {
   CONFIGURACION_POR_DEFECTO,
+  ELEMENTOS_CON_CALENDARIO,
   ESTADOS_FORMACION_EQUIPOS,
   ESTADOS_POR_FUNCION,
   FUNCIONES_SEGUIMIENTO,
   PERMISOS_COORGANIZADOR,
   PERMISOS_COORGANIZADOR_POR_DEFECTO,
+  esElementoConCalendario,
   esEstadoFormacionEquipos,
   parsearEstadoEspacioEquipo,
   serializarEstadoEspacioEquipo,
 } from './actividades.js'
 
 describe('catálogo de funciones de seguimiento', () => {
-  it('tiene exactamente ocho funciones (nucleo §7.1)', () => {
-    expect(FUNCIONES_SEGUIMIENTO).toHaveLength(8)
+  it('tiene las cinco funciones que se configuran por actividad', () => {
+    expect(FUNCIONES_SEGUIMIENTO).toEqual([
+      'formacion_equipos',
+      'bitacora_individual',
+      'calificacion',
+      'espacio_equipo',
+      'insignias',
+    ])
   })
 
   it('el reporte de trabajo ya no es una función: vive en los avances del espacio de equipo', () => {
@@ -107,5 +115,20 @@ describe('estados de formacion_equipos', () => {
     expect(esEstadoFormacionEquipos('manual')).toBe(true)
     expect(esEstadoFormacionEquipos('dirigido')).toBe(false)
     expect(esEstadoFormacionEquipos(undefined)).toBe(false)
+  })
+})
+
+describe('calendarios de revisión', () => {
+  it('cada elemento del espacio de equipo y la bitácora tienen el suyo', () => {
+    expect(ELEMENTOS_CON_CALENDARIO).toEqual([
+      'metas',
+      'planeacion',
+      'avances',
+      'recursos',
+      'producto',
+      'bitacora',
+    ])
+    expect(esElementoConCalendario('bitacora')).toBe(true)
+    expect(esElementoConCalendario('general')).toBe(false)
   })
 })

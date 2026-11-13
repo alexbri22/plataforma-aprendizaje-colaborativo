@@ -72,7 +72,14 @@ const PERMISO_REQUERIDO_POR_ACCION: Readonly<Record<AccionActividad, PermisoCoor
     // Nunca llega a mirar este valor: ACCIONES_EXCLUSIVAS_DE_PARTICIPANTE
     // decide escribir_bitacora antes de la rama de organizador/co-organizador.
     escribir_bitacora: null,
+    // Como escribir_bitacora: la decide ACCIONES_EXCLUSIVAS_DE_PARTICIPANTE.
+    publicar_proyecto: null,
     comentar: 'calificar_y_comentar',
+    // Configurar la ponderación es configurar la actividad (general §7.3).
+    configurar_calificacion: 'configurar_actividad',
+    // Como escribir_bitacora: la decide ACCIONES_EXCLUSIVAS_DE_PARTICIPANTE.
+    responder_instrumento: null,
+    capturar_puntaje: 'calificar_y_comentar',
   }
 
 // Acciones abiertas además a los participantes, sobre sí mismos (elegir
@@ -94,7 +101,11 @@ const ACCIONES_DE_AUTOSERVICIO: readonly AccionActividad[] = [
 // roles. autorizar() la resuelve aquí, antes de conceder por rol, porque la
 // rama de organizador de más abajo concede cualquier acción de su propia
 // actividad sin pasar por ACCIONES_DE_AUTOSERVICIO.
-const ACCIONES_EXCLUSIVAS_DE_PARTICIPANTE: readonly AccionActividad[] = ['escribir_bitacora']
+const ACCIONES_EXCLUSIVAS_DE_PARTICIPANTE: readonly AccionActividad[] = [
+  'escribir_bitacora',
+  'responder_instrumento',
+  'publicar_proyecto',
+]
 
 // Estados de `formacion_equipos` en los que cada acción está abierta.
 // Sin entrada: en cualquiera. Elegir equipo es cosa de los participantes
@@ -162,12 +173,30 @@ const FASES_POR_ACCION: Readonly<Record<AccionActividad, readonly EstadoActivida
   // equipo, por la misma regla de cierre de general §6.1 ("deshabilita:
   // nuevos reportes, entradas de bitácora y avances").
   escribir_bitacora: ['desarrollo'],
+  // El entregable final se sube en el cierre (y no antes: durante el
+  // desarrollo el trabajo en curso vive en Producto).
+  publicar_proyecto: ['cierre'],
   // Comentarios (nucleo §10.4): continuos a lo largo de desarrollo y
   // cierre, no un paso exclusivo de este último (concepto §5.3). Al no
   // incluir 'archivada', exigirAccion también cubre la regla "editable
   // mientras la actividad no esté archivada" (nucleo §10.4) al reusarse
   // para la edición.
   comentar: ['desarrollo', 'cierre'],
+  // Calificación (nucleo §10.1): hasta que se archive; los instrumentos con
+  // respuestas o puntajes los protege el servicio, no la fase.
+  // Instrumentos del proceso (general §6.1, P-41): durante el desarrollo y
+  // el cierre, todas las instancias desde el inicio.
+  responder_instrumento: ['desarrollo', 'cierre'],
+  // Los puntajes se capturan y corrigen durante el desarrollo y el cierre
+  // (nucleo §10.3, "Modificación posterior").
+  capturar_puntaje: ['desarrollo', 'cierre'],
+  configurar_calificacion: [
+    'configuracion',
+    'inscripcion',
+    'formacion_equipos',
+    'desarrollo',
+    'cierre',
+  ],
 }
 
 // Orden de evaluación de nucleo §2.2: de lo más general y barato a lo más

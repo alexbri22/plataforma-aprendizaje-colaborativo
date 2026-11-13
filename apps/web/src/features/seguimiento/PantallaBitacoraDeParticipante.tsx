@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { AppShellEquipo } from '../../components/AppShellEquipo'
+import { PuntajeDeBitacora } from '../evaluacion/PuntajeDeBitacora'
 import { AvisoError, IconoCargando, Paginacion, rebanar } from '../../components/ui'
 import { useActividad } from '../actividades'
 import { useEquipo } from '../equipos/useEquipos'
@@ -92,6 +93,13 @@ export function PantallaBitacoraDeParticipante() {
       ayuda="bitacora"
     >
       <div className={styles.contenido}>
+        {actividad.configuracion?.calificacion === 'habilitada' ? (
+          <PuntajeDeBitacora
+            idActividad={actividad.id}
+            idMembresia={idMembresia}
+            puedeCapturar={(actividad.capacidades ?? []).includes('capturar_puntaje')}
+          />
+        ) : null}
         {entradasQuery.isPending ? (
           <div className={styles.cargando} role="status" aria-label="Cargando la bitácora">
             <IconoCargando size={20} />
