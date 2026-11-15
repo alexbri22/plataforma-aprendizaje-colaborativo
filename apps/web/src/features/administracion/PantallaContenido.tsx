@@ -63,7 +63,7 @@ export function PantallaContenido() {
   return (
     <AppShell
       seccionActiva="contenido"
-      titulo="Contenido formativo"
+      titulo="Recursos"
       acciones={
         <Button size="sm" to="/admin/contenido/nuevo">
           Nuevo recurso

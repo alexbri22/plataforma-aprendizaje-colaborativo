@@ -270,7 +270,7 @@ const PENDIENTES_APRENDE = [
 // herramientas de administración se agregan aquí y aparecen dentro del grupo.
 const ITEMS_NAV_ADMIN: ItemNav[] = [
   { id: 'cuentas', etiqueta: 'Cuentas', to: '/admin/cuentas', Icono: IconoCuentas },
-  { id: 'contenido', etiqueta: 'Contenido', to: '/admin/contenido', Icono: IconoRecursos },
+  { id: 'contenido', etiqueta: 'Recursos', to: '/admin/contenido', Icono: IconoRecursos },
   { id: 'cursos', etiqueta: 'Cursos', to: '/admin/cursos', Icono: IconoCursos },
   { id: 'rutas', etiqueta: 'Rutas', to: '/admin/rutas', Icono: IconoRutas },
   { id: 'revisiones', etiqueta: 'Revisiones', to: '/admin/revisiones', Icono: IconoCursos },

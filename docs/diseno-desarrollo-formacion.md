@@ -897,3 +897,40 @@ Estados nuevos en `estatus_recurso`; columnas `origen`, `decision_sin_ver` y `fe
 
 - Versiones de curso y recurso (VER-01), si se quiere que un autor proponga cambios a algo ya publicado.
 - Filtro del catálogo por duración.
+
+## Nota de implementación: observaciones de pantallas (14 de noviembre de 2026)
+
+Cambios pedidos en `Observaciones-pantallas-4nov.pptx`. Solo web; sin cambios de modelo ni de API.
+
+### Decisiones
+
+- **Inicio** (`/`, Contenido público): "Recursos" sale del encabezado público en todas las páginas; sin sesión el encabezado ya no dibuja navegación. "Aprender colaborando" estrena texto y su "Ver más" lleva a `/recursos`; el de "Características de Co3" lleva a la página nueva `/caracteristicas`.
+- **Características de Co3** (`/caracteristicas`, pública): introducción y los dos usos, Organizo y Participo. Con sesión, cada uno lleva a su sección; sin sesión, "Crear cuenta" e "Ingresar". La animación que sugiere el mock queda pendiente de diseño.
+- **`/recursos` se presenta como "Aprender colaborando"**, con la misma URL: presentación (dos párrafos y, si hay un curso a medias, "Continúa aprendiendo"), después **Recursos** (el catálogo, con Cursos, Artículos y Recursos breves como subgrupos) y al final **Rutas recomendadas**, con su encabezado. Salen "Empieza por aquí" y los botones "Explorar recursos" y "Ver rutas de aprendizaje". Las rutas no llevan filtros: se muestra una recomendada.
+- El texto de las rutas dice "constancia" y no "diploma" mientras no se acuerde el nombre.
+
+### Pendiente
+
+- Escudos de la UNAM y la CUAED al pie del inicio: faltan los archivos oficiales.
+- Submenú de "Aprende colaborando" (Recursos, Rutas de aprendizaje, Mis diplomas, Compartir recursos): acordarlo antes con Cuentas, porque cambia la barra lateral y mueve Mi formación.
+
+## Nota de implementación: observaciones de pantallas (12 de noviembre de 2026)
+
+Cambios pedidos en `Observaciones-pantallas12nov.pptx`. El orden del submenú de "Aprende colaborando" (y que las plantillas vivan dentro de Recursos) queda pendiente de acordarse con Cuentas.
+
+### Decisiones
+
+- **Recursos con sesión** empieza directo en el catálogo ("Aprende a tu ritmo"): la presentación "Aprender colaborando" es solo para quien no ha entrado. "Continúa aprendiendo" sale de Recursos porque ya está en Mi formación.
+- **Filtro "Tipo" en lugar de "Sección"**, con sesión y sin ella: Todos, Cursos, Artículos, Plantillas, PDF, Videos y Enlaces. Las listas que el tipo deja fuera no se piden.
+- **Mi formación** es una sola página, sin pestañas, con tarjetas en cuadrícula como el catálogo: Cursos (En curso, Completado o Retirado, con avance, "Sigue con" y Continuar), Recursos guardados y Mis propuestas. `?vista=guardados` y `?vista=propuestas` siguen funcionando: llevan a su sección.
+- **"¿Qué quieres fortalecer?"** se mudó a Rutas recomendadas, que es lo único que lo usa, y se guarda al marcar (sin botón). Si falla, las casillas vuelven a lo que había; mientras guarda, esperan, para que dos clics no lleguen en desorden.
+- **Panel:** "Contenido" se llama "Recursos". Un artículo admite un PDF opcional y una plantilla, también Word, Excel o PowerPoint (.docx, .xlsx, .pptx). El API comprueba la firma de los bytes (`%PDF-` o ZIP) y no solo el tipo declarado; un PDF se abre en el navegador y los de Office se descargan. Cambiar a un tipo que no acepta el archivo actual lo descarta.
+- **Barra de formato** sobre el contenido de recursos y lecciones: inserta el mismo Markdown que ya se interpretaba, así que lo guardado no cambia. Un editor visual completo queda pendiente.
+- **Elementos de colaboración:** seis. Se renombraron sin cambiar las claves guardadas (`responsabilidades` → Definición de responsabilidades, `interaccion_promotora` → Interacción, `procesamiento_grupal` → Evaluación de grupo) y se agregó `habilidades_sociales`. La migración `20261114200000_nombres_elementos_colaboracion` solo recalcula `texto_busqueda` para que la búsqueda encuentre los nombres nuevos.
+- **Objetivo del curso:** se llama "Objetivo general" y pide redactarlo como resultado medible.
+
+### Pendiente
+
+- Lecciones con objetivo (de los objetivos específicos del curso), desarrollo, recursos de apoyo y actividad de aprendizaje: incremento aparte, con su diseño.
+- §3 de este documento y el artículo semilla "Los cinco elementos del aprendizaje colaborativo" siguen con los cinco elementos y sus nombres anteriores: actualizarlos es una decisión de contenido.
+- Editor visual (WYSIWYG) completo.

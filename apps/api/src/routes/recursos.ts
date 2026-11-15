@@ -1,6 +1,7 @@
 import express, { Router, type Request, type Response } from 'express'
 import {
   MAX_BYTES_ARCHIVO_RECURSO,
+  MIME_PDF,
   POR_PAGINA_ADMIN,
   POR_PAGINA_PUBLICA,
   TIPOS_ARCHIVO_RECURSO,
@@ -65,8 +66,10 @@ recursosRouter.get('/recursos/:id', async (req, res) => {
   res.status(200).json({ recurso })
 })
 
-/** Envía un PDF en línea, para que el navegador lo abra en su visor.
- * nosniff para que nunca lo interprete como otra cosa que el tipo declarado.
+/** Envía el archivo de un recurso. Un PDF va en línea, para que el navegador
+ * lo abra en su visor; un Word, Excel o PowerPoint se descarga, porque el
+ * navegador no los muestra. nosniff para que nunca lo interprete como otra
+ * cosa que el tipo declarado.
  * Express agrega un ETag, así que una revalidación de un archivo que no
  * cambió responde 304 sin volver a mandar los bytes. */
 export function enviarArchivo(
@@ -78,7 +81,7 @@ export function enviarArchivo(
     .status(200)
     .type(archivo.tipo)
     .set({
-      'Content-Disposition': `inline; filename*=UTF-8''${encodeURIComponent(archivo.nombre)}`,
+      'Content-Disposition': `${archivo.tipo === MIME_PDF ? 'inline' : 'attachment'}; filename*=UTF-8''${encodeURIComponent(archivo.nombre)}`,
       'Cache-Control': cacheControl,
       'X-Content-Type-Options': 'nosniff',
     })
@@ -157,7 +160,7 @@ export const recibirArchivo = express.raw({
 export function archivoSubido(req: Request): { tipo: string; nombre: string; contenido: Buffer } {
   const tipo = req.headers['content-type']?.split(';')[0].trim() ?? ''
   const contenido = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0)
-  let nombre = 'recurso.pdf'
+  let nombre = 'recurso'
   const encabezado = req.headers['x-nombre-archivo']
   if (typeof encabezado === 'string') {
     try {

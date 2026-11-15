@@ -74,7 +74,7 @@ describe('constancia verificada', () => {
     expect(screen.getByText('Acuerdos y responsabilidades claras')).toBeInTheDocument()
     expect(screen.getByText(/2 de noviembre de 2026/)).toBeInTheDocument()
     expect(
-      screen.getByText('Trabaja: Responsabilidades claras · Interdependencia positiva'),
+      screen.getByText('Trabaja: Definición de responsabilidades · Interdependencia positiva'),
     ).toBeInTheDocument()
     expect(screen.getByText(/Emitida por Co3 · Folio/)).toHaveTextContent('CO3-7KQM-4XPA')
     expect(screen.getByText(/No es un documento oficial ni una calificación/)).toBeInTheDocument()

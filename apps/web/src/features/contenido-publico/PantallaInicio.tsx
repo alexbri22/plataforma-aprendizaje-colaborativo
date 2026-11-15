@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { Encabezado } from '../../components/Encabezado'
 import { Button } from '../../components/ui'
 import { useSesion } from '../cuentas'
@@ -27,14 +28,17 @@ const RECURSOS = [
   {
     id: 'caracteristicas-de-co3',
     titulo: 'Características de Co3',
+    to: '/caracteristicas',
     texto:
       'Co3 permite definir actividades colaborativas y equipos de trabajo. Considera dos tipos de espacios para evaluar la actividad y, por otro lado, la participación de los miembros del equipo.',
   },
   {
     id: 'aprender-colaborando',
     titulo: 'Aprender colaborando',
+    // Lleva a la página general de Recursos (observaciones del 4 de noviembre).
+    to: '/recursos',
     texto:
-      'El aprendizaje colaborativo tiene sus fundamentos en el trabajo de Johnson y Johnson. Impulsa el desarrollo de cinco aspectos: definición de responsabilidades, interdependencia positiva, responsabilidad individual y grupal, interacción y habilidades sociales.',
+      'El aprendizaje colaborativo es un enfoque de enseñanza fundado en el trabajo de Johnson y Johnson, quienes plantean que los estudiantes trabajen en equipos para lograr objetivos educativos en conjunto.',
   },
 ]
 
@@ -89,10 +93,17 @@ export function PantallaInicio() {
                   <h2>{r.titulo}</h2>
                   <p>{r.texto}</p>
                 </div>
-                <button type="button" className={styles.seccionLink}>
+                {/* Sin restauración de scroll en el router, la página nueva
+                    abriría a la altura en que se dio clic. */}
+                <Link
+                  to={r.to}
+                  className={styles.seccionLink}
+                  onClick={() => window.scrollTo({ top: 0 })}
+                >
                   Ver más
+                  <span className={styles.srOnly}>: {r.titulo}</span>
                   <FlechaIcono />
-                </button>
+                </Link>
               </div>
             ))}
           </div>

@@ -56,22 +56,27 @@ export const ETIQUETAS_AREA: Readonly<Record<AreaHabilidad, string>> = {
   otros: 'Otros',
 }
 
-/** Los cinco elementos de Johnson y Johnson (§3). */
+/** Los elementos de la colaboración (§3; seis desde las observaciones del 12 de noviembre). */
 export const ELEMENTOS_COLABORACION = [
   'responsabilidades',
   'interdependencia_positiva',
   'responsabilidad_individual_grupal',
   'interaccion_promotora',
   'procesamiento_grupal',
+  'habilidades_sociales',
 ] as const
 export type ElementoColaboracion = (typeof ELEMENTOS_COLABORACION)[number]
 
+/** Nombres de las observaciones del 12 de noviembre. Las claves no cambian,
+ * para no migrar lo guardado: "interaccion_promotora" se muestra como
+ * Interacción y "procesamiento_grupal", como Evaluación de grupo. */
 export const ETIQUETAS_ELEMENTO: Readonly<Record<ElementoColaboracion, string>> = {
-  responsabilidades: 'Responsabilidades claras',
+  responsabilidades: 'Definición de responsabilidades',
   interdependencia_positiva: 'Interdependencia positiva',
   responsabilidad_individual_grupal: 'Responsabilidad individual y grupal',
-  interaccion_promotora: 'Interacción promotora',
-  procesamiento_grupal: 'Procesamiento del grupo',
+  interaccion_promotora: 'Interacción',
+  procesamiento_grupal: 'Evaluación de grupo',
+  habilidades_sociales: 'Habilidades sociales',
 }
 
 /** Estado editorial de un recurso, un curso o una ruta. Los tres de en medio
@@ -188,12 +193,50 @@ export const TIPOS_LECTURA: readonly TipoRecurso[] = ['texto']
 export const TIPOS_CON_URL: readonly TipoRecurso[] = ['video', 'enlace']
 
 /** Tipos que admiten un archivo adjunto. En pdf es obligatorio para publicar;
- * en plantilla es opcional (puede ser solo texto con instrucciones). */
-export const TIPOS_CON_ARCHIVO: readonly TipoRecurso[] = ['pdf', 'plantilla']
+ * en plantilla y en artículo es opcional (observaciones del 12 de noviembre:
+ * un artículo puede llevar su versión en PDF). */
+export const TIPOS_CON_ARCHIVO: readonly TipoRecurso[] = ['pdf', 'plantilla', 'texto']
 
-/** Único formato de archivo admitido en el MVP (§13.3): se rechazan
- * ejecutables y formatos que el navegador no pueda mostrar por sí solo. */
-export const TIPOS_ARCHIVO_RECURSO = ['application/pdf'] as const
+export const MIME_PDF = 'application/pdf'
+export const MIME_WORD = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+export const MIME_EXCEL = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+export const MIME_POWERPOINT =
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+
+/** Formatos admitidos (§13.3): PDF y, para plantillas, los documentos de
+ * Office modernos (.docx, .xlsx, .pptx), que es como suele llegar una
+ * plantilla editable. Se rechazan ejecutables, macros (.docm…) y los
+ * formatos viejos de Office. */
+export const TIPOS_ARCHIVO_RECURSO = [MIME_PDF, MIME_WORD, MIME_EXCEL, MIME_POWERPOINT] as const
+export type TipoArchivoRecurso = (typeof TIPOS_ARCHIVO_RECURSO)[number]
+
+/** Qué formatos acepta cada tipo de recurso. */
+export const ARCHIVOS_POR_TIPO: Readonly<Record<TipoRecurso, readonly TipoArchivoRecurso[]>> = {
+  texto: [MIME_PDF],
+  pdf: [MIME_PDF],
+  plantilla: TIPOS_ARCHIVO_RECURSO,
+  video: [],
+  enlace: [],
+}
+
+export const ETIQUETAS_ARCHIVO: Readonly<Record<TipoArchivoRecurso, string>> = {
+  [MIME_PDF]: 'PDF',
+  [MIME_WORD]: 'Word',
+  [MIME_EXCEL]: 'Excel',
+  [MIME_POWERPOINT]: 'PowerPoint',
+}
+
+/** Extensiones para el selector de archivos del navegador. */
+export const EXTENSIONES_ARCHIVO: Readonly<Record<TipoArchivoRecurso, string>> = {
+  [MIME_PDF]: '.pdf',
+  [MIME_WORD]: '.docx',
+  [MIME_EXCEL]: '.xlsx',
+  [MIME_POWERPOINT]: '.pptx',
+}
+
+export function admiteArchivo(tipoRecurso: TipoRecurso, mime: string): boolean {
+  return (ARCHIVOS_POR_TIPO[tipoRecurso] as readonly string[]).includes(mime)
+}
 
 /** El archivo se guarda en la base (bytea) porque el API corre como función
  * sin disco persistente. Vercel corta el cuerpo de la petición en 4.5 MB, así

@@ -23,6 +23,7 @@ import {
   RutaAdmin,
 } from '../features/administracion'
 import { PantallaInicio } from '../features/contenido-publico/PantallaInicio.tsx'
+import { PantallaCaracteristicas } from '../features/contenido-publico/PantallaCaracteristicas.tsx'
 import { PantallaIngresar, PantallaRegistrarse } from '../features/cuentas'
 import { PantallaEquipos } from '../features/equipos'
 import {
@@ -62,6 +63,7 @@ export function App() {
         <ProveedorMarcasNav>
           <Routes>
             <Route path="/" element={<PantallaInicio />} />
+            <Route path="/caracteristicas" element={<PantallaCaracteristicas />} />
             <Route path="/ingresar" element={<PantallaIngresar />} />
             <Route path="/registrarse" element={<PantallaRegistrarse />} />
             {/* Organizo y Participo son ramificaciones propias del mapa del sitio

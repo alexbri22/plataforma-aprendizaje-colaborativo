@@ -1,3 +1,4 @@
+import { ETIQUETAS_ARCHIVO, type TipoArchivoRecurso } from '@plataforma/shared'
 import { formatoTamano } from './formato'
 import { Markdown } from './Markdown'
 import { urlArchivo, type RecursoPublico } from './formacion.api'
@@ -9,6 +10,11 @@ function dominio(url: string): string {
   } catch {
     return url
   }
+}
+
+/** "PDF", "Word"…; si llega un formato desconocido, solo el tamaño. */
+function formatoDe(tipo: string): string | null {
+  return ETIQUETAS_ARCHIVO[tipo as TipoArchivoRecurso] ?? null
 }
 
 function AccionExterna({ href, children }: { href: string; children: string }) {
@@ -53,7 +59,20 @@ export function CuerpoRecurso({ recurso }: { recurso: RecursoPublico }) {
       {tipoRecurso === 'plantilla' && archivo ? (
         <div className={styles.bloqueAccion}>
           <AccionExterna href={urlArchivo(archivo)}>Descargar plantilla</AccionExterna>
-          <span className={styles.detalleAccion}>PDF · {formatoTamano(archivo.tamano)}</span>
+          <span className={styles.detalleAccion}>
+            {[formatoDe(archivo.tipo), formatoTamano(archivo.tamano)].filter(Boolean).join(' · ')}
+          </span>
+        </div>
+      ) : null}
+
+      {/* Un artículo puede llevar su versión en PDF (observaciones del 12 de
+          noviembre). */}
+      {tipoRecurso === 'texto' && archivo ? (
+        <div className={styles.bloqueAccion}>
+          <AccionExterna href={urlArchivo(archivo)}>Abrir en PDF</AccionExterna>
+          <span className={styles.detalleAccion}>
+            {archivo.nombre} · {formatoTamano(archivo.tamano)}
+          </span>
         </div>
       ) : null}
 

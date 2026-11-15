@@ -146,10 +146,12 @@ describe('Mis propuestas', () => {
     })
     renderEn('/mi-formacion?vista=propuestas')
 
-    expect(await screen.findByRole('tab', { name: 'Mis propuestas (1 nueva)' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    )
+    // Sin pestañas: la sección lleva el aviso en su título y ?vista=propuestas
+    // la trae a la vista.
+    expect(
+      await screen.findByRole('heading', { name: 'Mis propuestas (1 nueva)' }),
+    ).toBeInTheDocument()
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalled()
     const enlace = await screen.findByRole('link', { name: 'Cómo dar retroalimentación' })
     expect(enlace).toHaveAttribute('href', '/propuestas/recursos/p1')
     expect(screen.getByText('Decisión nueva')).toBeInTheDocument()

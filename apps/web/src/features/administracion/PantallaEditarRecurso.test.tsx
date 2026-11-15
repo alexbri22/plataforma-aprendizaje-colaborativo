@@ -167,12 +167,41 @@ describe('PantallaEditarRecurso', () => {
     expect(screen.getByLabelText('Licencia o derechos de uso')).toHaveFocus()
   })
 
+  // Observaciones del 12 de noviembre: el artículo admite un PDF opcional y la
+  // plantilla, también documentos de Office.
+  it('un artículo ofrece adjuntar su PDF, opcional', async () => {
+    vi.mocked(obtenerRecursoAdmin).mockResolvedValue({ ...RECURSO, tipoRecurso: 'texto' })
+    renderEn('/admin/contenido/r1')
+
+    expect(await screen.findByRole('heading', { name: 'Archivo PDF (opcional)' })).toBeVisible()
+    const campo = document.getElementById('campo-archivo') as HTMLInputElement
+    expect(campo.accept).toBe('application/pdf,.pdf')
+    expect(screen.getByText(/Solo PDF, hasta/)).toBeInTheDocument()
+  })
+
+  it('una plantilla acepta PDF, Word, Excel o PowerPoint', async () => {
+    vi.mocked(obtenerRecursoAdmin).mockResolvedValue({ ...RECURSO, tipoRecurso: 'plantilla' })
+    renderEn('/admin/contenido/r1')
+
+    expect(await screen.findByRole('heading', { name: 'Archivo (opcional)' })).toBeVisible()
+    const campo = document.getElementById('campo-archivo') as HTMLInputElement
+    expect(campo.accept).toContain('.docx')
+    expect(campo.accept).toContain('.xlsx')
+    expect(campo.accept).toContain('.pptx')
+    expect(screen.getByText(/PDF, Word, Excel o PowerPoint, hasta/)).toBeInTheDocument()
+  })
+
   it('el PDF de un borrador se abre con la descarga del panel, no con la pública', async () => {
     vi.mocked(obtenerRecursoAdmin).mockResolvedValue({
       ...RECURSO,
       tipoRecurso: 'pdf',
       estatus: 'borrador',
-      archivo: { nombre: 'guia.pdf', tamano: 2048, url: '/api/recursos/r1/archivo?v=123' },
+      archivo: {
+        nombre: 'guia.pdf',
+        tipo: 'application/pdf',
+        tamano: 2048,
+        url: '/api/recursos/r1/archivo?v=123',
+      },
     })
     renderEn('/admin/contenido/r1')
 

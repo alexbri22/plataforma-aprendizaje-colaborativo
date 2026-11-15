@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useId, useState, type FormEvent } from 'react'
 import { ETIQUETAS_TIPO_LECCION, LARGO_MAXIMO_LECCION, type TipoLeccion } from '@plataforma/shared'
 import {
   AvisoError,
@@ -11,6 +11,7 @@ import {
 } from '../../../components/ui'
 import { ErrorFormacion, type DatosLeccion, type LeccionAdmin } from '../formacion.api'
 import { Markdown } from '../Markdown'
+import { BarraFormato } from './BarraFormato'
 import styles from './ModalLeccion.module.css'
 
 const TIPOS_PROPIOS: Exclude<TipoLeccion, 'recurso'>[] = ['lectura', 'practica', 'reflexion']
@@ -45,6 +46,7 @@ export function ModalLeccion({
   onCambiarRecurso,
 }: ModalLeccionProps) {
   const esRecurso = leccion?.tipo === 'recurso'
+  const idContenido = useId()
   const [tipo, setTipo] = useState<TipoLeccion>(leccion?.tipo ?? 'lectura')
   const [titulo, setTitulo] = useState(leccion?.titulo ?? '')
   const [contenido, setContenido] = useState(leccion?.contenido ?? '')
@@ -141,7 +143,14 @@ export function ModalLeccion({
           placeholder={esRecurso ? leccion?.recurso?.titulo : undefined}
         />
 
+        <BarraFormato
+          idCampo={idContenido}
+          valor={contenido}
+          onCambiar={setContenido}
+          maxLength={LARGO_MAXIMO_LECCION.contenido}
+        />
         <Textarea
+          id={idContenido}
           label={ETIQUETA_CONTENIDO[tipo]}
           value={contenido}
           maxLength={LARGO_MAXIMO_LECCION.contenido}

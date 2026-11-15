@@ -1,8 +1,23 @@
+/* Mismo ancho y cuadrícula que el catálogo de Recursos (observaciones del 12
+   de noviembre: consistencia con el resto del sitio). */
 .contenido {
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
-  max-width: 48rem;
+  gap: var(--space-10);
+  max-width: var(--layout-content-max);
+}
+
+.introduccion {
+  max-width: 65ch;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-normal);
+  text-wrap: pretty;
+}
+
+.seccion {
+  scroll-margin-top: var(--space-6);
 }
 
 .cargando {
@@ -28,42 +43,50 @@
   text-wrap: pretty;
 }
 
-.secciones {
+.bloque {
   display: flex;
   flex-direction: column;
-  gap: var(--space-8);
+  gap: var(--space-4);
 }
 
 .tituloSeccion {
-  margin: 0 0 var(--space-3);
-  color: var(--color-text-muted);
-  font-size: var(--font-size-xs);
+  margin: 0 0 var(--space-5);
+  color: var(--color-text);
+  font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-semibold);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  line-height: var(--line-height-tight);
 }
 
-.lista,
-.listaGuardados {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-5);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.tarjeta {
+.grid > li {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+  min-width: 0;
 }
 
-.tarjetaCabecera {
+.tarjeta {
   display: flex;
-  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-4);
+  box-shadow: var(--shadow-sm);
+}
+
+.tarjetaMeta {
+  display: flex;
   align-items: center;
-  gap: var(--space-2) var(--space-3);
+  justify-content: space-between;
+  gap: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
 }
 
 .tarjetaTitulo {
@@ -72,43 +95,36 @@
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-tight);
+  text-wrap: balance;
 }
 
-.tarjetaTitulo a,
-.guardadoTexto a {
+.tarjetaTitulo a {
   border-radius: var(--radius-sm);
   color: var(--color-text);
   text-decoration: none;
 }
 
-.tarjetaTitulo a:hover,
-.guardadoTexto a:hover {
+.tarjetaTitulo a:hover {
   color: var(--color-primary);
 }
 
 .tarjetaTitulo a:focus-visible,
-.guardadoTexto a:focus-visible {
+.enlaceAccion:focus-visible,
+.enlaceConstancia:focus-visible {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
+}
+
+.avance {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
 .meta {
   margin: 0;
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
-}
-
-.enlaceConstancia {
-  align-self: flex-start;
-  border-radius: var(--radius-sm);
-  color: var(--color-primary);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-}
-
-.enlaceConstancia:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
 }
 
 .nota {
@@ -118,67 +134,77 @@
   line-height: var(--line-height-normal);
 }
 
-.acciones {
+.siguiente {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+}
+
+/* Las acciones van al pie, alineadas entre tarjetas de distinto alto. */
+.pie {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
+  margin-top: auto;
 }
 
-.siguiente {
-  min-width: 0;
-  color: var(--color-text);
-  font-size: var(--font-size-sm);
-}
-
-.guardado {
-  display: flex;
+.enlaceAccion,
+.enlaceConstancia {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  padding: var(--space-4) var(--space-5);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-bg);
-}
-
-.guardadoTexto {
-  display: flex;
-  flex-direction: column;
   gap: var(--space-1);
-  min-width: 0;
+  border-radius: var(--radius-sm);
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
+  text-decoration: none;
 }
 
-.guardadoTexto .meta {
-  font-weight: var(--font-weight-regular);
+.enlaceAccion:hover,
+.enlaceConstancia:hover {
+  color: var(--color-primary-hover);
 }
 
-/* "¿Qué quieres fortalecer?" (incremento 4). */
-.preferencias form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+.flecha {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.15s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.preferenciasCampos {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin: 0;
+.enlaceAccion:hover .flecha,
+.enlaceAccion:focus-visible .flecha {
+  transform: translateX(3px);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
   padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
   border: 0;
 }
 
-.preferenciasTitulo {
-  margin-bottom: var(--space-1);
-  padding: 0;
-  color: var(--color-text);
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
+@media (max-width: 56rem) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
-.preferenciasCampos .nota {
-  margin-bottom: var(--space-2);
+@media (max-width: 42rem) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flecha {
+    transition: none;
+  }
 }

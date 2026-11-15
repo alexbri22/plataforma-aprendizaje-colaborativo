@@ -184,7 +184,7 @@ function aFicha(c: CursoAdmin): Ficha {
 const CAMPOS_FICHA: { campo: keyof Ficha; etiqueta: string }[] = [
   { campo: 'titulo', etiqueta: 'Título' },
   { campo: 'resumen', etiqueta: 'Resumen' },
-  { campo: 'objetivo', etiqueta: 'Objetivo' },
+  { campo: 'objetivo', etiqueta: 'Objetivo general' },
   { campo: 'practicaFinal', etiqueta: 'Resultado práctico' },
   { campo: 'area', etiqueta: 'Área de habilidad' },
   { campo: 'nivel', etiqueta: 'Nivel' },
@@ -695,7 +695,10 @@ function Editor({
               />
               <Textarea
                 id="campo-objetivo"
-                label="Objetivo: qué va a aprender la persona"
+                label="Objetivo general"
+                // Observaciones del 12 de noviembre: se redacta como resultado
+                // medible.
+                ayuda="Redáctalo como un resultado medible: qué se va a aprender, cómo y para qué."
                 value={ficha.objetivo}
                 maxLength={LARGO_MAXIMO_CURSO.objetivo}
                 onChange={(e) => cambiar('objetivo', e.target.value)}

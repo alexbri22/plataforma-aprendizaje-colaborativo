@@ -27,7 +27,7 @@ import {
  *   (interés implícito). Si no hay ninguno de los dos, la señal no aplica y
  *   su peso se reparte entre las demás.
  * - Brecha: qué parte de lo que trabaja la ruta son elementos que la persona
- *   aún no ha cubierto con cursos terminados. Los cinco elementos se
+ *   aún no ha cubierto con cursos terminados. Los elementos se
  *   necesitan juntos (§3), así que llenar huecos tiene sentido pedagógico.
  * - Continuidad: cuánto de la ruta ya hizo (un curso terminado vale 1; uno
  *   empezado, 0.5). Seguir es mejor que dispersarse.

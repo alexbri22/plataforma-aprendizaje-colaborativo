@@ -2,8 +2,12 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import type { UseQueryResult } from '@tanstack/react-query'
 import {
+  ARCHIVOS_POR_TIPO,
   AREAS_HABILIDAD,
   ELEMENTOS_COLABORACION,
+  ETIQUETAS_ARCHIVO,
+  EXTENSIONES_ARCHIVO,
+  MIME_PDF,
   ETIQUETAS_AREA,
   ETIQUETAS_ELEMENTO,
   ETIQUETAS_ESTATUS_RECURSO,
@@ -40,7 +44,8 @@ import {
   type RecursoAdmin,
   type RecursoAdminDetalle,
 } from '../formacion.api'
-import { formatoTamano } from '../formato'
+import { formatoTamano, listaLegible } from '../formato'
+import { BarraFormato } from './BarraFormato'
 import { Markdown } from '../Markdown'
 import {
   useActualizarPropuestaRecurso,
@@ -211,7 +216,7 @@ const CAMPOS: { campo: string; etiqueta: string }[] = [
   { campo: 'seccion', etiqueta: 'Sección' },
   { campo: 'contenido', etiqueta: 'Contenido' },
   { campo: 'transcripcion', etiqueta: 'Transcripción' },
-  { campo: 'archivo', etiqueta: 'Archivo PDF' },
+  { campo: 'archivo', etiqueta: 'Archivo' },
   { campo: 'area', etiqueta: 'Área de habilidad' },
   { campo: 'duracionMin', etiqueta: 'Duración' },
   { campo: 'elementos', etiqueta: 'Elementos de colaboración' },
@@ -365,6 +370,11 @@ function Editor({
   const propuestaEnElPanel = !esAutor && recurso?.origen === 'propuesta'
   const tipo = form.tipoRecurso
   const admiteArchivo = TIPOS_CON_ARCHIVO.includes(tipo)
+  // Qué formatos acepta este tipo (observaciones del 12 de noviembre: el
+  // artículo, un PDF opcional; la plantilla, también Word, Excel o PowerPoint).
+  const formatos = ARCHIVOS_POR_TIPO[tipo]
+  const nombresFormatos = listaLegible(formatos.map((f) => ETIQUETAS_ARCHIVO[f]))
+  const soloPdf = formatos.length === 1 && formatos[0] === MIME_PDF
   const esDeUrl = TIPOS_CON_URL.includes(tipo)
 
   function cambiar<K extends keyof Formulario>(campo: K, valor: Formulario[K]) {
@@ -529,8 +539,8 @@ function Editor({
     if (!archivo) return
     setMensaje(null)
     setAviso(null)
-    if (archivo.type !== 'application/pdf') {
-      setErrores((e) => ({ ...e, archivo: 'El archivo debe ser PDF.' }))
+    if (!(formatos as readonly string[]).includes(archivo.type)) {
+      setErrores((e) => ({ ...e, archivo: `El archivo debe ser ${nombresFormatos}.` }))
       return
     }
     if (archivo.size > MAX_BYTES_ARCHIVO_RECURSO) {
@@ -762,6 +772,12 @@ function Editor({
                 />
               ) : (
                 <>
+                  <BarraFormato
+                    idCampo="campo-contenido"
+                    valor={form.contenido}
+                    onCambiar={(v) => cambiar('contenido', v)}
+                    maxLength={LARGO_MAXIMO_RECURSO.contenido}
+                  />
                   <Textarea
                     label={ETIQUETA_CONTENIDO[tipo]}
                     value={form.contenido}
@@ -811,7 +827,10 @@ function Editor({
 
               {admiteArchivo ? (
                 <div className={styles.archivo} id="seccion-archivo" tabIndex={-1}>
-                  <h3>Archivo PDF{tipo === 'plantilla' ? ' (opcional)' : ''}</h3>
+                  <h3>
+                    {soloPdf ? 'Archivo PDF' : 'Archivo'}
+                    {tipo === 'pdf' ? '' : ' (opcional)'}
+                  </h3>
                   {!recurso ? (
                     <p className={styles.nota}>
                       Guarda el borrador para poder adjuntar el archivo.
@@ -842,7 +861,7 @@ function Editor({
                           <input
                             id="campo-archivo"
                             type="file"
-                            accept="application/pdf"
+                            accept={formatos.flatMap((f) => [f, EXTENSIONES_ARCHIVO[f]]).join(',')}
                             disabled={ocupado}
                             aria-describedby={errores.archivo ? 'error-archivo' : undefined}
                             onChange={(e) => {
@@ -850,7 +869,13 @@ function Editor({
                               e.target.value = ''
                             }}
                           />
-                          {archivo ? 'Reemplazar PDF' : 'Subir PDF'}
+                          {archivo
+                            ? soloPdf
+                              ? 'Reemplazar PDF'
+                              : 'Reemplazar archivo'
+                            : soloPdf
+                              ? 'Subir PDF'
+                              : 'Subir archivo'}
                         </label>
                         {archivo ? (
                           <Button
@@ -864,7 +889,8 @@ function Editor({
                         ) : null}
                       </div>
                       <p className={styles.nota}>
-                        Solo PDF, hasta {formatoTamano(MAX_BYTES_ARCHIVO_RECURSO)}.
+                        {soloPdf ? 'Solo PDF' : nombresFormatos}, hasta{' '}
+                        {formatoTamano(MAX_BYTES_ARCHIVO_RECURSO)}.
                       </p>
                     </>
                   )}
