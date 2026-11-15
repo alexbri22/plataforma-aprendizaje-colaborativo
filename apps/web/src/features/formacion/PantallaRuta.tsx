@@ -18,7 +18,7 @@ import propios from './PantallaRuta.module.css'
  */
 export function PantallaRuta() {
   return (
-    <MarcoFormacion titulo="Recursos">
+    <MarcoFormacion titulo="Rutas de aprendizaje" seccionActiva="rutas-aprendizaje">
       <FichaRuta />
     </MarcoFormacion>
   )
@@ -214,8 +214,8 @@ function FichaRuta() {
 
   return (
     <div className={styles.pagina}>
-      <Link to="/recursos" className={styles.volver}>
-        ← Todos los recursos
+      <Link to="/rutas" className={styles.volver}>
+        ← Todas las rutas
       </Link>
 
       {consulta.isPending ? (
@@ -232,8 +232,8 @@ function FichaRuta() {
               <p className={styles.resumen}>
                 Puede que se haya retirado o que el enlace esté incompleto.
               </p>
-              <Button variant="secondary" to="/recursos">
-                Ver todos los recursos
+              <Button variant="secondary" to="/rutas">
+                Ver todas las rutas
               </Button>
             </>
           ) : (

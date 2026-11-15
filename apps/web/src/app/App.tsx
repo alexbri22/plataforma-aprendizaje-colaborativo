@@ -35,7 +35,10 @@ import {
   PantallaPropuestaRecurso,
   PantallaRecurso,
   PantallaRecursos,
+  PantallaMisDiplomas,
+  PantallaPlantillas,
   PantallaRuta,
+  PantallaRutasAprendizaje,
   ProveedorMarcasNav,
 } from '../features/formacion'
 import {
@@ -256,6 +259,14 @@ export function App() {
                 </RutaProtegida>
               }
             />
+            <Route
+              path="/mis-diplomas"
+              element={
+                <RutaProtegida>
+                  <PantallaMisDiplomas />
+                </RutaProtegida>
+              }
+            />
             {/* Autoría abierta: proponer y editar mis recursos y cursos (nota del
               incremento 6 de Formación). */}
             <Route
@@ -452,7 +463,9 @@ export function App() {
             <Route path="/recursos" element={<PantallaRecursos />} />
             <Route path="/recursos/:id" element={<PantallaRecurso />} />
             <Route path="/cursos/:id" element={<PantallaCurso />} />
+            <Route path="/rutas" element={<PantallaRutasAprendizaje />} />
             <Route path="/rutas/:id" element={<PantallaRuta />} />
+            <Route path="/plantillas" element={<PantallaPlantillas />} />
             <Route path="/cursos/:id/lecciones/:idLeccion" element={<PantallaLeccion />} />
             {/* Verificación de una constancia: pública para que la persona pueda
               compartir el enlace (nota del incremento 5 de Formación). */}

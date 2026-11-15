@@ -10,6 +10,9 @@ export { PantallaCurso } from './PantallaCurso'
 export { PantallaLeccion } from './PantallaLeccion'
 export { PantallaMiFormacion } from './PantallaMiFormacion'
 export { PantallaRuta } from './PantallaRuta'
+export { PantallaRutasAprendizaje } from './PantallaRutasAprendizaje'
+export { PantallaPlantillas } from './PantallaPlantillas'
+export { PantallaMisDiplomas } from './PantallaMisDiplomas'
 export { PantallaConstancia } from './PantallaConstancia'
 // Los editores de recursos y cursos: los usan el panel (modo admin) y quien
 // propone (modo autor), con las mismas piezas (nota del incremento 6).

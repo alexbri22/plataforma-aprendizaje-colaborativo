@@ -110,6 +110,10 @@ como en el mock. */
   margin-bottom: var(--space-8);
 }
 
+.rutasCabecera .enlaceTexto {
+  margin-top: var(--space-4);
+}
+
 .rutaIntroduccion .enlaceTexto {
   margin-top: var(--space-6);
 }

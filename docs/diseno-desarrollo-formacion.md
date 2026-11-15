@@ -934,3 +934,18 @@ Cambios pedidos en `Observaciones-pantallas12nov.pptx`. El orden del submenú de
 - Lecciones con objetivo (de los objetivos específicos del curso), desarrollo, recursos de apoyo y actividad de aprendizaje: incremento aparte, con su diseño.
 - §3 de este documento y el artículo semilla "Los cinco elementos del aprendizaje colaborativo" siguen con los cinco elementos y sus nombres anteriores: actualizarlos es una decisión de contenido.
 - Editor visual (WYSIWYG) completo.
+
+## Nota de implementación: Rutas de aprendizaje, Plantillas y Mis diplomas (14 de noviembre de 2026)
+
+Las tres entradas de "Aprende colaborando" que estaban en el mapa sin pantalla. Solo web; sin cambios de modelo ni de API.
+
+### Decisiones
+
+- **Rutas de aprendizaje** (`/rutas`, pública): todas las rutas publicadas en tarjetas (cursos, duración, nivel inicial, elementos). Con sesión, la recomendada va primero ("Recomendada para ti" en modo personalizado), cada tarjeta muestra el avance (cursos terminados entre los disponibles; los retirados no cuentan) y "Ver constancia" si la ruta ya se terminó. El avance sale de Mi formación y de las constancias. "¿Qué quieres fortalecer?" también aparece aquí: es el mismo componente que en Recursos. La ficha de una ruta (`/rutas/:id`) marca este ítem y su regreso lleva a `/rutas`; Recursos enlaza "Ver todas las rutas".
+- **Plantillas** (`/plantillas`, pública): los recursos publicados de tipo plantilla, con filtro de habilidad, búsqueda y paginación; cada tarjeta dice el formato de su archivo. Si se acuerda que las plantillas vivan dentro de Recursos, el catálogo ya tiene "Tipo → Plantillas".
+- **Mis diplomas** (`/mis-diplomas`, con sesión): mis constancias en tarjetas (curso o ruta, folio, fecha) y el interruptor "Mostrar mis constancias en mi perfil", el mismo del perfil. La página se llama como el ítem de la barra; el documento sigue diciendo "constancia" hasta que se acuerde el nombre.
+- **Barra lateral:** los tres ítems pasan a ser enlaces en el mismo orden que tenían; "Recursos compartidos" sigue sin enlace (espacio de equipo, de Cuentas/núcleo).
+
+### Pendiente
+
+- Orden del submenú y nombre "diploma" o "constancia": por acordarse.

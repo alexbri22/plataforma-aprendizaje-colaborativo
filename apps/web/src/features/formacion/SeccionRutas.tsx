@@ -91,6 +91,9 @@ export function SeccionRutas() {
           Son conjuntos de recursos ordenados de manera progresiva para tener un mejor dominio o
           entendimiento. Al completar los cursos que incluye una ruta, se obtiene una constancia.
         </p>
+        <Link to="/rutas" className={styles.enlaceTexto}>
+          Ver todas las rutas <IconoFlecha className={styles.flecha} />
+        </Link>
       </div>
 
       {/* Con sesión, lo que la persona quiere fortalecer se elige aquí mismo
