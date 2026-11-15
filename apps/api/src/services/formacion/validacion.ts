@@ -4,6 +4,7 @@ import {
   LARGO_MAXIMO_RECURSO,
   esAreaHabilidad,
   esElementoColaboracion,
+  esEstatusEditorial,
   esEstatusRecurso,
   esSeccionFormativa,
   esTipoRecurso,
@@ -154,7 +155,7 @@ export function validarDatosRecurso(cuerpo: unknown, parcial: boolean): Partial<
   }
 
   if (datos.estatus !== undefined) {
-    if (typeof datos.estatus === 'string' && esEstatusRecurso(datos.estatus)) {
+    if (typeof datos.estatus === 'string' && esEstatusEditorial(datos.estatus)) {
       resultado.estatus = datos.estatus
     } else {
       detalle.estatus = 'El estatus no es válido.'

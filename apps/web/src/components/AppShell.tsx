@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useCerrarSesionMutation, useSesion } from '../features/cuentas'
 import { GrupoNav } from './GrupoNav'
+import { useMarcasNav } from './marcasNav'
 import { Avatar } from './ui'
 import styles from './AppShell.module.css'
 
@@ -20,6 +21,7 @@ export type SeccionApp =
   | 'contenido'
   | 'cursos'
   | 'rutas'
+  | 'revisiones'
 
 interface ItemNav {
   id: SeccionApp
@@ -267,9 +269,11 @@ const ITEMS_NAV_ADMIN: ItemNav[] = [
   { id: 'contenido', etiqueta: 'Contenido', to: '/admin/contenido', Icono: IconoRecursos },
   { id: 'cursos', etiqueta: 'Cursos', to: '/admin/cursos', Icono: IconoCursos },
   { id: 'rutas', etiqueta: 'Rutas', to: '/admin/rutas', Icono: IconoRutas },
+  { id: 'revisiones', etiqueta: 'Revisiones', to: '/admin/revisiones', Icono: IconoCursos },
 ]
 
 function ItemNavLink({ item, activo }: { item: ItemNav; activo: boolean }) {
+  const marca = useMarcasNav()[item.id]
   return (
     <Link
       to={item.to}
@@ -278,6 +282,12 @@ function ItemNavLink({ item, activo }: { item: ItemNav; activo: boolean }) {
     >
       <item.Icono />
       {item.etiqueta}
+      {marca ? (
+        <>
+          <span className={styles.marca} aria-hidden="true" />
+          <span className={styles.srOnly}>({marca})</span>
+        </>
+      ) : null}
     </Link>
   )
 }

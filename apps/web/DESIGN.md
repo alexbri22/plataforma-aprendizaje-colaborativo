@@ -245,6 +245,22 @@ The only amber progress bar in the system, and it compares a person against thei
 
 The second progress bar, and deliberately the quieter one: it is navigation ("where was I?"), not recognition. Same shape as the level bar — track in `surface` with a `border` outline — but the fill is Study Ink while the course is in progress and Confirmed Green once it is completed. Never Apothecary Amber: finishing a course is not a badge. Always accompanied by its text ("2 de 3 lecciones · 66 %"), and completed lessons are marked with "✓ Completada" in `success-ink`, never color alone. No streaks, points, confetti or animation beyond the width transition (none with reduced motion).
 
+### Completion certificate (features/formacion)
+
+A _constancia_ records that someone finished a course or a learning path. It is the quiet cousin of a badge, and it must never be mistaken for one: finishing is navigation completed, not recognition earned.
+
+- **On a profile** it is a plain list inside a Card, under the Insignias group: a small check in a `success-subtle` circle with `success-ink`, the title, and a muted line with the type and date ("Curso · Terminado el 2 de noviembre de 2026"). The meaning lives in the text, never in the check alone. No artwork, frames, levels, points, counts or sorting by achievement — newest first, five at a time.
+- **The certificate page** is a sober document: white paper, a hairline `border-strong` outline, centered text, the name and the title in semibold, and one Confirmed Green seal carrying the folio in the mono family. It always states what it is not ("No es un documento oficial ni una calificación"). Printing hides everything but the document.
+- **Never Apothecary Amber**, at rest or at the moment of completion. If a certificate starts to look like a diploma or an insignia, that's a bug in the design.
+
+### Proposal status (features/formacion/editor)
+
+When someone proposes content, the editor opens with a quiet status panel: the title states the status in words ("En revisión", "Te pidieron cambios", "Publicada"), the reviewer's reason sits in a plain quote, and the history folds away in a `details`. Caution Gold for "changes requested", Confirmed Green for "published", neutral surface otherwise. An approved proposal is published content, not recognition: never Apothecary Amber. When the content can't be edited, the whole form is a disabled `fieldset` — it reads, it doesn't pretend to be editable.
+
+### Navigation marks (components/marcasNav.ts)
+
+A pending notice next to a sidebar item (new decisions on your proposals, next to "Mi formación") is a small Study Ink dot pushed to the end of the row, always paired with visually hidden text that explains it. No counts in the sidebar, no badges, no amber: it is a nudge to look, not a score.
+
 ### Rank Insignia (features/insignias)
 
 The one place in the system where raster artwork appears. A rank insignia is **two layers**: a metallic frame PNG for the level (bronce / plata / oro / platino / diamante), and inside it an emblem PNG for the category at that level. A category not yet earned keeps the frame's dotted placeholder and a muted vector emblem. It is the visual payload of the recognition system, so it gets latitude nothing else in the interface gets — and correspondingly tight boundaries.

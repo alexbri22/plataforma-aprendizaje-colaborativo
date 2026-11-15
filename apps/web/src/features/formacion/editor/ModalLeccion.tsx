@@ -1,7 +1,16 @@
 import { useState, type FormEvent } from 'react'
 import { ETIQUETAS_TIPO_LECCION, LARGO_MAXIMO_LECCION, type TipoLeccion } from '@plataforma/shared'
-import { AvisoError, Button, Checkbox, Input, Modal, Select, Textarea } from '../../components/ui'
-import { ErrorFormacion, Markdown, type DatosLeccion, type LeccionAdmin } from '../formacion'
+import {
+  AvisoError,
+  Button,
+  Checkbox,
+  Input,
+  Modal,
+  Select,
+  Textarea,
+} from '../../../components/ui'
+import { ErrorFormacion, type DatosLeccion, type LeccionAdmin } from '../formacion.api'
+import { Markdown } from '../Markdown'
 import styles from './ModalLeccion.module.css'
 
 const TIPOS_PROPIOS: Exclude<TipoLeccion, 'recurso'>[] = ['lectura', 'practica', 'reflexion']

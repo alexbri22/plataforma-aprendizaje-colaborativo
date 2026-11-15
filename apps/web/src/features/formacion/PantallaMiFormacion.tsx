@@ -18,12 +18,15 @@ import {
   Tabs,
 } from '../../components/ui'
 import { BarraProgreso } from './BarraProgreso'
+import { MisPropuestas } from './MisPropuestas'
+import { useAvisosPropuestas } from './usePropuestas'
 import type { MiCurso } from './formacion.api'
 import { etiquetaTipo, formatoDuracion, formatoFecha, textoProgreso } from './formato'
 import {
   useCambiarGuardado,
   useGuardarPreferencias,
   useMiFormacion,
+  useMisConstancias,
   usePreferencias,
   useRecursosGuardados,
 } from './useProgreso'
@@ -31,23 +34,36 @@ import styles from './PantallaMiFormacion.module.css'
 
 /*
  * Espacio individual de formación (docs/diseno-desarrollo-formacion.md §7.2 y
- * ESP-02): mis cursos y mis recursos guardados. Es de la persona y de nadie
+ * ESP-02): mis cursos, mis recursos guardados y mis propuestas de contenido
+ * (nota del incremento 6). Es de la persona y de nadie
  * más; no muestra perfil, insignias ni comparación con otras personas. La
  * pestaña vive en la URL (?vista=guardados) para poder enlazarla.
  */
 
-type Vista = 'cursos' | 'guardados'
+type Vista = 'cursos' | 'guardados' | 'propuestas'
 
-const VISTAS = [
-  { id: 'cursos', etiqueta: 'Mis cursos' },
-  { id: 'guardados', etiqueta: 'Guardados' },
-]
+function vistaDe(valor: string | null): Vista {
+  return valor === 'guardados' || valor === 'propuestas' ? valor : 'cursos'
+}
 
 const POR_PAGINA_GUARDADOS = 10
 
 export function PantallaMiFormacion() {
   const [parametros, setParametros] = useSearchParams()
-  const vista: Vista = parametros.get('vista') === 'guardados' ? 'guardados' : 'cursos'
+  const vista = vistaDe(parametros.get('vista'))
+  // La pestaña dice si hay decisiones nuevas sobre mis propuestas, con texto.
+  const avisos = useAvisosPropuestas().data ?? 0
+  const vistas = [
+    { id: 'cursos', etiqueta: 'Mis cursos' },
+    { id: 'guardados', etiqueta: 'Guardados' },
+    {
+      id: 'propuestas',
+      etiqueta:
+        avisos > 0
+          ? `Mis propuestas (${avisos} ${avisos === 1 ? 'nueva' : 'nuevas'})`
+          : 'Mis propuestas',
+    },
+  ]
 
   return (
     <AppShell seccionActiva="mi-formacion" titulo="Mi formación">
@@ -55,12 +71,18 @@ export function PantallaMiFormacion() {
         <Preferencias />
         <Tabs
           label="Mi formación"
-          items={VISTAS}
+          items={vistas}
           valor={vista}
-          onCambiar={(id) => setParametros(id === 'guardados' ? { vista: 'guardados' } : {})}
+          onCambiar={(id) => setParametros(id === 'cursos' ? {} : { vista: id })}
         />
         <div role="tabpanel" id={`panel-${vista}`} aria-labelledby={`tab-${vista}`}>
-          {vista === 'cursos' ? <MisCursos /> : <Guardados />}
+          {vista === 'cursos' ? (
+            <MisCursos />
+          ) : vista === 'guardados' ? (
+            <Guardados />
+          ) : (
+            <MisPropuestas />
+          )}
         </div>
       </div>
     </AppShell>
@@ -88,6 +110,12 @@ function Vacio({ texto }: { texto: string }) {
 
 function MisCursos() {
   const consulta = useMiFormacion()
+  // Si falla o tarda, los cursos se muestran igual, sin el enlace.
+  const constancias = useMisConstancias()
+  const folioDe = new Map<string, string>()
+  for (const k of constancias.data?.constancias ?? []) {
+    if (k.idCurso) folioDe.set(k.idCurso, k.folio)
+  }
 
   if (consulta.isPending) return <Cargando etiqueta="Cargando tus cursos" />
   if (consulta.isError) {
@@ -132,7 +160,7 @@ function MisCursos() {
           <ul className={styles.lista}>
             {completados.map((c) => (
               <li key={c.idCurso}>
-                <TarjetaMiCurso curso={c} />
+                <TarjetaMiCurso curso={c} folioConstancia={folioDe.get(c.idCurso)} />
               </li>
             ))}
           </ul>
@@ -142,7 +170,13 @@ function MisCursos() {
   )
 }
 
-function TarjetaMiCurso({ curso: c }: { curso: MiCurso }) {
+function TarjetaMiCurso({
+  curso: c,
+  folioConstancia,
+}: {
+  curso: MiCurso
+  folioConstancia?: string
+}) {
   const retirado = c.estatus === 'retirado'
   const terminado = c.fechaFinalizacion !== null
 
@@ -173,6 +207,15 @@ function TarjetaMiCurso({ curso: c }: { curso: MiCurso }) {
             : `Empezado el ${formatoFecha(c.fechaInicio)}`,
         ].join(' · ')}
       </p>
+      {folioConstancia ? (
+        <Link
+          to={`/constancias/${folioConstancia}`}
+          className={styles.enlaceConstancia}
+          aria-label={`Ver la constancia de ${c.titulo}`}
+        >
+          Ver constancia
+        </Link>
+      ) : null}
 
       {retirado ? (
         <p className={styles.nota}>

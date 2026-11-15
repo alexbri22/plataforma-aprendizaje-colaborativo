@@ -4,7 +4,7 @@ Centro de formación y biblioteca de recursos formativos
 (`docs/diseno-desarrollo-formacion.md`). Público: se ve sin sesión, con el
 `Encabezado`; con sesión, dentro del `AppShell` (`MarcoFormacion`).
 
-**Estado:** incrementos 1 a 4: biblioteca de recursos, cursos (catálogo, ficha y visor), progreso del alumno y rutas de aprendizaje con recomendación.
+**Estado:** incrementos 1 a 6: biblioteca de recursos, cursos (catálogo, ficha y visor), progreso del alumno, rutas de aprendizaje con recomendación, constancias de finalización y autoría abierta con revisión.
 
 - `PantallaRecursos` (`/recursos`) — diseño de la rama `plataforma-formativaV1`.
   Artículos (tipo texto) y recursos breves (el resto) vienen de
@@ -27,7 +27,23 @@ Centro de formación y biblioteca de recursos formativos
 - `BarraProgreso` — avance en un curso: Study Ink y Confirmed Green al
   terminar, siempre junto a su texto.
 - `useProgreso.ts` — inscripción, marcas, reflexión, Mi formación,
-  guardados, preferencias y rutas recomendadas. Todo cuelga de `['formacion', 'me']` y solo se pide con sesión.
+  guardados, preferencias, rutas recomendadas y mis constancias. Todo cuelga de `['formacion', 'me']` y solo se pide con sesión.
+- `PantallaConstancia` (`/constancias/:folio`, pública) — la constancia como
+  documento imprimible, con su folio y lo que no es. No se indexa.
+- `ConstanciasEnPerfil` — el grupo "Formación completada" que el perfil
+  (Cuentas) inserta: en Mi perfil, con el interruptor para mostrarlas; en el de
+  otra persona, solo si ella lo activó. `useConstancias.ts` lee las de otra
+  persona y la verificación.
+- `editor/` — los editores de recursos y cursos (`EditorRecurso`,
+  `EditorCurso`) con su `modo`: `admin` para el panel y `autor` para quien
+  propone (`/propuestas/…`). Las reglas de quién edita qué están en
+  `modoEditor.ts`, iguales a las del servidor (`acceso.ts`). `AvisoRevision`
+  le dice al autor el estado y el motivo; `VistaPrevia` muestra un borrador
+  como lo verá la persona.
+- `MisPropuestas` — la pestaña "Mis propuestas" de Mi formación.
+  `usePropuestas.ts` tiene sus hooks y los de la cola del administrador.
+- `ProveedorMarcasNav` — el punto de "Mi formación" en la barra lateral
+  cuando hay decisiones nuevas; se monta en `App`.
 - `Markdown` — subconjunto de markdown renderizado como elementos de React,
   nunca HTML crudo; solo enlaza direcciones https.
 - `formacion.api.ts` y `useRecursos.ts` — cliente y hooks, públicos y de

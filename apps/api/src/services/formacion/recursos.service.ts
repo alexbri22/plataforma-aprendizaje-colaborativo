@@ -10,6 +10,7 @@ import {
   type AreaHabilidad,
   type ElementoColaboracion,
   type EstatusRecurso,
+  type OrigenContenido,
   type Paginacion,
   type SeccionFormativa,
   type TipoRecurso,
@@ -17,18 +18,24 @@ import {
 import { prisma } from '../../data/prisma.js'
 import {
   ErrorArchivoInvalido,
+  ErrorPropuestaNoEditable,
+  ErrorPropuestaNoEliminable,
+  ErrorRecursoDesactualizado,
   ErrorRecursoEnUso,
   ErrorRecursoNoEncontrado,
   ErrorValidacion,
 } from '../../errores.js'
+import { ADMIN, exigirEditable, puedeVer, type Acceso, type EstadoContenido } from './acceso.js'
 import { fijarFinalizaciones } from './calculoProgreso.js'
+import { emitirConstanciasDeRutas } from './constancias.service.js'
 import { cursosQueUsanRecurso } from './usoDeRecursos.js'
 import type { DatosRecurso, FiltrosRecursos, PeticionPagina } from './validacion.js'
 
 /*
  * Biblioteca de recursos formativos (docs/diseno-desarrollo-formacion.md §6 y
- * §12.3). En este alcance solo el administrador crea y publica; el público
- * (con o sin sesión) solo ve lo publicado.
+ * §12.3). El administrador crea y publica su contenido (editorial); un usuario
+ * puede proponer el suyo, que pasa por revisión (nota del incremento 6; quién
+ * ve y edita qué está en acceso.ts). El público solo ve lo publicado.
  *
  * Transiciones de estatus: borrador → publicado → retirado → publicado. Un
  * recurso publicado no vuelve a borrador: se edita en sitio (no hay versiones
@@ -68,6 +75,8 @@ export interface RecursoPublico extends ResumenRecurso {
 
 export interface RecursoAdmin extends RecursoPublico {
   estatus: EstatusRecurso
+  origen: OrigenContenido
+  versionFicha: number
   fechaCreacion: string
   autor: { idUsuario: string; nombre: string } | null
 }
@@ -144,6 +153,8 @@ function aAdmin(fila: FilaRecurso): RecursoAdmin {
   return {
     ...aPublico(fila),
     estatus: fila.estatus,
+    origen: fila.origen,
+    versionFicha: fila.versionFicha,
     fechaCreacion: fila.fechaCreacion.toISOString(),
     autor: fila.autor
       ? {
@@ -278,38 +289,55 @@ export async function listarRecursosGuardados(
 
 // ---- Administración ----
 
-/** El archivo de un recurso en cualquier estatus, para que el administrador
- * lo revise antes de publicarlo (§12.3, vista previa). */
+/** El archivo de un recurso en cualquier estatus, para revisarlo antes de
+ * publicarlo (§12.3, vista previa): el administrador, el de lo que ve; el
+ * autor, el de su propuesta. */
 export async function obtenerArchivoAdmin(
   idRecurso: string,
+  acceso: Acceso = ADMIN,
 ): Promise<{ contenido: Uint8Array; tipo: string; nombre: string }> {
-  const archivo = await prisma.archivoRecurso.findUnique({
+  const fila = await prisma.recursoFormativo.findUnique({
     where: { idRecurso },
-    select: { contenido: true, tipo: true, nombre: true },
+    select: {
+      origen: true,
+      estatus: true,
+      idUsuarioAutor: true,
+      archivo: { select: { contenido: true, tipo: true, nombre: true } },
+    },
   })
-  if (!archivo) throw new ErrorRecursoNoEncontrado()
-  return archivo
+  if (!fila || !puedeVer(fila, acceso) || !fila.archivo) throw new ErrorRecursoNoEncontrado()
+  return fila.archivo
 }
 
-/** Todos los recursos para el panel. Los filtros sirven también al editor de
- * cursos, que busca en la biblioteca el recurso que quiere usar como lección. */
+/** Lo que el panel no lista: las propuestas que su autor todavía prepara. */
+export const SIN_PROPUESTAS_PRIVADAS = {
+  NOT: { origen: 'propuesta', estatus: { in: ['borrador', 'cambios_solicitados'] } },
+} satisfies Prisma.RecursoFormativoWhereInput
+
+/** Los recursos del panel: el contenido editorial y las propuestas que ya
+ * llegaron a revisión. Los filtros sirven también al editor de cursos, que
+ * busca en la biblioteca el recurso que quiere usar como lección. */
 export async function listarRecursosAdmin(
   pagina: PeticionPagina = PRIMERA_PAGINA,
   filtros: FiltrosRecursosAdmin = {},
 ): Promise<PaginaDe<RecursoAdmin>> {
-  const where: Prisma.RecursoFormativoWhereInput = {}
+  const where: Prisma.RecursoFormativoWhereInput = { ...SIN_PROPUESTAS_PRIVADAS }
   if (filtros.estatus) where.estatus = filtros.estatus
   if (filtros.tiposRecurso) where.tipoRecurso = { in: filtros.tiposRecurso }
   if (filtros.texto) where.textoBusqueda = { contains: normalizarBusqueda(filtros.texto) }
   return paginar(where, pagina, aAdmin)
 }
 
-export async function obtenerRecursoAdmin(idRecurso: string): Promise<RecursoAdminDetalle> {
+/** Un recurso en su editor. Lo que quien llama no puede ver responde 404. */
+export async function obtenerRecursoAdmin(
+  idRecurso: string,
+  acceso: Acceso = ADMIN,
+): Promise<RecursoAdminDetalle> {
   const fila = await prisma.recursoFormativo.findUnique({
     where: { idRecurso },
     include: INCLUIR_METADATOS,
   })
-  if (!fila) throw new ErrorRecursoNoEncontrado()
+  if (!fila || !puedeVer(fila, acceso)) throw new ErrorRecursoNoEncontrado()
   return conUso(aAdmin(fila))
 }
 
@@ -376,15 +404,65 @@ function validarCoherencia(r: RecursoCombinado): void {
   if (Object.keys(detalle).length > 0) throw new ErrorValidacion(detalle)
 }
 
+/** El recurso tal como está, para revisar sus mínimos antes de publicarlo. */
+function combinadoDe(fila: FilaRecurso): RecursoCombinado {
+  return {
+    seccion: fila.seccion,
+    titulo: fila.titulo,
+    resumen: fila.resumen,
+    tipoRecurso: fila.tipoRecurso,
+    contenido: fila.contenido,
+    transcripcion: fila.transcripcion,
+    area: fila.area as AreaHabilidad | null,
+    elementos: fila.elementos as ElementoColaboracion[],
+    duracionMin: fila.duracionMin,
+    fuente: fila.fuente,
+    licencia: fila.licencia,
+    orden: fila.orden,
+    estatus: fila.estatus,
+    tieneArchivo: fila.archivo !== null,
+  }
+}
+
+/** Los mínimos de publicación de un recurso que ya existe. Los usa la
+ * revisión: al enviar una propuesta y al aprobarla. */
+export async function validarRecursoPublicable(
+  tx: Prisma.TransactionClient,
+  idRecurso: string,
+): Promise<void> {
+  const fila = await tx.recursoFormativo.findUniqueOrThrow({
+    where: { idRecurso },
+    include: INCLUIR_METADATOS,
+  })
+  validarCoherencia({ ...combinadoDe(fila), estatus: 'publicado' })
+}
+
+// Las transiciones que el administrador hace directamente sobre su contenido.
+// Los estados de revisión no aparecen: los recorren solo las propuestas, con
+// un envío o una decisión (revision.service.ts).
 const TRANSICIONES: Readonly<Record<EstatusRecurso, readonly EstatusRecurso[]>> = {
   borrador: ['borrador', 'publicado'],
   publicado: ['publicado', 'retirado'],
   retirado: ['retirado', 'publicado'],
+  en_revision: ['en_revision'],
+  cambios_solicitados: ['cambios_solicitados'],
+  rechazado: ['rechazado'],
+}
+
+export interface OpcionesAlta {
+  /** Una propuesta nace en borrador y es solo de su autor. */
+  origen?: OrigenContenido
+  /** Para crearlo dentro de otra transacción (la del límite de propuestas). */
+  cliente?: Prisma.TransactionClient
 }
 
 export async function crearRecurso(
   idUsuarioAutor: string,
   datos: Partial<DatosRecurso>,
+  {
+    origen = 'editorial',
+    cliente = prisma as unknown as Prisma.TransactionClient,
+  }: OpcionesAlta = {},
 ): Promise<RecursoAdminDetalle> {
   // El alta ya validó sección, título y tipo como obligatorios.
   const combinado = {
@@ -407,9 +485,9 @@ export async function crearRecurso(
   // Por defecto al final de la lista.
   const orden =
     datos.orden ??
-    ((await prisma.recursoFormativo.aggregate({ _max: { orden: true } }))._max.orden ?? -1) + 1
+    ((await cliente.recursoFormativo.aggregate({ _max: { orden: true } }))._max.orden ?? -1) + 1
 
-  const fila = await prisma.recursoFormativo.create({
+  const fila = await cliente.recursoFormativo.create({
     data: {
       seccion: combinado.seccion,
       titulo: combinado.titulo,
@@ -424,6 +502,7 @@ export async function crearRecurso(
       licencia: combinado.licencia,
       orden,
       estatus: combinado.estatus,
+      origen,
       textoBusqueda: textoDeBusqueda(combinado),
       idUsuarioAutor,
     },
@@ -441,28 +520,83 @@ export async function crearRecurso(
  * petición vacía su contenido (o quita su PDF) podía dejar publicado un
  * recurso que no cumple los mínimos. Las peticiones sobre recursos distintos
  * no se esperan entre sí.
+ *
+ * Con la fila bloqueada se decide además si quien llama la puede ver (si no,
+ * 404) y se le entrega su estado, para que la operación decida si la puede
+ * editar (acceso.ts). La revisión usa el mismo bloqueo, así que un envío, una
+ * decisión y una edición de la misma propuesta se forman en fila.
  */
-async function conRecursoBloqueado<T>(
+export async function conRecursoBloqueado<T>(
   idRecurso: string,
-  operacion: (tx: Prisma.TransactionClient) => Promise<T>,
+  acceso: Acceso,
+  operacion: (tx: Prisma.TransactionClient, estado: EstadoContenido) => Promise<T>,
 ): Promise<T> {
   return prisma.$transaction(async (tx) => {
-    const bloqueado = await tx.$queryRaw<{ id_recurso: string }[]>`
-      SELECT id_recurso FROM recursos_formativos WHERE id_recurso = ${idRecurso} FOR UPDATE`
-    if (bloqueado.length === 0) throw new ErrorRecursoNoEncontrado()
-    return operacion(tx)
+    const filas = await tx.$queryRaw<
+      { origen: OrigenContenido; estatus: EstatusRecurso; id_usuario_autor: string | null }[]
+    >`
+      SELECT origen::text AS origen, estatus::text AS estatus, id_usuario_autor
+      FROM recursos_formativos WHERE id_recurso = ${idRecurso} FOR UPDATE`
+    const estado = filas[0]
+      ? {
+          origen: filas[0].origen,
+          estatus: filas[0].estatus,
+          idUsuarioAutor: filas[0].id_usuario_autor,
+        }
+      : null
+    if (!estado || !puedeVer(estado, acceso)) throw new ErrorRecursoNoEncontrado()
+    return operacion(tx, estado)
   })
 }
 
+/**
+ * Lo que sigue a que un recurso cambie de estatus. Retirarlo hace que su
+ * lección deje de contar para terminar los cursos que lo usan: quien ya tenía
+ * hechas las demás los termina. Las rutas se revisan una vez, al final: el
+ * candado de las rutas es lo último que pide la transacción, después de
+ * bloquear todas las inscripciones.
+ */
+export async function alCambiarEstatusRecurso(
+  tx: Prisma.TransactionClient,
+  idRecurso: string,
+): Promise<void> {
+  const cursos = (await cursosQueUsanRecurso(idRecurso, tx)).map((c) => c.idCurso)
+  const terminaron: string[] = []
+  for (const idCurso of cursos) terminaron.push(...(await fijarFinalizaciones(tx, idCurso)))
+  if (terminaron.length > 0) {
+    await emitirConstanciasDeRutas(tx, { idsCurso: cursos, idsUsuario: terminaron })
+  }
+}
+
+/** Editar un recurso. El administrador edita su contenido y las propuestas ya
+ * publicadas; el autor, su propuesta mientras la prepara. `versionLeida` es
+ * la versión de la ficha que el editor leyó: si cambió, no se sobrescribe. */
 export async function actualizarRecurso(
   idRecurso: string,
   cambios: Partial<DatosRecurso>,
+  acceso: Acceso = ADMIN,
+  versionLeida?: number,
 ): Promise<RecursoAdminDetalle> {
-  const fila = await conRecursoBloqueado(idRecurso, async (tx) => {
+  const fila = await conRecursoBloqueado(idRecurso, acceso, async (tx, estado) => {
+    exigirEditable(estado, acceso)
     const actual = await tx.recursoFormativo.findUniqueOrThrow({
       where: { idRecurso },
       include: INCLUIR_METADATOS,
     })
+    if (versionLeida !== undefined && versionLeida !== actual.versionFicha) {
+      throw new ErrorRecursoDesactualizado()
+    }
+    // El estatus de una propuesta no se edita: cambia con un envío o con una
+    // decisión que lleva motivo (revision.service.ts).
+    if (
+      actual.origen === 'propuesta' &&
+      cambios.estatus !== undefined &&
+      cambios.estatus !== actual.estatus
+    ) {
+      throw new ErrorPropuestaNoEditable(
+        'Las decisiones sobre una propuesta se toman desde la cola de revisión, con motivo.',
+      )
+    }
 
     if (cambios.estatus && !TRANSICIONES[actual.estatus].includes(cambios.estatus)) {
       throw new ErrorValidacion({
@@ -500,16 +634,14 @@ export async function actualizarRecurso(
     if (descartarArchivo) await tx.archivoRecurso.delete({ where: { idRecurso } })
     const actualizado = await tx.recursoFormativo.update({
       where: { idRecurso },
-      data: { ...cambios, textoBusqueda: textoDeBusqueda(final) },
+      data: {
+        ...cambios,
+        textoBusqueda: textoDeBusqueda(final),
+        versionFicha: { increment: 1 },
+      },
       include: INCLUIR_METADATOS,
     })
-    // Retirar un recurso hace que su lección deje de contar para terminar
-    // los cursos que lo usan: quien ya tenía hechas las demás los termina.
-    if (actualizado.estatus !== actual.estatus) {
-      for (const curso of await cursosQueUsanRecurso(idRecurso, tx)) {
-        await fijarFinalizaciones(tx, curso.idCurso)
-      }
-    }
+    if (actualizado.estatus !== actual.estatus) await alCambiarEstatusRecurso(tx, idRecurso)
     return actualizado
   })
   return conUso(aAdmin(fila))
@@ -518,9 +650,14 @@ export async function actualizarRecurso(
 /** Borra el recurso y su archivo, salvo que algún curso lo use: entonces
  * hay que quitarlo de esos cursos primero, o retirarlo. La llave RESTRICT de
  * lecciones_curso lo garantiza en la base; aquí se comprueba antes para dar
- * un mensaje que nombre los cursos. */
-export async function eliminarRecurso(idRecurso: string): Promise<void> {
-  await conRecursoBloqueado(idRecurso, async (tx) => {
+ * un mensaje que nombre los cursos.
+ *
+ * El administrador no borra propuestas: las rechaza o las retira. El autor
+ * borra la suya mientras la prepara o si se rechazó, nunca en revisión ni ya
+ * publicada. */
+export async function eliminarRecurso(idRecurso: string, acceso: Acceso = ADMIN): Promise<void> {
+  await conRecursoBloqueado(idRecurso, acceso, async (tx, estado) => {
+    exigirEliminable(estado, acceso)
     const cursos = await cursosQueUsanRecurso(idRecurso, tx)
     if (cursos.length > 0) throw new ErrorRecursoEnUso(cursos)
     try {
@@ -545,6 +682,7 @@ export async function guardarArchivoRecurso(
   tipo: string,
   nombre: string,
   contenido: Buffer,
+  acceso: Acceso = ADMIN,
 ): Promise<RecursoAdminDetalle> {
   // El contenido se valida antes de abrir la transacción: no depende del
   // estado del recurso y así el bloqueo dura lo menos posible.
@@ -565,7 +703,8 @@ export async function guardarArchivoRecurso(
     tamano: contenido.length,
     actualizadoEn: new Date(),
   }
-  await conRecursoBloqueado(idRecurso, async (tx) => {
+  await conRecursoBloqueado(idRecurso, acceso, async (tx, estado) => {
+    exigirEditable(estado, acceso)
     // El tipo se lee con la fila bloqueada: un cambio de tipo simultáneo no
     // puede dejar el archivo huérfano en un recurso que no lo admite.
     const { tipoRecurso } = await tx.recursoFormativo.findUniqueOrThrow({
@@ -581,11 +720,15 @@ export async function guardarArchivoRecurso(
       update: datos,
     })
   })
-  return obtenerRecursoAdmin(idRecurso)
+  return obtenerRecursoAdmin(idRecurso, acceso)
 }
 
-export async function quitarArchivoRecurso(idRecurso: string): Promise<RecursoAdminDetalle> {
-  await conRecursoBloqueado(idRecurso, async (tx) => {
+export async function quitarArchivoRecurso(
+  idRecurso: string,
+  acceso: Acceso = ADMIN,
+): Promise<RecursoAdminDetalle> {
+  await conRecursoBloqueado(idRecurso, acceso, async (tx, estado) => {
+    exigirEditable(estado, acceso)
     const actual = await tx.recursoFormativo.findUniqueOrThrow({
       where: { idRecurso },
       select: { estatus: true, tipoRecurso: true, contenido: true },
@@ -601,7 +744,27 @@ export async function quitarArchivoRecurso(idRecurso: string): Promise<RecursoAd
     }
     await tx.archivoRecurso.deleteMany({ where: { idRecurso } })
   })
-  return obtenerRecursoAdmin(idRecurso)
+  return obtenerRecursoAdmin(idRecurso, acceso)
+}
+
+/** Quién borra qué (ver eliminarRecurso). Lo comparte cursos.service. */
+export function exigirEliminable(estado: EstadoContenido, acceso: Acceso): void {
+  if (estado.origen !== 'propuesta') return
+  if (acceso.rol === 'admin') {
+    throw new ErrorPropuestaNoEliminable(
+      'Una propuesta no se elimina desde el panel: recházala o retírala.',
+    )
+  }
+  if (estado.estatus === 'en_revision') {
+    throw new ErrorPropuestaNoEliminable(
+      'Tu propuesta está en revisión. Cancela el envío para poder eliminarla.',
+    )
+  }
+  if (estado.estatus === 'publicado' || estado.estatus === 'retirado') {
+    throw new ErrorPropuestaNoEliminable(
+      'Esta propuesta ya se publicó: solo el administrador puede retirarla.',
+    )
+  }
 }
 
 /** Nombre con el que se ofrece la descarga: sin rutas ni caracteres de

@@ -1,6 +1,6 @@
 import { MAX_CURSOS_RUTA, MIN_CURSOS_RUTA } from '@plataforma/shared'
 import type { CursoDeRuta } from '../formacion'
-import type { Requisito } from './requisitosCurso'
+import type { Requisito } from '../formacion'
 
 /**
  * Lo que falta para publicar una ruta, en vivo. Repite las reglas de

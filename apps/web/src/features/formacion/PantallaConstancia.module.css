@@ -1,0 +1,196 @@
+.pagina {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4) var(--space-12);
+}
+
+.estado {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-16) 0;
+  color: var(--color-text-muted);
+}
+
+.noEncontrada {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-8) 0;
+}
+
+.noEncontrada p {
+  margin: 0;
+  color: var(--color-text-muted);
+  line-height: var(--line-height-normal);
+  text-wrap: pretty;
+}
+
+.tituloNoEncontrada {
+  margin: 0;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Un documento sobrio: papel blanco, un borde fino y el texto centrado. */
+.documento {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-10) var(--space-8);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+  color: var(--color-text);
+  text-align: center;
+}
+
+.documento p {
+  margin: 0;
+}
+
+.emisor {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  letter-spacing: 0.04em;
+}
+
+.titulo {
+  margin: var(--space-2) 0 var(--space-5);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
+.frase {
+  color: var(--color-text-muted);
+}
+
+.nombre {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.obra {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.fecha {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.bloque {
+  margin-top: var(--space-4);
+}
+
+.etiqueta {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cursos {
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style-position: inside;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+}
+
+.documento .elementos {
+  margin-top: var(--space-4);
+  font-size: var(--font-size-sm);
+  text-wrap: pretty;
+}
+
+/* El sello de verificación: Confirmed Green, el color de lo terminado. */
+.documento .sello {
+  margin-top: var(--space-5);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-success-subtle);
+  color: var(--color-success-ink);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.folio {
+  font-family: var(--font-family-mono);
+}
+
+.documento .nota {
+  margin-top: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  text-wrap: pretty;
+}
+
+.documento .leyenda {
+  margin-top: var(--space-4);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  text-wrap: pretty;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.enlace {
+  border-radius: var(--radius-sm);
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.enlace:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.estadoCopia {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+@media (max-width: 30rem) {
+  .documento {
+    padding: var(--space-8) var(--space-4);
+  }
+}
+
+/* Al imprimir solo queda el documento: ni la navegación, ni el aviso de
+ * cuenta, ni los botones. */
+@media print {
+  :global(body *) {
+    visibility: hidden;
+  }
+
+  .documento,
+  .documento * {
+    visibility: visible;
+  }
+
+  .documento {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    border: none;
+  }
+}

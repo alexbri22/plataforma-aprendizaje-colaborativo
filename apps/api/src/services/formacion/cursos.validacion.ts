@@ -4,7 +4,7 @@ import {
   LARGO_MAXIMO_LECCION,
   esAreaHabilidad,
   esElementoColaboracion,
-  esEstatusRecurso,
+  esEstatusEditorial,
   esNivelCurso,
   esTipoLeccion,
   type AreaHabilidad,
@@ -137,7 +137,7 @@ export function validarDatosCurso(cuerpo: unknown, parcial: boolean): Partial<Da
   }
 
   if (datos.estatus !== undefined) {
-    if (typeof datos.estatus === 'string' && esEstatusRecurso(datos.estatus)) {
+    if (typeof datos.estatus === 'string' && esEstatusEditorial(datos.estatus)) {
       resultado.estatus = datos.estatus
     } else {
       detalle.estatus = 'El estatus no es válido.'

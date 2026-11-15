@@ -58,6 +58,8 @@ const RECURSO: RecursoAdminDetalle = {
   licencia: 'CC BY 4.0',
   orden: 0,
   estatus: 'publicado',
+  origen: 'editorial',
+  versionFicha: 0,
   fechaCreacion: '2026-09-01T00:00:00.000Z',
   fechaActualizacion: '2026-09-01T00:00:00.000Z',
   archivo: null,

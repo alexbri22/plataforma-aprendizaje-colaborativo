@@ -1,12 +1,17 @@
 import { useState } from 'react'
 import { ETIQUETAS_TIPO_RECURSO } from '@plataforma/shared'
-import { AvisoError, Button, Input, Modal, Paginacion } from '../../components/ui'
-import { useRecursosAdmin, useValorDiferido } from '../formacion'
+import { AvisoError, Button, Input, Modal, Paginacion } from '../../../components/ui'
+import { useRecursosAdmin, useRecursosPublicos } from '../useRecursos'
+import { useValorDiferido } from '../useValorDiferido'
+import type { ModoEditor } from './modoEditor'
 import styles from './ModalElegirRecurso.module.css'
 
 const POR_PAGINA = 6
 
 export interface ModalElegirRecursoProps {
+  /** El autor busca en el catálogo público: solo lo publicado, de cualquiera.
+   * El panel busca en su biblioteca, también solo lo publicado. */
+  modo?: ModoEditor
   /** Los que ya están en el curso: se muestran, pero no se pueden repetir. */
   idsEnCurso: string[]
   onElegir: (idRecurso: string) => void
@@ -19,6 +24,7 @@ export interface ModalElegirRecursoProps {
 // publicados: un curso publicado no puede usar otros, así que elegir un
 // borrador solo aplazaría el problema.
 export function ModalElegirRecurso({
+  modo = 'admin',
   idsEnCurso,
   onElegir,
   onCerrar,
@@ -29,12 +35,17 @@ export function ModalElegirRecurso({
   const [paginaElegida, setPaginaElegida] = useState({ texto, pagina: 1 })
   const pagina = paginaElegida.texto === texto ? paginaElegida.pagina : 1
 
-  const { data, isPending, isError, error } = useRecursosAdmin({
-    texto: texto || undefined,
-    estatus: 'publicado',
-    pagina,
-    porPagina: POR_PAGINA,
-  })
+  // Las dos consultas se declaran siempre (son hooks); solo se pide la del
+  // modo.
+  const delPanel = useRecursosAdmin(
+    { texto: texto || undefined, estatus: 'publicado', pagina, porPagina: POR_PAGINA },
+    modo === 'admin',
+  )
+  const delCatalogo = useRecursosPublicos(
+    { texto: texto || undefined, pagina, porPagina: POR_PAGINA },
+    modo === 'autor',
+  )
+  const { data, isPending, isError, error } = modo === 'admin' ? delPanel : delCatalogo
 
   return (
     <Modal

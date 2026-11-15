@@ -8,6 +8,7 @@ import { CuerpoRecurso } from './CuerpoRecurso'
 import { etiquetaLeccion, formatoFecha, textoProgreso } from './formato'
 import {
   ErrorFormacion,
+  type ConstanciaResumen,
   type CursoPublico,
   type LeccionPublica,
   type MiProgresoCurso,
@@ -197,6 +198,38 @@ function CuerpoLeccion({
   )
 }
 
+/** El aviso de la marca que terminó el curso, con su constancia y las de las
+ * rutas que se terminaron con él. Confirmed Green, nunca Apothecary Amber:
+ * terminar un curso no es una insignia (DESIGN.md, "Course progress"). */
+function AvisoCursoTerminado({
+  idCurso,
+  titulo,
+  constancias,
+}: {
+  idCurso: string
+  titulo: string
+  constancias: ConstanciaResumen[]
+}) {
+  const delCurso = constancias.find((k) => k.tipo === 'curso')
+  const rutas = constancias.filter((k) => k.tipo === 'ruta')
+  return (
+    <div className={styles.cursoTerminado} role="status">
+      <p className={styles.cursoTerminadoTitulo}>Completaste el curso</p>
+      <p>Terminaste todas las lecciones de «{titulo}». Puedes volver a ellas cuando quieras.</p>
+      {rutas.map((r) => (
+        <p key={r.folio}>
+          Con este curso también terminaste la ruta «{r.titulo}».{' '}
+          <Link to={`/constancias/${r.folio}`}>Ver su constancia</Link>
+        </p>
+      ))}
+      <p className={styles.cursoTerminadoAcciones}>
+        {delCurso ? <Link to={`/constancias/${delCurso.folio}`}>Ver tu constancia</Link> : null}
+        <Link to={`/cursos/${idCurso}`}>Volver al curso</Link>
+      </p>
+    </div>
+  )
+}
+
 /** Marcar la lección como hecha (o devolverla a pendiente). */
 function ControlCompletar({
   idCurso,
@@ -207,13 +240,16 @@ function ControlCompletar({
   idCurso: string
   idLeccion: string
   completada: boolean
-  alTerminarCurso: () => void
+  alTerminarCurso: (constancias: ConstanciaResumen[]) => void
 }) {
   const marcar = useMarcarLeccion(idCurso)
   const cambiar = (valor: boolean) =>
     marcar.mutate(
       { idLeccion, completada: valor },
-      { onSuccess: (r) => (r.cursoCompletadoAhora ? alTerminarCurso() : undefined) },
+      {
+        onSuccess: (r) =>
+          r.cursoCompletadoAhora ? alTerminarCurso(r.constanciasNuevas) : undefined,
+      },
     )
 
   return (
@@ -256,8 +292,12 @@ function VisorLeccion() {
   const progreso = useMiProgreso(id).data
   const error = curso.error ?? leccion.error
   const [indiceAbierto, setIndiceAbierto] = useState(indiceAbiertoAlInicio)
-  // Solo la marca que terminó el curso lo avisa, y solo en esa lección.
-  const [terminoEn, setTerminoEn] = useState<string | null>(null)
+  // Solo la marca que terminó el curso lo avisa, y solo en esa lección; trae
+  // las constancias que emitió (la del curso y las de sus rutas).
+  const [termino, setTermino] = useState<{
+    idLeccion: string
+    constancias: ConstanciaResumen[]
+  } | null>(null)
 
   // La ruta no cambia de pantalla al pasar de lección: sin esto, "Siguiente"
   // dejaría a la persona al final de la lección nueva.
@@ -357,19 +397,16 @@ function VisorLeccion() {
               idCurso={c.idCurso}
               idLeccion={l.idLeccion}
               completada={completadas.has(l.idLeccion)}
-              alTerminarCurso={() => setTerminoEn(l.idLeccion)}
+              alTerminarCurso={(constancias) => setTermino({ idLeccion: l.idLeccion, constancias })}
             />
           ) : null}
 
-          {terminoEn === l.idLeccion ? (
-            <div className={styles.cursoTerminado} role="status">
-              <p className={styles.cursoTerminadoTitulo}>Completaste el curso</p>
-              <p>
-                Terminaste todas las lecciones de «{c.titulo}». Puedes volver a ellas cuando
-                quieras.
-              </p>
-              <Link to={`/cursos/${c.idCurso}`}>Volver al curso</Link>
-            </div>
+          {termino?.idLeccion === l.idLeccion ? (
+            <AvisoCursoTerminado
+              idCurso={c.idCurso}
+              titulo={c.titulo}
+              constancias={termino.constancias}
+            />
           ) : null}
 
           <nav className={styles.navegacion} aria-label="Navegación entre lecciones">

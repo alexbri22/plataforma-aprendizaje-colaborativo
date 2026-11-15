@@ -6,7 +6,7 @@ import { BarraProgreso } from './BarraProgreso'
 import { ErrorFormacion, type MiFormacion, type RutaPublica } from './formacion.api'
 import { MarcoFormacion } from './MarcoFormacion'
 import { useDentroDeApp } from './marcoContexto'
-import { useMiFormacion } from './useProgreso'
+import { useMiFormacion, useMisConstancias } from './useProgreso'
 import { useRutaPublica } from './useRutas'
 import styles from './PantallaCurso.module.css'
 import propios from './PantallaRuta.module.css'
@@ -49,6 +49,10 @@ function Contenido({ ruta }: { ruta: RutaPublica }) {
   const porcentaje =
     disponibles.length === 0 ? 0 : Math.floor((completados * 100) / disponibles.length)
   const empezo = disponibles.some((c) => estados.has(c.idCurso))
+  // La constancia se busca aunque la ruta ya no se vea terminada: si después
+  // se le agregó un curso, la que se emitió sigue valiendo.
+  const misConstancias = useMisConstancias()
+  const constancia = misConstancias.data?.constancias.find((k) => k.idRuta === ruta.idRuta)
 
   return (
     <article className={styles.ficha}>
@@ -182,6 +186,11 @@ function Contenido({ ruta }: { ruta: RutaPublica }) {
                 {completados} de {disponibles.length}{' '}
                 {disponibles.length === 1 ? 'curso' : 'cursos'} · {porcentaje} %
               </p>
+              {constancia ? (
+                <Link to={`/constancias/${constancia.folio}`} className={styles.enlaceConstancia}>
+                  Ver tu constancia de la ruta
+                </Link>
+              ) : null}
               {siguiente ? (
                 <Button to={`/cursos/${siguiente.idCurso}`}>
                   {empezo ? 'Seguir con la ruta' : 'Empezar la ruta'}

@@ -170,6 +170,8 @@ model Usuario {
   recursosGuardados  RecursoGuardado[]
   rutasFormativas    RutaFormativa[]
   preferencias       PreferenciasFormativas?
+  constancias        Constancia[]
+  revisiones         RevisionContenido[]
 
   @@map("usuarios")
 }
@@ -573,15 +575,28 @@ enum TipoRecurso {
   @@map("tipo_recurso")
 }
 
-// El estatus que el documento general reservaba (§4.4) se activa con tres
-// valores: el administrador prepara un borrador, lo publica y puede retirarlo.
-// Los estados de revisión de la autoría abierta se añadirían aquí.
+// El estatus que el documento general reservaba (§4.4). El administrador
+// prepara un borrador, lo publica y puede retirarlo. Los tres de revisión son
+// de la autoría abierta (nota del incremento 6 de Formación): solo los
+// recorre lo que propone un usuario. Las rutas no los usan.
 enum EstatusRecurso {
   borrador
   publicado
   retirado
+  en_revision
+  cambios_solicitados
+  rechazado
 
   @@map("estatus_recurso")
+}
+
+// Quién trajo el contenido: el administrador (editorial) o un usuario que lo
+// propuso (propuesta). Decide quién lo ve y quién lo edita en cada estatus.
+enum OrigenContenido {
+  editorial
+  propuesta
+
+  @@map("origen_contenido")
 }
 
 // `area` y `elementos` se guardan como texto, igual que la categoría de
@@ -607,6 +622,15 @@ model RecursoFormativo {
   licencia           String           @default("")
   orden              Int              @default(0)
   estatus            EstatusRecurso   @default(borrador)
+  origen             OrigenContenido  @default(editorial)
+  // Sube con cada guardado de la ficha, como en cursos: el editor manda la que
+  // leyó y el servidor rechaza el guardado si cambió.
+  versionFicha       Int              @default(0) @map("version_ficha")
+  // Una decisión del administrador sobre la propuesta que su autor no ha
+  // visto. Sirve para avisarle; se apaga cuando la ve.
+  decisionSinVer     Boolean          @default(false) @map("decision_sin_ver")
+  // Cuándo se envió a revisión la última vez: ordena la cola.
+  fechaEnvio         DateTime?        @map("fecha_envio")
   // Título, resumen, área y elementos en minúsculas y sin acentos, para que
   // la búsqueda del catálogo encuentre "comunicacion" en "Comunicación" sin
   // depender de la extensión unaccent. Lo calcula el servicio al guardar.
@@ -624,6 +648,7 @@ model RecursoFormativo {
   guardados RecursoGuardado[]
 
   @@index([estatus, orden])
+  @@index([idUsuarioAutor, origen])
   @@map("recursos_formativos")
 }
 
@@ -673,25 +698,29 @@ enum TipoLeccion {
 // nunca se desfase de lo que el curso contiene. Como en recursos, un borrador
 // puede estar incompleto y los mínimos se exigen al publicar (servicio).
 model Curso {
-  idCurso            String         @id @default(uuid()) @map("id_curso")
+  idCurso            String          @id @default(uuid()) @map("id_curso")
   titulo             String
-  resumen            String         @default("")
-  objetivo           String         @default("")
+  resumen            String          @default("")
+  objetivo           String          @default("")
   area               String?
-  elementos          String[]       @default([])
+  elementos          String[]        @default([])
   nivel              NivelCurso?
-  practicaFinal      String         @default("") @map("practica_final")
-  orden              Int            @default(0)
-  estatus            EstatusRecurso @default(borrador)
-  textoBusqueda      String         @default("") @map("texto_busqueda")
+  practicaFinal      String          @default("") @map("practica_final")
+  orden              Int             @default(0)
+  estatus            EstatusRecurso  @default(borrador)
+  origen             OrigenContenido @default(editorial)
+  // Igual que en recursos: decisión sin ver por su autor y fecha del envío.
+  decisionSinVer     Boolean         @default(false) @map("decision_sin_ver")
+  fechaEnvio         DateTime?       @map("fecha_envio")
+  textoBusqueda      String          @default("") @map("texto_busqueda")
   // Sube con cada guardado de la ficha. El editor manda la que leyó y el
   // servidor rechaza el guardado si cambió: así un administrador no pisa sin
   // saberlo lo que otro guardó mientras tanto. Las lecciones no la mueven,
   // porque se guardan una por una y no reescriben nada ajeno.
-  versionFicha       Int            @default(0) @map("version_ficha")
-  idUsuarioAutor     String?        @map("id_usuario_autor")
-  fechaCreacion      DateTime       @default(now()) @map("fecha_creacion")
-  fechaActualizacion DateTime       @updatedAt @map("fecha_actualizacion")
+  versionFicha       Int             @default(0) @map("version_ficha")
+  idUsuarioAutor     String?         @map("id_usuario_autor")
+  fechaCreacion      DateTime        @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime        @updatedAt @map("fecha_actualizacion")
 
   autor         Usuario?           @relation(fields: [idUsuarioAutor], references: [idUsuario], onDelete: SetNull)
   lecciones     LeccionCurso[]
@@ -699,6 +728,7 @@ model Curso {
   rutas         CursoRuta[]
 
   @@index([estatus, orden])
+  @@index([idUsuarioAutor, origen])
   @@map("cursos")
 }
 
@@ -857,11 +887,103 @@ model CursoRuta {
 // propia y privada, no una medición; el recomendador de rutas la usa como
 // señal de interés.
 model PreferenciasFormativas {
-  idUsuario          String   @id @map("id_usuario")
-  elementos          String[] @default([])
-  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+  idUsuario           String   @id @map("id_usuario")
+  elementos           String[] @default([])
+  // Si las constancias se ven en el perfil de la persona (nota del incremento
+  // 5). Apagado por defecto, como el correo: nadie aceptó mostrarlas.
+  constanciasPublicas Boolean  @default(false) @map("constancias_publicas")
+  fechaActualizacion  DateTime @updatedAt @map("fecha_actualizacion")
 
   usuario Usuario @relation(fields: [idUsuario], references: [idUsuario], onDelete: Cascade)
 
   @@map("preferencias_formativas")
+}
+
+enum TipoConstancia {
+  curso
+  ruta
+}
+
+// ---- Constancias de finalización (docs/diseno-desarrollo-formacion.md, nota
+// del incremento 5). Se emiten al terminar un curso o una ruta y nunca se
+// borran ni cambian: guardan el título, los elementos y la duración tal como
+// eran al emitirse, para que un cambio posterior del administrador no altere
+// lo que ya se hizo constar.
+//
+// id_curso e id_ruta no llevan llave foránea, a propósito. La constancia se
+// basta a sí misma y debe sobrevivir a que la ruta se borre. Además, la llave
+// haría que emitir una constancia bloqueara (FOR KEY SHARE) la fila del curso
+// o la ruta, y eso invierte el orden de bloqueos con el administrador que la
+// está editando: los dos se esperarían. Un curso con constancias tampoco se
+// puede borrar, porque tiene inscripciones. Un CHECK de la migración exige
+// exactamente una de las dos según el tipo.
+model Constancia {
+  idConstancia      String         @id @default(uuid()) @map("id_constancia")
+  folio             String         @unique
+  idUsuario         String         @map("id_usuario")
+  tipo              TipoConstancia
+  idCurso           String?        @map("id_curso")
+  idRuta            String?        @map("id_ruta")
+  titulo            String
+  elementos         String[]       @default([])
+  duracionMin       Int            @map("duracion_min")
+  // En una ruta, los cursos que contaron para terminarla, en su orden.
+  titulosCursos     String[]       @default([]) @map("titulos_cursos")
+  // En un curso, la de su inscripción; en una ruta, la de su último curso.
+  fechaFinalizacion DateTime       @map("fecha_finalizacion")
+  fechaEmision      DateTime       @default(now()) @map("fecha_emision")
+
+  usuario Usuario @relation(fields: [idUsuario], references: [idUsuario], onDelete: Cascade)
+
+  @@unique([idUsuario, idCurso])
+  @@unique([idUsuario, idRuta])
+  @@index([idUsuario, fechaFinalizacion])
+  @@map("constancias")
+}
+
+enum TipoContenido {
+  recurso
+  curso
+
+  @@map("tipo_contenido")
+}
+
+enum AccionRevision {
+  enviada
+  cancelada
+  aprobada
+  cambios_solicitados
+  rechazada
+  retirada
+  publicada_de_nuevo
+
+  @@map("accion_revision")
+}
+
+// ---- Revisión de propuestas (docs/diseno-desarrollo-formacion.md §6.3, MOD-01
+// y nota del incremento 6). Cada envío del autor y cada decisión del
+// administrador deja una fila: quién, cuándo, qué y por qué.
+//
+// id_contenido no lleva llave foránea, como las constancias: el registro
+// sobrevive a que el autor borre su propuesta, y guarda el título que tenía
+// para poder leerse sin ella.
+model RevisionContenido {
+  idRevision     String         @id @default(uuid()) @map("id_revision")
+  tipoContenido  TipoContenido  @map("tipo_contenido")
+  idContenido    String         @map("id_contenido")
+  titulo         String
+  // Quien hizo la acción: el autor al enviar o cancelar, el administrador al
+  // decidir. Nulo si la cuenta desaparece.
+  idUsuarioActor String?        @map("id_usuario_actor")
+  accion         AccionRevision
+  // Obligatorio al pedir cambios, rechazar y retirar; opcional al aprobar.
+  motivo         String         @default("")
+  // Los criterios de §6.4 que el administrador marcó; todos al aprobar.
+  criterios      String[]       @default([])
+  fecha          DateTime       @default(now())
+
+  actor Usuario? @relation(fields: [idUsuarioActor], references: [idUsuario], onDelete: SetNull)
+
+  @@index([tipoContenido, idContenido, fecha])
+  @@map("revisiones_contenido")
 }

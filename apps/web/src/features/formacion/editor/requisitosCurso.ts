@@ -4,7 +4,7 @@ import {
   MIN_LECCIONES_CURSO,
   type ElementoColaboracion,
 } from '@plataforma/shared'
-import type { LeccionAdmin } from '../formacion'
+import type { LeccionAdmin } from '../formacion.api'
 
 export interface FichaFormulario {
   resumen: string

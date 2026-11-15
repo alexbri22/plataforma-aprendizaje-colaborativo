@@ -74,17 +74,111 @@ export const ETIQUETAS_ELEMENTO: Readonly<Record<ElementoColaboracion, string>> 
   procesamiento_grupal: 'Procesamiento del grupo',
 }
 
-/** Estado editorial de un recurso. Solo el administrador crea contenido en
- * este alcance, así que no hay estados de revisión; si se aprueba la autoría
- * abierta (opción B, §13.1) se añaden valores sin migrar la columna. */
-export const ESTATUS_RECURSO = ['borrador', 'publicado', 'retirado'] as const
+/** Estado editorial de un recurso, un curso o una ruta. Los tres de en medio
+ * son de la autoría abierta (opción B de §13.1, nota del incremento 6): solo
+ * los recorre lo que propone un usuario y revisa el administrador. */
+export const ESTATUS_RECURSO = [
+  'borrador',
+  'en_revision',
+  'cambios_solicitados',
+  'rechazado',
+  'publicado',
+  'retirado',
+] as const
 export type EstatusRecurso = (typeof ESTATUS_RECURSO)[number]
 
 export const ETIQUETAS_ESTATUS_RECURSO: Readonly<Record<EstatusRecurso, string>> = {
   borrador: 'Borrador',
+  en_revision: 'En revisión',
+  cambios_solicitados: 'Cambios solicitados',
+  rechazado: 'Rechazado',
   publicado: 'Publicado',
   retirado: 'Retirado',
 }
+
+/** Los que el administrador fija directamente en su propio contenido y en
+ * las rutas. Los de revisión solo se alcanzan con un envío o una decisión. */
+export const ESTATUS_EDITORIALES = ['borrador', 'publicado', 'retirado'] as const
+export type EstatusEditorial = (typeof ESTATUS_EDITORIALES)[number]
+
+// ---- Autoría abierta con revisión (nota del incremento 6) ----
+
+/** De dónde viene un contenido: del administrador (editorial) o de un
+ * usuario que lo propuso y pasó por revisión. */
+export const ORIGENES_CONTENIDO = ['editorial', 'propuesta'] as const
+export type OrigenContenido = (typeof ORIGENES_CONTENIDO)[number]
+
+/** Lo que se puede proponer. Las rutas siguen siendo editoriales. */
+export const TIPOS_CONTENIDO = ['recurso', 'curso'] as const
+export type TipoContenido = (typeof TIPOS_CONTENIDO)[number]
+
+/** Estados de una propuesta en los que su autor la edita. En los demás nadie
+ * la edita: en revisión está congelada, y rechazada es definitiva. */
+export const ESTATUS_EDITABLES_POR_AUTOR: readonly EstatusRecurso[] = [
+  'borrador',
+  'cambios_solicitados',
+]
+
+/** Lo que decide el administrador sobre una propuesta. */
+export const DECISIONES_REVISION = [
+  'aprobar',
+  'pedir_cambios',
+  'rechazar',
+  'retirar',
+  'publicar_de_nuevo',
+] as const
+export type DecisionRevision = (typeof DECISIONES_REVISION)[number]
+
+/** Las decisiones que exigen motivo (MOD-01): la persona debe saber qué
+ * cambiar o por qué no se publicó. Aprobar admite un comentario opcional. */
+export const DECISIONES_CON_MOTIVO: readonly DecisionRevision[] = [
+  'pedir_cambios',
+  'rechazar',
+  'retirar',
+]
+
+/** Lo que queda en el registro: los envíos del autor y las decisiones. */
+export const ACCIONES_REVISION = [
+  'enviada',
+  'cancelada',
+  'aprobada',
+  'cambios_solicitados',
+  'rechazada',
+  'retirada',
+  'publicada_de_nuevo',
+] as const
+export type AccionRevision = (typeof ACCIONES_REVISION)[number]
+
+export const ETIQUETAS_ACCION_REVISION: Readonly<Record<AccionRevision, string>> = {
+  enviada: 'Enviada a revisión',
+  cancelada: 'Envío cancelado',
+  aprobada: 'Aprobada y publicada',
+  cambios_solicitados: 'Cambios solicitados',
+  rechazada: 'Rechazada',
+  retirada: 'Retirada del catálogo',
+  publicada_de_nuevo: 'Publicada de nuevo',
+}
+
+/** Criterios mínimos de publicación (§6.4). El administrador los marca al
+ * revisar; para aprobar deben estar todos. */
+export const CRITERIOS_PUBLICACION = [
+  { id: 'proposito', etiqueta: 'Propósito formativo claro y relacionado con colaboración.' },
+  { id: 'derechos', etiqueta: 'Fuentes, autoría y derechos de uso identificados.' },
+  { id: 'completo', etiqueta: 'Contenido completo, coherente y sin enlaces rotos.' },
+  { id: 'lenguaje', etiqueta: 'Lenguaje respetuoso, comprensible y sin estereotipos.' },
+  { id: 'accesible', etiqueta: 'Alternativas accesibles para contenido visual o audiovisual.' },
+  { id: 'practica', etiqueta: 'Una práctica o uso concreto, no solo información general.' },
+  { id: 'datos', etiqueta: 'Sin datos personales, publicidad ni archivos ejecutables.' },
+] as const
+export type CriterioPublicacion = (typeof CRITERIOS_PUBLICACION)[number]['id']
+
+/** Límites por persona, para que nadie llene la cola ni la base: propuestas
+ * en revisión a la vez, y propuestas abiertas (en borrador o con cambios
+ * solicitados). */
+export const MAX_PROPUESTAS_EN_REVISION = 3
+export const MAX_PROPUESTAS_ABIERTAS = 10
+
+export const LARGO_MAXIMO_MOTIVO = 2_000
 
 /** Tipos que se muestran como artículo para leer en la plataforma; el resto
  * son "recursos breves" para usar en el momento. */
@@ -195,6 +289,29 @@ export const MAX_ELEMENTOS_PREFERIDOS = 2
 /** Respuesta privada a una lección de reflexión (CUR-03). */
 export const LARGO_MAXIMO_REFLEXION = 5_000
 
+// ---- Constancias de finalización (nota del incremento 5) ----
+
+/** Lo que una constancia hace constar que alguien terminó. */
+export const TIPOS_CONSTANCIA = ['curso', 'ruta'] as const
+export type TipoConstancia = (typeof TIPOS_CONSTANCIA)[number]
+
+/**
+ * El folio es `CO3-XXXX-XXXX`: ocho caracteres al azar del alfabeto de
+ * Crockford (sin I, L, O ni U, para que nadie los confunda al dictarlo o
+ * copiarlo a mano). Son 40 bits: no se pueden recorrer probando, y por eso la
+ * página de verificación puede ser pública.
+ */
+export const PREFIJO_FOLIO = 'CO3'
+export const ALFABETO_FOLIO = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'
+const FORMATO_FOLIO = /^CO3-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$/
+
+/** El folio en su forma canónica, o null si no tiene el formato. Acepta
+ * minúsculas y espacios alrededor, como llega de quien lo escribe a mano. */
+export function normalizarFolio(valor: string): string | null {
+  const folio = valor.trim().toUpperCase()
+  return FORMATO_FOLIO.test(folio) ? folio : null
+}
+
 export function esNivelCurso(valor: string): valor is NivelCurso {
   return (NIVELES_CURSO as readonly string[]).includes(valor)
 }
@@ -221,6 +338,18 @@ export function esElementoColaboracion(valor: string): valor is ElementoColabora
 
 export function esEstatusRecurso(valor: string): valor is EstatusRecurso {
   return (ESTATUS_RECURSO as readonly string[]).includes(valor)
+}
+
+export function esEstatusEditorial(valor: string): valor is EstatusEditorial {
+  return (ESTATUS_EDITORIALES as readonly string[]).includes(valor)
+}
+
+export function esTipoContenido(valor: string): valor is TipoContenido {
+  return (TIPOS_CONTENIDO as readonly string[]).includes(valor)
+}
+
+export function esDecisionRevision(valor: string): valor is DecisionRevision {
+  return (DECISIONES_REVISION as readonly string[]).includes(valor)
 }
 
 export function esTipoArchivoRecurso(valor: string): boolean {

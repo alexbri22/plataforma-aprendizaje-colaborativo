@@ -38,6 +38,20 @@ vi.mock('../cuentas/api', async () => {
   }
 })
 
+// Formación pinta su grupo de constancias en el perfil y lo prueba en
+// features/formacion/ConstanciasEnPerfil.test.tsx; aquí basta con que no
+// salga a la red.
+vi.mock('../formacion/formacion.api', async () => {
+  const real = await vi.importActual<typeof import('../formacion/formacion.api')>(
+    '../formacion/formacion.api',
+  )
+  return {
+    ...real,
+    obtenerMisConstancias: vi.fn().mockResolvedValue({ constancias: [], publicas: false }),
+    obtenerConstanciasDeUsuario: vi.fn().mockResolvedValue([]),
+  }
+})
+
 function renderPantalla(id: string) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },

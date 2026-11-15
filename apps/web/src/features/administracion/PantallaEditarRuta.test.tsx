@@ -94,6 +94,7 @@ const RUTA: RutaAdmin = {
 function resumenCurso(c: CursoDeRuta): ResumenCursoAdmin {
   return {
     idCurso: c.idCurso,
+    origen: 'editorial',
     titulo: c.titulo,
     resumen: '',
     area: c.area,

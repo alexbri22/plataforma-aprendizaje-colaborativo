@@ -13,10 +13,12 @@ import {
   listarRecursosGuardados,
   listarRutas,
   obtenerMiFormacion,
+  obtenerMisConstancias,
   obtenerPreferencias,
   obtenerRecomendaciones,
   obtenerRecurso,
   obtenerRuta,
+  type ConstanciaPropia,
   type MiCurso,
   type MiFormacion,
   type ResumenRecurso,
@@ -49,6 +51,7 @@ vi.mock('./formacion.api', async () => {
     obtenerRecomendaciones: vi.fn(),
     obtenerPreferencias: vi.fn(),
     guardarPreferencias: vi.fn(),
+    obtenerMisConstancias: vi.fn(),
   }
 })
 
@@ -142,7 +145,21 @@ beforeEach(() => {
   vi.mocked(listarRutas).mockResolvedValue({ rutas: [], paginacion: pagina([]) })
   vi.mocked(obtenerRecomendaciones).mockResolvedValue({ modo: 'editorial', recomendaciones: [] })
   vi.mocked(obtenerPreferencias).mockResolvedValue([])
+  vi.mocked(obtenerMisConstancias).mockResolvedValue({ constancias: [], publicas: false })
 })
+
+function constanciaPropia(parcial: Partial<ConstanciaPropia> = {}): ConstanciaPropia {
+  return {
+    folio: 'CO3-7KQM-4XPA',
+    tipo: 'curso',
+    titulo: 'Retrospectivas',
+    numCursos: 0,
+    fechaFinalizacion: '2026-11-02T12:00:00.000Z',
+    idCurso: 'c3',
+    idRuta: null,
+    ...parcial,
+  }
+}
 
 describe('Continúa aprendiendo', () => {
   it('con un curso a medias, el hero ofrece seguir en la lección pendiente', async () => {
@@ -200,6 +217,10 @@ describe('Continúa aprendiendo', () => {
 
 describe('Mi formación: cursos', () => {
   it('separa en curso y completados, y un retirado no ofrece seguir', async () => {
+    vi.mocked(obtenerMisConstancias).mockResolvedValue({
+      constancias: [constanciaPropia()],
+      publicas: false,
+    })
     vi.mocked(obtenerMiFormacion).mockResolvedValue(
       formacion({
         enCurso: [
@@ -238,6 +259,11 @@ describe('Mi formación: cursos', () => {
     expect(
       within(completados).getByText(/Completado el 2 de noviembre de 2026/),
     ).toBeInTheDocument()
+    expect(
+      await within(completados).findByRole('link', { name: 'Ver la constancia de Retrospectivas' }),
+    ).toHaveAttribute('href', '/constancias/CO3-7KQM-4XPA')
+    // Un curso en curso no tiene constancia.
+    expect(within(enCurso).queryByRole('link', { name: /constancia/ })).not.toBeInTheDocument()
   })
 
   it('sin cursos invita a explorar', async () => {
@@ -508,6 +534,27 @@ describe('ficha de ruta', () => {
     // El curso retirado no tiene enlace ni cuenta.
     expect(screen.queryByRole('link', { name: 'Curso no disponible' })).not.toBeInTheDocument()
     expect(screen.getByText(/no cuenta para terminar la ruta/)).toBeInTheDocument()
+  })
+
+  it('con la ruta terminada enlaza su constancia', async () => {
+    vi.mocked(obtenerMisConstancias).mockResolvedValue({
+      publicas: false,
+      constancias: [
+        constanciaPropia({
+          folio: 'CO3-R7TA-0001',
+          tipo: 'ruta',
+          titulo: 'Comunicación y confianza',
+          numCursos: 2,
+          idCurso: null,
+          idRuta: 'rc',
+        }),
+      ],
+    })
+    renderEn('/rutas/rc')
+
+    expect(
+      await screen.findByRole('link', { name: 'Ver tu constancia de la ruta' }),
+    ).toHaveAttribute('href', '/constancias/CO3-R7TA-0001')
   })
 
   it('si no se puede leer el avance, no lo inventa: ofrece reintentar', async () => {

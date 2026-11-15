@@ -11,6 +11,7 @@ import {
   obtenerCurso,
   obtenerLeccion,
   obtenerMiProgreso,
+  obtenerMisConstancias,
   type CursoPublico,
   type LeccionPublica,
   type MiProgresoCurso,
@@ -33,6 +34,7 @@ vi.mock('./formacion.api', async () => {
     inscribirse: vi.fn(),
     marcarLeccion: vi.fn(),
     guardarReflexion: vi.fn(),
+    obtenerMisConstancias: vi.fn(),
   }
 })
 
@@ -160,6 +162,7 @@ beforeEach(() => {
   vi.mocked(inscribirse).mockReset()
   vi.mocked(marcarLeccion).mockReset()
   vi.mocked(guardarReflexion).mockReset()
+  vi.mocked(obtenerMisConstancias).mockResolvedValue({ constancias: [], publicas: false })
 })
 
 describe('ficha con sesión', () => {
@@ -193,7 +196,21 @@ describe('ficha con sesión', () => {
     expect(within(segunda).queryByText('Completada')).not.toBeInTheDocument()
   })
 
-  it('con el curso terminado dice cuándo y ofrece repasarlo', async () => {
+  it('con el curso terminado dice cuándo, enlaza su constancia y ofrece repasarlo', async () => {
+    vi.mocked(obtenerMisConstancias).mockResolvedValue({
+      publicas: false,
+      constancias: [
+        {
+          folio: 'CO3-7KQM-4XPA',
+          tipo: 'curso',
+          titulo: 'Acuerdos claros',
+          numCursos: 0,
+          fechaFinalizacion: '2026-11-02T18:00:00.000Z',
+          idCurso: 'c1',
+          idRuta: null,
+        },
+      ],
+    })
     vi.mocked(obtenerMiProgreso).mockResolvedValue(
       progreso({
         inscrito: true,
@@ -207,6 +224,10 @@ describe('ficha con sesión', () => {
     renderEn('/cursos/c1')
 
     expect(await screen.findByText(/Completaste este curso el/)).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: 'Ver tu constancia' })).toHaveAttribute(
+      'href',
+      '/constancias/CO3-7KQM-4XPA',
+    )
     // Queda la reflexión opcional: "Ver lo nuevo" lleva a ella.
     expect(screen.getByRole('link', { name: 'Ver lo nuevo' })).toHaveAttribute(
       'href',
@@ -228,7 +249,11 @@ describe('ficha con sesión', () => {
 
 describe('visor con sesión', () => {
   it('marca la lección como completada y la señala en el índice', async () => {
-    vi.mocked(marcarLeccion).mockResolvedValue({ progreso: EMPEZADO, cursoCompletadoAhora: false })
+    vi.mocked(marcarLeccion).mockResolvedValue({
+      progreso: EMPEZADO,
+      cursoCompletadoAhora: false,
+      constanciasNuevas: [],
+    })
     const user = userEvent.setup()
     renderEn('/cursos/c1/lecciones/l1')
 
@@ -249,6 +274,7 @@ describe('visor con sesión', () => {
     vi.mocked(marcarLeccion).mockResolvedValue({
       progreso: progreso({ inscrito: true }),
       cursoCompletadoAhora: false,
+      constanciasNuevas: [],
     })
     const user = userEvent.setup()
     renderEn('/cursos/c1/lecciones/l1')
@@ -273,6 +299,22 @@ describe('visor con sesión', () => {
         porcentaje: 100,
       }),
       cursoCompletadoAhora: true,
+      constanciasNuevas: [
+        {
+          folio: 'CO3-7KQM-4XPA',
+          tipo: 'curso',
+          titulo: 'Acuerdos claros',
+          numCursos: 0,
+          fechaFinalizacion: '2026-11-02T18:00:00.000Z',
+        },
+        {
+          folio: 'CO3-R7TA-0001',
+          tipo: 'ruta',
+          titulo: 'Organización y corresponsabilidad',
+          numCursos: 2,
+          fechaFinalizacion: '2026-11-02T18:00:00.000Z',
+        },
+      ],
     })
     const user = userEvent.setup()
     renderEn('/cursos/c1/lecciones/l2')
@@ -281,6 +323,18 @@ describe('visor con sesión', () => {
 
     expect(await screen.findByText('Completaste el curso')).toBeInTheDocument()
     expect(screen.getByText('2 de 2 lecciones · 100 %')).toBeInTheDocument()
+    // Su constancia, y la de la ruta que terminó con este curso.
+    expect(screen.getByRole('link', { name: 'Ver tu constancia' })).toHaveAttribute(
+      'href',
+      '/constancias/CO3-7KQM-4XPA',
+    )
+    expect(
+      screen.getByText(/también terminaste la ruta «Organización y corresponsabilidad»/),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Ver su constancia' })).toHaveAttribute(
+      'href',
+      '/constancias/CO3-R7TA-0001',
+    )
   })
 
   it('una lección no disponible no se puede marcar', async () => {
