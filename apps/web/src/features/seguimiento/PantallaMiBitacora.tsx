@@ -142,7 +142,12 @@ export function PantallaMiBitacora() {
     )
 
   return (
-    <AppShellEquipo idEquipo={idEquipo} seccionActiva="bitacora" titulo="Mi bitácora">
+    <AppShellEquipo
+      idEquipo={idEquipo}
+      seccionActiva="bitacora"
+      titulo="Mi bitácora"
+      ayuda="bitacora"
+    >
       <div className={styles.contenido}>
         {puedeEscribir ? (
           <FormularioNuevaEntrada

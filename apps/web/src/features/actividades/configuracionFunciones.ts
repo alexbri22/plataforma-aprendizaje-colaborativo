@@ -25,8 +25,8 @@ export const FUNCIONES_SIMPLES: DefinicionFuncion[] = [
     titulo: 'Formación de equipos',
     descripcion: 'Cómo se conforman los equipos al cerrar la inscripción.',
     opciones: [
-      { valor: 'autogestionado', etiqueta: 'Autogestionada' },
-      { valor: 'manual', etiqueta: 'Asignación manual' },
+      { valor: 'autogestionado', etiqueta: 'Cada quien elige su equipo' },
+      { valor: 'manual', etiqueta: 'Tú asignas los equipos' },
     ],
   },
   {
@@ -78,12 +78,12 @@ export const FUNCIONES_SIMPLES: DefinicionFuncion[] = [
   },
   {
     funcion: 'insignias',
-    titulo: 'Insignias',
-    descripcion: 'Quién puede otorgar insignias durante el periodo de cierre.',
+    titulo: 'Reconocimientos',
+    descripcion: 'Quién puede dar reconocimientos durante el cierre.',
     opciones: [
-      { valor: 'deshabilitado', etiqueta: 'Deshabilitado' },
-      { valor: 'solo_organizador', etiqueta: 'Solo tú otorgas' },
-      { valor: 'organizador_y_participantes', etiqueta: 'Tú y los participantes otorgan entre sí' },
+      { valor: 'deshabilitado', etiqueta: 'Deshabilitados' },
+      { valor: 'solo_organizador', etiqueta: 'Solo tú los das' },
+      { valor: 'organizador_y_participantes', etiqueta: 'Tú y los participantes, entre sí' },
     ],
   },
 ]
@@ -101,14 +101,24 @@ export const ELEMENTOS_ESPACIO_EQUIPO_UI: {
 }[] = [
   { elemento: 'metas', etiqueta: 'Metas', descripcion: 'Lo que el equipo se propone lograr.' },
   {
+    elemento: 'planeacion',
+    etiqueta: 'Planeación',
+    descripcion: 'Cómo se organiza el equipo para lograr sus metas.',
+  },
+  {
     elemento: 'avances',
     etiqueta: 'Avances',
     descripcion: 'Entregas periódicas del trabajo, con su propio calendario.',
   },
   {
     elemento: 'recursos',
-    etiqueta: 'Recursos',
-    descripcion: 'Enlaces y materiales que el equipo comparte.',
+    etiqueta: 'Materiales',
+    descripcion: 'Enlaces y archivos que el equipo comparte.',
+  },
+  {
+    elemento: 'producto',
+    etiqueta: 'Producto',
+    descripcion: 'Lo que el equipo entrega como resultado final.',
   },
 ]
 

@@ -1,12 +1,15 @@
 import {
   LONGITUD_MAXIMA_CONTENIDO_ELEMENTO,
+  esUrlSegura,
   type ElementoDeEspacioEquipo,
 } from '@plataforma/shared'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { formatearFechaHora } from '../actividades'
 import { AvisoError, Button, Card, IconoCargando, Textarea } from '../../components/ui'
+import { AdjuntosElemento, CamposAdjuntos, MarcaAdjunto } from './AdjuntosElemento'
 import { ComentariosDeElemento } from './ComentariosDeElemento'
 import { IconoChevron } from './IconoChevron'
+import type { DatosElemento } from './useElementos'
 import styles from './TarjetaElemento.module.css'
 
 interface TarjetaElementoProps {
@@ -17,7 +20,7 @@ interface TarjetaElementoProps {
   guardando: boolean
   eliminando: boolean
   error: string | null
-  onGuardar: (contenido: string) => Promise<void>
+  onGuardar: (datos: DatosElemento) => Promise<void>
   onEliminar: () => void
   idMiMembresia: string | undefined
   /** Organizador o co-organizador con `calificar_y_comentar` (nucleo §10.4). */
@@ -52,6 +55,11 @@ export function TarjetaElemento({
   const [expandida, setExpandida] = useState(expandidaInicial)
   const [editando, setEditando] = useState(false)
   const [borrador, setBorrador] = useState(elemento.contenido)
+  const [enlace, setEnlace] = useState(elemento.enlace ?? '')
+  const [archivoNuevo, setArchivoNuevo] = useState<File | null>(null)
+  const [quitarArchivo, setQuitarArchivo] = useState(false)
+  const [errorEnlace, setErrorEnlace] = useState<string | undefined>()
+  const [confirmandoEliminar, setConfirmandoEliminar] = useState(false)
   const encabezadoRef = useRef<HTMLButtonElement>(null)
 
   // expandidaInicial refleja el id pedido por la URL. La tarjeta puede ya
@@ -68,9 +76,28 @@ export function TarjetaElemento({
     if (expandidaInicial) encabezadoRef.current?.scrollIntoView({ block: 'center' })
   }, [expandidaInicial])
 
+  // Abre la edición con lo que hay ahora (pudo cambiar por un refetch).
+  function empezarEdicion() {
+    setBorrador(elemento.contenido)
+    setEnlace(elemento.enlace ?? '')
+    setArchivoNuevo(null)
+    setQuitarArchivo(false)
+    setErrorEnlace(undefined)
+    setEditando(true)
+  }
+
   async function manejarGuardar(evento: FormEvent) {
     evento.preventDefault()
-    await onGuardar(borrador)
+    const enlaceLimpio = enlace.trim()
+    if (enlaceLimpio && !esUrlSegura(enlaceLimpio)) {
+      setErrorEnlace('Debe ser un enlace completo que empiece con https://')
+      return
+    }
+    await onGuardar({
+      contenido: borrador,
+      enlace: enlaceLimpio || null,
+      archivo: archivoNuevo ?? (quitarArchivo ? null : undefined),
+    })
     setEditando(false)
   }
 
@@ -84,6 +111,7 @@ export function TarjetaElemento({
         aria-expanded={expandida}
       >
         <span className={styles.contenidoPreview}>{elemento.contenido}</span>
+        {elemento.enlace || elemento.archivo ? <MarcaAdjunto /> : null}
         <span className={styles.autoria}>
           {elemento.autor} · {formatearFechaHora(elemento.fechaActualizacion)}
         </span>
@@ -100,6 +128,17 @@ export function TarjetaElemento({
                 onChange={(e) => setBorrador(e.target.value)}
                 maxLength={LONGITUD_MAXIMA_CONTENIDO_ELEMENTO}
                 autoFocus
+              />
+              <CamposAdjuntos
+                enlace={enlace}
+                onEnlace={setEnlace}
+                archivoNuevo={archivoNuevo}
+                onArchivoNuevo={setArchivoNuevo}
+                archivoActual={elemento.archivo}
+                quitarActual={quitarArchivo}
+                onQuitarActual={setQuitarArchivo}
+                errorEnlace={errorEnlace}
+                disabled={guardando}
               />
               {error ? <AvisoError mensaje={error} /> : null}
               <div className={styles.acciones}>
@@ -123,22 +162,52 @@ export function TarjetaElemento({
           ) : (
             <>
               <p className={styles.contenido}>{elemento.contenido}</p>
-              {puedeEscribir ? (
+              <AdjuntosElemento
+                idElemento={elemento.id}
+                enlace={elemento.enlace}
+                archivo={elemento.archivo}
+              />
+              {puedeEscribir && confirmandoEliminar ? (
+                // Eliminar no tiene vuelta atrás y es del equipo entero (lo
+                // borra para todos): se confirma en el mismo lugar, con el
+                // patrón "Sí, {verbo}" + Cancelar del resto de la app.
+                <div
+                  className={styles.confirmacion}
+                  role="group"
+                  aria-label="Confirmar eliminación"
+                >
+                  <span className={styles.pregunta}>¿Eliminar esto para todo el equipo?</span>
+                  <div className={styles.acciones}>
+                    <Button
+                      type="button"
+                      variant="danger"
+                      size="sm"
+                      disabled={eliminando}
+                      onClick={onEliminar}
+                    >
+                      {eliminando ? <IconoCargando size={14} /> : 'Sí, eliminar'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={eliminando}
+                      onClick={() => setConfirmandoEliminar(false)}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              ) : puedeEscribir ? (
                 <div className={styles.acciones}>
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={() => {
-                      // borrador se inicializó con useState(elemento.contenido),
-                      // que React solo evalúa al montar: si el contenido
-                      // cambió desde entonces por un refetch (lo editó alguien
-                      // más), reiniciarlo aquí evita abrir la edición sobre un
-                      // valor ya obsoleto y terminar guardándolo encima del
-                      // más nuevo.
-                      setBorrador(elemento.contenido)
-                      setEditando(true)
-                    }}
+                    // Reinicia el borrador al abrir: useState solo toma el
+                    // valor al montar, y si alguien más lo editó desde
+                    // entonces se guardaría encima del más nuevo.
+                    onClick={empezarEdicion}
                   >
                     Editar
                   </Button>
@@ -146,10 +215,9 @@ export function TarjetaElemento({
                     type="button"
                     variant="ghost"
                     size="sm"
-                    disabled={eliminando}
-                    onClick={onEliminar}
+                    onClick={() => setConfirmandoEliminar(true)}
                   >
-                    {eliminando ? <IconoCargando size={14} /> : 'Eliminar'}
+                    Eliminar
                   </Button>
                 </div>
               ) : null}

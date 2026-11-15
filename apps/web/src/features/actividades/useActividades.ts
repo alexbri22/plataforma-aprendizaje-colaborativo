@@ -9,6 +9,7 @@ import {
   definirPeriodos,
   fijarLimitesEquipo,
   iniciarCierre,
+  archivarActividad,
   obtenerActividad,
   obtenerActividades,
   obtenerParticipantes,
@@ -63,6 +64,17 @@ export function useIniciarCierreMutation(id: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: () => iniciarCierre(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: claveActividad(id) })
+      queryClient.invalidateQueries({ queryKey: CLAVE_ACTIVIDADES })
+    },
+  })
+}
+
+export function useArchivarMutation(id: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => archivarActividad(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: claveActividad(id) })
       queryClient.invalidateQueries({ queryKey: CLAVE_ACTIVIDADES })

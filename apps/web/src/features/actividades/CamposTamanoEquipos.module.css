@@ -1,22 +1,22 @@
 .control {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: stretch;
   gap: var(--space-1);
   flex-shrink: 0;
 }
 
 .campos {
   display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
+  flex-direction: column;
+  gap: var(--space-4);
 }
 
-/* Mismo ancho para los dos, con la etiqueta en una línea, para que las cajas
-   queden a la misma altura. Sin las flechas del navegador, que solo aparecen
-   en uno al pasar el cursor y descuadran. */
-.campos > * {
-  width: 190px;
+/* Uno debajo del otro: cada uno lleva su ayuda, de distinto largo, y lado a
+   lado las cajas quedaban a alturas distintas. Sin las flechas del
+   navegador, que solo aparecen en uno al pasar el cursor y descuadran. */
+.campos input {
+  max-width: 12rem;
 }
 
 .campos label {
@@ -32,15 +32,4 @@
 .campos input[type='number']::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
-}
-
-@media (max-width: 640px) {
-  .control {
-    align-items: stretch;
-  }
-
-  .campos > * {
-    flex: 1;
-    width: auto;
-  }
 }

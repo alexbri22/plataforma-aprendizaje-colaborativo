@@ -139,12 +139,12 @@ export function BarraFormacion({
     return (
       <div className={styles.barra}>
         <div className={styles.grupo}>
-          <span className={styles.pregunta}>¿Cerrar la formación?</span>
+          <span className={styles.pregunta}>¿Confirmar los equipos?</span>
           {resumen}
         </div>
         <div className={styles.grupo}>
           <Button size="sm" disabled={trabajando} onClick={cerrarFormacion}>
-            {cerrar.isPending ? cargando('Cerrando…') : 'Confirmar cierre'}
+            {cerrar.isPending ? cargando('Confirmando…') : 'Sí, confirmar equipos'}
           </Button>
           <Button
             variant="ghost"
@@ -168,7 +168,7 @@ export function BarraFormacion({
         </span>
         <div className={styles.grupo}>
           <Button size="sm" disabled={trabajando} onClick={generarPropuesta}>
-            {proponer.isPending ? cargando('Generando…') : 'Reemplazar'}
+            {proponer.isPending ? cargando('Sugiriendo…') : 'Sí, reemplazar'}
           </Button>
           <Button
             variant="ghost"
@@ -192,14 +192,14 @@ export function BarraFormacion({
         {resumen}
         {generados !== null ? (
           <span className={styles.estado} role="status">
-            Propuesta generada: {generados} {generados === 1 ? 'equipo' : 'equipos'}.
+            Sugerencia lista: {generados} {generados === 1 ? 'equipo' : 'equipos'}.
           </span>
         ) : null}
       </div>
       <div className={styles.grupo}>
         {puedeConfigurar ? (
           <Button variant="ghost" size="sm" onClick={onConfigurar}>
-            Configurar
+            Ajustes de formación
           </Button>
         ) : null}
         {puedePropuesta ? (
@@ -210,10 +210,10 @@ export function BarraFormacion({
             onClick={equipos.length > 0 ? () => setConfirmacion('propuesta') : generarPropuesta}
           >
             {proponer.isPending
-              ? cargando('Generando…')
+              ? cargando('Sugiriendo…')
               : equipos.length > 0
-                ? 'Generar otra propuesta'
-                : 'Generar propuesta'}
+                ? 'Sugerir otros'
+                : 'Sugerir equipos'}
           </Button>
         ) : null}
         {puedeCerrar ? (
@@ -222,7 +222,7 @@ export function BarraFormacion({
             disabled={equipos.length === 0 || trabajando}
             onClick={() => setConfirmacion('cierre')}
           >
-            Cerrar la formación
+            Confirmar equipos
           </Button>
         ) : null}
       </div>

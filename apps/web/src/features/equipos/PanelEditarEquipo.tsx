@@ -206,14 +206,16 @@ export function PanelEditarEquipo({
             <section className={styles.seccion}>
               {confirmando ? (
                 <>
-                  <p className={styles.texto}>Sus integrantes quedan sin equipo.</p>
+                  <p className={styles.texto}>
+                    ¿Eliminar este equipo? Sus integrantes quedan sin equipo.
+                  </p>
                   <div className={styles.botones}>
                     <Button
                       variant="danger"
                       disabled={ocupado}
                       onClick={() => onEliminar(equipo.id)}
                     >
-                      Eliminar equipo
+                      Sí, eliminar
                     </Button>
                     <Button
                       variant="secondary"

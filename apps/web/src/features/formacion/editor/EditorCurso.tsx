@@ -1096,9 +1096,9 @@ function Editor({
             onClick={() => void alConfirmar()}
           >
             {confirmar?.tipo === 'eliminar'
-              ? 'Eliminar definitivamente'
+              ? 'Sí, eliminar'
               : confirmar?.tipo === 'retirar'
-                ? 'Retirar'
+                ? 'Sí, retirar'
                 : confirmar?.tipo === 'cancelarEnvio'
                   ? 'Cancelar el envío'
                   : 'Quitar'}

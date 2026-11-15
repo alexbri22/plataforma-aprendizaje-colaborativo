@@ -22,7 +22,7 @@ import { registrarEvento } from '../historial/historial.service.js'
 // la membresía y no al equipo. Este módulo es el único que lee y escribe
 // `bitacoras`.
 
-const MENSAJE_FASE = 'La bitácora no puede editarse en esta fase.'
+const MENSAJE_FASE = 'La bitácora no puede editarse en esta etapa.'
 
 function aRespuesta(fila: FilaBitacora): EntradaBitacora {
   return {

@@ -113,6 +113,72 @@ describe('POST /api/sesion', () => {
   })
 })
 
+// El límite de intentos vive en memoria y dura toda la ventana: cada prueba
+// usa su propio correo para no heredar el conteo de otra.
+describe('POST /api/sesion: límite de intentos', () => {
+  async function ingresar(correo: string, contrasena: string) {
+    return request(app).post('/api/sesion').send({ correo, contrasena })
+  }
+
+  it('dice cuántos intentos quedan y, al agotarlos, cuánto esperar', async () => {
+    const correo = 'limite-a@ejemplo.com'
+    await request(app)
+      .post('/api/usuarios')
+      .send({ ...DATOS_REGISTRO, correo })
+      .expect(201)
+
+    const primero = await ingresar(correo, 'incorrecta-pero-larga')
+    expect(primero.status).toBe(401)
+    expect(primero.body.intentosRestantes).toBe(9)
+    expect(primero.body.reintentarEnSegundos).toBeUndefined()
+
+    for (let i = 0; i < 8; i++) await ingresar(correo, 'incorrecta-pero-larga')
+    const ultimo = await ingresar(correo, 'incorrecta-pero-larga')
+    expect(ultimo.status).toBe(401)
+    expect(ultimo.body.intentosRestantes).toBe(0)
+    expect(ultimo.body.reintentarEnSegundos).toBeGreaterThan(0)
+
+    const bloqueado = await ingresar(correo, DATOS_REGISTRO.contrasena)
+    expect(bloqueado.status).toBe(429)
+    expect(bloqueado.body.codigo).toBe('limite_intentos')
+    expect(bloqueado.body.reintentarEnSegundos).toBeGreaterThan(0)
+  })
+
+  it('cuenta igual un correo que no tiene cuenta, sin revelarlo', async () => {
+    const respuesta = await ingresar('limite-sin-cuenta@ejemplo.com', 'lo-que-sea-largo')
+
+    expect(respuesta.status).toBe(401)
+    expect(respuesta.body.codigo).toBe('credenciales_invalidas')
+    expect(respuesta.body.intentosRestantes).toBe(9)
+  })
+
+  it('los fallos de una persona no bloquean a otra en la misma red', async () => {
+    const otra = 'limite-b@ejemplo.com'
+    await request(app)
+      .post('/api/usuarios')
+      .send({ ...DATOS_REGISTRO, correo: otra })
+      .expect(201)
+
+    for (let i = 0; i < 10; i++) await ingresar('limite-c@ejemplo.com', 'incorrecta-pero-larga')
+    expect((await ingresar('limite-c@ejemplo.com', 'incorrecta-pero-larga')).status).toBe(429)
+
+    expect((await ingresar(otra, DATOS_REGISTRO.contrasena)).status).toBe(200)
+  })
+
+  it('los ingresos correctos no gastan intentos', async () => {
+    const correo = 'limite-d@ejemplo.com'
+    await request(app)
+      .post('/api/usuarios')
+      .send({ ...DATOS_REGISTRO, correo })
+      .expect(201)
+
+    for (let i = 0; i < 12; i++) {
+      expect((await ingresar(correo, DATOS_REGISTRO.contrasena)).status).toBe(200)
+    }
+    expect((await ingresar(correo, 'incorrecta-pero-larga')).body.intentosRestantes).toBe(9)
+  })
+})
+
 describe('GET /api/sesion', () => {
   it('responde 401 sin cookie de sesión', async () => {
     const respuesta = await request(app).get('/api/sesion')

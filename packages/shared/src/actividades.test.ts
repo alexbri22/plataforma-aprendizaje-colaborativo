@@ -36,23 +36,45 @@ describe('catálogo de funciones de seguimiento', () => {
 
 describe('estado compuesto de espacio_equipo', () => {
   it('serializa y parsea de vuelta al mismo valor', () => {
-    const estado = { metas: 'obligatorio', avances: 'opcional', recursos: 'opcional' } as const
+    const estado = {
+      metas: 'obligatorio',
+      planeacion: 'opcional',
+      avances: 'opcional',
+      recursos: 'opcional',
+      producto: 'opcional',
+    } as const
     expect(parsearEstadoEspacioEquipo(serializarEstadoEspacioEquipo(estado))).toEqual(estado)
   })
 
-  it('rechaza JSON inválido, con claves de más o de menos, o valores fuera de catálogo', () => {
+  it('rechaza JSON inválido, claves desconocidas o valores fuera de catálogo', () => {
     expect(parsearEstadoEspacioEquipo('no es json')).toBeNull()
-    expect(parsearEstadoEspacioEquipo('{"metas":"opcional"}')).toBeNull()
+    expect(parsearEstadoEspacioEquipo('{"metas":"opcional","otro":"opcional"}')).toBeNull()
     expect(
       parsearEstadoEspacioEquipo('{"metas":"x","avances":"opcional","recursos":"opcional"}'),
     ).toBeNull()
   })
 
+  it('un elemento que falta toma el valor por defecto, como en las actividades anteriores a Planeación y Producto', () => {
+    expect(
+      parsearEstadoEspacioEquipo(
+        '{"metas":"obligatorio","avances":"deshabilitado","recursos":"opcional"}',
+      ),
+    ).toEqual({
+      metas: 'obligatorio',
+      planeacion: 'opcional',
+      avances: 'deshabilitado',
+      recursos: 'opcional',
+      producto: 'opcional',
+    })
+  })
+
   it('admite deshabilitado en cualquiera de los tres elementos', () => {
     const estado = {
       metas: 'deshabilitado',
+      planeacion: 'opcional',
       avances: 'opcional',
       recursos: 'deshabilitado',
+      producto: 'opcional',
     } as const
     expect(parsearEstadoEspacioEquipo(serializarEstadoEspacioEquipo(estado))).toEqual(estado)
   })

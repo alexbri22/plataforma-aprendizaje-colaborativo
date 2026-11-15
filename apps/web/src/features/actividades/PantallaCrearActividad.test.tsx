@@ -61,8 +61,8 @@ const CAMPOS_OBLIGATORIOS = [
   'Fecha de inicio',
   'Fecha de término',
   'Fecha límite de inscripción',
-  'Plazo de reconocimiento (días)',
-  'Número de equipos esperado',
+  'Días para reconocer al cierre',
+  'Equipos esperados',
 ]
 
 async function llenarFormularioValido() {
@@ -77,10 +77,10 @@ async function llenarFormularioValido() {
   fireEvent.change(screen.getByLabelText('Fecha límite de inscripción'), {
     target: { value: '2026-09-05' },
   })
-  fireEvent.change(screen.getByLabelText('Plazo de reconocimiento (días)'), {
+  fireEvent.change(screen.getByLabelText('Días para reconocer al cierre'), {
     target: { value: '10' },
   })
-  fireEvent.change(screen.getByLabelText('Número de equipos esperado'), {
+  fireEvent.change(screen.getByLabelText('Equipos esperados'), {
     target: { value: '3' },
   })
 }
@@ -128,17 +128,60 @@ describe('PantallaCrearActividad', () => {
     expect(await screen.findByText('Debe ser posterior a la fecha de inicio.')).toBeInTheDocument()
   })
 
+  it('exige que la inscripción cierre antes del término', async () => {
+    renderPantalla()
+
+    fireEvent.change(screen.getByLabelText('Fecha de término'), { target: { value: '2026-11-01' } })
+    fireEvent.change(screen.getByLabelText('Fecha límite de inscripción'), {
+      target: { value: '2026-11-01' },
+    })
+    fireEvent.blur(screen.getByLabelText('Fecha límite de inscripción'))
+
+    expect(await screen.findByText('Debe ser anterior a la fecha de término.')).toBeInTheDocument()
+  })
+
+  it('explica cada campo con una ayuda que el lector de pantalla asocia al campo', () => {
+    renderPantalla()
+
+    expect(screen.getByLabelText('Equipos esperados')).toHaveAccessibleDescription(
+      /Cuántos equipos sugerirá Co3/,
+    )
+    expect(screen.getByLabelText('Fecha límite de inscripción')).toHaveAccessibleDescription(
+      /Último día para unirse con la clave/,
+    )
+  })
+
+  it('resume las fechas con lo que se lleva escrito', async () => {
+    renderPantalla()
+
+    fireEvent.change(screen.getByLabelText('Fecha de inicio'), { target: { value: '2026-09-01' } })
+    fireEvent.change(screen.getByLabelText('Fecha de término'), { target: { value: '2026-11-30' } })
+    fireEvent.change(screen.getByLabelText('Fecha límite de inscripción'), {
+      target: { value: '2026-09-05' },
+    })
+    fireEvent.change(screen.getByLabelText('Días para reconocer al cierre'), {
+      target: { value: '10' },
+    })
+
+    expect(screen.getByText('Inscripción con la clave').nextSibling).toHaveTextContent(
+      'hasta el 5 sep 2026',
+    )
+    expect(screen.getByText('Reconocimientos').nextSibling).toHaveTextContent(
+      'del 30 nov 2026 al 10 dic 2026',
+    )
+  })
+
   it('rechaza valores no enteros o no positivos en los campos numéricos', async () => {
     renderPantalla()
 
-    fireEvent.change(screen.getByLabelText('Plazo de reconocimiento (días)'), {
+    fireEvent.change(screen.getByLabelText('Días para reconocer al cierre'), {
       target: { value: '0' },
     })
-    fireEvent.blur(screen.getByLabelText('Plazo de reconocimiento (días)'))
-    fireEvent.change(screen.getByLabelText('Número de equipos esperado'), {
+    fireEvent.blur(screen.getByLabelText('Días para reconocer al cierre'))
+    fireEvent.change(screen.getByLabelText('Equipos esperados'), {
       target: { value: '1.5' },
     })
-    fireEvent.blur(screen.getByLabelText('Número de equipos esperado'))
+    fireEvent.blur(screen.getByLabelText('Equipos esperados'))
 
     expect(await screen.findAllByText('Debe ser un número entero mayor a cero.')).toHaveLength(2)
   })

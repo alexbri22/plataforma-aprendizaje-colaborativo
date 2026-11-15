@@ -74,7 +74,7 @@ export async function definirPeriodos(
     membresiaActor,
     'configurar_funciones',
     actividad.estado,
-    'El calendario no puede regenerarse en esta fase.',
+    'El calendario no puede regenerarse en esta etapa.',
   )
 
   const periodos =
@@ -124,7 +124,7 @@ export async function actualizarPeriodo(
     membresiaActor,
     'ajustar_periodos',
     actividad.estado,
-    'Los periodos no pueden ajustarse en esta fase.',
+    'Los periodos no pueden ajustarse en esta etapa.',
   )
 
   const { idActividad } = actividad

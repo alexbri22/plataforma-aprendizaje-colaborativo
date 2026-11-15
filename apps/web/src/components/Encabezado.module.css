@@ -139,6 +139,10 @@
   inset: -8px;
 }
 
+.navLink[aria-current='page'] {
+  color: var(--color-primary);
+}
+
 .navLink:hover {
   background: var(--color-primary-subtle);
   color: var(--color-primary);

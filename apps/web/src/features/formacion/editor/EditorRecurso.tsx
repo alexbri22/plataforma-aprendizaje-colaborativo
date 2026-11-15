@@ -1077,10 +1077,10 @@ function Editor({
             onClick={() => void alConfirmar()}
           >
             {confirmar === 'eliminar'
-              ? 'Eliminar definitivamente'
+              ? 'Sí, eliminar'
               : confirmar === 'cancelarEnvio'
                 ? 'Cancelar el envío'
-                : 'Retirar'}
+                : 'Sí, retirar'}
           </Button>
         </div>
       </Modal>

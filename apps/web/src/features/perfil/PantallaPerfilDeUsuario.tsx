@@ -23,7 +23,7 @@ export function PantallaPerfilDeUsuario() {
 
   if (perfil.isPending) {
     return (
-      <AppShell seccionActiva="actividades" titulo="Perfil">
+      <AppShell seccionActiva="actividades" titulo="Perfil" volverAlAnterior>
         <div className={styles.cargando} role="status" aria-label="Cargando perfil">
           <IconoCargando size={24} />
         </div>
@@ -33,7 +33,7 @@ export function PantallaPerfilDeUsuario() {
 
   if (perfil.isError || !perfil.data) {
     return (
-      <AppShell seccionActiva="actividades" titulo="Perfil">
+      <AppShell seccionActiva="actividades" titulo="Perfil" volverAlAnterior>
         <AvisoError mensaje={perfil.error?.message ?? 'No encontramos a esta persona.'} />
       </AppShell>
     )
@@ -42,7 +42,7 @@ export function PantallaPerfilDeUsuario() {
   const usuario = perfil.data
 
   return (
-    <AppShell seccionActiva="actividades" titulo="Perfil">
+    <AppShell seccionActiva="actividades" titulo="Perfil" volverAlAnterior>
       <Card className={styles.cabecera}>
         <Avatar
           nombre={usuario.nombre}

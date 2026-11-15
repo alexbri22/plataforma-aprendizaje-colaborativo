@@ -11,6 +11,8 @@ function elemento(sobrescribir: Partial<ElementoDeEspacioEquipo> = {}): Elemento
     id: 'el-1',
     tipo: 'metas',
     contenido: 'Contenido original',
+    enlace: null,
+    archivo: null,
     idMembresiaAutor: 'yo',
     autor: 'Ana García',
     fechaCreacion: '2026-10-01T10:00:00.000Z',

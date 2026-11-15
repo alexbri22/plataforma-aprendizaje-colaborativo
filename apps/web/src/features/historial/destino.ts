@@ -1,4 +1,4 @@
-import type { EventoHistorial } from '@plataforma/shared'
+import { ELEMENTOS_ESPACIO_EQUIPO, type EventoHistorial } from '@plataforma/shared'
 
 // A dónde lleva un clic sobre un evento del historial: "ir directamente a
 // revisarlo", ya con la tarjeta exacta abierta (nucleo §5.5) — entre veinte
@@ -16,7 +16,7 @@ function esCadena(valor: unknown): valor is string {
 
 function destinoDeElemento(idEquipo: unknown, tipo: unknown, idAbrir: string): string | null {
   if (!esCadena(idEquipo) || !esCadena(tipo)) return null
-  if (tipo !== 'metas' && tipo !== 'avances' && tipo !== 'recursos') return null
+  if (!(ELEMENTOS_ESPACIO_EQUIPO as readonly string[]).includes(tipo)) return null
   return `/equipos/${idEquipo}/${tipo}?abrir=${idAbrir}`
 }
 

@@ -10,8 +10,7 @@ const BASE_URL = import.meta.env.VITE_API_URL ?? ''
 
 export class ErrorActividad extends Error {}
 
-const MENSAJE_SIN_CONEXION =
-  'No pudimos conectar con el servidor. Verifica tu conexión e intenta de nuevo.'
+const MENSAJE_SIN_CONEXION = 'No pudimos comunicarnos con Co3. Intenta de nuevo en un momento.'
 
 async function leerMensajeError(respuesta: Response, mensajePorDefecto: string): Promise<string> {
   try {
@@ -199,6 +198,24 @@ export async function iniciarCierre(id: string): Promise<Actividad> {
   return actividad
 }
 
+// POST /api/actividades/{id}/archivo (docs/diseno-desarrollo-nucleo.md §7.4 y
+// §7.7): archiva la actividad antes de que venza el plazo de cierre. La
+// muestra PantallaConfirmarCierre cuando 'archivar' está en las capacidades.
+export async function archivarActividad(id: string): Promise<Actividad> {
+  const respuesta = await pedir(`/api/actividades/${encodeURIComponent(id)}/archivo`, {
+    method: 'POST',
+  })
+
+  if (!respuesta.ok) {
+    throw new ErrorActividad(
+      await leerMensajeError(respuesta, 'No pudimos archivar la actividad. Intenta de nuevo.'),
+    )
+  }
+
+  const { actividad } = (await respuesta.json()) as { actividad: Actividad }
+  return actividad
+}
+
 // PUT /api/actividades/{id}/configuracion/{funcion} (docs/diseno-desarrollo-nucleo.md
 // §7.7): fija el estado de una función. `cuerpo` es {estado} para las siete
 // funciones simples, o {metas, avances, recursos} para espacio_equipo
@@ -260,7 +277,7 @@ export async function obtenerPeriodos(id: string): Promise<PeriodoReporte[]> {
 
   if (!respuesta.ok) {
     throw new ErrorActividad(
-      await leerMensajeError(respuesta, 'No pudimos cargar el calendario de avances.'),
+      await leerMensajeError(respuesta, 'No pudimos cargar el calendario de entregas.'),
     )
   }
 

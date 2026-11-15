@@ -23,8 +23,13 @@
   gap: var(--space-3);
 }
 
-.badge {
-  align-self: flex-start;
+.nombreActividad {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  color: var(--color-text);
+  text-wrap: balance;
 }
 
 .objetivo {
@@ -32,28 +37,6 @@
   line-height: var(--line-height-normal);
   color: var(--color-text);
   margin: 0;
-}
-
-.accion {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.accionBoton {
-  align-self: flex-start;
-}
-
-.accionTexto {
-  font-size: var(--font-size-sm);
-  line-height: var(--line-height-normal);
-  color: var(--color-text);
-  margin: 0;
-}
-
-.accionBotones {
-  display: flex;
-  gap: var(--space-2);
 }
 
 .texto {
@@ -68,50 +51,6 @@
   font-weight: var(--font-weight-semibold);
   color: var(--color-text);
   margin: 0;
-}
-
-.cargandoSeccion {
-  display: flex;
-  padding: var(--space-4) 0;
-  color: var(--color-text-muted);
-}
-
-.listaParticipantes {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.verTodos {
-  align-self: flex-start;
-}
-
-.filaParticipante {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-2) 0;
-  border-top: 1px solid var(--color-border);
-}
-
-.filaParticipante:first-child {
-  border-top: none;
-}
-
-.nombreParticipante {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text);
-}
-
-.fechaParticipante {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
-  white-space: nowrap;
 }
 
 .detalles {
@@ -141,8 +80,3 @@
 
 /* La clave es un dato más de la lista, no un bloque aparte — el monoespaciado
    basta para señalar que es un código, sin subir tamaño, color ni fondo. */
-.clave {
-  font-family: var(--font-family-mono);
-  font-weight: var(--font-weight-medium);
-  letter-spacing: 0.02em;
-}

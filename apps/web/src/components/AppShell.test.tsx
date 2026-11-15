@@ -1,5 +1,5 @@
-import { render, screen, within } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { screen, within } from '@testing-library/react'
+import { renderConProveedores } from '../pruebas/conProveedores'
 import { describe, expect, it, vi } from 'vitest'
 import type { Usuario } from '../features/cuentas'
 import { AppShell, type SeccionApp } from './AppShell'
@@ -26,12 +26,10 @@ vi.mock('../features/cuentas/useSesion', async () => {
 })
 
 function montar(seccionActiva: SeccionApp) {
-  return render(
-    <MemoryRouter>
-      <AppShell seccionActiva={seccionActiva} titulo="Pantalla">
-        <p>contenido</p>
-      </AppShell>
-    </MemoryRouter>,
+  return renderConProveedores(
+    <AppShell seccionActiva={seccionActiva} titulo="Pantalla">
+      <p>contenido</p>
+    </AppShell>,
   )
 }
 

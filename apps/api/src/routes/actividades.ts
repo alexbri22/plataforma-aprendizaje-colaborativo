@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { cargarContextoActividad } from '../middleware/contextoActividad.js'
 import { exigirSesion } from '../middleware/sesion.js'
+import { obtenerIdEquipoDeMembresia } from '../services/equipos/equipos.service.js'
 import type { UsuarioPublico } from '../services/cuentas/cuentas.service.js'
 import {
   agregarOPromoverCoorganizador,
@@ -9,6 +10,7 @@ import {
   crearActividad,
   fijarLimitesEquipo,
   iniciarCierre,
+  archivar,
   listarActividadesDeUsuario,
   listarParticipantes,
   nombreCompleto,
@@ -51,8 +53,15 @@ actividadesRouter.get(
   cargarContextoActividad,
   async (req, res) => {
     const { membresia } = req.contextoActividad!
-    const actividad = await obtenerActividadPorId(req.params.id as string, membresia)
-    res.status(200).json({ actividad })
+    // El equipo propio se compone aquí y no en actividades.service:
+    // equipos.service ya depende de actividades.service, y pedírselo desde
+    // allá cerraría el ciclo (mismo patrón que routes/historial.ts). Con él,
+    // el cliente lleva a quien participa directo a su equipo.
+    const [actividad, idMiEquipo] = await Promise.all([
+      obtenerActividadPorId(req.params.id as string, membresia),
+      obtenerIdEquipoDeMembresia(membresia.idMembresia),
+    ])
+    res.status(200).json({ actividad: { ...actividad, idMiEquipo } })
   },
 )
 
@@ -103,6 +112,20 @@ actividadesRouter.post(
     const { membresia } = req.contextoActividad!
     const actor = req.actor as UsuarioPublico
     const actividad = await iniciarCierre(req.params.id as string, actor.idUsuario, membresia)
+    res.status(200).json({ actividad })
+  },
+)
+
+// POST /api/actividades/{id}/archivo (nucleo §7.4): archiva la actividad
+// antes de que venza el plazo de cierre.
+actividadesRouter.post(
+  '/actividades/:id/archivo',
+  exigirSesion,
+  cargarContextoActividad,
+  async (req, res) => {
+    const { membresia } = req.contextoActividad!
+    const actor = req.actor as UsuarioPublico
+    const actividad = await archivar(req.params.id as string, actor.idUsuario, membresia)
     res.status(200).json({ actividad })
   },
 )

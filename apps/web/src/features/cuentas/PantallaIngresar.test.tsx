@@ -125,4 +125,20 @@ describe('PantallaIngresar', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Correo o contraseña incorrectos.')
     expect(navigateMock).not.toHaveBeenCalled()
   })
+
+  it('tras demasiados intentos dice cuánto esperar y bloquea el botón mientras tanto', async () => {
+    vi.mocked(iniciarSesion).mockRejectedValueOnce(
+      new ErrorCuenta('Demasiados intentos.', { reintentarEnSegundos: 720 }),
+    )
+    renderPantalla()
+
+    await userEvent.type(screen.getByLabelText('Correo'), 'ana@example.com')
+    await userEvent.type(screen.getByLabelText('Contraseña'), 'clave1234')
+    await userEvent.click(screen.getByRole('button', { name: 'Ingresar' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Demasiados intentos. Vuelve a intentarlo en 12 minutos.',
+    )
+    expect(screen.getByRole('button', { name: /^Espera 1[12]:\d\d$/ })).toBeDisabled()
+  })
 })

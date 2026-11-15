@@ -1,5 +1,6 @@
 import { Encabezado } from '../../components/Encabezado'
 import { Button } from '../../components/ui'
+import { useSesion } from '../cuentas'
 import styles from './PantallaInicio.module.css'
 
 function FlechaIcono() {
@@ -38,6 +39,8 @@ const RECURSOS = [
 ]
 
 export function PantallaInicio() {
+  const { usuario } = useSesion()
+
   return (
     <div className={styles.page}>
       <Encabezado />
@@ -54,10 +57,16 @@ export function PantallaInicio() {
                 </p>
               </div>
               <div className={styles.heroActions}>
-                <Button to="/registrarse">Registrarse</Button>
-                <Button variant="secondary" to="/ingresar">
-                  Ingresar
-                </Button>
+                {usuario ? (
+                  <Button to="/actividades">Ir a mis actividades</Button>
+                ) : (
+                  <>
+                    <Button to="/registrarse">Crear cuenta</Button>
+                    <Button variant="secondary" to="/ingresar">
+                      Ingresar
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
 

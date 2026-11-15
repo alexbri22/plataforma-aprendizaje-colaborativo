@@ -12,6 +12,15 @@ export function formatearFecha(fechaIso: string): string {
   return FORMATO_FECHA.format(new Date(anio, mes - 1, dia))
 }
 
+/** La fecha de calendario `dias` días después (o antes, si es negativo),
+ * también en YYYY-MM-DD y sin pasar por UTC, por lo mismo que formatearFecha. */
+export function sumarDias(fechaIso: string, dias: number): string {
+  const [anio, mes, dia] = fechaIso.split('-').map(Number)
+  const fecha = new Date(anio, mes - 1, dia + dias)
+  const dosDigitos = (n: number) => String(n).padStart(2, '0')
+  return `${fecha.getFullYear()}-${dosDigitos(fecha.getMonth() + 1)}-${dosDigitos(fecha.getDate())}`
+}
+
 // A diferencia de formatearFecha, este recibe un instante real (con hora),
 // como membresias.fecha_union: aquí sí es correcto parsear el ISO directo,
 // porque no es una fecha de calendario sin hora la que podría correrse de

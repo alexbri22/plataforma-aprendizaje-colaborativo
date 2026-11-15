@@ -78,6 +78,11 @@ export function CamposTamanoEquipos({
           <Input
             key={campo}
             label={campo === 'minimo' ? 'Mínimo de integrantes' : 'Máximo de integrantes'}
+            ayuda={
+              campo === 'minimo'
+                ? 'Los equipos con menos personas se marcan para que los completes.'
+                : 'Nadie puede entrar a un equipo que ya tiene este número.'
+            }
             type="number"
             inputMode="numeric"
             min={PISO_POR_CAMPO[campo]}

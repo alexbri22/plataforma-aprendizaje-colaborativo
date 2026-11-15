@@ -1,8 +1,14 @@
-import type { ElementoEspacioEquipo as FilaElemento, Prisma } from '@prisma/client'
-import type { ElementoDeEspacioEquipo, ElementoEspacioEquipo } from '@plataforma/shared'
+import type { ElementoEspacioEquipo as FilaElementoBase, Prisma } from '@prisma/client'
+import {
+  MAX_BYTES_ARCHIVO_ELEMENTO,
+  esTipoArchivoElemento,
+  type ElementoDeEspacioEquipo,
+  type ElementoEspacioEquipo,
+} from '@plataforma/shared'
 import { prisma } from '../../data/prisma.js'
 import {
   ErrorAccionNoPermitida,
+  ErrorArchivoInvalido,
   ErrorElementoNoEncontrado,
   ErrorFaseNoPermiteAccion,
 } from '../../errores.js'
@@ -24,13 +30,25 @@ import { registrarEvento } from '../historial/historial.service.js'
 // que expone equipos.service.ts, y de la fase de la actividad solo lo que
 // expone actividades.service.ts (nucleo §1.2).
 
-const MENSAJE_FASE = 'El espacio de equipo no puede editarse en esta fase.'
+const MENSAJE_FASE = 'El espacio de equipo no puede editarse en esta etapa.'
+
+// Del archivo adjunto solo los datos para mostrarlo, nunca los bytes: esos
+// se piden aparte (obtenerArchivoElemento) al descargarlo.
+const CON_DATOS_DE_ARCHIVO = {
+  archivo: { select: { nombre: true, tipo: true, tamano: true } },
+} as const
+
+type FilaElemento = FilaElementoBase & {
+  archivo: { nombre: string; tipo: string; tamano: number } | null
+}
 
 function aRespuesta(fila: FilaElemento, nombreAutor: string): ElementoDeEspacioEquipo {
   return {
     id: fila.idElemento,
     tipo: fila.tipoElemento,
     contenido: fila.contenido,
+    enlace: fila.enlace,
+    archivo: fila.archivo,
     idMembresiaAutor: fila.idMembresiaAutor,
     autor: nombreAutor,
     fechaCreacion: fila.fechaCreacion.toISOString(),
@@ -81,6 +99,7 @@ export async function listarElementos(
   const filas = await prisma.elementoEspacioEquipo.findMany({
     where: { idEquipo, ...(tipo ? { tipoElemento: tipo } : {}) },
     orderBy: { fechaCreacion: 'asc' },
+    include: CON_DATOS_DE_ARCHIVO,
   })
   const autores = await nombresDeAutores([...new Set(filas.map((f) => f.idMembresiaAutor))])
   return filas.map((fila) => aRespuesta(fila, autores.get(fila.idMembresiaAutor) ?? ''))
@@ -93,6 +112,7 @@ export async function crearElemento(
   idEquipo: string,
   tipo: ElementoEspacioEquipo,
   contenido: string,
+  enlace: string | null,
   idUsuarioActor: string,
 ): Promise<ElementoDeEspacioEquipo> {
   const contexto = await contextoEquipoParaSeguimiento(idEquipo, idUsuarioActor)
@@ -111,7 +131,14 @@ export async function crearElemento(
 
   const fila = await prisma.$transaction(async (tx) => {
     const creado = await tx.elementoEspacioEquipo.create({
-      data: { idEquipo, tipoElemento: tipo, contenido, idMembresiaAutor: membresia.idMembresia },
+      data: {
+        idEquipo,
+        tipoElemento: tipo,
+        contenido,
+        enlace,
+        idMembresiaAutor: membresia.idMembresia,
+      },
+      include: CON_DATOS_DE_ARCHIVO,
     })
 
     await registrarEvento(tx, {
@@ -136,7 +163,10 @@ export async function crearElemento(
 }
 
 async function cargarElementoConEquipo(idElemento: string): Promise<FilaElemento> {
-  const fila = await prisma.elementoEspacioEquipo.findUnique({ where: { idElemento } })
+  const fila = await prisma.elementoEspacioEquipo.findUnique({
+    where: { idElemento },
+    include: CON_DATOS_DE_ARCHIVO,
+  })
   if (!fila) throw new ErrorElementoNoEncontrado()
   return fila
 }
@@ -172,9 +202,10 @@ export async function contextoElementoParaComentario(
 // contenido de cualquier elemento, no solo el que creó (nucleo §9.1).
 export async function editarElemento(
   idElemento: string,
-  contenido: string,
+  cambios: { contenido: string; enlace?: string | null },
   idUsuarioActor: string,
 ): Promise<ElementoDeEspacioEquipo> {
+  const { contenido } = cambios
   const actual = await cargarElementoConEquipo(idElemento)
   const contexto = await contextoEquipoParaSeguimiento(actual.idEquipo, idUsuarioActor)
   await exigirEscrituraSobreEquipo(contexto)
@@ -192,12 +223,16 @@ export async function editarElemento(
     )
   }
 
+  // Sin `enlace` en la petición, el enlace no cambia.
+  const enlace = cambios.enlace === undefined ? actual.enlace : cambios.enlace
+
   const fila = await prisma.$transaction(async (tx) => {
-    if (contenido === actual.contenido) return actual
+    if (contenido === actual.contenido && enlace === actual.enlace) return actual
 
     const actualizado = await tx.elementoEspacioEquipo.update({
       where: { idElemento },
-      data: { contenido },
+      data: { contenido, enlace },
+      include: CON_DATOS_DE_ARCHIVO,
     })
 
     await registrarEvento(tx, {
@@ -214,6 +249,7 @@ export async function editarElemento(
         tipo: actual.tipoElemento,
         antes: actual.contenido,
         despues: contenido,
+        ...(enlace !== actual.enlace ? { enlaceAntes: actual.enlace, enlaceDespues: enlace } : {}),
         idEquipo: actual.idEquipo,
       },
       categoria: 'aportacion',
@@ -283,3 +319,181 @@ registrarComprobadorDeDatos('espacio_equipo', async (tx, idActividad) =>
     ? 'El espacio de equipo ya tiene contenido: solo puede habilitarse, no deshabilitarse ni cambiar de modo.'
     : null,
 )
+
+// ---- Archivo adjunto ----
+
+// Firmas de los primeros bytes de cada formato admitido: el tipo que manda
+// el navegador se puede falsear, el contenido no tanto. Los Office actuales
+// son un ZIP; los anteriores a 2007, un contenedor OLE.
+const FIRMAS: { tipos: string[]; firma: number[]; desde?: number }[] = [
+  { tipos: ['application/pdf'], firma: [0x25, 0x50, 0x44, 0x46] },
+  { tipos: ['image/png'], firma: [0x89, 0x50, 0x4e, 0x47] },
+  { tipos: ['image/jpeg'], firma: [0xff, 0xd8, 0xff] },
+  { tipos: ['image/gif'], firma: [0x47, 0x49, 0x46, 0x38] },
+  { tipos: ['image/webp'], firma: [0x57, 0x45, 0x42, 0x50], desde: 8 },
+  {
+    tipos: [
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    ],
+    firma: [0x50, 0x4b, 0x03, 0x04],
+  },
+  {
+    tipos: ['application/msword', 'application/vnd.ms-excel', 'application/vnd.ms-powerpoint'],
+    firma: [0xd0, 0xcf, 0x11, 0xe0],
+  },
+]
+
+function coincideConSuTipo(tipo: string, contenido: Buffer): boolean {
+  const regla = FIRMAS.find((f) => f.tipos.includes(tipo))
+  if (!regla) return false
+  const desde = regla.desde ?? 0
+  return regla.firma.every((byte, i) => contenido[desde + i] === byte)
+}
+
+function limpiarNombre(nombre: string): string {
+  const base = nombre
+    .split(/[\\/]/)
+    .pop()!
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\x00-\x1f"]/g, '')
+    .trim()
+    .slice(0, 120)
+  return base || 'archivo'
+}
+
+// Mismas reglas que editar el elemento: integrante del equipo, etapa que lo
+// permite y el tipo de elemento habilitado.
+async function exigirElementoEditable(idElemento: string, idUsuarioActor: string) {
+  const actual = await cargarElementoConEquipo(idElemento)
+  const contexto = await contextoEquipoParaSeguimiento(actual.idEquipo, idUsuarioActor)
+  await exigirEscrituraSobreEquipo(contexto)
+  const estadoEspacio = await obtenerEstadoEspacioEquipo(contexto.idActividad)
+  if (!estadoEspacio || estadoEspacio[actual.tipoElemento] === 'deshabilitado') {
+    throw new ErrorFaseNoPermiteAccion(
+      `No puedes editar ${actual.tipoElemento}: está deshabilitado en esta actividad.`,
+    )
+  }
+  return { actual, contexto }
+}
+
+async function registrarCambioDeArchivo(
+  tx: Prisma.TransactionClient,
+  actual: FilaElemento,
+  idActividad: string,
+  idUsuarioActor: string,
+  archivo: { antes: string | null; despues: string | null },
+) {
+  await registrarEvento(tx, {
+    idActividad,
+    tipoActor: 'usuario',
+    idUsuarioActor,
+    tipoEvento: 'elemento_modificado',
+    tipoEntidad: 'elemento_espacio_equipo',
+    idEntidad: actual.idElemento,
+    datos: {
+      tipo: actual.tipoElemento,
+      archivoAntes: archivo.antes,
+      archivoDespues: archivo.despues,
+      idEquipo: actual.idEquipo,
+    },
+    categoria: 'aportacion',
+  })
+}
+
+// PUT /api/elementos/{id}/archivo: adjunta o reemplaza el archivo (uno por
+// elemento).
+export async function guardarArchivoElemento(
+  idElemento: string,
+  tipo: string,
+  nombre: string,
+  contenido: Buffer,
+  idUsuarioActor: string,
+): Promise<ElementoDeEspacioEquipo> {
+  if (!esTipoArchivoElemento(tipo)) {
+    throw new ErrorArchivoInvalido('Solo se admiten PDF, imágenes y documentos de Office.')
+  }
+  if (contenido.length === 0) throw new ErrorArchivoInvalido('El archivo llegó vacío.')
+  if (contenido.length > MAX_BYTES_ARCHIVO_ELEMENTO) {
+    throw new ErrorArchivoInvalido('El archivo pesa más de 4 MB. Súbelo a Drive y pega el enlace.')
+  }
+  if (!coincideConSuTipo(tipo, contenido)) {
+    throw new ErrorArchivoInvalido('El archivo no corresponde a su tipo o está dañado.')
+  }
+
+  const { actual, contexto } = await exigirElementoEditable(idElemento, idUsuarioActor)
+  const nombreLimpio = limpiarNombre(nombre)
+  const datos = {
+    contenido: new Uint8Array(contenido),
+    tipo,
+    nombre: nombreLimpio,
+    tamano: contenido.length,
+    subidoEn: new Date(),
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.archivoElemento.upsert({
+      where: { idElemento },
+      create: { idElemento, ...datos },
+      update: datos,
+    })
+    // El elemento cuenta como actualizado: así su fecha refleja el cambio.
+    await tx.elementoEspacioEquipo.update({
+      where: { idElemento },
+      data: { fechaActualizacion: new Date() },
+    })
+    await registrarCambioDeArchivo(tx, actual, contexto.idActividad, idUsuarioActor, {
+      antes: actual.archivo?.nombre ?? null,
+      despues: nombreLimpio,
+    })
+  })
+
+  const fila = await cargarElementoConEquipo(idElemento)
+  const autores = await nombresDeAutores([fila.idMembresiaAutor])
+  return aRespuesta(fila, autores.get(fila.idMembresiaAutor) ?? '')
+}
+
+// DELETE /api/elementos/{id}/archivo
+export async function quitarArchivoElemento(
+  idElemento: string,
+  idUsuarioActor: string,
+): Promise<ElementoDeEspacioEquipo> {
+  const { actual, contexto } = await exigirElementoEditable(idElemento, idUsuarioActor)
+  if (actual.archivo) {
+    await prisma.$transaction(async (tx) => {
+      await tx.archivoElemento.delete({ where: { idElemento } })
+      await tx.elementoEspacioEquipo.update({
+        where: { idElemento },
+        data: { fechaActualizacion: new Date() },
+      })
+      await registrarCambioDeArchivo(tx, actual, contexto.idActividad, idUsuarioActor, {
+        antes: actual.archivo?.nombre ?? null,
+        despues: null,
+      })
+    })
+  }
+  const fila = await cargarElementoConEquipo(idElemento)
+  const autores = await nombresDeAutores([fila.idMembresiaAutor])
+  return aRespuesta(fila, autores.get(fila.idMembresiaAutor) ?? '')
+}
+
+// GET /api/elementos/{id}/archivo: lo descarga quien puede ver el elemento
+// (mismas reglas que listarElementos).
+export async function obtenerArchivoElemento(
+  idElemento: string,
+  idUsuarioActor: string,
+): Promise<{ contenido: Uint8Array; tipo: string; nombre: string }> {
+  const actual = await cargarElementoConEquipo(idElemento)
+  const { membresia, esIntegrante } = await contextoEquipoParaSeguimiento(
+    actual.idEquipo,
+    idUsuarioActor,
+  )
+  if (membresia.rol === 'participante' && !esIntegrante) throw new ErrorElementoNoEncontrado()
+  const archivo = await prisma.archivoElemento.findUnique({
+    where: { idElemento },
+    select: { contenido: true, tipo: true, nombre: true },
+  })
+  if (!archivo) throw new ErrorElementoNoEncontrado()
+  return archivo
+}

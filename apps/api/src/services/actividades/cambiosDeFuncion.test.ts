@@ -47,20 +47,46 @@ describe('evaluarCambioEnCurso', () => {
   it('espacio_equipo: habilitar un elemento deshabilitado es libre aunque otro tenga contenido', () => {
     const antes = espacio({
       metas: 'opcional',
+      planeacion: 'opcional',
       avances: 'deshabilitado',
       recursos: 'deshabilitado',
+      producto: 'opcional',
     })
-    const despues = espacio({ metas: 'opcional', avances: 'opcional', recursos: 'deshabilitado' })
+    const despues = espacio({
+      metas: 'opcional',
+      planeacion: 'opcional',
+      avances: 'opcional',
+      recursos: 'deshabilitado',
+      producto: 'opcional',
+    })
     expect(evaluarCambioEnCurso('espacio_equipo', antes, despues, CON_DATOS)).toEqual({
       permitido: true,
     })
   })
 
   it('espacio_equipo: tocar un elemento ya habilitado con datos se impide', () => {
-    const antes = espacio({ metas: 'opcional', avances: 'opcional', recursos: 'opcional' })
+    const antes = espacio({
+      metas: 'opcional',
+      planeacion: 'opcional',
+      avances: 'opcional',
+      recursos: 'opcional',
+      producto: 'opcional',
+    })
     for (const despues of [
-      espacio({ metas: 'deshabilitado', avances: 'opcional', recursos: 'opcional' }),
-      espacio({ metas: 'obligatorio', avances: 'opcional', recursos: 'opcional' }),
+      espacio({
+        metas: 'deshabilitado',
+        planeacion: 'opcional',
+        avances: 'opcional',
+        recursos: 'opcional',
+        producto: 'opcional',
+      }),
+      espacio({
+        metas: 'obligatorio',
+        planeacion: 'opcional',
+        avances: 'opcional',
+        recursos: 'opcional',
+        producto: 'opcional',
+      }),
     ]) {
       expect(evaluarCambioEnCurso('espacio_equipo', antes, despues, CON_DATOS)).toEqual({
         permitido: false,

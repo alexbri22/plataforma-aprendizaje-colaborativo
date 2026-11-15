@@ -18,10 +18,49 @@ export const LONGITUD_MAXIMA_CONTENIDO_ELEMENTO = 2000
  * elementos_espacio_equipo). Cualquier integrante del equipo puede crear,
  * editar o eliminar cualquiera, por eso `autor` identifica a quien lo
  * escribió sin que eso limite quién puede tocarlo después (nucleo §9.1). */
+/** Un elemento puede llevar un enlace y un archivo, opcionales y uno de
+ * cada uno. El archivo se guarda en la base (bytea), como los PDF de los
+ * recursos formativos: el API corre sin disco persistente y Vercel corta el
+ * cuerpo de la petición en 4.5 MB. Lo que pese más va por enlace (Drive). */
+export const MAX_BYTES_ARCHIVO_ELEMENTO = 4 * 1024 * 1024
+
+export const LONGITUD_MAXIMA_ENLACE_ELEMENTO = 2048
+
+/** PDF, imágenes y documentos de Office (actuales y anteriores a 2007), con
+ * la extensión que los identifica cuando el navegador no da el tipo. */
+export const EXTENSIONES_ARCHIVO_ELEMENTO = {
+  pdf: 'application/pdf',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  webp: 'image/webp',
+  gif: 'image/gif',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  doc: 'application/msword',
+  xls: 'application/vnd.ms-excel',
+  ppt: 'application/vnd.ms-powerpoint',
+} as const
+
+export const TIPOS_ARCHIVO_ELEMENTO = [...new Set(Object.values(EXTENSIONES_ARCHIVO_ELEMENTO))]
+
+export function esTipoArchivoElemento(tipo: string): boolean {
+  return (TIPOS_ARCHIVO_ELEMENTO as string[]).includes(tipo)
+}
+
+export interface ArchivoDeElemento {
+  nombre: string
+  tipo: string
+  tamano: number
+}
+
 export interface ElementoDeEspacioEquipo {
   id: string
   tipo: ElementoEspacioEquipo
   contenido: string
+  enlace: string | null
+  archivo: ArchivoDeElemento | null
   idMembresiaAutor: string
   autor: string
   fechaCreacion: string

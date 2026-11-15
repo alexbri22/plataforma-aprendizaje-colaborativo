@@ -4,8 +4,7 @@ const BASE_URL = import.meta.env.VITE_API_URL ?? ''
 
 export class ErrorComentario extends Error {}
 
-const MENSAJE_SIN_CONEXION =
-  'No pudimos conectar con el servidor. Verifica tu conexión e intenta de nuevo.'
+const MENSAJE_SIN_CONEXION = 'No pudimos comunicarnos con Co3. Intenta de nuevo en un momento.'
 
 async function leerMensajeError(respuesta: Response, mensajePorDefecto: string): Promise<string> {
   try {

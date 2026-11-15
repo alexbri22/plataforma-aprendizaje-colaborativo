@@ -10,18 +10,9 @@ export interface FilaPeriodoProps {
   periodo: PeriodoReporte
   deshabilitado: boolean
   onGuardar: (idPeriodo: string, cambios: CambiosPeriodo) => void
-  /** "Avance" por defecto; PanelCalendarioProcesoColaborativo pasa el nombre
-   * de su propia tarea ("Periodo") para no hablar de "avances" fuera de
-   * Proyecto colaborativo. */
-  nombreSingular?: string
 }
 
-export function FilaPeriodo({
-  periodo,
-  deshabilitado,
-  onGuardar,
-  nombreSingular = 'Avance',
-}: FilaPeriodoProps) {
+export function FilaPeriodo({ periodo, deshabilitado, onGuardar }: FilaPeriodoProps) {
   const [inicio, setInicio] = useState(periodo.fechaInicio)
   const [fin, setFin] = useState(periodo.fechaFin)
 
@@ -29,15 +20,12 @@ export function FilaPeriodo({
   const cambiado = inicio !== periodo.fechaInicio || fin !== periodo.fechaFin
   // Las fechas son YYYY-MM-DD, así que comparar como texto es comparar fechas.
   const rangoInvalido = inicio === '' || fin === '' || fin < inicio
-  const nombreMinuscula = nombreSingular.toLocaleLowerCase('es')
 
   return (
-    <li role="group" aria-label={`${nombreSingular} ${periodo.orden}`} className={styles.fila}>
+    <li role="group" aria-label={`Entrega ${periodo.orden}`} className={styles.fila}>
       <div className={styles.encabezadoFila}>
-        <span className={styles.nombre}>
-          {nombreSingular} {periodo.orden}
-        </span>
-        {cancelado ? <Badge variant="neutral">Cancelado</Badge> : null}
+        <span className={styles.nombre}>Entrega {periodo.orden}</span>
+        {cancelado ? <Badge variant="neutral">Cancelada</Badge> : null}
       </div>
 
       <div className={styles.fechas}>
@@ -61,7 +49,7 @@ export function FilaPeriodo({
       <div className={styles.acciones}>
         <Button
           size="sm"
-          aria-label={`Guardar fechas del ${nombreMinuscula} ${periodo.orden}`}
+          aria-label={`Guardar fechas de la entrega ${periodo.orden}`}
           disabled={!cambiado || rangoInvalido || cancelado || deshabilitado}
           onClick={() => onGuardar(periodo.id, { fechaInicio: inicio, fechaFin: fin })}
         >
@@ -70,11 +58,11 @@ export function FilaPeriodo({
         <Button
           size="sm"
           variant="secondary"
-          aria-label={`${cancelado ? 'Reactivar' : 'Cancelar'} ${nombreMinuscula} ${periodo.orden}`}
+          aria-label={`${cancelado ? 'Reactivar' : 'Cancelar'} la entrega ${periodo.orden}`}
           disabled={deshabilitado}
           onClick={() => onGuardar(periodo.id, { estado: cancelado ? 'activo' : 'cancelado' })}
         >
-          {cancelado ? `Reactivar ${nombreMinuscula}` : `Cancelar ${nombreMinuscula}`}
+          {cancelado ? 'Reactivar entrega' : 'Cancelar entrega'}
         </Button>
       </div>
     </li>
@@ -118,8 +106,8 @@ export function PanelCalendarioAvances({
   return (
     <PanelLateral
       abierto={abierto}
-      titulo="Calendario de avances"
-      descripcion="Ajusta las fechas de cada avance o cancela los que no se harán. Un avance cancelado sigue en la lista y puedes reactivarlo."
+      titulo="Calendario de entregas"
+      descripcion="Ajusta las fechas de cada entrega o cancela las que no se harán. Una entrega cancelada sigue en la lista y puedes reactivarla."
       onCerrar={onCerrar}
     >
       <div className={styles.estado} aria-live="polite">

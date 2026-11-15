@@ -42,3 +42,9 @@
   font-size: var(--font-size-xs);
   color: var(--color-danger);
 }
+
+.ayuda {
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-muted);
+}

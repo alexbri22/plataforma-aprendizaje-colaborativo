@@ -89,10 +89,56 @@ function conFotoAbsoluta<T extends { fotoUrl: string | null }>(usuario: T): T {
   return usuario.fotoUrl ? { ...usuario, fotoUrl: `${BASE_URL}${usuario.fotoUrl}` } : usuario
 }
 
-export class ErrorCuenta extends Error {}
+interface DetalleErrorCuenta {
+  detallePorCampo?: Record<string, string>
+  /** Solo en un 429: cuánto falta para que el servidor vuelva a aceptar intentos. */
+  reintentarEnSegundos?: number
+}
 
-const MENSAJE_SIN_CONEXION =
-  'No pudimos conectar con el servidor. Verifica tu conexión e intenta de nuevo.'
+export class ErrorCuenta extends Error {
+  readonly detallePorCampo?: Record<string, string>
+  readonly reintentarEnSegundos?: number
+
+  constructor(mensaje: string, detalle: DetalleErrorCuenta = {}) {
+    super(mensaje)
+    this.detallePorCampo = detalle.detallePorCampo
+    this.reintentarEnSegundos = detalle.reintentarEnSegundos
+  }
+}
+
+// Forma del error del API (docs/diseno-desarrollo-nucleo.md §3.1), más los
+// campos que agregan el límite de intentos y el inicio de sesión fallido.
+interface CuerpoError {
+  codigo?: string
+  mensaje?: string
+  detallePorCampo?: Record<string, string>
+  reintentarEnSegundos?: number
+  intentosRestantes?: number
+}
+
+async function leerCuerpoError(respuesta: Response): Promise<CuerpoError> {
+  try {
+    const cuerpo: unknown = await respuesta.json()
+    return cuerpo && typeof cuerpo === 'object' ? (cuerpo as CuerpoError) : {}
+  } catch {
+    return {}
+  }
+}
+
+const MENSAJE_LIMITE_INTENTOS = 'Demasiados intentos.'
+
+// A partir de cuántos intentos restantes se avisa: antes de eso la cifra solo
+// es ruido para quien se equivocó una vez.
+const AVISAR_DESDE_INTENTOS = 3
+
+function mensajeCredencialesIncorrectas(intentosRestantes: number | undefined): string {
+  const base = 'Correo o contraseña incorrectos.'
+  if (intentosRestantes === undefined || intentosRestantes > AVISAR_DESDE_INTENTOS) return base
+  if (intentosRestantes === 0) return `${base} Ya no te quedan intentos por ahora.`
+  return `${base} Te ${intentosRestantes === 1 ? 'queda 1 intento' : `quedan ${intentosRestantes} intentos`} antes de una pausa.`
+}
+
+const MENSAJE_SIN_CONEXION = 'No pudimos comunicarnos con Co3. Intenta de nuevo en un momento.'
 
 async function leerMensajeError(respuesta: Response, mensajePorDefecto: string): Promise<string> {
   try {
@@ -132,12 +178,28 @@ function enviar(ruta: string, datos: unknown): Promise<Response> {
 export async function iniciarSesion(credenciales: CredencialesIngreso): Promise<Usuario> {
   const respuesta = await enviar('/api/sesion', credenciales)
 
-  if (respuesta.status === 401) {
-    throw new ErrorCuenta('Correo o contraseña incorrectos.')
-  }
   if (!respuesta.ok) {
+    const cuerpo = await leerCuerpoError(respuesta)
+    if (respuesta.status === 429) {
+      throw new ErrorCuenta(MENSAJE_LIMITE_INTENTOS, {
+        reintentarEnSegundos: cuerpo.reintentarEnSegundos,
+      })
+    }
+    if (cuerpo.codigo === 'cuenta_desactivada') {
+      throw new ErrorCuenta(
+        'Esta cuenta está desactivada. Pide a la administración de la plataforma que la reactive.',
+      )
+    }
+    if (respuesta.status === 401) {
+      throw new ErrorCuenta(mensajeCredencialesIncorrectas(cuerpo.intentosRestantes), {
+        // Con el último intento gastado, el servidor ya dice cuánto esperar:
+        // la pantalla puede bloquear el botón sin hacer un intento más.
+        reintentarEnSegundos:
+          cuerpo.intentosRestantes === 0 ? cuerpo.reintentarEnSegundos : undefined,
+      })
+    }
     throw new ErrorCuenta(
-      await leerMensajeError(respuesta, 'No pudimos iniciar tu sesión. Intenta de nuevo.'),
+      cuerpo.mensaje?.trim() || 'No pudimos iniciar tu sesión. Intenta de nuevo.',
     )
   }
 
@@ -148,13 +210,22 @@ export async function iniciarSesion(credenciales: CredencialesIngreso): Promise<
 export async function registrarUsuario(datos: DatosRegistro): Promise<Usuario> {
   const respuesta = await enviar('/api/usuarios', datos)
 
-  if (respuesta.status === 409) {
-    throw new ErrorCuenta('Ya existe una cuenta con este correo.')
-  }
   if (!respuesta.ok) {
-    throw new ErrorCuenta(
-      await leerMensajeError(respuesta, 'No pudimos crear tu cuenta. Intenta de nuevo.'),
-    )
+    const cuerpo = await leerCuerpoError(respuesta)
+    if (respuesta.status === 429) {
+      throw new ErrorCuenta(MENSAJE_LIMITE_INTENTOS, {
+        reintentarEnSegundos: cuerpo.reintentarEnSegundos,
+      })
+    }
+    if (respuesta.status === 409) {
+      throw new ErrorCuenta('Ya existe una cuenta con este correo.')
+    }
+    if (cuerpo.codigo === 'validacion' && cuerpo.detallePorCampo) {
+      throw new ErrorCuenta('Revisa los campos marcados.', {
+        detallePorCampo: cuerpo.detallePorCampo,
+      })
+    }
+    throw new ErrorCuenta(cuerpo.mensaje?.trim() || 'No pudimos crear tu cuenta. Intenta de nuevo.')
   }
 
   const { usuario } = (await respuesta.json()) as { usuario: Usuario }
@@ -188,11 +259,8 @@ export async function cerrarSesion(): Promise<void> {
 }
 
 export class ErrorPerfil extends ErrorCuenta {
-  readonly detallePorCampo?: Record<string, string>
-
   constructor(mensaje: string, detallePorCampo?: Record<string, string>) {
-    super(mensaje)
-    this.detallePorCampo = detallePorCampo
+    super(mensaje, { detallePorCampo })
   }
 }
 

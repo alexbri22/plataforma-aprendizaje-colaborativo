@@ -41,11 +41,16 @@ export function PanelAjustesFormacion({
   }
 
   return (
-    <PanelLateral abierto={abierto} titulo="Formación de equipos" onCerrar={onCerrar}>
+    <PanelLateral abierto={abierto} titulo="Ajustes de formación" onCerrar={onCerrar}>
       <div className={styles.contenido}>
         {error ? <AvisoError mensaje={error} /> : null}
         <Select
           label="Cómo se forman"
+          ayuda={
+            (actividad.configuracion?.formacion_equipos ?? 'autogestionado') === 'manual'
+              ? 'Solo tú pones a cada persona en un equipo.'
+              : 'Cada participante se une al equipo que quiera; tú puedes moverlos.'
+          }
           value={actividad.configuracion?.formacion_equipos ?? 'autogestionado'}
           disabled={configurar.isPending}
           onChange={cambiarEstado}
