@@ -136,7 +136,13 @@ export function useGuardarEntregaMutation(idActividad: string, idInstrumento: st
     },
     onSuccess: (entrega) => {
       queryClient.setQueryData(claveEntregas(idActividad, idInstrumento), [entrega])
-      return queryClient.invalidateQueries({ queryKey: claveMisInstrumentos(idActividad) })
     },
+    // También si falla a medias (la nota se guardó, el archivo no): lo que
+    // muestre la pantalla al cancelar debe ser lo que ya existe.
+    onSettled: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: claveEntregas(idActividad, idInstrumento) }),
+        queryClient.invalidateQueries({ queryKey: claveMisInstrumentos(idActividad) }),
+      ]),
   })
 }

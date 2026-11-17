@@ -32,21 +32,12 @@ interface DesgloseProps {
   desglose: Desglose
   /** Quien organiza captura aquí lo que no se puntúa solo. */
   puedeCapturar: boolean
-  /** parcial: lo calificado hasta ahora, sin contar lo pendiente (lo que ve
-   * quien participa durante el desarrollo, P-18). final: la calificación,
-   * con lo pendiente en 0. */
-  modo?: 'parcial' | 'final'
 }
 
 // La calificación de una persona con su desglose (nucleo §10.3): cada
 // componente, sus aspectos y sus instrumentos, con lo que pesa cada uno ya
 // redistribuido. Lo capturable se edita en su fila.
-export function DesgloseCalificacion({
-  idActividad,
-  desglose,
-  puedeCapturar,
-  modo = 'final',
-}: DesgloseProps) {
+export function DesgloseCalificacion({ idActividad, desglose, puedeCapturar }: DesgloseProps) {
   const capturar = useCapturarPuntajeMutation(idActividad)
   const { parcial } = desglose
 
@@ -77,19 +68,15 @@ export function DesgloseCalificacion({
     )
   }
   const cubre = `cubre ${formatearPuntaje(parcial.cubre)} % de la calificación`
-  const principal = modo === 'parcial' ? parcial.valor : desglose.valor
+  const principal = desglose.valor
   const nota =
-    modo === 'parcial'
-      ? parcial.valor === null
-        ? 'Todavía no hay nada calificado.'
-        : `En lo calificado hasta ahora; ${cubre}. Lo pendiente aún no cuenta.`
-      : desglose.valor === null
-        ? 'Todavía no hay nada que calificar.'
-        : desglose.provisional
-          ? `Provisional: lo pendiente cuenta 0. En lo calificado lleva ${
-              parcial.valor === null ? '—' : formatearPuntaje(parcial.valor)
-            }, que ${cubre}.`
-          : 'Calificación completa.'
+    desglose.valor === null
+      ? 'Todavía no hay nada que calificar.'
+      : desglose.provisional
+        ? `Provisional: lo pendiente cuenta 0. En lo calificado lleva ${
+            parcial.valor === null ? '—' : formatearPuntaje(parcial.valor)
+          }, que ${cubre}.`
+        : 'Calificación completa.'
 
   return (
     <div className={styles.desglose}>

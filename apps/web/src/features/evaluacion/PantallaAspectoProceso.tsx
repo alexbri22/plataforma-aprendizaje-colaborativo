@@ -77,11 +77,21 @@ interface FormularioEntregaProps {
   instrumento: InstrumentoPorResponder
   entrega: EntregaDeInstrumento | null
   onListo: () => void
+  /** Al fallar, el formulario sigue abierto aunque el refresco descubra una
+   * entrega recién creada (la nota se guardó, el archivo no): así se
+   * reintenta el adjunto sin perder el error. */
+  onFallo: () => void
 }
 
 // La entrega de una actividad externa (nucleo §10.1): qué hizo y, si quiere,
 // un enlace (la grabación) o un archivo (un PDF), como un avance.
-function FormularioEntrega({ idActividad, instrumento, entrega, onListo }: FormularioEntregaProps) {
+function FormularioEntrega({
+  idActividad,
+  instrumento,
+  entrega,
+  onListo,
+  onFallo,
+}: FormularioEntregaProps) {
   const guardar = useGuardarEntregaMutation(idActividad, instrumento.id)
   const [contenido, setContenido] = useState(entrega?.contenido ?? '')
   const [enlace, setEnlace] = useState(entrega?.enlace ?? '')
@@ -101,6 +111,7 @@ function FormularioEntrega({ idActividad, instrumento, entrega, onListo }: Formu
       })
       onListo()
     } catch (e) {
+      onFallo()
       setError(e instanceof Error ? e.message : 'No pudimos guardar tu entrega.')
     }
   }
@@ -256,7 +267,11 @@ function FilaActividadExterna({
               idActividad={idActividad}
               instrumento={instrumento}
               entrega={entrega}
-              onListo={() => (entrega ? setEditando(false) : setAbierta(false))}
+              onListo={() => {
+                if (editando) setEditando(false)
+                else setAbierta(false)
+              }}
+              onFallo={() => setEditando(true)}
             />
           ) : (
             <p className={styles.apagado}>

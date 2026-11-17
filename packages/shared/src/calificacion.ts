@@ -523,9 +523,9 @@ export interface DesgloseCalificacion {
   equipo: { id: string; nombre: string } | null
   valor: number | null
   provisional: boolean
-  /** Lo calificado hasta ahora (P-18): el promedio de lo que ya tiene
-   * puntaje, sin contar lo pendiente, y qué porcentaje de la calificación
-   * cubre. Es lo que ve quien participa durante el desarrollo. */
+  /** Lo calificado hasta ahora: el promedio de lo que ya tiene puntaje, sin
+   * contar lo pendiente, y qué porcentaje de la calificación cubre. Acompaña
+   * a la calificación provisional. */
   parcial: { valor: number | null; cubre: number }
   componentes: ComponenteDelDesglose[]
 }

@@ -67,6 +67,19 @@ export function PuntajeDelEquipo({
           ? 'Hay ajustes por persona; se ven en el desglose de cada quien.'
           : 'Se asigna a cada participante del equipo.'}
       </span>
+      {/* Con ajustes el campo está vacío (no hay un valor común), así que
+          vaciarlo no retira nada: hace falta una acción explícita, que pasa
+          por la misma confirmación de reemplazar los ajustes. */}
+      {actual.ajustado && puedeCapturar && !pendiente ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={capturar.isPending}
+          onClick={() => void guardar(null).catch(() => undefined)}
+        >
+          Quitar los puntajes
+        </Button>
+      ) : null}
       {pendiente ? (
         <div className={styles.confirmacion}>
           <span>Esto reemplaza los ajustes individuales.</span>
