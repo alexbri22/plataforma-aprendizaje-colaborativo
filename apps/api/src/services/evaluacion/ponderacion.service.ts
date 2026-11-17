@@ -88,7 +88,7 @@ export async function obtenerPonderacion(idActividad: string): Promise<Ponderaci
         include: {
           instrumentos: {
             orderBy: { orden: 'asc' },
-            include: { _count: { select: { respuestas: true, entregas: true } } },
+            include: { _count: { select: { respuestas: true, entregas: true, puntajes: true } } },
           },
         },
       },
@@ -119,7 +119,11 @@ export async function obtenerPonderacion(idActividad: string): Promise<Ponderaci
             ? aFechaCalendario(instrumento.fechaPlanificada)
             : null,
           orden: instrumento.orden,
-          conRespuestas: instrumento._count.respuestas + instrumento._count.entregas > 0,
+          conRespuestas:
+            instrumento._count.respuestas +
+              instrumento._count.entregas +
+              instrumento._count.puntajes >
+            0,
         })),
       })),
     })),
@@ -204,7 +208,7 @@ export async function definirInstrumentos(
   const { aspecto, catalogo } = await aspectoDelProceso(actividad, idAspecto)
   if (await hayRespuestas(aspecto.instrumentos.map((i) => i.idInstrumento))) {
     throw new ErrorInstrumentoConRespuestas(
-      'Este aspecto ya tiene respuestas o entregas: sus instrumentos no pueden reemplazarse.',
+      'Este aspecto ya tiene respuestas, entregas o puntajes: sus instrumentos no pueden reemplazarse.',
     )
   }
 
@@ -291,7 +295,7 @@ export async function actualizarInstrumento(
   const formato = cambios.formato ?? instrumento.origen
   if (formato !== instrumento.origen && (await hayRespuestas([idInstrumento]))) {
     throw new ErrorInstrumentoConRespuestas(
-      'Esta instancia ya tiene respuestas o entregas: su formato no puede cambiar.',
+      'Esta instancia ya tiene respuestas, entregas o puntajes: su formato no puede cambiar.',
     )
   }
   if (!formatosPara(instrumento.aspecto.clave, tipo).includes(formato)) {

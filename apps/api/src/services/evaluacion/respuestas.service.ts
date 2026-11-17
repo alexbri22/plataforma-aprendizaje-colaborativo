@@ -447,14 +447,18 @@ export async function misResultadosPares(
   }
 }
 
-// Para ponderacion.service: si alguna instancia ya tiene respuestas o
-// entregas, no se reemplaza ni cambia de formato (nucleo §10.1).
+// Para ponderacion.service: si alguna instancia ya tiene respuestas,
+// entregas o puntajes capturados, no se reemplaza ni cambia de formato
+// (nucleo §10.1): reemplazarla borraría en cascada lo que la puntúa, y
+// cambiar una actividad externa a plantilla dejaría sus puntajes fuera del
+// cálculo.
 export async function hayRespuestas(idsInstrumento: string[]): Promise<boolean> {
   if (idsInstrumento.length === 0) return false
   const donde = { idInstrumento: { in: idsInstrumento } }
-  const [respuesta, entrega] = await Promise.all([
+  const [respuesta, entrega, puntaje] = await Promise.all([
     prisma.respuestaInstrumento.findFirst({ where: donde, select: { idRespuesta: true } }),
     prisma.entregaInstrumento.findFirst({ where: donde, select: { idEntrega: true } }),
+    prisma.puntajeCapturado.findFirst({ where: donde, select: { idPuntaje: true } }),
   ])
-  return respuesta !== null || entrega !== null
+  return respuesta !== null || entrega !== null || puntaje !== null
 }

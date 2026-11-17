@@ -138,7 +138,7 @@ export function SeccionProcesoColaborativo({ actividad }: { actividad: Actividad
                   (t) => t.tarea === aspecto.clave,
                 )
                 const tipo = aspecto.instrumentos[0]?.tipo ?? null
-                // Con respuestas, sus instancias ya no se reemplazan (nucleo
+                // Con respuestas, entregas o puntajes, sus instancias ya no se reemplazan (nucleo
                 // §10.1): tipo y periodicidad quedan fijos.
                 const conRespuestas = aspecto.instrumentos.some((i) => i.conRespuestas)
                 const periodicidad = periodicidadDeAspecto(aspecto, fechaInicio, fechaTermino)
@@ -196,7 +196,9 @@ export function SeccionProcesoColaborativo({ actividad }: { actividad: Actividad
                           {calificacionHabilitada && !tipo && aspecto.peso > 0 ? (
                             <Badge variant="warning">Elige un instrumento</Badge>
                           ) : null}
-                          {conRespuestas ? <Badge variant="neutral">Con respuestas</Badge> : null}
+                          {conRespuestas ? (
+                            <Badge variant="neutral">Con respuestas o puntajes</Badge>
+                          ) : null}
                           {aspecto.instrumentos.some((i) => i.origen === 'enlace' && !i.enlace) ? (
                             <Badge variant="warning">Falta el enlace</Badge>
                           ) : null}

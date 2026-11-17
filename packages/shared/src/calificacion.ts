@@ -259,8 +259,8 @@ export interface InstrumentoDePonderacion {
   /** YYYY-MM-DD. Sin efecto todavía (P-41). */
   fechaPlanificada: string | null
   orden: number
-  /** Con respuestas o entregas, no se reemplaza ni cambia de formato
-   * (nucleo §10.1). */
+  /** Con respuestas, entregas o puntajes capturados, no se reemplaza ni
+   * cambia de formato (nucleo §10.1). */
   conRespuestas: boolean
 }
 

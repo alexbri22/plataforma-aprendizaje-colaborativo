@@ -72,12 +72,18 @@ export function validarDatosInstrumento(cuerpo: unknown): CambiosInstrumento {
       cambios.formato = formato as OrigenInstrumento
     } else errores.formato = 'Debe ser plantilla o enlace.'
   }
+  // null o texto vacío quitan el enlace; cualquier otro tipo es un error, no
+  // una forma de borrarlo.
   if (enlace !== undefined) {
-    const limpio = typeof enlace === 'string' ? enlace.trim() : ''
-    if (enlace === null || limpio === '') cambios.enlace = null
-    else if (!esUrlSegura(limpio) || limpio.length > 2048) {
+    if (enlace === null || (typeof enlace === 'string' && enlace.trim() === '')) {
+      cambios.enlace = null
+    } else if (
+      typeof enlace !== 'string' ||
+      enlace.trim().length > LONGITUD_MAXIMA_ENLACE_ELEMENTO ||
+      !esUrlSegura(enlace.trim())
+    ) {
       errores.enlace = 'Debe ser un enlace completo que empiece con https://'
-    } else cambios.enlace = limpio
+    } else cambios.enlace = enlace.trim()
   }
   if (fechaPlanificada !== undefined) {
     if (fechaPlanificada === null) cambios.fechaPlanificada = null

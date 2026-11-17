@@ -70,7 +70,7 @@ function FilaInstancia({
           label="Formato"
           ayuda={
             instrumento.conRespuestas
-              ? 'Ya tiene respuestas'
+              ? 'Ya tiene respuestas o puntajes'
               : plantilla
                 ? NOMBRE_PLANTILLA[plantilla]
                 : undefined

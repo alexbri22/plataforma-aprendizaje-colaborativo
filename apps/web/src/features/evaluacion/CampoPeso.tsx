@@ -73,12 +73,14 @@ export function CampoPeso({
           max={100}
           step={1}
           value={apagado ? '0' : (borrador ?? String(peso))}
-          disabled={apagado || !puedeEditar}
+          // Mientras guarda no se edita: un cambio escrito entonces se perdería.
+          disabled={apagado || !puedeEditar || estado?.status === 'guardando'}
           endAdornment="%"
           onChange={(e) => setBorrador(e.target.value)}
           onBlur={() => void guardarSiCambio()}
+          // Enter solo quita el foco: se guarda una sola vez, desde onBlur.
           onKeyDown={(e) => {
-            if (e.key === 'Enter') void guardarSiCambio()
+            if (e.key === 'Enter') e.currentTarget.blur()
           }}
         />
       </div>

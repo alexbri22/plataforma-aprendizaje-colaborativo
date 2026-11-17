@@ -69,11 +69,13 @@ export function CampoPuntaje({
           step={0.01}
           placeholder={marcador ?? '—'}
           value={borrador ?? (valor === null ? '' : String(valor))}
-          disabled={disabled}
+          // Mientras guarda no se edita: un cambio escrito entonces se perdería.
+          disabled={disabled || estado?.status === 'guardando'}
           onChange={(e) => setBorrador(e.target.value)}
           onBlur={() => void guardarSiCambio()}
+          // Enter solo quita el foco: se guarda una sola vez, desde onBlur.
           onKeyDown={(e) => {
-            if (e.key === 'Enter') void guardarSiCambio()
+            if (e.key === 'Enter') e.currentTarget.blur()
           }}
         />
       </div>
