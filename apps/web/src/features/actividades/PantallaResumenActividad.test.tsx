@@ -71,7 +71,7 @@ function renderConRutas(ruta: string) {
           />
           <Route path="/equipos/:idEquipo/:seccion" element={<p>Espacio del equipo</p>} />
           <Route path="/actividades/:id/equipos" element={<p>Pantalla de equipos</p>} />
-          <Route path="/actividades/:id/operacion" element={<p>Operación de la planeación</p>} />
+          <Route path="/actividades/:id/operacion" element={<p>Pantalla de operación</p>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -294,7 +294,9 @@ describe('PantallaResumenActividad', () => {
 
       renderConRutas(`/actividades/${ACTIVIDAD_BASE.id}`)
 
-      expect(await screen.findByText('Operación de la planeación')).toBeInTheDocument()
+      // Texto propio de la ruta de destino: "Operación de la planeación"
+      // también está en la barra lateral antes de redirigir.
+      expect(await screen.findByText('Pantalla de operación')).toBeInTheDocument()
     })
 
     it('en inscripción, al abrir la actividad se queda en Datos de la actividad', async () => {
