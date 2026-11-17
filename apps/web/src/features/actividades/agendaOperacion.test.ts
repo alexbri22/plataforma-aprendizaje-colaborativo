@@ -92,31 +92,33 @@ describe('grupoDeEntrada', () => {
     )
   })
 
-  it('lo que pasó sin completarse está vencido; completo, ya pasó', () => {
+  it('lo que pasó sin completarse está atrasado; lo entregado, completado', () => {
     const ayer = { desde: '2026-11-11', hasta: '2026-11-11' }
-    expect(grupoDeEntrada(entrada({ ...ayer, hecho: false }), HOY)).toBe('vencido')
-    expect(grupoDeEntrada(entrada({ ...ayer, hecho: true }), HOY)).toBe('pasado')
+    expect(grupoDeEntrada(entrada({ ...ayer, hecho: false }), HOY)).toBe('atrasado')
+    expect(grupoDeEntrada(entrada({ ...ayer, hecho: true }), HOY)).toBe('completado')
     expect(
       grupoDeEntrada(
         entrada({ ...ayer, progreso: { hechos: 2, total: 3, unidad: 'equipos' } }),
         HOY,
       ),
-    ).toBe('vencido')
+    ).toBe('atrasado')
     expect(
       grupoDeEntrada(
         entrada({ ...ayer, progreso: { hechos: 3, total: 3, unidad: 'equipos' } }),
         HOY,
       ),
-    ).toBe('pasado')
-    // Un hito (sin hecho ni progreso) no se vence: solo pasa.
-    expect(grupoDeEntrada(entrada(ayer), HOY)).toBe('pasado')
+    ).toBe('completado')
+    // Un hito (sin hecho ni progreso) no queda pendiente.
+    expect(grupoDeEntrada(entrada(ayer), HOY)).toBe('completado')
   })
 
   it('sin fecha y pendiente queda aparte; sin fecha y hecho, ya pasó', () => {
     expect(grupoDeEntrada(entrada({ desde: null, hasta: null, hecho: false }), HOY)).toBe(
       'sinFecha',
     )
-    expect(grupoDeEntrada(entrada({ desde: null, hasta: null, hecho: true }), HOY)).toBe('pasado')
+    expect(grupoDeEntrada(entrada({ desde: null, hasta: null, hecho: true }), HOY)).toBe(
+      'completado',
+    )
   })
 })
 
@@ -130,7 +132,7 @@ describe('construirAgenda', () => {
       datos({ periodos, entregas: [entregas('p1', 2, 3), entregas('p2', 1, 3)] }),
     )
 
-    expect(agenda.map((s) => s.grupo)).toEqual(['vencido', 'hoy', 'proximo', 'pasado'])
+    expect(agenda.map((s) => s.grupo)).toEqual(['atrasado', 'hoy', 'proximo'])
     const vencido = agenda[0].entradas[0]
     expect(vencido).toMatchObject({
       titulo: 'Avance 1',
@@ -211,30 +213,27 @@ describe('construirAgenda', () => {
     })
   })
 
-  it('los hitos de la actividad: la inscripción solo antes del desarrollo', () => {
+  it('las fechas de la actividad: la inscripción solo antes del desarrollo, y las pasadas no aparecen', () => {
     const titulos = (a: Actividad) =>
       construirAgenda(datos({ actividad: a }))
         .flatMap((s) => s.entradas)
         .map((e) => e.titulo)
-    expect(titulos(actividad())).toEqual(['Termina la actividad', 'Empieza la actividad'])
+    // Empezó el 1 de octubre: ya pasó y no está ni atrasada ni completada.
+    expect(titulos(actividad())).toEqual(['Termina la actividad'])
     expect(
       titulos(actividad({ fase: 'inscripcion', fechaLimiteInscripcion: '2026-11-14' })),
     ).toContain('Cierra la inscripción')
   })
 
-  it('lo que ya pasó se lee de lo más reciente a lo más antiguo', () => {
+  it('lo completado se lee de lo más reciente a lo más antiguo', () => {
     const agenda = construirAgenda(
       datos({
         periodos: [periodo(1, '2026-10-05', '2026-10-11'), periodo(2, '2026-10-12', '2026-10-18')],
         entregas: [entregas('p1', 3, 3), entregas('p2', 3, 3)],
       }),
     )
-    const pasado = agenda.find((s) => s.grupo === 'pasado')!
-    expect(pasado.entradas.map((e) => e.titulo)).toEqual([
-      'Avance 2',
-      'Avance 1',
-      'Empieza la actividad',
-    ])
+    const pasado = agenda.find((s) => s.grupo === 'completado')!
+    expect(pasado.entradas.map((e) => e.titulo)).toEqual(['Avance 2', 'Avance 1'])
   })
 })
 

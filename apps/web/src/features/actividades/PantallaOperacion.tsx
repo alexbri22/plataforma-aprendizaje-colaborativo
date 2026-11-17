@@ -39,8 +39,8 @@ function fechas(entrada: EntradaAgenda): string | null {
 
 function tituloGrupo(grupo: GrupoAgenda, hoy: string): string {
   switch (grupo) {
-    case 'vencido':
-      return 'Vencido'
+    case 'atrasado':
+      return 'Atrasado'
     case 'hoy':
       return `Hoy · ${formatearFecha(hoy)}`
     case 'semana':
@@ -49,17 +49,17 @@ function tituloGrupo(grupo: GrupoAgenda, hoy: string): string {
       return 'Más adelante'
     case 'sinFecha':
       return 'Sin fecha'
-    case 'pasado':
-      return 'Ya pasó'
+    case 'completado':
+      return 'Completado'
   }
 }
 
-function Estado({ entrada, vencido }: { entrada: EntradaAgenda; vencido: boolean }) {
+function Estado({ entrada, atrasado }: { entrada: EntradaAgenda; atrasado: boolean }) {
   if (entrada.progreso) {
     const { hechos, total, unidad } = entrada.progreso
     const completo = total > 0 && hechos >= total
     return (
-      <Badge variant={completo ? 'success' : vencido ? 'warning' : 'neutral'}>
+      <Badge variant={completo ? 'success' : atrasado ? 'warning' : 'neutral'}>
         {hechos} de {total} {unidad}
       </Badge>
     )
@@ -68,11 +68,11 @@ function Estado({ entrada, vencido }: { entrada: EntradaAgenda; vencido: boolean
   return entrada.hecho ? (
     <Badge variant="success">Hecho</Badge>
   ) : (
-    <Badge variant={vencido ? 'warning' : 'neutral'}>Pendiente</Badge>
+    <Badge variant={atrasado ? 'warning' : 'neutral'}>Pendiente</Badge>
   )
 }
 
-function Fila({ entrada, vencido }: { entrada: EntradaAgenda; vencido: boolean }) {
+function Fila({ entrada, atrasado }: { entrada: EntradaAgenda; atrasado: boolean }) {
   const cuando = fechas(entrada)
   return (
     <li className={styles.fila}>
@@ -88,7 +88,7 @@ function Fila({ entrada, vencido }: { entrada: EntradaAgenda; vencido: boolean }
       </div>
       <div className={styles.cuando}>
         {cuando ? <span className={styles.fecha}>{cuando}</span> : null}
-        <Estado entrada={entrada} vencido={vencido} />
+        <Estado entrada={entrada} atrasado={atrasado} />
       </div>
     </li>
   )
@@ -98,12 +98,12 @@ function Fila({ entrada, vencido }: { entrada: EntradaAgenda; vencido: boolean }
 // en el encabezado para que no se pierda. La persona decide después y su
 // elección se recuerda en el navegador.
 const ABIERTO_POR_DEFECTO: Record<GrupoAgenda, boolean> = {
-  vencido: false,
+  atrasado: false,
   hoy: true,
   semana: true,
   proximo: false,
   sinFecha: false,
-  pasado: false,
+  completado: false,
 }
 
 function claveGrupo(grupo: GrupoAgenda): string {
@@ -175,7 +175,7 @@ function Grupo({ seccion, hoy }: { seccion: SeccionAgenda; hoy: string }) {
         <div id={idLista} className={styles.cuerpo}>
           <ul className={styles.lista} aria-label={titulo}>
             {visibles.map((entrada) => (
-              <Fila key={entrada.clave} entrada={entrada} vencido={seccion.grupo === 'vencido'} />
+              <Fila key={entrada.clave} entrada={entrada} atrasado={seccion.grupo === 'atrasado'} />
             ))}
           </ul>
           <Paginacion
@@ -191,7 +191,7 @@ function Grupo({ seccion, hoy }: { seccion: SeccionAgenda; hoy: string }) {
   )
 }
 
-// Lo planificado de la actividad, por cuándo toca: qué está vencido, qué es
+// Lo planificado de la actividad, por cuándo toca: qué está atrasado, qué es
 // hoy, qué viene. Quien organiza ve cuánto llevan entregado; quien
 // participa, si ya lo hizo. Cada entrada lleva a donde se hace o se revisa.
 export function PantallaOperacion() {

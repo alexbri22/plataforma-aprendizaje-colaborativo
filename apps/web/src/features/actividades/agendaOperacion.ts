@@ -12,15 +12,15 @@ import type { Actividad } from './tipos'
 // cuándo toca, para saber qué está pendiente y qué viene. Función pura (sin
 // fetch ni "hoy" implícito) para poder probarla sin renderizar.
 
-export type GrupoAgenda = 'vencido' | 'hoy' | 'semana' | 'proximo' | 'sinFecha' | 'pasado'
+export type GrupoAgenda = 'atrasado' | 'hoy' | 'semana' | 'proximo' | 'sinFecha' | 'completado'
 
 export const ORDEN_GRUPOS: readonly GrupoAgenda[] = [
-  'vencido',
+  'atrasado',
   'hoy',
   'semana',
   'proximo',
   'sinFecha',
-  'pasado',
+  'completado',
 ]
 
 export interface ProgresoAgenda {
@@ -74,13 +74,17 @@ function completo(entrada: EntradaAgenda): boolean {
   if (entrada.hecho !== undefined) return entrada.hecho
   if (entrada.progreso)
     return entrada.progreso.total > 0 && entrada.progreso.hechos >= entrada.progreso.total
-  // Un hito no se "hace": una vez pasado, ya pasó.
+  // Un hito (una fecha de la actividad) no se hace: no queda pendiente.
   return true
 }
 
+function esHito(entrada: EntradaAgenda): boolean {
+  return entrada.hecho === undefined && entrada.progreso === undefined
+}
+
 export function grupoDeEntrada(entrada: EntradaAgenda, hoy: string): GrupoAgenda {
-  if (!entrada.desde || !entrada.hasta) return completo(entrada) ? 'pasado' : 'sinFecha'
-  if (entrada.hasta < hoy) return completo(entrada) ? 'pasado' : 'vencido'
+  if (!entrada.desde || !entrada.hasta) return completo(entrada) ? 'completado' : 'sinFecha'
+  if (entrada.hasta < hoy) return completo(entrada) ? 'completado' : 'atrasado'
   if (entrada.desde <= hoy) return 'hoy'
   if (entrada.desde <= sumarDias(hoy, DIAS_DE_LA_SEMANA)) return 'semana'
   return 'proximo'
@@ -188,7 +192,10 @@ export function construirAgenda(datos: DatosAgenda): SeccionAgenda[] {
     ...entradasDeInstrumentos(datos, organiza),
   ]
   const porGrupo = new Map<GrupoAgenda, EntradaAgenda[]>()
-  for (const entrada of todas) {
+  // Una fecha de la actividad que ya pasó ("Empieza la actividad") no dice
+  // nada: ni está atrasada ni se completó.
+  const vigentes = todas.filter((e) => !(esHito(e) && e.hasta !== null && e.hasta < datos.hoy))
+  for (const entrada of vigentes) {
     const grupo = grupoDeEntrada(entrada, datos.hoy)
     porGrupo.set(grupo, [...(porGrupo.get(grupo) ?? []), entrada])
   }
@@ -196,8 +203,8 @@ export function construirAgenda(datos: DatosAgenda): SeccionAgenda[] {
     const entradas = [...porGrupo.get(grupo)!].sort((a, b) =>
       (a.desde ?? '').localeCompare(b.desde ?? ''),
     )
-    // Lo que ya pasó se lee de lo más reciente a lo más antiguo.
-    return { grupo, entradas: grupo === 'pasado' ? entradas.reverse() : entradas }
+    // Lo completado se lee de lo más reciente a lo más antiguo.
+    return { grupo, entradas: grupo === 'completado' ? entradas.reverse() : entradas }
   })
 }
 
