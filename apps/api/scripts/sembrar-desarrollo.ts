@@ -1,6 +1,7 @@
-// Datos de prueba para recorrer la aplicación en el navegador con varios
-// participantes. Solo para desarrollo: crea usuarios @seed.local y algunas
-// actividades en distintas fases y con distinta configuración. Se puede
+// Datos de demostración para recorrer la aplicación en el navegador con
+// varios participantes: un recorrido completo con todas las funciones
+// habilitadas, una actividad por etapa, más escenarios puntuales. Crea
+// usuarios @seed.local. Se puede
 // volver a ejecutar: primero borra lo que creó antes (todo lo que cuelga de
 // esos usuarios) y no toca ninguna otra cuenta.
 //
@@ -9,8 +10,16 @@
 // Todas las cuentas usan la misma contraseña (CONTRASENA).
 import {
   PERMISOS_COORGANIZADOR_POR_DEFECTO,
+  PLANTILLAS_INSTRUMENTO,
+  generarPeriodos,
+  repartoEquitativo,
+  serializarEstadoEspacioEquipo,
+  type ClavePlantilla,
+  type ElementoEspacioEquipo,
   type FuncionSeguimiento,
+  type Periodicidad,
   type RespuestasBitacora,
+  type TipoInstrumento,
 } from '@plataforma/shared'
 import { prisma } from '../src/data/prisma.js'
 import { config } from '../src/config.js'
@@ -22,11 +31,15 @@ import {
 import { crearEntradaBitacora as crearEntradaBitacoraDeServicio } from '../src/services/seguimiento/bitacora.service.js'
 // Efecto de carga: registra la estructura de calificación por defecto que
 // recibe toda actividad al crearse (registrarAlCrearActividad).
-import '../src/services/evaluacion/ponderacion.service.js'
+import { definirInstrumentos } from '../src/services/evaluacion/ponderacion.service.js'
+import { guardarEntrega } from '../src/services/evaluacion/entregas.service.js'
+import { responderInstrumento } from '../src/services/evaluacion/respuestas.service.js'
 import {
   crearComentarioSobreElemento,
   crearComentarioSobreEntrada,
+  crearRetroalimentacionDeEquipo,
 } from '../src/services/seguimiento/comentarios.service.js'
+import { guardarPublicacion } from '../src/services/seguimiento/publicaciones.service.js'
 import { crearElemento as crearElementoDeServicio } from '../src/services/seguimiento/elementos.service.js'
 import { hashContrasena } from '../src/services/cuentas/contrasena.js'
 
@@ -112,7 +125,7 @@ async function crearUsuario(correoLocal: string, nombre: string, apellido: strin
     data: {
       nombre,
       apellidoPaterno: apellido,
-      apellidoMaterno: 'Seed',
+      apellidoMaterno: 'García',
       nivelEstudios: 'licenciatura',
       institucionEducativa: 'UNAM',
       correo: `${correoLocal}${DOMINIO}`,
@@ -220,6 +233,7 @@ async function crearComentarioSobreEntradaDeSeed(
 
 interface Escenario {
   nombre: string
+  objetivo?: string
   organizador: string
   participantes: string[]
   coorganizadores?: string[]
@@ -262,8 +276,8 @@ async function sembrar(
     idPorCorreo.get(escenario.organizador)!.nombreCompleto,
     {
       nombre: escenario.nombre,
-      objetivo: 'Datos de prueba para recorrer la aplicación.',
-      informacionGeneral: 'Actividad creada por el script de sembrado de desarrollo.',
+      objetivo: escenario.objetivo ?? 'Mostrar un caso concreto de la plataforma.',
+      informacionGeneral: 'Actividad de demostración, creada por el script de sembrado.',
       fechaInicio: escenario.fechaInicio ?? fecha(0),
       fechaTermino: escenario.fechaTermino ?? fecha(60),
       fechaLimiteInscripcion: fecha(7),
@@ -346,185 +360,7 @@ async function sembrar(
 
 type IdPorCorreo = Map<string, { id: string; nombreCompleto: string }>
 
-// "Seed · En desarrollo, con contenido": la actividad de demo completa —
-// dos equipos chicos, cada uno con metas, avances y recursos ya escritos,
-// bitácora habilitada con entradas por participante, y comentarios de
-// quien organiza y de profe (co-organizador) puestos en las cuatro
-// secciones (metas, avances, recursos, bitácora), para dar un recorrido de
-// punta a punta sin tener que capturar nada antes. También deja contenido
-// para ver el historial completo: general (configuración, fase) y, con
-// ?idEquipo=, lo propio de cada equipo (nucleo §10.4, §5.5).
-async function sembrarEnDesarrolloConContenido(idPorCorreo: IdPorCorreo) {
-  const idUsuario = (correoLocal: string) => idPorCorreo.get(correoLocal)!.id
-
-  const { idActividad, idEquipoPorNombre } = await sembrar(
-    {
-      nombre: 'Seed · En desarrollo, con contenido',
-      organizador: 'org',
-      coorganizadores: ['profe'],
-      participantes: ['alumno01', 'alumno02', 'alumno03', 'alumno04', 'alumno05', 'alumno06'],
-      estado: 'desarrollo',
-      formacion: 'autogestionado',
-      equiposEsperados: 2,
-      configuracion: { bitacora_individual: 'guiada' },
-      equipos: [
-        { nombre: 'Alfa', integrantes: ['alumno01', 'alumno02', 'alumno03'] },
-        { nombre: 'Beta', integrantes: ['alumno04', 'alumno05', 'alumno06'] },
-      ],
-      fechaInicio: fecha(-15),
-      fechaTermino: fecha(15),
-    },
-    idPorCorreo,
-  )
-
-  const idAlfa = idEquipoPorNombre.Alfa
-  const idBeta = idEquipoPorNombre.Beta
-
-  const metaAlfa = await crearElementoEspacio(
-    idAlfa,
-    idUsuario('alumno01'),
-    'metas',
-    'Entregar el prototipo funcional con las tres pantallas principales antes de la siguiente revisión.',
-  )
-  await crearElementoEspacio(
-    idAlfa,
-    idUsuario('alumno02'),
-    'metas',
-    'Repartir las cinco pruebas de usuario entre los tres, dos personas cada una.',
-  )
-  const recursoAlfa = await crearElementoEspacio(
-    idAlfa,
-    idUsuario('alumno01'),
-    'recursos',
-    'Carpeta de Figma con los wireframes: figma.com/file/equipo-alfa-wireframes',
-  )
-  await crearElementoEspacio(
-    idAlfa,
-    idUsuario('alumno01'),
-    'avances',
-    'Terminé el wireframe de la pantalla de inicio y lo subí a la carpeta compartida.',
-  )
-  await crearElementoEspacio(
-    idAlfa,
-    idUsuario('alumno02'),
-    'avances',
-    'Empecé la pantalla de detalle, falta conectar los datos reales.',
-  )
-  await crearElementoEspacio(
-    idAlfa,
-    idUsuario('alumno03'),
-    'avances',
-    'Hice dos de las cinco pruebas de usuario que nos tocaban, los comentarios fueron buenos.',
-  )
-
-  const metaBeta = await crearElementoEspacio(
-    idBeta,
-    idUsuario('alumno04'),
-    'metas',
-    'Terminar la integración con la API de pagos antes del día 15.',
-  )
-  await crearElementoEspacio(
-    idBeta,
-    idUsuario('alumno05'),
-    'recursos',
-    'Guía de la pasarela de pagos que estamos usando: docs.pasarela-ejemplo.com',
-  )
-  await crearElementoEspacio(
-    idBeta,
-    idUsuario('alumno06'),
-    'recursos',
-    'Plantilla del reporte final que compartió el profesor',
-  )
-  const avanceAlumno04 = await crearElementoEspacio(
-    idBeta,
-    idUsuario('alumno04'),
-    'avances',
-    'La API de pagos ya responde en sandbox, falta probar con tarjetas rechazadas.',
-  )
-  await crearElementoEspacio(
-    idBeta,
-    idUsuario('alumno05'),
-    'avances',
-    'Escribí la primera versión del documento de integración, falta la sección de errores.',
-  )
-
-  const primeraEntradaAlumno01 = await crearEntradaBitacora(idActividad, idUsuario('alumno01'), {
-    conocimientos_adquiridos: 'Aprendí a definir la jerarquía visual de una pantalla de inicio.',
-    aspecto_mas_dificil:
-      'Me costó decidir la jerarquía visual de la pantalla de inicio; al final usé la que vimos en clase.',
-    tareas_cumplidas: 'Sí, entregué el wireframe que me tocaba.',
-    aportacion_concreta: 'Propuse la estructura de navegación que adoptó el equipo.',
-  })
-  await crearEntradaBitacora(
-    idActividad,
-    idUsuario('alumno01'),
-    'Avancé más rápido de lo que esperaba con el wireframe de detalle.',
-  )
-  const entradaAlumno02 = await crearEntradaBitacora(
-    idActividad,
-    idUsuario('alumno02'),
-    'Se me complicó conectar los datos simulados, voy a pedirle ayuda a Ana mañana.',
-  )
-  await crearEntradaBitacora(
-    idActividad,
-    idUsuario('alumno03'),
-    'Las pruebas de usuario me dieron nervios al principio pero salieron mejor de lo que pensé.',
-  )
-  await crearEntradaBitacora(
-    idActividad,
-    idUsuario('alumno04'),
-    'Tuve que leer la documentación de la pasarela de pagos tres veces para entenderla bien.',
-  )
-  await crearEntradaBitacora(
-    idActividad,
-    idUsuario('alumno05'),
-    'Escribir el reporte me tomó más tiempo del que pensé, pero ya le agarré el modo.',
-  )
-  await crearEntradaBitacora(
-    idActividad,
-    idUsuario('alumno06'),
-    'Todavía no he empezado mi parte, la semana que entra me pongo con esto.',
-  )
-
-  // Comentarios de quien organiza y de profe, en las cuatro secciones:
-  // metas, avances, recursos y bitácora. La visibilidad de cada uno la
-  // hereda lo comentado (concepto §5.3) — los de elemento los ve todo el
-  // equipo, los de bitácora solo su autor y quien organiza o co-organiza.
-  await crearComentarioSobreElementoDeSeed(
-    metaAlfa.id,
-    idUsuario('org'),
-    'Buena meta. Ponle una fecha límite concreta a cada una de las pruebas de usuario.',
-  )
-  await crearComentarioSobreElementoDeSeed(
-    avanceAlumno04.id,
-    idUsuario('profe'),
-    '¿Ya probaron qué pasa si la tarjeta es rechazada a la mitad del pago?',
-  )
-  await crearComentarioSobreElementoDeSeed(
-    recursoAlfa.id,
-    idUsuario('profe'),
-    'Buen avance. Agreguen también los wireframes de la pantalla de detalle cuando estén listos.',
-  )
-  await crearComentarioSobreElementoDeSeed(
-    metaBeta.id,
-    idUsuario('org'),
-    '¿Qué pasa si no se alcanza el día 15? Avísenme con tiempo si van a necesitar más días.',
-  )
-  await crearComentarioSobreEntradaDeSeed(
-    primeraEntradaAlumno01.id,
-    idUsuario('org'),
-    'Me da gusto ver que recurriste a lo que vimos en clase. Sigue así.',
-  )
-  await crearComentarioSobreEntradaDeSeed(
-    entradaAlumno02.id,
-    idUsuario('profe'),
-    'Pregúntale a Ana con confianza, para eso están trabajando en equipo.',
-  )
-
-  console.log('    con metas, avances, recursos, bitácora y comentarios en las cuatro secciones')
-}
-
-// "Seed · En desarrollo, equipo grande con historial": un solo equipo de
+// "Estudio de mercado · Un equipo grande con mucho historial": un solo equipo de
 // seis, con doce avances y doce entradas de bitácora, todas comentadas.
 // Con páginas de 20 no llega a paginar: eso lo cubre "Bitácora muy cargada".
 async function sembrarEnDesarrolloEquipoGrande(idPorCorreo: IdPorCorreo) {
@@ -533,7 +369,7 @@ async function sembrarEnDesarrolloEquipoGrande(idPorCorreo: IdPorCorreo) {
 
   const { idActividad, idEquipoPorNombre } = await sembrar(
     {
-      nombre: 'Seed · En desarrollo, equipo grande con historial',
+      nombre: 'Estudio de mercado · Un equipo grande con mucho historial',
       organizador: 'org',
       coorganizadores: ['profe'],
       participantes,
@@ -669,7 +505,7 @@ async function sembrarEnDesarrolloEquipoGrande(idPorCorreo: IdPorCorreo) {
   console.log('    equipo de 6, 12 avances, 12 entradas de bitácora, todas comentadas')
 }
 
-// "Seed · Bitácora muy cargada (ejemplo de densidad)": el caso que motivó
+// "Diario de prácticas · Una bitácora con muchas entradas": el caso que motivó
 // las tarjetas colapsadas (TarjetaElemento, TarjetaEntradaBitacora, nucleo
 // §9.3/§9.1) — una sola persona con más de veinticinco entradas de
 // bitácora, para ver de verdad cómo se comporta la pantalla con un volumen
@@ -684,7 +520,7 @@ async function sembrarBitacoraMuyCargada(idPorCorreo: IdPorCorreo) {
 
   const { idActividad, idEquipoPorNombre } = await sembrar(
     {
-      nombre: 'Seed · Bitácora muy cargada (ejemplo de densidad)',
+      nombre: 'Diario de prácticas · Una bitácora con muchas entradas',
       organizador: 'org',
       coorganizadores: ['profe'],
       participantes,
@@ -798,6 +634,390 @@ async function sembrarBitacoraMuyCargada(idPorCorreo: IdPorCorreo) {
   )
 }
 
+// ---------------------------------------------------------------------------
+// Recorrido completo: actividades con todas las funciones habilitadas, una
+// por etapa, para mostrar la plataforma de punta a punta en una reunión.
+// Todo el contenido pasa por la capa de servicios (deja historial). Se crea
+// con la actividad en desarrollo, como lo haría la gente, y al final se lleva
+// a su etapa (cierre o archivada).
+// ---------------------------------------------------------------------------
+
+// Todas las funciones habilitadas: bitácora guiada, calificación,
+// reconocimientos entre todos y los cinco elementos del espacio de equipo.
+const TODO_HABILITADO: Partial<Record<FuncionSeguimiento, string>> = {
+  bitacora_individual: 'guiada',
+  calificacion: 'habilitada',
+  insignias: 'organizador_y_participantes',
+  espacio_equipo: serializarEstadoEspacioEquipo({
+    metas: 'obligatorio',
+    planeacion: 'opcional',
+    avances: 'obligatorio',
+    recursos: 'opcional',
+    producto: 'obligatorio',
+  }),
+}
+
+// Un calendario de revisiones por elemento (nucleo §9.2), cada uno con su
+// periodicidad, entre el inicio y el término de la actividad.
+const CALENDARIOS: { elemento: string; periodicidad: Periodicidad }[] = [
+  { elemento: 'metas', periodicidad: 'mensual' },
+  { elemento: 'planeacion', periodicidad: 'mensual' },
+  { elemento: 'avances', periodicidad: 'semanal' },
+  { elemento: 'producto', periodicidad: 'mensual' },
+  { elemento: 'bitacora', periodicidad: 'quincenal' },
+]
+
+async function sembrarCalendarios(idActividad: string, inicio: Date, termino: Date) {
+  for (const { elemento, periodicidad } of CALENDARIOS) {
+    await prisma.periodoReporte.createMany({
+      data: generarPeriodos(inicio, termino, periodicidad).map((p) => ({
+        idActividad,
+        elemento,
+        ...p,
+      })),
+    })
+  }
+}
+
+// Un instrumento por aspecto del proceso, quincenal: autoevaluaciones con
+// plantilla, la evaluación por pares y actividades externas con su enlace.
+const INSTRUMENTOS_PROCESO: { aspecto: string; tipo: TipoInstrumento }[] = [
+  { aspecto: 'definicion_responsabilidades', tipo: 'entrevista' },
+  { aspecto: 'interdependencia_positiva', tipo: 'cuestionario_autoevaluacion' },
+  { aspecto: 'responsabilidad_individual_grupal', tipo: 'coevaluacion' },
+  { aspecto: 'interaccion', tipo: 'rubrica' },
+  { aspecto: 'evaluacion_grupo_habilidades_sociales', tipo: 'cuestionario_autoevaluacion' },
+]
+
+async function sembrarInstrumentos(idActividad: string, idUsuarioOrganizador: string) {
+  const actividad = await prisma.actividad.findUniqueOrThrow({ where: { idActividad } })
+  const membresia = await buscarMembresiaConPermisos(idUsuarioOrganizador, idActividad)
+  for (const { aspecto, tipo } of INSTRUMENTOS_PROCESO) {
+    const fila = await prisma.aspectoCalificacion.findFirstOrThrow({
+      where: { clave: aspecto, componente: { idActividad } },
+    })
+    await definirInstrumentos(
+      actividad,
+      fila.idAspecto,
+      { tipo, periodicidad: 'quincenal' },
+      idUsuarioOrganizador,
+      membresia!,
+    )
+  }
+  // Las actividades externas necesitan su enlace para poder entregarse.
+  await prisma.instrumento.updateMany({
+    where: { origen: 'enlace', aspecto: { componente: { idActividad } } },
+    data: { enlace: 'https://forms.example.com/co3-actividad-externa' },
+  })
+}
+
+interface EquipoDelRecorrido {
+  nombre: string
+  integrantes: string[]
+  descripcion: string
+  metas: string[]
+  planeacion: string[]
+  avances: string[]
+  materiales: string[]
+  producto: string
+}
+
+interface Recorrido {
+  nombre: string
+  objetivo: string
+  organizador: string
+  coorganizadores?: string[]
+  equipos: EquipoDelRecorrido[]
+  etapa: 'inscripcion' | 'desarrollo' | 'cierre' | 'archivada'
+  fechaInicio: Date
+  fechaTermino: Date
+  // Equipos (por nombre) que ya publicaron su proyecto; solo en cierre o
+  // archivada.
+  publicados?: string[]
+  // Qué tan avanzada va la calificación: nada, lo del desarrollo, o todo.
+  calificacion: 'nada' | 'parcial' | 'completa'
+}
+
+const RESPUESTAS_BITACORA: RespuestasBitacora[] = [
+  {
+    conocimientos_adquiridos:
+      'Aprendí a dividir el problema en partes que cada quien puede avanzar.',
+    tareas_cumplidas: 'Sí, terminé la parte que me tocaba de la investigación.',
+    aportacion_concreta: 'Propuse el formato de la tabla donde juntamos los datos.',
+  },
+  {
+    aspecto_mas_dificil: 'Ponernos de acuerdo en el alcance; queríamos abarcar demasiado.',
+    duda_pendiente: '¿Cuántas fuentes necesitamos para que el análisis sea confiable?',
+  },
+  {
+    conocimientos_adquiridos: 'Entendí mejor cómo presentar resultados con gráficas sencillas.',
+    importancia_cooperar: 'Escuchar primero las ideas de todos nos ahorró rehacer trabajo.',
+  },
+]
+
+async function sembrarRecorrido(r: Recorrido, idPorCorreo: IdPorCorreo) {
+  const idUsuario = (correoLocal: string) => idPorCorreo.get(correoLocal)!.id
+  const conEquipos = r.etapa !== 'inscripcion'
+  const participantes = r.equipos.flatMap((e) => e.integrantes)
+
+  const { idActividad, membresia, idEquipoPorNombre } = await sembrar(
+    {
+      nombre: r.nombre,
+      objetivo: r.objetivo,
+      organizador: r.organizador,
+      coorganizadores: r.coorganizadores,
+      participantes,
+      estado: conEquipos ? 'desarrollo' : 'inscripcion',
+      formacion: 'autogestionado',
+      equiposEsperados: r.equipos.length,
+      equipos: conEquipos
+        ? r.equipos.map((e) => ({ nombre: e.nombre, integrantes: e.integrantes }))
+        : undefined,
+      configuracion: TODO_HABILITADO,
+      fechaInicio: r.fechaInicio,
+      fechaTermino: r.fechaTermino,
+      plazoCierreDias: 21,
+    },
+    idPorCorreo,
+  )
+  await sembrarCalendarios(idActividad, r.fechaInicio, r.fechaTermino)
+  await sembrarInstrumentos(idActividad, idUsuario(r.organizador))
+  if (!conEquipos) return
+
+  // Lo publicado se reparte en el tiempo desde el inicio, para que Operación
+  // de la planeación muestre revisiones completadas, atrasadas y por venir.
+  const transcurrido = Math.min(Date.now(), r.fechaTermino.getTime()) - r.fechaInicio.getTime()
+  const enElAvance = (fraccion: number) =>
+    new Date(r.fechaInicio.getTime() + Math.round(transcurrido * fraccion))
+
+  for (const [e, equipo] of r.equipos.entries()) {
+    const idEquipo = idEquipoPorNombre[equipo.nombre]
+    const autor = (i: number) => idUsuario(equipo.integrantes[i % equipo.integrantes.length])
+    await prisma.equipo.update({
+      where: { idEquipo },
+      data: { descripcionActividad: equipo.descripcion },
+    })
+
+    const crear = async (tipo: ElementoEspacioEquipo, contenido: string, i: number, f: number) => {
+      const creado = await crearElementoDeServicio(idEquipo, tipo, contenido, null, autor(i))
+      await prisma.elementoEspacioEquipo.update({
+        where: { idElemento: creado.id },
+        data: { fechaCreacion: enElAvance(f), fechaActualizacion: enElAvance(f) },
+      })
+      return creado
+    }
+    const meta = await crear('metas', equipo.metas[0], 0, 0.05)
+    for (const [i, texto] of equipo.metas.slice(1).entries()) {
+      await crear('metas', texto, i + 1, 0.08)
+    }
+    for (const [i, texto] of equipo.planeacion.entries()) await crear('planeacion', texto, i, 0.1)
+    // Los avances se reparten entre el inicio y hoy. El último equipo deja
+    // de publicar antes, para que se vea una revisión atrasada.
+    const hasta = e === r.equipos.length - 1 ? 0.6 : 0.95
+    const avances = equipo.avances
+    for (const [i, texto] of avances.entries()) {
+      await crear(
+        'avances',
+        texto,
+        i,
+        0.15 + ((hasta - 0.15) * i) / Math.max(1, avances.length - 1),
+      )
+    }
+    for (const [i, texto] of equipo.materiales.entries()) await crear('recursos', texto, i, 0.2)
+    await crear('producto', equipo.producto, 1, 0.9)
+
+    // La bitácora de cada integrante, en dos momentos.
+    for (const [i, correo] of equipo.integrantes.entries()) {
+      for (const [j, f] of [0.3, 0.8].entries()) {
+        const entrada = await crearEntradaBitacora(
+          idActividad,
+          idUsuario(correo),
+          RESPUESTAS_BITACORA[(i + j) % RESPUESTAS_BITACORA.length],
+        )
+        await prisma.bitacora.update({
+          where: { idEntrada: entrada.id },
+          data: { fechaCreacion: enElAvance(f), fechaActualizacion: enElAvance(f) },
+        })
+        if (i === 0 && j === 0) {
+          await crearComentarioSobreEntradaDeSeed(
+            entrada.id,
+            idUsuario(r.organizador),
+            'Buena reflexión. Para la próxima, cuenta también qué harías distinto.',
+          )
+        }
+      }
+    }
+
+    // Un comentario sobre un elemento concreto y retroalimentación sobre
+    // cómo trabaja el equipo.
+    await crearComentarioSobreElementoDeSeed(
+      meta.id,
+      idUsuario(r.organizador),
+      'Ponle una fecha objetivo a esta meta para poder darle seguimiento.',
+    )
+    await crearRetroalimentacionDeEquipo(
+      idEquipo,
+      'metas',
+      'Definieron metas claras e incorporaron rápido los comentarios.',
+      idUsuario(r.organizador),
+    )
+    await crearRetroalimentacionDeEquipo(
+      idEquipo,
+      'general',
+      'Se nota la buena organización; cuiden que todos participen por igual.',
+      idUsuario(r.organizador),
+    )
+    if (r.coorganizadores?.length) {
+      await crearRetroalimentacionDeEquipo(
+        idEquipo,
+        'avances',
+        'Los avances son constantes; agreguen evidencia (fotos, datos) a cada uno.',
+        idUsuario(r.coorganizadores[0]),
+      )
+    }
+  }
+
+  // Proceso colaborativo: respuestas a las autoevaluaciones y a la evaluación
+  // por pares, y entregas de las actividades externas, en las instancias cuya
+  // fecha ya pasó. Con la calificación incompleta, el último integrante de
+  // cada equipo va atrasado.
+  const actividadFila = await prisma.actividad.findUniqueOrThrow({ where: { idActividad } })
+  const pasadas = await prisma.instrumento.findMany({
+    where: {
+      fechaPlanificada: { lt: new Date() },
+      aspecto: { componente: { idActividad, clave: 'proceso' } },
+    },
+  })
+  for (const equipo of r.equipos) {
+    const idsEquipo = equipo.integrantes.map((c) => membresia[c])
+    for (const [k, correo] of equipo.integrantes.entries()) {
+      if (k === equipo.integrantes.length - 1 && r.calificacion !== 'completa') continue
+      const actor = await buscarMembresiaConPermisos(idUsuario(correo), idActividad)
+      for (const instancia of pasadas) {
+        if (instancia.origen === 'enlace') {
+          await guardarEntrega(
+            actividadFila,
+            actor!,
+            instancia.idInstrumento,
+            { contenido: 'Hecha; el resumen está en la carpeta del equipo.', enlace: null },
+            idUsuario(correo),
+          )
+          continue
+        }
+        const plantilla = PLANTILLAS_INSTRUMENTO[instancia.clavePlantilla as ClavePlantilla]
+        const reparto = repartoEquitativo(idsEquipo.length)
+        const valor =
+          plantilla.campo === 'likert'
+            ? Object.fromEntries(plantilla.reactivos.map((x, i) => [x.clave, 3 + ((i + k) % 2)]))
+            : Object.fromEntries(
+                plantilla.reactivos.map((x) => [
+                  x.clave,
+                  Object.fromEntries(idsEquipo.map((id, i) => [id, reparto[i]])),
+                ]),
+              )
+        await responderInstrumento(
+          actividadFila,
+          actor!,
+          instancia.idInstrumento,
+          valor,
+          idUsuario(correo),
+        )
+      }
+    }
+  }
+
+  // Puntajes que captura quien organiza. Parcial: metas, planeación, avances
+  // y bitácora. Completa: todo lo capturable, incluido Aprendizaje.
+  if (r.calificacion !== 'nada') {
+    const instrumentos = await prisma.instrumento.findMany({
+      where: { origen: { in: ['manual', 'enlace'] }, aspecto: { componente: { idActividad } } },
+      include: { aspecto: { include: { componente: true } } },
+    })
+    for (const [e, equipo] of r.equipos.entries()) {
+      for (const [k, correo] of equipo.integrantes.entries()) {
+        for (const instrumento of instrumentos) {
+          const componente = instrumento.aspecto.componente.clave
+          const clave = instrumento.aspecto.clave
+          const deLoParcial =
+            componente === 'proyecto' &&
+            ['metas', 'planeacion', 'avances', 'bitacora'].includes(clave)
+          if (r.calificacion === 'parcial' && !deLoParcial) continue
+          if (instrumento.fechaPlanificada && instrumento.fechaPlanificada > new Date()) continue
+          const valor =
+            componente === 'proyecto' && clave !== 'bitacora'
+              ? 95 - e * 7
+              : 80 + ((k * 7 + e * 3) % 20)
+          await prisma.puntajeCapturado.create({
+            data: {
+              idInstrumento: instrumento.idInstrumento,
+              idMembresia: membresia[correo],
+              valor,
+              idMembresiaCalificador: membresia[r.organizador],
+            },
+          })
+        }
+      }
+    }
+  }
+
+  if (r.etapa === 'desarrollo') return
+  await prisma.actividad.update({ where: { idActividad }, data: { estado: 'cierre' } })
+
+  // Publicación de proyectos: el entregable final de los equipos que ya lo
+  // subieron.
+  const actividadEnCierre = await prisma.actividad.findUniqueOrThrow({ where: { idActividad } })
+  for (const equipo of r.equipos.filter((x) => r.publicados?.includes(x.nombre))) {
+    const correo = equipo.integrantes[0]
+    const actor = await buscarMembresiaConPermisos(idUsuario(correo), idActividad)
+    await guardarPublicacion(
+      actividadEnCierre,
+      actor!,
+      {
+        descripcion: equipo.producto,
+        enlace: `https://video.example.com/${equipo.nombre.toLowerCase().replace(/\s+/g, '-')}`,
+      },
+      idUsuario(correo),
+    )
+  }
+
+  if (r.etapa === 'archivada') {
+    await prisma.actividad.update({ where: { idActividad }, data: { estado: 'archivada' } })
+  }
+  console.log(`    con su contenido, llevada a ${r.etapa}`)
+}
+
+// Tres equipos de tres con un tema cada uno, para los recorridos. Los
+// integrantes salen de los alumnos que se le pasen.
+function equiposDe(
+  alumnos: string[],
+  temas: { nombre: string; tema: string; producto: string }[],
+): EquipoDelRecorrido[] {
+  return temas.map(({ nombre, tema, producto }, i) => ({
+    nombre,
+    integrantes: alumnos.slice(i * 3, i * 3 + 3),
+    descripcion: `Investigamos ${tema} y presentamos una propuesta para la escuela.`,
+    metas: [
+      `Reunir datos confiables sobre ${tema} de al menos cinco fuentes.`,
+      'Presentar un prototipo o maqueta que se pueda probar con usuarios.',
+    ],
+    planeacion: [
+      'Semana 1: investigación. Responsable de fuentes: cada integrante trae dos.',
+      'Semana 3: prototipo. Responsable: quien tenga menos carga esa semana.',
+    ],
+    avances: [
+      `Terminamos la lista de fuentes sobre ${tema} y repartimos lecturas.`,
+      'Hicimos la primera encuesta en el grupo; tenemos 34 respuestas.',
+      'Armamos el borrador de la propuesta con los resultados de la encuesta.',
+      'Probamos el prototipo con compañeros de otro grupo y anotamos mejoras.',
+    ],
+    materiales: [
+      'Carpeta compartida con las fuentes y la encuesta: drive.example.com/equipo',
+      'Plantilla del reporte final que compartió la profesora.',
+    ],
+    producto,
+  }))
+}
+
 async function main() {
   await limpiar()
   const hash = await hashContrasena(CONTRASENA)
@@ -821,21 +1041,123 @@ async function main() {
   const a = (desde: number, hasta: number) =>
     alumnos.slice(desde - 1, hasta).map((x) => x.correoLocal)
 
-  console.log('Actividades:')
-  await sembrar(
+  // -- Recorrido completo: todas las funciones habilitadas, una por etapa ----
+  console.log('Recorrido completo (todas las funciones habilitadas):')
+  await sembrarRecorrido(
     {
-      nombre: 'Seed · Inscripción abierta',
+      nombre: 'Taller de diseño de apps',
+      objetivo: 'Diseñar en equipo una app que resuelva un problema de la comunidad escolar.',
       organizador: 'org',
-      participantes: a(1, 3),
-      estado: 'inscripcion',
-      formacion: 'autogestionado',
-      equiposEsperados: 2,
+      coorganizadores: ['profe'],
+      equipos: equiposDe(a(1, 9), [
+        { nombre: 'Agenda escolar', tema: 'cómo se organizan las tareas', producto: '' },
+        { nombre: 'Cafetería', tema: 'las filas de la cafetería', producto: '' },
+        { nombre: 'Biblioteca', tema: 'el préstamo de libros', producto: '' },
+      ]),
+      etapa: 'inscripcion',
+      fechaInicio: fecha(10),
+      fechaTermino: fecha(70),
+      calificacion: 'nada',
     },
     idPorCorreo,
   )
+  await sembrarRecorrido(
+    {
+      nombre: 'Feria de ciencias: energía en casa',
+      objetivo: 'Proponer, en equipo, una forma de ahorrar energía en casa y medir su efecto.',
+      organizador: 'org',
+      coorganizadores: ['profe'],
+      equipos: equiposDe(a(1, 9), [
+        {
+          nombre: 'Paneles solares',
+          tema: 'los paneles solares caseros',
+          producto: 'Maqueta de un panel solar casero y medición de lo que genera en un día.',
+        },
+        {
+          nombre: 'Ahorro de agua',
+          tema: 'el consumo de agua caliente',
+          producto: 'Guía para reducir el uso del calentador, con datos de tres familias.',
+        },
+        {
+          nombre: 'Composta',
+          tema: 'la composta y el gas de cocina',
+          producto: 'Prototipo de compostero y estimación del gas que se ahorra.',
+        },
+      ]),
+      etapa: 'desarrollo',
+      fechaInicio: fecha(-35),
+      fechaTermino: fecha(25),
+      calificacion: 'parcial',
+    },
+    idPorCorreo,
+  )
+  await sembrarRecorrido(
+    {
+      nombre: 'Hackatón de movilidad urbana',
+      objetivo: 'Diseñar una solución para moverse de forma más segura alrededor de la escuela.',
+      organizador: 'org',
+      coorganizadores: ['profe'],
+      equipos: equiposDe(a(10, 18), [
+        {
+          nombre: 'Ruta segura',
+          tema: 'los cruces peligrosos cerca de la escuela',
+          producto: 'Mapa de cruces peligrosos y propuesta de señalización, en video.',
+        },
+        {
+          nombre: 'Bici compartida',
+          tema: 'el uso de la bicicleta para llegar a clase',
+          producto: 'Plan de un sistema de préstamo de bicicletas, con presupuesto.',
+        },
+        {
+          nombre: 'Parada inteligente',
+          tema: 'la espera del transporte público',
+          producto: 'Prototipo de una pantalla con horarios estimados del camión.',
+        },
+      ]),
+      etapa: 'cierre',
+      fechaInicio: fecha(-70),
+      fechaTermino: fecha(-4),
+      publicados: ['Ruta segura', 'Bici compartida'],
+      calificacion: 'completa',
+    },
+    idPorCorreo,
+  )
+  await sembrarRecorrido(
+    {
+      nombre: 'Seminario de periodismo escolar',
+      objetivo: 'Publicar en equipo un número de un periódico escolar con notas verificadas.',
+      organizador: 'org',
+      equipos: equiposDe(a(19, 27), [
+        {
+          nombre: 'La Gaceta',
+          tema: 'las noticias del plantel',
+          producto: 'Número especial de La Gaceta, en PDF, con seis notas verificadas.',
+        },
+        {
+          nombre: 'Voces',
+          tema: 'las opiniones de los estudiantes',
+          producto: 'Serie de entrevistas a estudiantes de todos los grados.',
+        },
+        {
+          nombre: 'Pulso',
+          tema: 'los datos de la vida escolar',
+          producto: 'Infografías sobre asistencia, deportes y uso de la biblioteca.',
+        },
+      ]),
+      etapa: 'archivada',
+      fechaInicio: fecha(-140),
+      fechaTermino: fecha(-80),
+      publicados: ['La Gaceta', 'Voces', 'Pulso'],
+      calificacion: 'completa',
+    },
+    idPorCorreo,
+  )
+
+  // -- Escenarios puntuales, para mostrar un caso concreto -------------------
+  console.log('Escenarios puntuales:')
   await sembrar(
     {
-      nombre: 'Seed · Formación autogestionada',
+      nombre: 'Proyecto de biología · Cada quien elige su equipo',
       organizador: 'org',
       coorganizadores: ['profe'],
       participantes: a(1, 8),
@@ -847,7 +1169,7 @@ async function main() {
   )
   await sembrar(
     {
-      nombre: 'Seed · Formación manual',
+      nombre: 'Laboratorio de química · La profesora arma los equipos',
       organizador: 'org',
       participantes: a(1, 8),
       estado: 'formacion_equipos',
@@ -863,7 +1185,7 @@ async function main() {
   )
   await sembrar(
     {
-      nombre: 'Seed · Manual sin equipos (probar la propuesta)',
+      nombre: 'Club de debate · Sin equipos todavía (sugerir equipos)',
       organizador: 'org',
       participantes: a(1, 10),
       estado: 'formacion_equipos',
@@ -874,7 +1196,7 @@ async function main() {
   )
   await sembrar(
     {
-      nombre: 'Seed · Con máximo de 3 y mínimo de 2',
+      nombre: 'Curso de fotografía · Equipos de 2 a 3 personas',
       organizador: 'org',
       participantes: a(1, 10),
       estado: 'formacion_equipos',
@@ -890,7 +1212,7 @@ async function main() {
   )
   await sembrar(
     {
-      nombre: 'Seed · Creada por un estudiante',
+      nombre: 'Torneo de ajedrez · Organizado por un estudiante',
       organizador: 'alumno01',
       coorganizadores: ['profe'],
       participantes: a(2, 7),
@@ -900,10 +1222,9 @@ async function main() {
     },
     idPorCorreo,
   )
-
   await sembrar(
     {
-      nombre: 'Seed · Muchos participantes',
+      nombre: 'Clase de matemáticas · 40 participantes',
       organizador: 'org',
       participantes: a(1, 40),
       estado: 'formacion_equipos',
@@ -919,7 +1240,7 @@ async function main() {
   )
   await sembrar(
     {
-      nombre: 'Seed · Equipos llenos (probar el intercambio)',
+      nombre: 'Concurso de robótica · Equipos llenos (intercambiar integrantes)',
       organizador: 'org',
       participantes: a(1, 8),
       estado: 'formacion_equipos',
@@ -935,52 +1256,15 @@ async function main() {
     },
     idPorCorreo,
   )
-
-  // La transición a cierre ya es real (POST /actividades/{id}/cierre), pero
-  // la automática por fecha de término (docs/diseno-desarrollo-nucleo.md
-  // §7.5) no existe todavía: este escenario sigue forzando el estado y las
-  // fechas a mano para no depender de ella. fechaTermino en el pasado y
-  // plazoCierreDias generoso para que la ventana de reconocimiento
-  // (insignias.service.ts, ventana()) esté abierta hoy.
-  await sembrar(
-    {
-      nombre: 'Seed · En cierre (probar reconocimiento)',
-      organizador: 'org',
-      participantes: a(1, 8),
-      estado: 'cierre',
-      formacion: 'autogestionado',
-      equiposEsperados: 2,
-      equipos: [
-        { nombre: 'Alfa', integrantes: a(1, 4) },
-        { nombre: 'Beta', integrantes: a(5, 8) },
-      ],
-      fechaInicio: fecha(-30),
-      fechaTermino: fecha(-3),
-      plazoCierreDias: 14,
-    },
-    idPorCorreo,
-  )
-
-  // Dos actividades en desarrollo con contenido real (metas, avances,
-  // recursos, bitácora y comentarios ya escritos), para navegar como
-  // organizador sin tener que capturar nada primero y ver cómo se ve una
-  // actividad a medio camino. A diferencia de los escenarios de arriba
-  // (formación), y de los "Olga participa" de abajo (donde Olga es
-  // participante), aquí org@seed.local organiza, igual que en el resto de
-  // su cuenta.
-
-  await sembrarEnDesarrolloConContenido(idPorCorreo)
   await sembrarEnDesarrolloEquipoGrande(idPorCorreo)
   await sembrarBitacoraMuyCargada(idPorCorreo)
 
-  // Las cuatro siguientes ponen a Olga (org@seed.local, quien organiza casi
-  // todo lo de arriba) como participante en vez de organizadora, una por
-  // cada fase donde su experiencia cambia — para probar escenarios de
-  // participante sin tener que cerrar sesión y entrar con un alumno.
-  // profe@seed.local organiza las cuatro.
+  // -- Olga como participante: profe organiza, Olga participa ---------------
+  // Para ver la experiencia de quien participa con la misma cuenta.
+  console.log('Olga como participante:')
   await sembrar(
     {
-      nombre: 'Seed · Olga participa: inscripción abierta',
+      nombre: 'Olga como participante · Inscripción abierta',
       organizador: 'profe',
       participantes: ['org', ...a(1, 2)],
       estado: 'inscripcion',
@@ -989,12 +1273,10 @@ async function main() {
     },
     idPorCorreo,
   )
-
-  // Olga queda sin equipo a propósito (los demás ya tienen el suyo): puede
-  // elegir entrar a Alfa o formar uno nuevo.
+  // Olga queda sin equipo a propósito: puede unirse a Alfa o crear uno.
   await sembrar(
     {
-      nombre: 'Seed · Olga participa: formación autogestionada',
+      nombre: 'Olga como participante · Formación de equipos',
       organizador: 'profe',
       participantes: ['org', ...a(1, 5)],
       estado: 'formacion_equipos',
@@ -1004,51 +1286,70 @@ async function main() {
     },
     idPorCorreo,
   )
-
-  // Olga ya integra un equipo de cuatro, actividad en desarrollo: puede
-  // crear metas, avances y recursos (usar_espacio_equipo solo es válido en
-  // esta fase), pero ya no puede cambiarse de equipo por su cuenta
-  // (elegir_equipo solo vale durante la formación).
-  await sembrar(
+  await sembrarRecorrido(
     {
-      nombre: 'Seed · Olga participa: en desarrollo (espacio de equipo)',
+      nombre: 'Olga como participante · Desarrollo',
+      objetivo: 'Recorrer como participante el espacio del equipo, la bitácora y el proceso.',
       organizador: 'profe',
-      participantes: ['org', ...a(1, 3)],
-      estado: 'desarrollo',
-      formacion: 'autogestionado',
-      equiposEsperados: 1,
-      equipos: [{ nombre: 'Alfa', integrantes: ['org', ...a(1, 3)] }],
+      equipos: equiposDe(
+        ['org', ...a(28, 32)],
+        [
+          {
+            nombre: 'Huerto escolar',
+            tema: 'un huerto en la azotea',
+            producto: 'Diseño del huerto y calendario de siembra.',
+          },
+          {
+            nombre: 'Reciclaje',
+            tema: 'la separación de residuos',
+            producto: 'Campaña de separación con contenedores rotulados.',
+          },
+        ],
+      ),
+      etapa: 'desarrollo',
+      fechaInicio: fecha(-30),
+      fechaTermino: fecha(30),
+      calificacion: 'parcial',
     },
     idPorCorreo,
   )
-
-  // Mismo equipo de cuatro, ya en cierre con la ventana abierta: Olga puede
-  // dar reconocimiento a sus compañeros de equipo (no a los de otros
-  // equipos, P-10) y ver qué le llega a ella.
-  await sembrar(
+  // En cierre: Olga ve su calificación, publica el proyecto de su equipo (que
+  // todavía no lo hace) y reconoce a sus compañeros.
+  await sembrarRecorrido(
     {
-      nombre: 'Seed · Olga participa: en cierre (dar reconocimiento)',
+      nombre: 'Olga como participante · Cierre (publicar, calificación, reconocer)',
+      objetivo: 'Recorrer como participante lo que pasa al cerrar una actividad.',
       organizador: 'profe',
-      participantes: ['org', ...a(1, 3)],
-      estado: 'cierre',
-      formacion: 'autogestionado',
-      equiposEsperados: 1,
-      equipos: [{ nombre: 'Alfa', integrantes: ['org', ...a(1, 3)] }],
-      fechaInicio: fecha(-30),
+      equipos: equiposDe(
+        ['org', ...a(33, 37)],
+        [
+          {
+            nombre: 'Radio escolar',
+            tema: 'un programa de radio en el recreo',
+            producto: 'Piloto de 10 minutos del programa de radio.',
+          },
+          {
+            nombre: 'Mural',
+            tema: 'un mural sobre la historia del barrio',
+            producto: 'Boceto final del mural y fotos del proceso.',
+          },
+        ],
+      ),
+      etapa: 'cierre',
+      fechaInicio: fecha(-60),
       fechaTermino: fecha(-3),
-      plazoCierreDias: 14,
+      publicados: ['Mural'],
+      calificacion: 'completa',
     },
     idPorCorreo,
   )
 
   console.log(`
 Cuentas (contraseña: ${CONTRASENA})
-  org${DOMINIO}      organiza casi todas las actividades; participa (no organiza) en las cuatro
-                     "Olga participa: …", una por fase, para probar escenarios de participante
-                     con esta misma cuenta
-  profe${DOMINIO}    co-organizador en "Formación autogestionada" y en la creada por un estudiante;
-                     organiza las cuatro "Olga participa: …"
-  alumno01${DOMINIO} … alumno40${DOMINIO}   participantes (alumno01 organiza "Creada por un estudiante")
+  org${DOMINIO}      Olga, organiza el recorrido completo y los escenarios puntuales;
+                     participa en las cuatro "Olga como participante · …"
+  profe${DOMINIO}    Pablo, co-organiza el recorrido y organiza las de Olga como participante
+  alumno01${DOMINIO} … alumno40${DOMINIO}   participantes
 `)
 }
 
