@@ -109,7 +109,7 @@ export function validarDatosCrearActividad(cuerpo: unknown): DatosCrearActividad
   }
 }
 
-// Valida que el parámetro de ruta :funcion sea uno de los ocho valores del
+// Valida que el parámetro de ruta :funcion sea uno de los valores del
 // catálogo (@plataforma/shared, docs/diseno-desarrollo-general.md §6.2).
 export function validarFuncion(valor: unknown): FuncionSeguimiento {
   if (typeof valor === 'string' && (FUNCIONES_SEGUIMIENTO as readonly string[]).includes(valor)) {

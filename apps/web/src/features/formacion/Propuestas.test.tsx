@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -179,7 +179,10 @@ describe('el editor del autor', () => {
     expect(crearPropuestaRecurso).toHaveBeenCalledWith(
       expect.not.objectContaining({ orden: expect.anything() }),
     )
-    expect(await screen.findByTestId('ubicacion')).toHaveTextContent('/propuestas/recursos/p9')
+    // ubicacion siempre existe: hay que esperar a que cambie, no a que aparezca.
+    await waitFor(() =>
+      expect(screen.getByTestId('ubicacion')).toHaveTextContent('/propuestas/recursos/p9'),
+    )
   })
 
   it('enviar guarda lo escrito, lo manda a revisión y vuelve a Mis propuestas', async () => {
@@ -195,8 +198,8 @@ describe('el editor del autor', () => {
       expect.objectContaining({ versionFicha: 2 }),
     )
     expect(enviarPropuesta).toHaveBeenCalledWith('recurso', 'p1')
-    expect(await screen.findByTestId('ubicacion')).toHaveTextContent(
-      '/mi-formacion?vista=propuestas',
+    await waitFor(() =>
+      expect(screen.getByTestId('ubicacion')).toHaveTextContent('/mi-formacion?vista=propuestas'),
     )
     expect(
       await screen.findByText(/Enviaste «Cómo dar retroalimentación» a revisión/),

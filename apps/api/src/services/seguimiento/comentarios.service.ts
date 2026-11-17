@@ -1,17 +1,31 @@
 import type { Comentario as FilaComentario } from '@prisma/client'
-import { type Comentario, type TipoEntidadComentario } from '@plataforma/shared'
+import {
+  SECCIONES_RETROALIMENTACION,
+  type Comentario,
+  type RetroalimentacionDeActividad,
+  type ElementoEspacioEquipo,
+  type ResumenDeSeccion,
+  type RetroalimentacionDeEquipo,
+  type SeccionRetroalimentacion,
+  type TipoEntidadComentario,
+} from '@plataforma/shared'
 import { prisma } from '../../data/prisma.js'
 import {
   ErrorAccionNoPermitida,
   ErrorComentarioNoEncontrado,
   ErrorElementoNoEncontrado,
+  ErrorEquipoNoEncontrado,
 } from '../../errores.js'
 import {
   exigirAccion,
   obtenerFaseDeActividad,
   type MembresiaActor,
 } from '../actividades/actividades.service.js'
-import { obtenerIdEquipoDeMembresia } from '../equipos/equipos.service.js'
+import {
+  contextoEquipoParaSeguimiento,
+  listarEquipos,
+  obtenerIdEquipoDeMembresia,
+} from '../equipos/equipos.service.js'
 import { registrarEvento } from '../historial/historial.service.js'
 import { contextoElementoParaComentario } from './elementos.service.js'
 import { contextoEntradaParaComentario, puedeLeerEntrada } from './bitacora.service.js'
@@ -77,6 +91,10 @@ async function datosDestinoComentario(
   tipoEntidad: TipoEntidadComentario,
   idEntidad: string,
 ): Promise<Record<string, unknown>> {
+  if (tipoEntidad === 'seccion_equipo') {
+    const [idEquipo, seccion] = idEntidad.split(':')
+    return { idEquipo, seccion }
+  }
   if (tipoEntidad === 'elemento_espacio_equipo') {
     const elemento = await prisma.elementoEspacioEquipo.findUnique({
       where: { idElemento: idEntidad },
@@ -256,4 +274,117 @@ export async function editarComentario(
 
   const autores = await nombresDeAutores([membresiaAutor.idMembresia])
   return aRespuesta(fila, autores.get(membresiaAutor.idMembresia) ?? '')
+}
+
+// ---------------------------------------------------------------------------
+// Retroalimentación: comentarios sobre cómo trabaja un equipo en una sección
+// de su espacio (o en general), no sobre un elemento. Son comentarios con
+// otro destino: mismas reglas de quién escribe (comentar: quien organiza, en
+// desarrollo y cierre), de edición y de historial. id_entidad es
+// "{idEquipo}:{sección}".
+// ---------------------------------------------------------------------------
+
+function claveSeccion(idEquipo: string, seccion: SeccionRetroalimentacion): string {
+  return `${idEquipo}:${seccion}`
+}
+
+function deEquipo(comentario: Comentario): RetroalimentacionDeEquipo {
+  const [idEquipo, seccion] = comentario.idEntidad.split(':')
+  return { ...comentario, idEquipo, seccion: seccion as SeccionRetroalimentacion }
+}
+
+async function listarPorEntidades(
+  tipoEntidad: TipoEntidadComentario,
+  idsEntidad: string[],
+): Promise<Comentario[]> {
+  if (idsEntidad.length === 0) return []
+  const filas = await prisma.comentario.findMany({
+    where: { tipoEntidad, idEntidad: { in: idsEntidad } },
+    orderBy: { fechaCreacion: 'asc' },
+  })
+  const autores = await nombresDeAutores([...new Set(filas.map((f) => f.idMembresiaAutor))])
+  return filas.map((f) => aRespuesta(f, autores.get(f.idMembresiaAutor) ?? ''))
+}
+
+// GET /api/actividades/{id}/retroalimentacion: quien organiza ve la de todos
+// los equipos; quien participa, la de su equipo (la visibilidad es la del
+// espacio de equipo).
+export async function listarRetroalimentacionDeActividad(
+  idActividad: string,
+  membresia: MembresiaActor,
+): Promise<RetroalimentacionDeActividad> {
+  const { equipos } = await listarEquipos(idActividad, membresia.idMembresia)
+  const participa = membresia.rol === 'participante'
+  const idMiEquipo = participa ? await obtenerIdEquipoDeMembresia(membresia.idMembresia) : null
+  const visibles = participa ? equipos.filter((e) => e.id === idMiEquipo) : equipos
+  const claves = visibles.flatMap((e) =>
+    SECCIONES_RETROALIMENTACION.map((seccion) => claveSeccion(e.id, seccion)),
+  )
+  const [deEquipos, resumen] = await Promise.all([
+    listarPorEntidades('seccion_equipo', claves),
+    participa ? Promise.resolve([]) : resumenDeSecciones(visibles.map((e) => e.id)),
+  ])
+  return {
+    equipos: visibles.map((e) => ({ id: e.id, nombre: e.nombre })),
+    retroalimentacion: deEquipos.map(deEquipo),
+    resumen,
+  }
+}
+
+// Para quien retroalimenta: por equipo y sección, cuántos elementos hay y
+// cuántos comentarios recibieron, para saber a primera vista qué revisar.
+async function resumenDeSecciones(idsEquipo: string[]): Promise<ResumenDeSeccion[]> {
+  if (idsEquipo.length === 0) return []
+  const elementos = await prisma.elementoEspacioEquipo.findMany({
+    where: { idEquipo: { in: idsEquipo } },
+    select: { idElemento: true, idEquipo: true, tipoElemento: true },
+  })
+  const comentarios = elementos.length
+    ? await prisma.comentario.groupBy({
+        by: ['idEntidad'],
+        where: {
+          tipoEntidad: 'elemento_espacio_equipo',
+          idEntidad: { in: elementos.map((e) => e.idElemento) },
+        },
+        _count: { _all: true },
+      })
+    : []
+  const porElemento = new Map(comentarios.map((c) => [c.idEntidad, c._count._all]))
+  const porSeccion = new Map<string, ResumenDeSeccion>()
+  for (const e of elementos) {
+    const clave = `${e.idEquipo}:${e.tipoElemento}`
+    const actual = porSeccion.get(clave) ?? {
+      idEquipo: e.idEquipo,
+      seccion: e.tipoElemento as ElementoEspacioEquipo,
+      elementos: 0,
+      comentarios: 0,
+    }
+    actual.elementos += 1
+    actual.comentarios += porElemento.get(e.idElemento) ?? 0
+    porSeccion.set(clave, actual)
+  }
+  return [...porSeccion.values()]
+}
+
+// POST /api/equipos/{id}/retroalimentacion: quien organiza (comentar), sobre
+// cualquier equipo de su actividad.
+export async function crearRetroalimentacionDeEquipo(
+  idEquipo: string,
+  seccion: SeccionRetroalimentacion,
+  contenido: string,
+  idUsuarioActor: string,
+): Promise<RetroalimentacionDeEquipo> {
+  const { idActividad, membresia } = await contextoEquipoParaSeguimiento(idEquipo, idUsuarioActor)
+  if (membresia.rol === 'participante') throw new ErrorEquipoNoEncontrado()
+  const fase = await obtenerFaseDeActividad(idActividad)
+  exigirAccion(membresia, 'comentar', fase, MENSAJE_FASE)
+  const comentario = await crearYRegistrar(
+    idActividad,
+    membresia,
+    'seccion_equipo',
+    claveSeccion(idEquipo, seccion),
+    contenido,
+    idUsuarioActor,
+  )
+  return deEquipo(comentario)
 }

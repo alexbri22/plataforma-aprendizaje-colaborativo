@@ -45,7 +45,7 @@ export interface GrupoNavProps {
    * quede oculto, sin importar lo que diga la preferencia guardada. */
   contieneActivo?: boolean
   /** 'principal': un ítem más del nivel superior, mismo tamaño que el resto
-   * y sin separador (p. ej. Actividades). 'seccion': grupo aparte, separado
+   * y sin separador (p. ej. Consultas). 'seccion': grupo aparte, separado
    * por línea y en versalitas (p. ej. Administración, Proceso colaborativo).
    * 'subgrupo': encabezado discreto, sin línea ni versalitas, para agrupar
    * dentro del nivel de una actividad (p. ej. Proyecto colaborativo).

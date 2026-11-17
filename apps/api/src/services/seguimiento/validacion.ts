@@ -1,12 +1,19 @@
 import {
+  ELEMENTOS_CON_CALENDARIO,
   ELEMENTOS_ESPACIO_EQUIPO,
   ESTADOS_PERIODO,
-  LONGITUD_MAXIMA_CONTENIDO_BITACORA,
   LONGITUD_MAXIMA_CONTENIDO_COMENTARIO,
   LONGITUD_MAXIMA_CONTENIDO_ELEMENTO,
   LONGITUD_MAXIMA_ENLACE_ELEMENTO,
   PERIODICIDADES,
+  esElementoConCalendario,
+  esSeccionRetroalimentacion,
   esUrlSegura,
+  validarContenidoBitacora,
+  validarRespuestasBitacora,
+  type ContenidoBitacora,
+  type ElementoConCalendario,
+  type SeccionRetroalimentacion,
   type ElementoEspacioEquipo,
   type EstadoPeriodo,
   type Periodicidad,
@@ -24,14 +31,21 @@ function comoObjeto(cuerpo: unknown): Record<string, unknown> {
 // 'ninguna' borra el calendario; las demás lo regeneran (nucleo §9.2, P-28).
 export type PeriodicidadSolicitada = Periodicidad | 'ninguna'
 
+// Sin elemento, el de siempre: los avances.
 export function validarDatosDefinirPeriodos(cuerpo: unknown): {
+  elemento: ElementoConCalendario
   periodicidad: PeriodicidadSolicitada
 } {
-  const { periodicidad } = comoObjeto(cuerpo)
+  const { periodicidad, elemento = 'avances' } = comoObjeto(cuerpo)
   const validas: readonly string[] = [...PERIODICIDADES, 'ninguna']
 
+  if (!esElementoConCalendario(elemento)) {
+    throw new ErrorValidacion({
+      elemento: `Debe ser uno de: ${ELEMENTOS_CON_CALENDARIO.join(', ')}.`,
+    })
+  }
   if (typeof periodicidad === 'string' && validas.includes(periodicidad)) {
-    return { periodicidad: periodicidad as PeriodicidadSolicitada }
+    return { elemento, periodicidad: periodicidad as PeriodicidadSolicitada }
   }
   throw new ErrorValidacion({ periodicidad: `Debe ser uno de: ${validas.join(', ')}.` })
 }
@@ -168,13 +182,17 @@ function validarContenidoConLimite(
   return { contenido }
 }
 
-export function validarDatosEntradaBitacora(cuerpo: unknown): { contenido: string } {
-  const resultado = validarContenidoConLimite(
-    comoObjeto(cuerpo).contenido,
-    LONGITUD_MAXIMA_CONTENIDO_BITACORA,
-    'Escribe el contenido de la entrada.',
-  )
-  if ('error' in resultado) throw new ErrorValidacion({ contenido: resultado.error })
+// Crear y editar mandan lo mismo (nucleo §9.3): las respuestas por clave de
+// pregunta si la entrada es guiada, o `contenido` si es libre, con la
+// validación compartida con el cliente. Si el formato es el que corresponde
+// lo decide el servicio.
+export function validarDatosEntradaBitacora(cuerpo: unknown): ContenidoBitacora {
+  const datos = comoObjeto(cuerpo)
+  const resultado =
+    'contenido' in datos
+      ? validarContenidoBitacora(datos.contenido)
+      : validarRespuestasBitacora(datos.respuestas)
+  if ('errores' in resultado) throw new ErrorValidacion(resultado.errores)
   return resultado
 }
 
@@ -189,4 +207,18 @@ export function validarDatosComentario(cuerpo: unknown): { contenido: string } {
   )
   if ('error' in resultado) throw new ErrorValidacion({ contenido: resultado.error })
   return resultado
+}
+
+// POST /api/equipos/{id}/retroalimentacion: el contenido, con las reglas de
+// un comentario, y la sección a la que se refiere.
+export function validarDatosRetroalimentacion(cuerpo: unknown): {
+  seccion: SeccionRetroalimentacion
+  contenido: string
+} {
+  const { contenido } = validarDatosComentario(cuerpo)
+  const { seccion } = comoObjeto(cuerpo)
+  if (!esSeccionRetroalimentacion(seccion)) {
+    throw new ErrorValidacion({ seccion: 'No es una sección del espacio de equipo.' })
+  }
+  return { seccion, contenido }
 }

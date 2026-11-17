@@ -55,32 +55,51 @@ export const ACCIONES_ACTIVIDAD = [
   // resuelve antes de la concesión general al organizador (ver
   // ACCIONES_EXCLUSIVAS_DE_PARTICIPANTE en capacidades.ts).
   'escribir_bitacora',
+  // Publicación de proyectos: subir o corregir el entregable final del propio
+  // equipo durante el cierre. Solo quien participa, como la bitácora.
+  'publicar_proyecto',
   // Comentarios (nucleo §10.4): escribir o editar un comentario sobre un
   // elemento del espacio de equipo o una entrada de bitácora. Organizador y
   // co-organizador con `calificar_y_comentar`; los participantes no la
   // tienen (no está en ACCIONES_DE_AUTOSERVICIO).
   'comentar',
+  // Evaluación (nucleo §10.1): pesos de componentes y aspectos, e
+  // instrumentos de cada aspecto. Hasta que la actividad se archive, porque
+  // la calificación es calculada y un cambio de peso no deja datos huérfanos.
+  'configurar_calificacion',
+  // Responder una plantilla del proceso colaborativo (nucleo §10.1). Como
+  // escribir_bitacora, general §7.3 la marca con "—" fijo para organizador y
+  // co-organizador: solo los participantes responden y reciben calificación.
+  'responder_instrumento',
+  // Capturar o corregir el puntaje de un instrumento que no se puntúa solo
+  // (nucleo §10.3): una actividad externa, el proyecto o la bitácora. Quien
+  // organiza y los co-organizadores con `calificar_y_comentar`.
+  'capturar_puntaje',
 ] as const
 
 export type AccionActividad = (typeof ACCIONES_ACTIVIDAD)[number]
 
-/** Las ocho funciones de seguimiento del catálogo (general §6.2). Cada
+/** Las cinco funciones de seguimiento del catálogo (general §6.2). Cada
  * actividad tiene exactamente una fila de configuración por función
  * (nucleo §7.1). El reporte de trabajo ya no es una función aparte: es el
  * elemento `avances` de `espacio_equipo`, con su calendario en los periodos
- * de reporte (ver PERIODICIDADES). */
+ * de reporte (ver PERIODICIDADES). Tampoco las autoevaluaciones: son los
+ * instrumentos de los aspectos del proceso colaborativo (calificacion.ts), igual
+ * que la evaluación por pares. */
 export const FUNCIONES_SEGUIMIENTO = [
   'formacion_equipos',
   'bitacora_individual',
   'calificacion',
-  'autoevaluacion_individual',
-  'autoevaluacion_grupal',
-  'evaluacion_pares',
   'espacio_equipo',
   'insignias',
 ] as const
 
 export type FuncionSeguimiento = (typeof FUNCIONES_SEGUIMIENTO)[number]
+
+/** Si la bitácora admite entradas: en cualquiera de sus dos formatos. */
+export function bitacoraHabilitada(estado: string | undefined): boolean {
+  return estado === 'guiada' || estado === 'libre'
+}
 
 /** Estados de la función `formacion_equipos` (general §6.2). La propuesta del
  * sistema no es un estado: es una acción disponible en `manual`. Son estados de
@@ -96,11 +115,12 @@ export function esEstadoFormacionEquipos(valor: unknown): valor is EstadoFormaci
  * salvo `espacio_equipo` tienen un estado simple, de esta lista. */
 export const ESTADOS_POR_FUNCION: Readonly<Record<FuncionSeguimiento, readonly string[]>> = {
   formacion_equipos: ESTADOS_FORMACION_EQUIPOS,
-  bitacora_individual: ['deshabilitada', 'habilitada'],
-  calificacion: ['deshabilitada', 'directa', 'rubrica'],
-  autoevaluacion_individual: ['deshabilitada', 'habilitada'],
-  autoevaluacion_grupal: ['deshabilitada', 'habilitada'],
-  evaluacion_pares: ['deshabilitada', 'opcional', 'obligatoria'],
+  // Habilitada, en uno de dos formatos (nucleo §9.3): guiada, con las
+  // preguntas de BLOQUES_BITACORA, o libre.
+  bitacora_individual: ['deshabilitada', 'guiada', 'libre'],
+  // Habilitada, se calcula por ponderación (general §4.2): ya no hay modos
+  // directo y rúbrica.
+  calificacion: ['deshabilitada', 'habilitada'],
   // espacio_equipo no usa esta lista: su estado es compuesto (ver
   // EstadoEspacioEquipo) y se valida con esElementoEspacioEquipoValido.
   espacio_equipo: [],
@@ -120,6 +140,17 @@ export const ELEMENTOS_ESPACIO_EQUIPO = [
   'producto',
 ] as const
 export type ElementoEspacioEquipo = (typeof ELEMENTOS_ESPACIO_EQUIPO)[number]
+
+/** Lo que tiene calendario de revisiones: cada elemento del espacio de
+ * equipo y la bitácora individual. Cada uno con sus propios periodos. */
+export const ELEMENTOS_CON_CALENDARIO = [...ELEMENTOS_ESPACIO_EQUIPO, 'bitacora'] as const
+export type ElementoConCalendario = (typeof ELEMENTOS_CON_CALENDARIO)[number]
+
+export function esElementoConCalendario(valor: unknown): valor is ElementoConCalendario {
+  return (
+    typeof valor === 'string' && (ELEMENTOS_CON_CALENDARIO as readonly string[]).includes(valor)
+  )
+}
 
 export const ESTADOS_ELEMENTO_ESPACIO_EQUIPO = ['deshabilitado', 'opcional', 'obligatorio'] as const
 export type EstadoElementoEspacioEquipo = (typeof ESTADOS_ELEMENTO_ESPACIO_EQUIPO)[number]
@@ -180,9 +211,6 @@ export const CONFIGURACION_POR_DEFECTO: Readonly<Record<FuncionSeguimiento, stri
   formacion_equipos: 'autogestionado',
   bitacora_individual: 'deshabilitada',
   calificacion: 'deshabilitada',
-  autoevaluacion_individual: 'deshabilitada',
-  autoevaluacion_grupal: 'deshabilitada',
-  evaluacion_pares: 'deshabilitada',
   espacio_equipo: serializarEstadoEspacioEquipo({
     metas: 'opcional',
     planeacion: 'opcional',
@@ -207,10 +235,26 @@ export type EstadoPeriodo = (typeof ESTADOS_PERIODO)[number]
  * (YYYY-MM-DD), no instantes. */
 export interface PeriodoReporte {
   id: string
+  elemento: ElementoConCalendario
   orden: number
   fechaInicio: string
   fechaFin: string
   estado: EstadoPeriodo
+}
+
+/** Operación de la planeación: cuánto se entregó dentro de las fechas de un
+ * periodo activo. Lo publicado todavía no apunta a un periodo (nucleo §9.2,
+ * Fase B), así que cuenta lo que se publicó entre su inicio y su fin, en la
+ * zona horaria de la plataforma. Los elementos del espacio de equipo se
+ * cuentan por equipo; la bitácora, por participante. */
+export interface EntregasDePeriodo {
+  idPeriodo: string
+  hechos: number
+  total: number
+  unidad: 'equipos' | 'participantes'
+  /** Para quien participa: si su equipo (o, en la bitácora, él mismo) ya
+   * publicó algo. Nulo para quien organiza o para quien no tiene equipo. */
+  mio: boolean | null
 }
 
 /** Catálogo de permisos otorgables a un co-organizador (general §7.3). */

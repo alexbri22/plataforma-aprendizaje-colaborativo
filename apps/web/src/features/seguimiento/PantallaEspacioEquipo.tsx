@@ -1,4 +1,6 @@
 import {
+  ELEMENTOS_CON_HISTORIA,
+  corregibleHoy,
   LONGITUD_MAXIMA_CONTENIDO_ELEMENTO,
   esUrlSegura,
   parsearEstadoEspacioEquipo,
@@ -31,6 +33,7 @@ import {
   ErrorArchivoSinSubir,
   type DatosElemento,
 } from './useElementos'
+import { PuntajeDelEquipo } from '../evaluacion/PuntajeDelEquipo'
 import styles from './PantallaEspacioEquipo.module.css'
 
 const TITULOS: Record<ElementoEspacioEquipo, string> = {
@@ -49,6 +52,15 @@ const AYUDA: Record<ElementoEspacioEquipo, string> = {
   producto: 'Lo que el equipo entrega como resultado final.',
 }
 
+// El botón que abre el formulario para agregar algo nuevo.
+const AGREGAR: Record<ElementoEspacioEquipo, string> = {
+  metas: 'Agregar meta',
+  planeacion: 'Agregar a la planeación',
+  avances: 'Agregar avance',
+  recursos: 'Agregar material',
+  producto: 'Agregar al producto',
+}
+
 // Las tarjetas ahora empiezan colapsadas (TarjetaElemento): una fila
 // compacta cada una, así que una página más grande sigue cabiendo sin
 // desplazamiento excesivo.
@@ -63,9 +75,11 @@ function mensajeDe(error: unknown): string {
 function FormularioNuevoElemento({
   tipo,
   onCrear,
+  onCerrar,
 }: {
   tipo: ElementoEspacioEquipo
   onCrear: (datos: DatosElemento) => Promise<void>
+  onCerrar: () => void
 }) {
   const [contenido, setContenido] = useState('')
   const [enlace, setEnlace] = useState('')
@@ -89,6 +103,7 @@ function FormularioNuevoElemento({
       setContenido('')
       setEnlace('')
       setArchivo(null)
+      onCerrar()
     } catch (e) {
       // El elemento ya existe: se limpia el formulario para que «Agregar» no
       // lo cree otra vez, y el aviso dice cómo adjuntar el archivo.
@@ -112,6 +127,7 @@ function FormularioNuevoElemento({
           onChange={(e) => setContenido(e.target.value)}
           maxLength={LONGITUD_MAXIMA_CONTENIDO_ELEMENTO}
           placeholder={AYUDA[tipo]}
+          autoFocus
         />
         <CamposAdjuntos
           enlace={enlace}
@@ -122,9 +138,20 @@ function FormularioNuevoElemento({
           disabled={guardando}
         />
         {error ? <AvisoError mensaje={error} /> : null}
-        <Button type="submit" size="sm" disabled={guardando || contenido.trim() === ''}>
-          {guardando ? <IconoCargando size={14} /> : 'Agregar'}
-        </Button>
+        <div className={styles.acciones}>
+          <Button type="submit" size="sm" disabled={guardando || contenido.trim() === ''}>
+            {guardando ? <IconoCargando size={14} /> : 'Agregar'}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={guardando}
+            onClick={onCerrar}
+          >
+            Cancelar
+          </Button>
+        </div>
       </form>
     </Card>
   )
@@ -145,6 +172,8 @@ export function PantallaEspacioEquipo({ tipo }: PantallaEspacioEquipoProps) {
   const [parametros] = useSearchParams()
   const idAAbrir = parametros.get('abrir')
   const [pagina, setPagina] = useState(0)
+  // El formulario para agregar no está abierto de entrada.
+  const [agregando, setAgregando] = useState(false)
   const [errorPorId, setErrorPorId] = useState<Record<string, string>>({})
   // Qué idAAbrir ya saltó de página, para no repetir el salto en cada
   // render una vez la persona cambia de página a propósito.
@@ -214,88 +243,119 @@ export function PantallaEspacioEquipo({ tipo }: PantallaEspacioEquipoProps) {
       titulo={TITULOS[tipo]}
       ayuda={tipo === 'recursos' ? 'materiales' : tipo}
     >
-      <IntegrantesEquipo integrantes={equipo.integrantes} />
-      {estado === 'deshabilitado' ? (
-        <p className={styles.ayuda}>Esta sección no se usa en esta actividad.</p>
-      ) : (
-        <div className={styles.contenido}>
-          {estado === 'obligatorio' && elementosQuery.data?.length === 0 ? (
-            <Badge variant="warning">Obligatorio: falta agregar algo aquí</Badge>
-          ) : null}
+      <div className={styles.pagina}>
+        <IntegrantesEquipo integrantes={equipo.integrantes} />
+        {/* Quien organiza califica el elemento aquí, viendo el trabajo
+          (nucleo §10.3, P-40). */}
+        {actividad.rol !== 'participante' &&
+        actividad.configuracion?.calificacion === 'habilitada' &&
+        estado !== 'deshabilitado' ? (
+          <PuntajeDelEquipo
+            idActividad={actividad.id}
+            idEquipo={id}
+            elemento={tipo}
+            puedeCapturar={capacidades.includes('capturar_puntaje')}
+          />
+        ) : null}
+        {estado === 'deshabilitado' ? (
+          <p className={styles.ayuda}>Esta sección no se usa en esta actividad.</p>
+        ) : (
+          <div className={styles.contenido}>
+            {estado === 'obligatorio' && elementosQuery.data?.length === 0 ? (
+              <Badge variant="warning">Obligatorio: falta agregar algo aquí</Badge>
+            ) : null}
 
-          {puedeEscribir ? (
-            <FormularioNuevoElemento
-              tipo={tipo}
-              onCrear={async (datos) => {
-                await crear.mutateAsync(datos)
-              }}
-            />
-          ) : null}
+            {puedeEscribir && agregando ? (
+              <FormularioNuevoElemento
+                tipo={tipo}
+                onCrear={async (datos) => {
+                  await crear.mutateAsync(datos)
+                }}
+                onCerrar={() => setAgregando(false)}
+              />
+            ) : puedeEscribir ? (
+              <div className={styles.barra}>
+                <Button size="sm" onClick={() => setAgregando(true)}>
+                  {AGREGAR[tipo]}
+                </Button>
+              </div>
+            ) : null}
 
-          {elementosQuery.isPending ? (
-            <div className={styles.cargando} role="status" aria-label={`Cargando ${TITULOS[tipo]}`}>
-              <IconoCargando size={20} />
-            </div>
-          ) : elementosQuery.isError ? (
-            <AvisoError mensaje="No pudimos cargar esto. Intenta de nuevo." />
-          ) : elementosQuery.data.length === 0 ? (
-            <p className={styles.ayuda}>
-              {puedeEscribir
-                ? 'Todavía no hay nada aquí. Usa el formulario para agregar lo primero.'
-                : 'El equipo todavía no ha agregado nada aquí.'}
-            </p>
-          ) : (
-            (() => {
-              // rebanar corrige la página si dejó de existir (p. ej. se
-              // eliminó el único elemento de la última): pasar la que
-              // devuelve, no el estado crudo, para que Paginacion no
-              // muestre un rango imposible como "21-20 de 20".
-              const { visibles, pagina: paginaActual } = rebanar(
-                elementosQuery.data,
-                pagina,
-                TAMANO_PAGINA,
-              )
-              return (
-                <>
-                  {visibles.map((elemento) => (
-                    <TarjetaElemento
-                      key={elemento.id}
-                      elemento={elemento}
-                      puedeEscribir={puedeEscribir}
-                      guardando={editar.isPending && editar.variables?.idElemento === elemento.id}
-                      eliminando={eliminar.isPending && eliminar.variables === elemento.id}
-                      error={errorPorId[elemento.id] ?? null}
-                      idMiMembresia={equipo.idMiMembresia}
-                      puedeComentar={puedeComentar}
-                      expandidaInicial={elemento.id === idAAbrir}
-                      onGuardar={async (datos) => {
-                        limpiarError(elemento.id)
-                        try {
-                          await editar.mutateAsync({ idElemento: elemento.id, ...datos })
-                        } catch (e) {
-                          alFallar(elemento.id, e)
-                          throw e
+            {elementosQuery.isPending ? (
+              <div
+                className={styles.cargando}
+                role="status"
+                aria-label={`Cargando ${TITULOS[tipo]}`}
+              >
+                <IconoCargando size={20} />
+              </div>
+            ) : elementosQuery.isError ? (
+              <AvisoError mensaje="No pudimos cargar esto. Intenta de nuevo." />
+            ) : elementosQuery.data.length === 0 ? (
+              <p className={styles.ayuda}>
+                {puedeEscribir
+                  ? 'Todavía no hay nada aquí.'
+                  : 'El equipo todavía no ha agregado nada aquí.'}
+              </p>
+            ) : (
+              (() => {
+                // rebanar corrige la página si dejó de existir (p. ej. se
+                // eliminó el único elemento de la última): pasar la que
+                // devuelve, no el estado crudo, para que Paginacion no
+                // muestre un rango imposible como "21-20 de 20".
+                const { visibles, pagina: paginaActual } = rebanar(
+                  elementosQuery.data,
+                  pagina,
+                  TAMANO_PAGINA,
+                )
+                return (
+                  <>
+                    {visibles.map((elemento) => (
+                      <TarjetaElemento
+                        key={elemento.id}
+                        elemento={elemento}
+                        // Los avances solo se corrigen el mismo día en que se
+                        // publicaron (ELEMENTOS_CON_HISTORIA).
+                        puedeEscribir={
+                          puedeEscribir &&
+                          (!ELEMENTOS_CON_HISTORIA.includes(tipo) ||
+                            corregibleHoy(elemento.fechaCreacion))
                         }
-                      }}
-                      onEliminar={() => {
-                        limpiarError(elemento.id)
-                        eliminar.mutate(elemento.id, { onError: (e) => alFallar(elemento.id, e) })
-                      }}
+                        guardando={editar.isPending && editar.variables?.idElemento === elemento.id}
+                        eliminando={eliminar.isPending && eliminar.variables === elemento.id}
+                        error={errorPorId[elemento.id] ?? null}
+                        idMiMembresia={equipo.idMiMembresia}
+                        puedeComentar={puedeComentar}
+                        expandidaInicial={elemento.id === idAAbrir}
+                        onGuardar={async (datos) => {
+                          limpiarError(elemento.id)
+                          try {
+                            await editar.mutateAsync({ idElemento: elemento.id, ...datos })
+                          } catch (e) {
+                            alFallar(elemento.id, e)
+                            throw e
+                          }
+                        }}
+                        onEliminar={() => {
+                          limpiarError(elemento.id)
+                          eliminar.mutate(elemento.id, { onError: (e) => alFallar(elemento.id, e) })
+                        }}
+                      />
+                    ))}
+                    <Paginacion
+                      total={elementosQuery.data.length}
+                      tamano={TAMANO_PAGINA}
+                      pagina={paginaActual}
+                      onCambiar={setPagina}
+                      etiqueta={TITULOS[tipo]}
                     />
-                  ))}
-                  <Paginacion
-                    total={elementosQuery.data.length}
-                    tamano={TAMANO_PAGINA}
-                    pagina={paginaActual}
-                    onCambiar={setPagina}
-                    etiqueta={TITULOS[tipo]}
-                  />
-                </>
-              )
-            })()
-          )}
-        </div>
-      )}
+                  </>
+                )
+              })()
+            )}
+          </div>
+        )}
+      </div>
     </AppShellEquipo>
   )
 }

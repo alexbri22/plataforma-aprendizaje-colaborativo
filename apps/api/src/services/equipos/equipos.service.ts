@@ -426,6 +426,31 @@ export async function listarIntegrantesDeEquipo(
     }))
 }
 
+// Operación de la planeación (Seguimiento y Evaluación, que dependen de
+// Equipos): los equipos de la actividad y, de sus participantes activos,
+// quiénes ya tienen uno, que son a quienes les toca entregar.
+export async function idsDeEquiposDeActividad(idActividad: string): Promise<string[]> {
+  const filas = await prisma.equipo.findMany({
+    where: { idActividad },
+    select: { idEquipo: true },
+  })
+  return filas.map((f) => f.idEquipo)
+}
+
+export async function participantesConEquipo(idActividad: string): Promise<string[]> {
+  const [filas, miembros] = await Promise.all([
+    prisma.integranteEquipo.findMany({
+      where: { equipo: { idActividad } },
+      select: { idMembresia: true },
+    }),
+    listarMiembros(idActividad),
+  ])
+  const participantes = new Set(
+    miembros.filter((m) => m.activa && m.rol === 'participante').map((m) => m.idMembresia),
+  )
+  return filas.map((f) => f.idMembresia).filter((id) => participantes.has(id))
+}
+
 // ---------------------------------------------------------------------------
 // Escrituras
 // ---------------------------------------------------------------------------

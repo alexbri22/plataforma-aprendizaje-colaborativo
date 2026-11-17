@@ -88,12 +88,7 @@ describe('construirNavActividad: quien organiza', () => {
     expect(etapas(nav).map((e) => e.etiqueta)).toEqual(['Creación', 'Desarrollo', 'Cierre'])
     expect(porEtapa(nav)).toEqual({
       creacion: ['Datos de la actividad', 'Planificar', 'Inscripción', 'Conformación de equipos'],
-      desarrollo: [
-        'Editar planificación',
-        'Equipos',
-        'Participantes',
-        'Evaluación y retroalimentación',
-      ],
+      desarrollo: ['Operación de la planeación', 'Equipos', 'Evaluación y retroalimentación'],
       cierre: [
         'Confirmar cierre de actividad',
         'Otorgar reconocimientos',
@@ -140,35 +135,41 @@ describe('construirNavActividad: quien organiza', () => {
 
     expect(enlace(nav, 'Planificar')).toBe('/actividades/a1/configuracion')
     expect(enlace(nav, 'Inscripción')).toBe('/actividades/a1/inscripcion')
-    expect(enlace(nav, 'Conformación de equipos')).toBe('/actividades/a1/equipos')
+    expect(enlace(nav, 'Conformación de equipos')).toBe('/actividades/a1/conformacion')
     expect(activos(nav)).toEqual(['Planificar'])
   })
 
-  it('pasada la Creación, sus entradas repetidas quedan sin enlace y solo se abre la de Desarrollo', () => {
+  it('pasada la Creación, Planificar y Conformación de equipos siguen abiertas', () => {
     const nav = construirNavActividad({
       actividad: actividad({ capacidades: ['ajustar_funciones'] }),
       contexto: { idActividad: 'a1', seccion: 'planificar' },
     })
 
-    expect(enlace(nav, 'Planificar')).toBeUndefined()
-    expect(enlace(nav, 'Conformación de equipos')).toBeUndefined()
-    expect(enlace(nav, 'Editar planificación')).toBe('/actividades/a1/configuracion')
+    expect(enlace(nav, 'Planificar')).toBe('/actividades/a1/configuracion')
+    expect(enlace(nav, 'Conformación de equipos')).toBe('/actividades/a1/conformacion')
+    expect(enlace(nav, 'Operación de la planeación')).toBe('/actividades/a1/operacion')
     expect(enlace(nav, 'Equipos')).toBe('/actividades/a1/equipos')
-    expect(activos(nav)).toEqual(['Editar planificación'])
+    expect(todas(nav).map((h) => h.etiqueta)).not.toContain('Editar planificación')
+    expect(activos(nav)).toEqual(['Planificar'])
   })
 
-  it('Equipos queda marcado en Desarrollo y Conformación de equipos en Creación', () => {
+  it('cada pantalla marca su propia entrada, en cualquier etapa', () => {
     const desarrollo = construirNavActividad({
       actividad: actividad(),
       contexto: { idActividad: 'a1', seccion: 'equipos' },
     })
-    const formacion = construirNavActividad({
-      actividad: actividad({ fase: 'formacion_equipos' }),
-      contexto: { idActividad: 'a1', seccion: 'equipos' },
+    const conformacion = construirNavActividad({
+      actividad: actividad(),
+      contexto: { idActividad: 'a1', seccion: 'conformacion' },
+    })
+    const operacion = construirNavActividad({
+      actividad: actividad(),
+      contexto: { idActividad: 'a1', seccion: 'operacion' },
     })
 
     expect(activos(desarrollo)).toEqual(['Equipos'])
-    expect(activos(formacion)).toEqual(['Conformación de equipos'])
+    expect(activos(conformacion)).toEqual(['Conformación de equipos'])
+    expect(activos(operacion)).toEqual(['Operación de la planeación'])
   })
 
   it('sin capacidades de planificación no ofrece Planificar ni Editar planificación', () => {
@@ -237,7 +238,7 @@ describe('construirNavActividad: quien organiza', () => {
 describe('construirNavActividad: quien organiza dentro de un equipo', () => {
   it('regresa con la flecha a Equipos, y el equipo es el título', () => {
     const nav = construirNavActividad({
-      actividad: actividad({ configuracion: { bitacora_individual: 'habilitada' } }),
+      actividad: actividad({ configuracion: { bitacora_individual: 'guiada' } }),
       contexto: { idEquipo: 'e1', seccion: 'metas' },
       equipo: EQUIPO,
     })
@@ -250,7 +251,7 @@ describe('construirNavActividad: quien organiza dentro de un equipo', () => {
 
   it('solo ve el proyecto, el proceso y las bitácoras del equipo', () => {
     const nav = construirNavActividad({
-      actividad: actividad({ configuracion: { bitacora_individual: 'habilitada' } }),
+      actividad: actividad({ configuracion: { bitacora_individual: 'guiada' } }),
       equipo: EQUIPO,
       contexto: { idEquipo: 'e1', seccion: 'bitacora-integrante', idMembresia: 'm1' },
     })
@@ -304,7 +305,7 @@ describe('construirNavActividad: quien participa', () => {
       rol: 'participante',
       capacidades: [],
       idMiEquipo: 'e1',
-      configuracion: { bitacora_individual: 'habilitada' },
+      configuracion: { bitacora_individual: 'guiada' },
       ...sobrescribir,
     })
 
@@ -325,10 +326,11 @@ describe('construirNavActividad: quien participa', () => {
     expect(hojas(desarrollo.entradas).map((h) => h.etiqueta)).toContain('Mi bitácora')
     expect(activos(nav)).toEqual(['Avances'])
     expect(porEtapa(nav).desarrollo.slice(-3)).toEqual([
+      'Operación de la planeación',
       'Equipos',
-      'Participantes',
       'Evaluación y retroalimentación',
     ])
+    expect(enlace(nav, 'Evaluación y retroalimentación')).toBe('/actividades/a1/evaluacion')
   })
 
   it('"Mi equipo" es un título sin enlace', () => {
@@ -426,5 +428,41 @@ describe('etapaDeActividad', () => {
     expect(de('desarrollo')).toBe('desarrollo')
     expect(de('cierre')).toBe('cierre')
     expect(de('archivada')).toBeNull()
+  })
+})
+
+describe('construirNavActividad: calificaciones y cierre', () => {
+  const conCalificacion = (fase: Actividad['fase'], rol: Actividad['rol'] = 'organizador') =>
+    construirNavActividad({
+      actividad: actividad({ fase, rol, configuracion: { calificacion: 'habilitada' } }),
+      contexto: { idActividad: 'a1', seccion: 'resumen' },
+    })
+
+  it('Evaluación y retroalimentación lleva a la retroalimentación, no a las calificaciones', () => {
+    expect(enlace(conCalificacion('desarrollo'), 'Evaluación y retroalimentación')).toBe(
+      '/actividades/a1/evaluacion',
+    )
+  })
+
+  it('las calificaciones solo se abren en el cierre, también para quien organiza', () => {
+    expect(enlace(conCalificacion('desarrollo'), 'Calificaciones')).toBeUndefined()
+    expect(enlace(conCalificacion('cierre'), 'Calificaciones')).toBe(
+      '/actividades/a1/calificaciones',
+    )
+    expect(enlace(conCalificacion('cierre', 'participante'), 'Calificaciones')).toBe(
+      '/actividades/a1/resultados',
+    )
+  })
+
+  it('Publicación de proyectos lleva a su pantalla en el cierre', () => {
+    expect(enlace(conCalificacion('cierre'), 'Publicación de proyectos')).toBe(
+      '/actividades/a1/publicacion',
+    )
+    expect(enlace(conCalificacion('desarrollo'), 'Publicación de proyectos')).toBeUndefined()
+  })
+
+  it('Participantes no está en el menú (no está en el mapa de navegación)', () => {
+    const etiquetas = todas(conCalificacion('cierre')).map((h) => h.etiqueta)
+    expect(etiquetas).not.toContain('Participantes')
   })
 })

@@ -34,7 +34,7 @@ describe('BotonAyuda', () => {
     renderConProveedores(<BotonAyuda idPista="equipos" organiza enPausa={false} />)
 
     expect(await screen.findByRole('dialog', { name: 'Equipos' })).toHaveTextContent(
-      /sugiere equipos/,
+      /espacio de cada equipo/,
     )
     await usuario.click(screen.getByRole('button', { name: 'Entendido' }))
 
@@ -51,9 +51,7 @@ describe('BotonAyuda', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 
     await usuario.click(screen.getByRole('button', { name: 'Ayuda: Equipos' }))
-    expect(screen.getByRole('dialog', { name: 'Equipos' })).toHaveTextContent(
-      /únete al que quieras/,
-    )
+    expect(screen.getByRole('dialog', { name: 'Equipos' })).toHaveTextContent(/entras al tuyo/)
     expect(marcarPistaVista).not.toHaveBeenCalled()
   })
 

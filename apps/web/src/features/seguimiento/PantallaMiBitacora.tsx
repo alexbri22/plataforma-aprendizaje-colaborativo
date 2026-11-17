@@ -1,18 +1,12 @@
-import { LONGITUD_MAXIMA_CONTENIDO_BITACORA } from '@plataforma/shared'
+import { corregibleHoy, bitacoraHabilitada, type ContenidoBitacora } from '@plataforma/shared'
 import { useState, type FormEvent } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { AppShellEquipo } from '../../components/AppShellEquipo'
-import {
-  AvisoError,
-  Button,
-  Card,
-  IconoCargando,
-  Paginacion,
-  Textarea,
-  rebanar,
-} from '../../components/ui'
+import { AvisoError, Button, Card, IconoCargando, Paginacion, rebanar } from '../../components/ui'
 import { useActividad } from '../actividades'
 import { useEquipo } from '../equipos/useEquipos'
+import { borradorSinTexto, borradorVacio, validarBorrador } from './borradorBitacora'
+import { CamposEntradaBitacora } from './CamposBitacora'
 import { TarjetaEntradaBitacora } from './TarjetaEntradaBitacora'
 import {
   useBitacora,
@@ -32,18 +26,43 @@ function mensajeDe(error: unknown): string {
     : 'No pudimos completar la acción. Intenta de nuevo.'
 }
 
-function FormularioNuevaEntrada({ onCrear }: { onCrear: (contenido: string) => Promise<void> }) {
-  const [contenido, setContenido] = useState('')
+// Entrada nueva en el formato de la función (nucleo §9.3): plegada tras un
+// botón, porque guiada son diez preguntas y abiertas siempre empujarían las
+// entradas fuera de la vista.
+function FormularioNuevaEntrada({
+  formato,
+  onCrear,
+}: {
+  formato: 'guiada' | 'libre'
+  onCrear: (contenido: ContenidoBitacora) => Promise<void>
+}) {
+  const [abierto, setAbierto] = useState(false)
+  const [borrador, setBorrador] = useState<ContenidoBitacora>(() => borradorVacio(formato))
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [errores, setErrores] = useState<Record<string, string>>({})
+
+  function cerrar() {
+    setAbierto(false)
+    setBorrador(borradorVacio(formato))
+    setError(null)
+    setErrores({})
+  }
 
   async function manejarEnviar(evento: FormEvent) {
     evento.preventDefault()
+    const validacion = validarBorrador(borrador)
+    if ('errores' in validacion) {
+      setErrores(validacion.errores)
+      setError(validacion.errores.respuestas ?? null)
+      return
+    }
     setGuardando(true)
     setError(null)
+    setErrores({})
     try {
-      await onCrear(contenido)
-      setContenido('')
+      await onCrear(validacion)
+      cerrar()
     } catch (e) {
       setError(mensajeDe(e))
     } finally {
@@ -51,20 +70,29 @@ function FormularioNuevaEntrada({ onCrear }: { onCrear: (contenido: string) => P
     }
   }
 
+  if (!abierto) {
+    return (
+      <div>
+        <Button size="sm" onClick={() => setAbierto(true)}>
+          Nueva entrada
+        </Button>
+      </div>
+    )
+  }
+
   return (
     <Card className={styles.formularioNuevo}>
       <form onSubmit={manejarEnviar} className={styles.formulario}>
-        <Textarea
-          label="Nueva entrada"
-          value={contenido}
-          onChange={(e) => setContenido(e.target.value)}
-          maxLength={LONGITUD_MAXIMA_CONTENIDO_BITACORA}
-          placeholder="Qué avanzaste, qué se te dificultó."
-        />
+        <CamposEntradaBitacora borrador={borrador} errores={errores} onCambiar={setBorrador} />
         {error ? <AvisoError mensaje={error} /> : null}
-        <Button type="submit" size="sm" disabled={guardando || contenido.trim() === ''}>
-          {guardando ? <IconoCargando size={14} /> : 'Agregar'}
-        </Button>
+        <div className={styles.acciones}>
+          <Button type="submit" size="sm" disabled={guardando || borradorSinTexto(borrador)}>
+            {guardando ? <IconoCargando size={14} /> : 'Guardar entrada'}
+          </Button>
+          <Button type="button" variant="secondary" size="sm" disabled={guardando} onClick={cerrar}>
+            Cancelar
+          </Button>
+        </div>
       </form>
     </Card>
   )
@@ -131,7 +159,7 @@ export function PantallaMiBitacora() {
   // bitácora deshabilitada se mostraría un formulario que siempre da 409.
   const puedeEscribir =
     capacidades.includes('escribir_bitacora') &&
-    actividad.configuracion?.bitacora_individual === 'habilitada'
+    bitacoraHabilitada(actividad.configuracion?.bitacora_individual)
   const puedeComentar = capacidades.includes('comentar')
 
   const alFallar = (idEntrada: string, error: unknown) =>
@@ -151,6 +179,10 @@ export function PantallaMiBitacora() {
       <div className={styles.contenido}>
         {puedeEscribir ? (
           <FormularioNuevaEntrada
+            // Si la función cambia de formato, el formulario empieza de nuevo
+            // en el formato vigente.
+            key={actividad.configuracion?.bitacora_individual}
+            formato={actividad.configuracion?.bitacora_individual === 'libre' ? 'libre' : 'guiada'}
             onCrear={async (contenido) => {
               await crear.mutateAsync(contenido)
             }}
@@ -166,7 +198,7 @@ export function PantallaMiBitacora() {
         ) : entradasQuery.data.length === 0 ? (
           <p className={styles.ayuda}>
             {puedeEscribir
-              ? 'Todavía no has escrito nada aquí. Usa el formulario para agregar tu primera entrada.'
+              ? 'Todavía no has escrito nada aquí. Usa Nueva entrada para agregar la primera.'
               : 'Todavía no hay entradas aquí.'}
           </p>
         ) : (
@@ -182,7 +214,9 @@ export function PantallaMiBitacora() {
                   <TarjetaEntradaBitacora
                     key={entrada.id}
                     entrada={entrada}
-                    puedeEditar={puedeEscribir}
+                    // Solo se corrige el mismo día: la bitácora muestra cómo
+                    // progresa quien la escribe.
+                    puedeEditar={puedeEscribir && corregibleHoy(entrada.fechaCreacion)}
                     guardando={editar.isPending && editar.variables?.idEntrada === entrada.id}
                     error={errorPorId[entrada.id] ?? null}
                     idMiMembresia={actividad.idMiMembresia}

@@ -6,21 +6,25 @@ import {
 import { useState, type ChangeEvent } from 'react'
 import { useParams } from 'react-router-dom'
 import { AppShell } from '../../components/AppShell'
-import { etapaDeActividad } from '../../components/navegacion/construirNavActividad'
 import { Card, IconoCargando, Select, Switch } from '../../components/ui'
 import { ErrorActividad } from './actividades.api'
 import { FUNCIONES_SIMPLES } from './configuracionFunciones'
 import { IndicadorCampo, MENSAJE_ERROR_GUARDADO, type EstadoCampo } from './IndicadorCampo'
-import { SeccionProcesoColaborativo } from './SeccionProcesoColaborativo'
 import { SeccionProyectoColaborativo } from './SeccionProyectoColaborativo'
+import { PesosComponentes } from '../evaluacion/PesosComponentes'
+import { SeccionProcesoColaborativo } from '../evaluacion/SeccionProcesoColaborativo'
+import { usePonderacion } from '../evaluacion/usePonderacion'
 import { useActividad, useConfigurarFuncionMutation } from './useActividades'
 import styles from './PantallaConfiguracion.module.css'
 
 // La formación de equipos no está aquí: se configura en la pantalla de Equipos,
 // donde se usa. Todas las de interruptor primero y luego las de picklist, para
 // que el patrón visual de cada fila no se interrumpa a media lista.
+// La bitácora tampoco: va en la tabla del proyecto colaborativo, con su
+// porcentaje y su calendario de revisiones.
 const FUNCIONES_CONFIGURABLES_AQUI = FUNCIONES_SIMPLES.filter(
-  (definicion) => definicion.funcion !== 'formacion_equipos',
+  (definicion) =>
+    definicion.funcion !== 'formacion_equipos' && definicion.funcion !== 'bitacora_individual',
 )
 const FUNCIONES_ORDENADAS = [
   ...FUNCIONES_CONFIGURABLES_AQUI.filter((definicion) => definicion.opciones.length === 2),
@@ -39,6 +43,7 @@ export function PantallaConfiguracion() {
   const actividadQuery = useActividad(id)
   const configurarMutacion = useConfigurarFuncionMutation(id)
   const [estados, setEstados] = useState<Record<string, EstadoCampo>>({})
+  const ponderacionQuery = usePonderacion(id)
 
   async function guardar(
     clave: string,
@@ -88,12 +93,6 @@ export function PantallaConfiguracion() {
   const estadoEspacioEquipo =
     parsearEstadoEspacioEquipo(actividad.configuracion?.espacio_equipo ?? '') ??
     ESPACIO_EQUIPO_POR_DEFECTO
-  // El calendario de Proceso colaborativo se genera entre el inicio y el
-  // término de la actividad, igual que el de Avances; ambos campos siempre
-  // llegan del servidor, el resguardo es solo para el tipo.
-  const fechaInicioActividad = actividad.fechaInicio ?? new Date().toISOString().slice(0, 10)
-  const fechaTerminoActividad = actividad.fechaTermino ?? fechaInicioActividad
-
   // Tres capacidades porque las fases donde cada una aplica también lo son
   // (capacidades.ts): configurar_funciones es el cambio libre previo al
   // desarrollo; ajustar_funciones, en desarrollo y cierre, permite habilitar y
@@ -110,7 +109,7 @@ export function PantallaConfiguracion() {
       seccionActiva="actividades"
       // El nombre de la entrada de la barra lateral por la que se llega en
       // cada etapa (construirNavActividad).
-      titulo={etapaDeActividad(actividad) === 'creacion' ? 'Planificar' : 'Editar planificación'}
+      titulo="Planificar"
       contexto={{ idActividad: id, seccion: 'planificar' }}
       ayuda="planificar"
     >
@@ -150,6 +149,16 @@ export function PantallaConfiguracion() {
                     <div className={styles.filaTexto}>
                       <h3 className={styles.tituloCampo}>{definicion.titulo}</h3>
                       <p className={styles.descripcionCampo}>{definicion.descripcion}</p>
+                      {/* Los porcentajes de los componentes, en la misma fila:
+                          se configuran donde se usan (DESIGN.md). */}
+                      {definicion.funcion === 'calificacion' &&
+                      valorActual === 'habilitada' &&
+                      ponderacionQuery.data ? (
+                        <PesosComponentes
+                          actividad={actividad}
+                          ponderacion={ponderacionQuery.data}
+                        />
+                      ) : null}
                     </div>
                     <div className={styles.filaControl}>
                       {definicion.opciones.length === 2 ? (
@@ -198,17 +207,19 @@ export function PantallaConfiguracion() {
           <SeccionProyectoColaborativo
             idActividad={id}
             estadoEspacioEquipo={estadoEspacioEquipo}
+            estadoBitacora={actividad.configuracion?.bitacora_individual ?? 'deshabilitada'}
             puedeConfigurar={puedeConfigurar}
             puedeRegenerarCalendario={puedeConfigurarLibre}
             puedeAjustarPeriodos={puedeAjustarPeriodos}
+            calificacionHabilitada={actividad.configuracion?.calificacion === 'habilitada'}
+            puedeConfigurarCalificacion={
+              actividad.capacidades?.includes('configurar_calificacion') ?? false
+            }
             estados={estados}
             guardar={guardar}
           />
 
-          <SeccionProcesoColaborativo
-            fechaInicioActividad={fechaInicioActividad}
-            fechaTerminoActividad={fechaTerminoActividad}
-          />
+          <SeccionProcesoColaborativo actividad={actividad} />
         </div>
       )}
     </AppShell>

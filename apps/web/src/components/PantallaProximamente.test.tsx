@@ -47,7 +47,7 @@ describe('PantallaProximamente', () => {
     useSesionMock.mockReturnValue({ usuario: null, cargando: false })
     renderPantalla(false)
 
-    expect(screen.getByRole('button', { name: 'Actividades' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Consultas' })).toBeInTheDocument()
   })
 
   it('con publica, muestra un indicador de carga mientras se resuelve la sesión', () => {
@@ -61,7 +61,7 @@ describe('PantallaProximamente', () => {
     useSesionMock.mockReturnValue({ usuario: null, cargando: false })
     renderPantalla(true)
 
-    expect(screen.queryByRole('button', { name: 'Actividades' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Consultas' })).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Recursos' })).toBeInTheDocument()
   })
 
@@ -69,7 +69,7 @@ describe('PantallaProximamente', () => {
     useSesionMock.mockReturnValue({ usuario: USUARIO_PRUEBA, cargando: false })
     renderPantalla(true)
 
-    expect(screen.getByRole('button', { name: 'Actividades' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Consultas' })).toBeInTheDocument()
   })
 
   it('el sidebar muestra Cuentas solo a administradores', () => {
@@ -109,12 +109,12 @@ describe('PantallaProximamente', () => {
     expect(panel).not.toHaveAttribute('inert')
   })
 
-  it('el grupo Actividades se pliega y muestra Organizo y Participo como sus dos ramas', async () => {
+  it('el grupo Consultas se pliega y muestra Organizo y Participo como sus dos ramas', async () => {
     localStorage.clear()
     useSesionMock.mockReturnValue({ usuario: USUARIO_PRUEBA, cargando: false })
     renderPantalla(false)
 
-    const encabezado = screen.getByRole('button', { name: 'Actividades' })
+    const encabezado = screen.getByRole('button', { name: 'Consultas' })
     expect(encabezado).toHaveAttribute('aria-expanded', 'true')
     expect(screen.getByRole('link', { name: 'Organizo' })).toHaveAttribute(
       'href',

@@ -1,0 +1,142 @@
+.cargando {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16) 0;
+  color: var(--color-text-muted);
+}
+
+.contenido {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: 1100px;
+}
+
+.grupo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.tituloGrupo {
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+/* Todo el encabezado pliega y despliega el grupo. */
+.encabezado {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.encabezado:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm);
+}
+
+.chevron {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  transition: transform 150ms ease;
+}
+
+.chevronAbierto {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chevron {
+    transition: none;
+  }
+}
+
+.cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Una línea por entrada: qué es a la izquierda, cuándo y su estado a la
+   derecha. En pantallas angostas el "cuándo" baja debajo. */
+.fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.fila:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.queEs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.titulo {
+  font-size: var(--font-size-base);
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+a.titulo {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+a.titulo:hover {
+  color: var(--color-primary-hover);
+  text-decoration: underline;
+}
+
+.detalle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.cuando {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+.fecha {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.vacio {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}

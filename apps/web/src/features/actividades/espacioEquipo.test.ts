@@ -39,7 +39,7 @@ describe('primeraSeccionHabilitada', () => {
   it('sin espacio de equipo, entra a la bitácora propia si está habilitada', () => {
     const config = {
       espacio_equipo: espacio('deshabilitado', 'deshabilitado', 'deshabilitado'),
-      bitacora_individual: 'habilitada',
+      bitacora_individual: 'guiada',
     }
     expect(primeraSeccionHabilitada(actividad(config))).toBe('bitacora')
     expect(primeraSeccionHabilitada(actividad(config, 'organizador'))).toBeNull()

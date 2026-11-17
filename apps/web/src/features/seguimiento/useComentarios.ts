@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { SeccionRetroalimentacion } from '@plataforma/shared'
 import {
   crearComentarioSobreElemento,
+  crearRetroalimentacionDeEquipo,
+  obtenerRetroalimentacion,
   crearComentarioSobreEntrada,
   editarComentario,
   obtenerComentariosDeElemento,
@@ -57,13 +60,43 @@ export function useCrearComentarioSobreEntradaMutation(idEntrada: string) {
 // Editar un comentario propio: invalida cualquiera de las dos colecciones a
 // las que podría pertenecer (no sabe de antemano cuál sin otra consulta), y
 // quien llama decide cuál es relevante pasando la clave correspondiente.
-export function useEditarComentarioMutation(
-  claveAInvalidar: ReturnType<typeof claveComentariosDeElemento | typeof claveComentariosDeEntrada>,
-) {
+export function useEditarComentarioMutation(claveAInvalidar: readonly unknown[]) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ idComentario, contenido }: { idComentario: string; contenido: string }) =>
       editarComentario(idComentario, contenido),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: claveAInvalidar }),
+  })
+}
+
+// Retroalimentación: cuelga de la actividad, porque la pantalla de
+// Evaluación y retroalimentación la pide entera y cada sección del espacio de
+// equipo filtra la suya.
+export function claveRetroalimentacion(idActividad: string) {
+  return ['actividades', idActividad, 'retroalimentacion'] as const
+}
+
+export function useRetroalimentacion(idActividad: string) {
+  return useQuery({
+    queryKey: claveRetroalimentacion(idActividad),
+    queryFn: () => obtenerRetroalimentacion(idActividad),
+    enabled: Boolean(idActividad),
+  })
+}
+
+export function useCrearRetroalimentacionDeEquipoMutation(idActividad: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      idEquipo,
+      seccion,
+      contenido,
+    }: {
+      idEquipo: string
+      seccion: SeccionRetroalimentacion
+      contenido: string
+    }) => crearRetroalimentacionDeEquipo(idEquipo, seccion, contenido),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: claveRetroalimentacion(idActividad) }),
   })
 }

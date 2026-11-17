@@ -1,3 +1,4 @@
+import { bitacoraHabilitada } from '@plataforma/shared'
 import type { Equipo } from '@plataforma/shared'
 import {
   SECCIONES_ESPACIO_EQUIPO,
@@ -16,8 +17,15 @@ export type SeccionActividad =
   | 'planificar'
   | 'inscripcion'
   | 'cierre'
+  | 'conformacion'
+  | 'operacion'
   | 'equipos'
   | 'participantes'
+  | 'proceso'
+  | 'calificaciones'
+  | 'evaluacion'
+  | 'publicacion'
+  | 'resultados'
   | 'reconocer'
   | 'insignias'
   | 'metas'
@@ -33,7 +41,7 @@ export type SeccionActividad =
  * (que cuelga de una actividad). */
 export type ContextoNav =
   | { idActividad: string; seccion: SeccionActividad }
-  | { idEquipo: string; seccion: SeccionActividad; idMembresia?: string }
+  | { idEquipo: string; seccion: SeccionActividad; idMembresia?: string; aspecto?: string }
 
 export interface ItemNavActividad {
   clave: string
@@ -150,12 +158,6 @@ function item(
   return { tipo: 'item', clave, etiqueta, to, activo }
 }
 
-// Algo que todavía no existe (Evaluación, Calificaciones...): en el mapa,
-// pero sin enlace.
-function pendiente(clave: string, etiqueta: string): EntradaNavActividad {
-  return item(clave, etiqueta, undefined, false)
-}
-
 // Una etapa próxima se puede abrir para ver qué tendrá, pero nada lleva a
 // ningún lado todavía.
 function sinEnlaces(entradas: EntradaNavActividad[]): EntradaNavActividad[] {
@@ -211,21 +213,22 @@ function grupoProyecto(
   }
 }
 
-// Proceso colaborativo: cómo trabaja el equipo (los cinco elementos de
-// Johnson y Johnson). Todavía sin pantallas (nucleo §9.1): se anuncia sin
-// enlace, plegado, para que exista en el mapa del sitio sin prometer nada.
-function grupoProceso(): EntradaNavActividad {
+// Proceso colaborativo: cómo trabaja el equipo. Cada aspecto lleva a sus
+// instrumentos (nucleo §10.6): quien participa los responde o entrega ahí, y
+// quien organiza ve, dentro del equipo, quién los completó.
+function grupoProceso(idEquipo: string, aspectoActivo: string | null): EntradaNavActividad {
   return {
     tipo: 'grupo',
     clave: 'proceso',
     etiqueta: 'Proceso colaborativo',
-    plegadoPorDefecto: true,
+    plegadoPorDefecto: aspectoActivo === null,
     // Las mismas cinco tareas, con el mismo nombre, que se planifican en
     // Planificar › Proceso colaborativo.
     items: TAREAS_PROCESO_COLABORATIVO.map(({ tarea, etiqueta }) => ({
       clave: tarea,
       etiqueta,
-      activo: false,
+      to: `/equipos/${idEquipo}/proceso/${tarea}`,
+      activo: tarea === aspectoActivo,
     })),
   }
 }
@@ -252,23 +255,29 @@ export function construirNavActividad({
   const id = actividad.id
   const organiza = actividad.rol !== 'participante'
   const idEquipoAbierto = 'idEquipo' in contexto ? contexto.idEquipo : null
+  const aspectoAbierto =
+    'idEquipo' in contexto && contexto.seccion === 'proceso' ? (contexto.aspecto ?? null) : null
   const nombreActividad = actividad.nombre
   const actual = etapaDeActividad(actividad)
   const cierre = fechaDeCierre(actividad)
   const equipos = `/actividades/${id}/equipos`
+  const conformacion = `/actividades/${id}/conformacion`
+  const operacion = `/actividades/${id}/operacion`
   const datos = `/actividades/${id}/resumen`
-  // Planificar y Conformación de equipos (Creación) llevan a las mismas
-  // pantallas que Editar planificación y Equipos (Desarrollo). Pasada la
-  // Creación quedan sin enlace: ese trabajo sigue en la etapa en curso, y dos
-  // entradas a una misma pantalla parecían dos opciones distintas.
+  // Planificar y Conformación de equipos (Creación) siguen abiertas toda la
+  // actividad: ahí se ajusta la configuración y se reasignan integrantes
+  // después de empezar. Equipos (Desarrollo) es otra pantalla: para entrar
+  // a revisar el espacio de cada equipo. Operación de la planeación es el
+  // día a día de lo planificado: qué vence y qué sigue.
   const enCreacion = actual === 'creacion'
+  const calificacionHabilitada = actividad.configuracion?.calificacion === 'habilitada'
 
   if (organiza && idEquipoAbierto) {
     const entradas: EntradaNavActividad[] = [
       grupoProyecto(actividad, idEquipoAbierto, seccion),
-      grupoProceso(),
+      grupoProceso(idEquipoAbierto, aspectoAbierto),
     ]
-    if (actividad.configuracion?.bitacora_individual === 'habilitada') {
+    if (bitacoraHabilitada(actividad.configuracion?.bitacora_individual)) {
       entradas.push(
         item(
           'bitacoras',
@@ -307,8 +316,8 @@ export function construirNavActividad({
                     item(
                       'planificar',
                       'Planificar',
-                      enCreacion ? `/actividades/${id}/configuracion` : undefined,
-                      seccion === 'planificar' && enCreacion,
+                      `/actividades/${id}/configuracion`,
+                      seccion === 'planificar',
                     ),
                   ]
                 : []),
@@ -321,29 +330,21 @@ export function construirNavActividad({
               item(
                 'conformacion',
                 'Conformación de equipos',
-                enCreacion ? equipos : undefined,
-                seccion === 'equipos' && enCreacion,
+                conformacion,
+                seccion === 'conformacion',
               ),
             ],
             desarrollo: [
-              ...(puedePlanificar
-                ? [
-                    item(
-                      'editar-planificacion',
-                      'Editar planificación',
-                      `/actividades/${id}/configuracion`,
-                      seccion === 'planificar' && !enCreacion,
-                    ),
-                  ]
-                : []),
-              item('equipos', 'Equipos', equipos, seccion === 'equipos' && !enCreacion),
+              item('operacion', 'Operación de la planeación', operacion, seccion === 'operacion'),
+              item('equipos', 'Equipos', equipos, seccion === 'equipos'),
+              // La retroalimentación de quien organiza sobre cómo trabaja
+              // cada equipo; no las calificaciones, que son del cierre.
               item(
-                'participantes',
-                'Participantes',
-                `/actividades/${id}/participantes`,
-                seccion === 'participantes',
+                'evaluacion',
+                'Evaluación y retroalimentación',
+                `/actividades/${id}/evaluacion`,
+                seccion === 'evaluacion',
               ),
-              pendiente('evaluacion', 'Evaluación y retroalimentación'),
             ],
             cierre: [
               item(
@@ -358,8 +359,21 @@ export function construirNavActividad({
                 ritual?.abierto ? `/actividades/${id}/reconocer` : undefined,
                 seccion === 'reconocer',
               ),
-              pendiente('calificaciones', 'Calificaciones'),
-              pendiente('publicacion', 'Publicación de proyectos'),
+              // Solo en el cierre. Durante el desarrollo, quien organiza captura
+              // los puntajes donde ve el trabajo (cada sección del equipo, cada
+              // aspecto del proceso, cada bitácora), sin ver el acumulado.
+              item(
+                'calificaciones',
+                'Calificaciones',
+                calificacionHabilitada ? `/actividades/${id}/calificaciones` : undefined,
+                seccion === 'calificaciones',
+              ),
+              item(
+                'publicacion',
+                'Publicación de proyectos',
+                `/actividades/${id}/publicacion`,
+                seccion === 'publicacion',
+              ),
             ],
           }),
         },
@@ -376,7 +390,7 @@ export function construirNavActividad({
   if (idMiEquipo) {
     const entradasEquipo: EntradaNavActividad[] = [
       grupoProyecto(actividad, idMiEquipo, mirandoOtroEquipo ? 'resumen' : seccion),
-      grupoProceso(),
+      grupoProceso(idMiEquipo, mirandoOtroEquipo ? null : aspectoAbierto),
     ]
     if (bitacoraPropiaHabilitada(actividad)) {
       entradasEquipo.push(
@@ -397,19 +411,16 @@ export function construirNavActividad({
   }
   const autogestionada = actividad.configuracion?.formacion_equipos !== 'manual'
   desarrollo.push(
+    item('operacion', 'Operación de la planeación', operacion, seccion === 'operacion'),
+    item('equipos', 'Equipos', equipos, seccionPropia === 'equipos'),
+    // La retroalimentación que ha recibido su equipo; su calificación se
+    // ve en el cierre.
     item(
-      'equipos',
-      'Equipos',
-      equipos,
-      seccionPropia === 'equipos' && !(enCreacion && autogestionada),
+      'evaluacion',
+      'Evaluación y retroalimentación',
+      `/actividades/${id}/evaluacion`,
+      seccion === 'evaluacion',
     ),
-    item(
-      'participantes',
-      'Participantes',
-      `/actividades/${id}/participantes`,
-      seccion === 'participantes',
-    ),
-    pendiente('evaluacion', 'Evaluación y retroalimentación'),
   )
 
   return {
@@ -429,11 +440,13 @@ export function construirNavActividad({
             item('datos', 'Datos de la actividad', datos, seccion === 'resumen'),
             ...(autogestionada
               ? [
+                  // Quien participa solo elige equipo durante la formación;
+                  // después no le queda nada que hacer aquí.
                   item(
                     'conformacion',
                     'Conformación de equipos',
-                    enCreacion ? equipos : undefined,
-                    seccion === 'equipos' && enCreacion,
+                    enCreacion ? conformacion : undefined,
+                    seccion === 'conformacion' && enCreacion,
                   ),
                 ]
               : []),
@@ -452,8 +465,18 @@ export function construirNavActividad({
                   ),
                 ]
               : []),
-            pendiente('calificaciones', 'Calificaciones'),
-            pendiente('publicacion', 'Publicación de proyectos'),
+            item(
+              'calificaciones',
+              'Calificaciones',
+              calificacionHabilitada ? `/actividades/${id}/resultados` : undefined,
+              seccion === 'resultados',
+            ),
+            item(
+              'publicacion',
+              'Publicación de proyectos',
+              `/actividades/${id}/publicacion`,
+              seccion === 'publicacion',
+            ),
           ],
         }),
       },

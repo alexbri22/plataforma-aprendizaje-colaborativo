@@ -44,15 +44,19 @@ export function MarcaAdjunto() {
   )
 }
 
-/** El enlace y el archivo de un elemento, para leerlos o descargarlos. */
+/** El enlace y el archivo de un elemento, para leerlos o descargarlos.
+ * urlArchivo sirve a otros adjuntos con la misma forma (la entrega de una
+ * actividad externa), cuyo archivo vive en otra ruta. */
 export function AdjuntosElemento({
   idElemento,
   enlace,
   archivo,
+  urlArchivo,
 }: {
   idElemento: string
   enlace: string | null
   archivo: ArchivoDeElemento | null
+  urlArchivo?: string
 }) {
   if (!enlace && !archivo) return null
   return (
@@ -69,7 +73,7 @@ export function AdjuntosElemento({
         <li>
           <span className={styles.etiqueta}>Archivo</span>
           <a
-            href={urlArchivoElemento(idElemento)}
+            href={urlArchivo ?? urlArchivoElemento(idElemento)}
             target="_blank"
             rel="noopener noreferrer"
             className={styles.enlace}

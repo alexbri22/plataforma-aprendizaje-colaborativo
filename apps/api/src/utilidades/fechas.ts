@@ -16,6 +16,11 @@ export function finDeDiaEnCDMX(fechaCalendario: Date): Date {
   return new Date(fechaCalendario.getTime() + unDiaMas + desplazamiento - 1)
 }
 
+// El principio de ese mismo día en CDMX: 6 horas después de la medianoche UTC.
+export function inicioDeDiaEnCDMX(fechaCalendario: Date): Date {
+  return new Date(fechaCalendario.getTime() + DESPLAZAMIENTO_CDMX_HORAS * 60 * 60 * 1000)
+}
+
 // `new Date` normaliza fechas de calendario inexistentes (2026-02-30 se
 // vuelve 2026-03-02 en vez de fallar) y acepta formatos fuera del contrato
 // YYYY-MM-DD. Se valida el formato con regex y se reconstruye la fecha para

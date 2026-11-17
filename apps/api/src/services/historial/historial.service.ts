@@ -49,6 +49,9 @@ const EVENTOS_ESTRUCTURA_DE_ACTIVIDAD: readonly string[] = [
   'co_organizador_modificado',
   'periodos_definidos',
   'periodo_modificado',
+  'peso_modificado',
+  'instrumentos_definidos',
+  'instrumento_modificado',
 ]
 
 // Visibles solo para quien integra alguno de los equipos que el evento toca
@@ -107,6 +110,10 @@ export function limiteHistorialValido(limiteSolicitado: number | undefined): num
 const EVENTOS_EVALUACION_DE_EQUIPO: readonly string[] = [
   'comentario_escrito',
   'comentario_modificado',
+  // Puntajes capturados (nucleo §10.3), con el equipo de la persona o el
+  // equipo capturado.
+  'puntaje_capturado',
+  'puntaje_capturado_equipo',
 ]
 
 // Quién consulta, resuelto por la ruta. idEquipo solo hace falta para un
@@ -178,7 +185,20 @@ export async function listarHistorial(
             {
               categoria: 'aportacion' as CategoriaEvento,
               datos: { path: ['idEquipo'], equals: idEquipoFiltro },
-              NOT: { tipoEntidad: 'bitacora' },
+              NOT: { tipoEntidad: { in: ['bitacora', 'instrumento'] } },
+            },
+            // Las respuestas a una autoevaluación son de quien responde y de
+            // quien organiza (nucleo §10.5): un participante solo ve las
+            // suyas.
+            {
+              categoria: 'aportacion' as CategoriaEvento,
+              tipoEntidad: 'instrumento',
+              AND: [
+                { datos: { path: ['idEquipo'], equals: idEquipoFiltro } },
+                esParticipante
+                  ? { datos: { path: ['idMembresia'], equals: actor.idMembresia } }
+                  : {},
+              ],
             },
             {
               categoria: 'aportacion' as CategoriaEvento,

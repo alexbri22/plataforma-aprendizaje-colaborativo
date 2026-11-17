@@ -87,7 +87,7 @@ function periodo(
   fechaFin: string,
   estado: PeriodoReporte['estado'] = 'activo',
 ): PeriodoReporte {
-  return { id: `per-${orden}`, orden, fechaInicio, fechaFin, estado }
+  return { id: `per-${orden}`, elemento: 'avances', orden, fechaInicio, fechaFin, estado }
 }
 
 // Calendario semanal reconocible: tres periodos de siete días y uno recortado.
@@ -129,7 +129,7 @@ describe('PantallaConfiguracion', () => {
     expect(
       await screen.findByText('No tienes permiso para planificar esta actividad.'),
     ).toBeInTheDocument()
-    expect(screen.queryByLabelText('Bitácora individual')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Estado de Bitácora')).not.toBeInTheDocument()
   })
 
   it('separa la configuración en General y Proyecto colaborativo', async () => {
@@ -142,7 +142,9 @@ describe('PantallaConfiguracion', () => {
     // La formación de equipos se configura en Equipos, no aquí.
     expect(within(general).queryByLabelText('Formación de equipos')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Máximo de integrantes')).not.toBeInTheDocument()
-    expect(within(general).getByLabelText('Bitácora individual')).toBeInTheDocument()
+    // La bitácora va en la tabla del proyecto, con su porcentaje y su calendario.
+    expect(within(general).queryByLabelText('Estado de Bitácora')).not.toBeInTheDocument()
+    expect(within(proyecto).getByLabelText('Estado de Bitácora')).toBeInTheDocument()
     expect(within(general).queryByLabelText('Estado de Metas')).not.toBeInTheDocument()
     expect(within(proyecto).getByLabelText('Estado de Metas')).toBeInTheDocument()
     expect(within(proyecto).getByLabelText('Estado de Avances')).toBeInTheDocument()
@@ -163,7 +165,7 @@ describe('PantallaConfiguracion', () => {
 
     renderPantalla(ACTIVIDAD_BASE.id)
 
-    const select = (await screen.findByLabelText('Evaluación por pares')) as HTMLSelectElement
+    const select = (await screen.findByLabelText('Estado de Bitácora')) as HTMLSelectElement
     expect(select.value).toBe('deshabilitada')
   })
 
@@ -172,17 +174,19 @@ describe('PantallaConfiguracion', () => {
     vi.mocked(obtenerActividad).mockResolvedValue(ACTIVIDAD_BASE)
     vi.mocked(configurarFuncion).mockResolvedValueOnce({
       ...ACTIVIDAD_BASE,
-      configuracion: { ...ACTIVIDAD_BASE.configuracion, bitacora_individual: 'habilitada' },
+      configuracion: { ...ACTIVIDAD_BASE.configuracion, bitacora_individual: 'libre' },
     })
 
     renderPantalla(ACTIVIDAD_BASE.id)
 
-    const interruptor = await screen.findByLabelText('Bitácora individual')
-    await usuario.click(interruptor)
+    await usuario.selectOptions(
+      await screen.findByLabelText('Estado de Bitácora'),
+      'Habilitada, texto libre',
+    )
 
     await waitFor(() =>
       expect(configurarFuncion).toHaveBeenCalledWith(ACTIVIDAD_BASE.id, 'bitacora_individual', {
-        estado: 'habilitada',
+        estado: 'libre',
       }),
     )
     // Sin etiqueta de éxito: al terminar solo desaparece "Guardando…".
@@ -199,8 +203,10 @@ describe('PantallaConfiguracion', () => {
 
     renderPantalla(ACTIVIDAD_BASE.id)
 
-    const interruptor = await screen.findByLabelText('Bitácora individual')
-    await usuario.click(interruptor)
+    await usuario.selectOptions(
+      await screen.findByLabelText('Estado de Bitácora'),
+      'Habilitada, texto libre',
+    )
 
     expect(
       await screen.findByText('La planificación no puede modificarse en esta etapa.'),
@@ -313,21 +319,42 @@ describe('PantallaConfiguracion', () => {
       })
     })
 
-    it('solo Avances tiene periodicidad y calendario', async () => {
+    it('cada elemento habilitado tiene su periodicidad; la bitácora, solo si está habilitada', async () => {
       vi.mocked(obtenerActividad).mockResolvedValueOnce(ACTIVIDAD_BASE)
 
       renderPantalla(ACTIVIDAD_BASE.id)
 
-      await screen.findByLabelText('Periodicidad de las entregas')
-      // Acotado a Proyecto colaborativo: Proceso colaborativo (vista previa,
-      // sin guardar) también trae un selector "Periodicidad de ..." por cada
-      // una de sus tareas.
+      await screen.findByLabelText('Periodicidad de Avances')
+      // Acotado a Proyecto colaborativo: Proceso colaborativo también trae
+      // selectores "Periodicidad de ..." por cada uno de sus aspectos.
       const proyecto = screen.getByRole('region', { name: 'Proyecto colaborativo' })
-      expect(within(proyecto).getAllByRole('combobox', { name: /^Periodicidad/ })).toHaveLength(1)
-      expect(within(proyecto).getAllByRole('button', { name: 'Editar calendario' })).toHaveLength(1)
+      expect(within(proyecto).getAllByRole('combobox', { name: /^Periodicidad de/ })).toHaveLength(
+        5,
+      )
+      expect(within(proyecto).queryByLabelText('Periodicidad de Bitácora')).not.toBeInTheDocument()
     })
 
-    it('con Avances deshabilitado no ofrece calendario y explica por qué', async () => {
+    it('cada calendario se genera para su propio elemento', async () => {
+      const usuario = userEvent.setup()
+      vi.mocked(obtenerActividad).mockResolvedValue({
+        ...ACTIVIDAD_BASE,
+        configuracion: { ...ACTIVIDAD_BASE.configuracion, bitacora_individual: 'guiada' },
+      })
+      vi.mocked(definirPeriodos).mockResolvedValueOnce([])
+
+      renderPantalla(ACTIVIDAD_BASE.id)
+
+      await usuario.selectOptions(
+        await screen.findByLabelText('Periodicidad de Bitácora'),
+        'Quincenal',
+      )
+
+      await waitFor(() =>
+        expect(definirPeriodos).toHaveBeenCalledWith(ACTIVIDAD_BASE.id, 'bitacora', 'quincenal'),
+      )
+    })
+
+    it('con Avances deshabilitado no ofrece su calendario', async () => {
       vi.mocked(obtenerActividad).mockResolvedValueOnce({
         ...ACTIVIDAD_BASE,
         configuracion: {
@@ -344,25 +371,21 @@ describe('PantallaConfiguracion', () => {
 
       renderPantalla(ACTIVIDAD_BASE.id)
 
-      expect(
-        await screen.findByText('Habilita Avances para definir su calendario.'),
-      ).toBeInTheDocument()
-      expect(screen.queryByLabelText('Periodicidad de las entregas')).not.toBeInTheDocument()
+      expect(await screen.findByLabelText('Periodicidad de Metas')).toBeInTheDocument()
+      expect(screen.queryByLabelText('Periodicidad de Avances')).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Editar calendario' })).not.toBeInTheDocument()
     })
   })
 
   describe('Proyecto colaborativo: calendario de avances', () => {
-    it('sin calendario muestra "Sin calendario" y no permite editar', async () => {
+    it('sin calendario muestra "Sin calendario" y no ofrece editarlo', async () => {
       vi.mocked(obtenerActividad).mockResolvedValueOnce(ACTIVIDAD_BASE)
 
       renderPantalla(ACTIVIDAD_BASE.id)
 
-      const select = (await screen.findByLabelText(
-        'Periodicidad de las entregas',
-      )) as HTMLSelectElement
+      const select = (await screen.findByLabelText('Periodicidad de Avances')) as HTMLSelectElement
       await waitFor(() => expect(select.value).toBe('ninguna'))
-      expect(screen.getByRole('button', { name: 'Editar calendario' })).toBeDisabled()
+      expect(screen.queryByRole('button', { name: 'Editar calendario' })).not.toBeInTheDocument()
     })
 
     it('con calendario deduce la periodicidad y muestra las fechas de los avances activos', async () => {
@@ -371,9 +394,7 @@ describe('PantallaConfiguracion', () => {
 
       renderPantalla(ACTIVIDAD_BASE.id)
 
-      const select = (await screen.findByLabelText(
-        'Periodicidad de las entregas',
-      )) as HTMLSelectElement
+      const select = (await screen.findByLabelText('Periodicidad de Avances')) as HTMLSelectElement
       await waitFor(() => expect(select.value).toBe('semanal'))
       expect(screen.getByText(formatearFecha('2026-09-10'))).toBeInTheDocument()
       expect(screen.getByText(formatearFecha('2026-10-03'))).toBeInTheDocument()
@@ -388,12 +409,12 @@ describe('PantallaConfiguracion', () => {
       renderPantalla(ACTIVIDAD_BASE.id)
 
       await usuario.selectOptions(
-        await screen.findByLabelText('Periodicidad de las entregas'),
+        await screen.findByLabelText('Periodicidad de Avances'),
         'Semanal',
       )
 
       await waitFor(() =>
-        expect(definirPeriodos).toHaveBeenCalledWith(ACTIVIDAD_BASE.id, 'semanal'),
+        expect(definirPeriodos).toHaveBeenCalledWith(ACTIVIDAD_BASE.id, 'avances', 'semanal'),
       )
     })
 
@@ -405,13 +426,13 @@ describe('PantallaConfiguracion', () => {
 
       renderPantalla(ACTIVIDAD_BASE.id)
 
-      const select = await screen.findByLabelText('Periodicidad de las entregas')
+      const select = await screen.findByLabelText('Periodicidad de Avances')
       await waitFor(() => expect(select).toHaveValue('semanal'))
       await usuario.selectOptions(select, 'Mensual')
 
       expect(
         screen.getByText(
-          /reemplaza los 4 avances actuales, incluidos los que ajustaste o cancelaste/,
+          /reemplaza las 4 revisiones actuales, incluidas las que ajustaste o cancelaste/,
         ),
       ).toBeInTheDocument()
       expect(definirPeriodos).not.toHaveBeenCalled()
@@ -419,7 +440,7 @@ describe('PantallaConfiguracion', () => {
       await usuario.click(screen.getByRole('button', { name: 'Reemplazar calendario' }))
 
       await waitFor(() =>
-        expect(definirPeriodos).toHaveBeenCalledWith(ACTIVIDAD_BASE.id, 'mensual'),
+        expect(definirPeriodos).toHaveBeenCalledWith(ACTIVIDAD_BASE.id, 'avances', 'mensual'),
       )
     })
 
@@ -430,7 +451,7 @@ describe('PantallaConfiguracion', () => {
 
       renderPantalla(ACTIVIDAD_BASE.id)
 
-      const select = await screen.findByLabelText('Periodicidad de las entregas')
+      const select = await screen.findByLabelText('Periodicidad de Avances')
       await waitFor(() => expect(select).toHaveValue('semanal'))
       await usuario.selectOptions(select, 'Quincenal')
       await usuario.click(screen.getByRole('button', { name: 'Mantener el actual' }))
@@ -441,7 +462,7 @@ describe('PantallaConfiguracion', () => {
       ).not.toBeInTheDocument()
     })
 
-    it('quitar el calendario avisa que borra los avances actuales', async () => {
+    it('quitar el calendario avisa que borra las revisiones actuales', async () => {
       const usuario = userEvent.setup()
       vi.mocked(obtenerActividad).mockResolvedValue(ACTIVIDAD_BASE)
       vi.mocked(obtenerPeriodos).mockResolvedValue(CALENDARIO_SEMANAL)
@@ -449,16 +470,16 @@ describe('PantallaConfiguracion', () => {
 
       renderPantalla(ACTIVIDAD_BASE.id)
 
-      const select = await screen.findByLabelText('Periodicidad de las entregas')
+      const select = await screen.findByLabelText('Periodicidad de Avances')
       await waitFor(() => expect(select).toHaveValue('semanal'))
       await usuario.selectOptions(select, 'Sin calendario')
 
       expect(
-        screen.getByText('Quitar el calendario borra los 4 avances actuales.'),
+        screen.getByText('Quitar el calendario borra las 4 revisiones actuales.'),
       ).toBeInTheDocument()
       await usuario.click(screen.getByRole('button', { name: 'Reemplazar calendario' }))
       await waitFor(() =>
-        expect(definirPeriodos).toHaveBeenCalledWith(ACTIVIDAD_BASE.id, 'ninguna'),
+        expect(definirPeriodos).toHaveBeenCalledWith(ACTIVIDAD_BASE.id, 'avances', 'ninguna'),
       )
     })
 
@@ -472,7 +493,7 @@ describe('PantallaConfiguracion', () => {
       renderPantalla(ACTIVIDAD_BASE.id)
 
       await usuario.selectOptions(
-        await screen.findByLabelText('Periodicidad de las entregas'),
+        await screen.findByLabelText('Periodicidad de Avances'),
         'Semanal',
       )
 
@@ -494,14 +515,14 @@ describe('PantallaConfiguracion', () => {
       await usuario.click(boton)
       return {
         usuario,
-        panel: await screen.findByRole('dialog', { name: 'Calendario de entregas' }),
+        panel: await screen.findByRole('dialog', { name: 'Calendario de avances' }),
       }
     }
 
     it('lista cada avance con sus fechas', async () => {
       const { panel } = await abrirPanel()
 
-      const avance2 = within(panel).getByRole('group', { name: 'Entrega 2' })
+      const avance2 = within(panel).getByRole('group', { name: 'Revisión 2' })
       expect(within(avance2).getByLabelText('Inicio')).toHaveValue('2026-09-17')
       expect(within(avance2).getByLabelText('Fin')).toHaveValue('2026-09-23')
       expect(within(panel).getAllByRole('group')).toHaveLength(4)
@@ -517,19 +538,19 @@ describe('PantallaConfiguracion', () => {
         periodo(3, '2026-09-24', '2026-09-30', 'cancelado'),
       )
 
-      const avance2 = within(panel).getByRole('group', { name: 'Entrega 2' })
+      const avance2 = within(panel).getByRole('group', { name: 'Revisión 2' })
       expect(within(avance2).getByText('Cancelada')).toBeInTheDocument()
       expect(within(avance2).getByLabelText('Inicio')).toBeDisabled()
 
-      await usuario.click(within(avance2).getByRole('button', { name: 'Reactivar la entrega 2' }))
+      await usuario.click(within(avance2).getByRole('button', { name: 'Reactivar la revisión 2' }))
       await waitFor(() =>
         expect(actualizarPeriodo).toHaveBeenCalledWith(ACTIVIDAD_BASE.id, 'per-2', {
           estado: 'activo',
         }),
       )
 
-      const avance3 = within(panel).getByRole('group', { name: 'Entrega 3' })
-      await usuario.click(within(avance3).getByRole('button', { name: 'Cancelar la entrega 3' }))
+      const avance3 = within(panel).getByRole('group', { name: 'Revisión 3' })
+      await usuario.click(within(avance3).getByRole('button', { name: 'Cancelar la revisión 3' }))
       await waitFor(() =>
         expect(actualizarPeriodo).toHaveBeenCalledWith(ACTIVIDAD_BASE.id, 'per-3', {
           estado: 'cancelado',
@@ -541,9 +562,9 @@ describe('PantallaConfiguracion', () => {
       const { usuario, panel } = await abrirPanel()
       vi.mocked(actualizarPeriodo).mockResolvedValue(CALENDARIO_SEMANAL[0])
 
-      const avance1 = within(panel).getByRole('group', { name: 'Entrega 1' })
+      const avance1 = within(panel).getByRole('group', { name: 'Revisión 1' })
       const guardar = within(avance1).getByRole('button', {
-        name: 'Guardar fechas de la entrega 1',
+        name: 'Guardar fechas de la revisión 1',
       })
       expect(guardar).toBeDisabled()
 
@@ -569,10 +590,10 @@ describe('PantallaConfiguracion', () => {
         new ErrorActividad('Estas fechas se traslapan con el periodo 2.'),
       )
 
-      const avance1 = within(panel).getByRole('group', { name: 'Entrega 1' })
+      const avance1 = within(panel).getByRole('group', { name: 'Revisión 1' })
       fireEvent.change(within(avance1).getByLabelText('Fin'), { target: { value: '2026-09-20' } })
       await usuario.click(
-        within(avance1).getByRole('button', { name: 'Guardar fechas de la entrega 1' }),
+        within(avance1).getByRole('button', { name: 'Guardar fechas de la revisión 1' }),
       )
 
       expect(
@@ -602,9 +623,9 @@ describe('PantallaConfiguracion', () => {
 
       renderPantalla(ACTIVIDAD_BASE.id)
 
-      expect(await screen.findByLabelText('Bitácora individual')).toBeDisabled()
+      expect(await screen.findByLabelText('Estado de Bitácora')).toBeDisabled()
       expect(screen.getByLabelText('Estado de Metas')).toBeDisabled()
-      expect(await screen.findByLabelText('Periodicidad de las entregas')).toBeDisabled()
+      expect(await screen.findByLabelText('Periodicidad de Avances')).toBeDisabled()
       expect(
         screen.getByText(/Las funciones ya no pueden cambiarse en esta etapa/),
       ).toBeInTheDocument()
@@ -621,7 +642,7 @@ describe('PantallaConfiguracion', () => {
       const boton = await screen.findByRole('button', { name: 'Editar calendario' })
       await waitFor(() => expect(boton).toBeEnabled())
       await usuario.click(boton)
-      await usuario.click(screen.getByRole('button', { name: 'Cancelar la entrega 3' }))
+      await usuario.click(screen.getByRole('button', { name: 'Cancelar la revisión 3' }))
 
       await waitFor(() =>
         expect(actualizarPeriodo).toHaveBeenCalledWith(ACTIVIDAD_BASE.id, 'per-3', {
@@ -642,8 +663,8 @@ describe('PantallaConfiguracion', () => {
 
     expect(await screen.findByText(/La actividad ya está en marcha/)).toBeInTheDocument()
     expect(screen.queryByText(/Las funciones ya no pueden cambiarse/)).not.toBeInTheDocument()
-    expect(screen.getByLabelText('Bitácora individual')).toBeEnabled()
-    expect(await screen.findByLabelText('Periodicidad de las entregas')).toBeDisabled()
+    expect(screen.getByLabelText('Estado de Bitácora')).toBeEnabled()
+    expect(await screen.findByLabelText('Periodicidad de Avances')).toBeDisabled()
   })
 
   it('se ubica con la barra: Planificar marcado y Datos de la actividad a un clic', async () => {
@@ -661,7 +682,7 @@ describe('PantallaConfiguracion', () => {
     )
   })
 
-  it('pasada la Creación se llama Editar planificación, y Planificar ya no es un enlace', async () => {
+  it('pasada la Creación sigue siendo Planificar, con su enlace abierto', async () => {
     vi.mocked(obtenerActividad).mockResolvedValueOnce({
       ...ACTIVIDAD_BASE,
       fase: 'desarrollo',
@@ -669,13 +690,11 @@ describe('PantallaConfiguracion', () => {
     })
     renderPantalla(ACTIVIDAD_BASE.id)
 
-    expect(await screen.findByRole('link', { name: 'Editar planificación' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: 'Planificar' })).toHaveAttribute(
       'aria-current',
       'page',
     )
-    expect(
-      screen.getByRole('heading', { name: 'Editar planificación', level: 1 }),
-    ).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Planificar' })).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Planificar', level: 1 })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Editar planificación' })).not.toBeInTheDocument()
   })
 })

@@ -49,7 +49,7 @@
   outline-offset: 2px;
 }
 
-/* Grupo "principal" (p. ej. Actividades): es un ítem más del nivel superior,
+/* Grupo "principal" (p. ej. Consultas): es un ítem más del nivel superior,
    mismo tamaño y caja que los demás — a diferencia de una sección no lleva
    línea divisoria ni versalitas. */
 .grupoPrincipal {

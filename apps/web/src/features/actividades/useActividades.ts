@@ -1,4 +1,4 @@
-import type { FuncionSeguimiento, Periodicidad } from '@plataforma/shared'
+import type { ElementoConCalendario, FuncionSeguimiento, Periodicidad } from '@plataforma/shared'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   buscarActividadPorClave,
@@ -13,6 +13,7 @@ import {
   obtenerActividad,
   obtenerActividades,
   obtenerParticipantes,
+  obtenerEntregasPorPeriodo,
   obtenerPeriodos,
   unirseConClave,
   type CambiosPeriodo,
@@ -129,10 +130,24 @@ export function usePeriodos(id: string) {
   })
 }
 
+export function useEntregasPorPeriodo(id: string, habilitado = true) {
+  return useQuery({
+    queryKey: [...claveActividad(id), 'entregas-por-periodo'] as const,
+    queryFn: () => obtenerEntregasPorPeriodo(id),
+    enabled: Boolean(id) && habilitado,
+  })
+}
+
 export function useDefinirPeriodosMutation(id: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (periodicidad: Periodicidad | 'ninguna') => definirPeriodos(id, periodicidad),
+    mutationFn: ({
+      elemento,
+      periodicidad,
+    }: {
+      elemento: ElementoConCalendario
+      periodicidad: Periodicidad | 'ninguna'
+    }) => definirPeriodos(id, elemento, periodicidad),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [...claveActividad(id), 'periodos'] })
     },

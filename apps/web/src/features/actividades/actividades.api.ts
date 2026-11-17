@@ -1,4 +1,6 @@
 import type {
+  ElementoConCalendario,
+  EntregasDePeriodo,
   EstadoPeriodo,
   FuncionSeguimiento,
   Periodicidad,
@@ -285,15 +287,29 @@ export async function obtenerPeriodos(id: string): Promise<PeriodoReporte[]> {
   return periodos
 }
 
-// PUT /api/actividades/{id}/periodos: genera el calendario a partir de una
-// periodicidad y reemplaza el anterior, o lo borra con 'ninguna'.
+// GET /api/actividades/{id}/entregas-por-periodo: Operación de la
+// planeación, cuánto se entregó en cada periodo activo de cada calendario.
+export async function obtenerEntregasPorPeriodo(id: string): Promise<EntregasDePeriodo[]> {
+  const respuesta = await pedir(`/api/actividades/${encodeURIComponent(id)}/entregas-por-periodo`)
+
+  if (!respuesta.ok) {
+    throw new ErrorActividad(await leerMensajeError(respuesta, 'No pudimos cargar lo entregado.'))
+  }
+
+  const { periodos } = (await respuesta.json()) as { periodos: EntregasDePeriodo[] }
+  return periodos
+}
+
+// PUT /api/actividades/{id}/periodos: genera el calendario de un elemento a
+// partir de una periodicidad y reemplaza el anterior, o lo borra con 'ninguna'.
 export async function definirPeriodos(
   id: string,
+  elemento: ElementoConCalendario,
   periodicidad: Periodicidad | 'ninguna',
 ): Promise<PeriodoReporte[]> {
   const respuesta = await enviar(
     `/api/actividades/${encodeURIComponent(id)}/periodos`,
-    { periodicidad },
+    { elemento, periodicidad },
     'PUT',
   )
 

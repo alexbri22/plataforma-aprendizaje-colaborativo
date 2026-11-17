@@ -4,6 +4,7 @@ import { exigirSesion } from '../middleware/sesion.js'
 import type { UsuarioPublico } from '../services/cuentas/cuentas.service.js'
 import {
   actualizarPeriodo,
+  entregasPorPeriodo,
   definirPeriodos,
   listarPeriodos,
 } from '../services/seguimiento/periodos.service.js'
@@ -27,6 +28,20 @@ periodosRouter.get(
   },
 )
 
+// GET /api/actividades/{id}/entregas-por-periodo: cualquier miembro, para
+// Operación de la planeación. Quien participa recibe además si su equipo (o
+// él, en la bitácora) ya publicó algo en cada periodo.
+periodosRouter.get(
+  '/actividades/:id/entregas-por-periodo',
+  exigirSesion,
+  cargarContextoActividad,
+  async (req, res) => {
+    const { membresia } = req.contextoActividad!
+    const periodos = await entregasPorPeriodo(req.params.id as string, membresia)
+    res.status(200).json({ periodos })
+  },
+)
+
 // PUT /api/actividades/{id}/periodos: genera el calendario a partir de una
 // periodicidad, o lo borra con 'ninguna'.
 periodosRouter.put(
@@ -36,9 +51,15 @@ periodosRouter.put(
   async (req, res) => {
     const { actividad, membresia } = req.contextoActividad!
     const actor = req.actor as UsuarioPublico
-    const { periodicidad } = validarDatosDefinirPeriodos(req.body)
+    const { elemento, periodicidad } = validarDatosDefinirPeriodos(req.body)
 
-    const periodos = await definirPeriodos(actividad, periodicidad, actor.idUsuario, membresia)
+    const periodos = await definirPeriodos(
+      actividad,
+      elemento,
+      periodicidad,
+      actor.idUsuario,
+      membresia,
+    )
     res.status(200).json({ periodos })
   },
 )

@@ -20,6 +20,7 @@ export {
 export { Modal, type ModalProps } from './Modal'
 export { Tabs, type TabsProps, type TabItem } from './Tabs'
 export { IconoCargando, type IconoCargandoProps } from './IconoCargando'
+export { AvisoAdvertencia } from './AvisoAdvertencia'
 export { AvisoError } from './AvisoError'
 export { Paginacion, type PaginacionProps } from './Paginacion'
 export { rebanar } from './rebanar'

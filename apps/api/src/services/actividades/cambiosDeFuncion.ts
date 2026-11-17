@@ -48,6 +48,11 @@ export function evaluarCambioEnCurso(
   if (funcion === 'espacio_equipo' && soloHabilitaElementos(anterior, nuevo)) {
     return { permitido: true }
   }
+  // Cambiar entre guiada y libre no pierde nada: cada entrada conserva el
+  // formato con que se escribió (nucleo §9.3).
+  if (funcion === 'bitacora_individual' && estaHabilitada(funcion, nuevo)) {
+    return { permitido: true }
+  }
   if (motivoDatos === null) return { permitido: true }
   return { permitido: false, motivo: motivoDatos }
 }
@@ -84,9 +89,6 @@ export const COMPROBADORES_DE_DATOS: Record<FuncionSeguimiento, ComprobadorDeDat
   // Los módulos dueños de estas funciones aún no existen, así que todavía no
   // puede haber datos.
   calificacion: SIN_DATOS_POSIBLES,
-  autoevaluacion_individual: SIN_DATOS_POSIBLES,
-  autoevaluacion_grupal: SIN_DATOS_POSIBLES,
-  evaluacion_pares: SIN_DATOS_POSIBLES,
   // Sustituido por services/seguimiento/elementos.service.ts al cargarse
   // (nucleo §9.1), ahora que ese módulo existe.
   espacio_equipo: SIN_DATOS_POSIBLES,

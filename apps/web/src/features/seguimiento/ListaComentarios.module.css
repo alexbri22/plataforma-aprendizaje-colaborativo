@@ -6,6 +6,12 @@
   border-top: 1px solid var(--color-border);
 }
 
+.seccionSinSeparador {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
 .lista {
   display: flex;
   flex-direction: column;
@@ -53,4 +59,10 @@
 .acciones {
   display: flex;
   gap: var(--space-2);
+}
+
+.vacio {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
 }

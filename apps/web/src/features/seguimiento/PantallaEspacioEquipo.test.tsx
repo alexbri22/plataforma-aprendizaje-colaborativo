@@ -159,6 +159,8 @@ describe('PantallaEspacioEquipo', () => {
     // Su equipo es un bloque con título en la barra lateral.
     expect(screen.getByText('Mi equipo: Alfa')).toBeInTheDocument()
 
+    // El formulario está cerrado de entrada: se abre con su botón.
+    await usuario.click(screen.getByRole('button', { name: 'Agregar meta' }))
     await usuario.type(screen.getByLabelText('Agregar a metas'), 'Nueva meta')
     await usuario.click(screen.getByRole('button', { name: 'Agregar' }))
 
@@ -178,7 +180,8 @@ describe('PantallaEspacioEquipo', () => {
     const usuario = userEvent.setup()
     const { container } = renderPantalla()
 
-    await usuario.type(await screen.findByLabelText('Agregar a metas'), 'Nueva meta')
+    await usuario.click(await screen.findByRole('button', { name: 'Agregar meta' }))
+    await usuario.type(screen.getByLabelText('Agregar a metas'), 'Nueva meta')
     const entradaArchivo = container.querySelector('input[type="file"]') as HTMLInputElement
     await usuario.upload(
       entradaArchivo,
@@ -264,7 +267,7 @@ describe('PantallaEspacioEquipo', () => {
     renderPantalla()
 
     await screen.findByText('Entregar el reporte final')
-    expect(screen.queryByLabelText('Agregar a metas')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Agregar meta' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Editar' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Eliminar' })).not.toBeInTheDocument()
   })
@@ -288,7 +291,7 @@ describe('PantallaEspacioEquipo', () => {
     renderPantalla()
 
     expect(await screen.findByText('Esta sección no se usa en esta actividad.')).toBeInTheDocument()
-    expect(screen.queryByLabelText('Agregar a metas')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Agregar meta' })).not.toBeInTheDocument()
   })
 
   it('muestra el mensaje del servidor si la creación falla', async () => {
@@ -299,7 +302,8 @@ describe('PantallaEspacioEquipo', () => {
     const usuario = userEvent.setup()
     renderPantalla()
 
-    await usuario.type(await screen.findByLabelText('Agregar a metas'), 'Algo')
+    await usuario.click(await screen.findByRole('button', { name: 'Agregar meta' }))
+    await usuario.type(screen.getByLabelText('Agregar a metas'), 'Algo')
     await usuario.click(screen.getByRole('button', { name: 'Agregar' }))
 
     expect(await screen.findByText('No pudimos guardar esto.')).toBeInTheDocument()
