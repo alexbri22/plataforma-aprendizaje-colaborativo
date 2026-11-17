@@ -326,7 +326,7 @@ function ItemNavLink({ item, activo }: { item: ItemNav; activo: boolean }) {
       {item.etiqueta}
       {marca ? (
         <>
-          <span className={styles.marca} aria-hidden="true" />
+          <span className={styles.marcaAviso} aria-hidden="true" />
           <span className={styles.srOnly}>({marca})</span>
         </>
       ) : null}

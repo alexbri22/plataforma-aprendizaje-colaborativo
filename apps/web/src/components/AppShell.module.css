@@ -512,8 +512,9 @@ a.nivelItem:hover {
 
 /* Un aviso pendiente junto a un ítem (marcasNav.ts). Study Ink, nunca
  * Apothecary Amber: es un aviso, no un reconocimiento. El texto que lo explica
- * va oculto a la vista y lo lee el lector de pantalla. */
-.marca {
+ * va oculto a la vista y lo lee el lector de pantalla. No se llama .marca:
+ * esa es la del logo, y compartir el nombre lo encogía a este punto. */
+.marcaAviso {
   flex: none;
   width: 0.5rem;
   height: 0.5rem;
