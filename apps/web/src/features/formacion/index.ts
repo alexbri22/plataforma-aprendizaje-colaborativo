@@ -10,6 +10,40 @@ export { PantallaCurso } from './PantallaCurso'
 export { PantallaLeccion } from './PantallaLeccion'
 export { PantallaMiFormacion } from './PantallaMiFormacion'
 export { PantallaRuta } from './PantallaRuta'
+export { PantallaRutasAprendizaje } from './PantallaRutasAprendizaje'
+export { PantallaPlantillas } from './PantallaPlantillas'
+export { PantallaMisDiplomas } from './PantallaMisDiplomas'
+export { PantallaConstancia } from './PantallaConstancia'
+// Los editores de recursos y cursos: los usan el panel (modo admin) y quien
+// propone (modo autor), con las mismas piezas (nota del incremento 6).
+export { EditorCurso } from './editor/EditorCurso'
+export { EditorRecurso } from './editor/EditorRecurso'
+export { PantallaPropuestaCurso, PantallaPropuestaRecurso } from './PantallaPropuesta'
+export { ProveedorMarcasNav } from './ProveedorMarcasNav'
+export { useColaRevision, useDecidirRevision, useRevision } from './usePropuestas'
+export type {
+  ContenidoEnRevision,
+  DatosDecision,
+  ElementoCola,
+  EntradaHistorial,
+} from './formacion.api'
+export { VistaPreviaCurso, VistaPreviaRecurso } from './editor/VistaPrevia'
+export { varianteEstatus } from './editor/varianteEstatus'
+export { llevarA } from './editor/llevarA'
+export type { Requisito } from './editor/requisitosCurso'
+export {
+  accionDe,
+  esAvisoContenido,
+  esAvisoCurso,
+  esAvisoRuta,
+  mensajeDeAviso,
+  mensajeDeAvisoCurso,
+  mensajeDeAvisoRuta,
+} from './editor/avisoContenido'
+export type { AvisoContenido, AvisoCurso, AvisoRuta } from './editor/avisoContenido'
+// Lo que el perfil (Cuentas) pinta de Formación: el grupo ya armado, con sus
+// datos y su regla de privacidad (nota del incremento 5).
+export { ConstanciasEnPerfil } from './ConstanciasEnPerfil'
 export { Markdown } from './Markdown'
 export { etiquetaLeccion, formatoTamano } from './formato'
 export { ErrorFormacion, urlArchivo, urlArchivoAdmin } from './formacion.api'

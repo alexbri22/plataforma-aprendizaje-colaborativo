@@ -94,6 +94,7 @@ const RUTA: RutaAdmin = {
 function resumenCurso(c: CursoDeRuta): ResumenCursoAdmin {
   return {
     idCurso: c.idCurso,
+    origen: 'editorial',
     titulo: c.titulo,
     resumen: '',
     area: c.area,
@@ -183,7 +184,7 @@ describe('PantallaEditarRuta', () => {
     expect(within(lateral).getByText(/Finalidad escrita/)).toHaveTextContent('pendiente')
     expect(within(lateral).getByText(/De 2 a 5 cursos/)).toHaveTextContent('pendiente')
     expect(within(lateral).getByText(/Empieza en nivel inicial · 15 min/)).toBeInTheDocument()
-    expect(within(lateral).getByText('Interacción promotora: 1 curso')).toBeInTheDocument()
+    expect(within(lateral).getByText('Interacción: 1 curso')).toBeInTheDocument()
 
     await user.type(screen.getByLabelText('Finalidad: para qué sirve la ruta'), 'Hablar claro.')
     expect(within(lateral).getByText(/Finalidad escrita/)).toHaveTextContent('cumplido')

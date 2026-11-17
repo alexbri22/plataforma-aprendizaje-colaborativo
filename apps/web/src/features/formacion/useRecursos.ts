@@ -25,11 +25,12 @@ const claveAdmin = (id: string) => ['recursos', 'admin', id] as const
 
 // keepPreviousData: al cambiar de página o de filtro se sigue viendo la página
 // anterior hasta que llega la nueva, en vez de vaciar la lista.
-export function useRecursosPublicos(consulta: ConsultaRecursos = {}) {
+export function useRecursosPublicos(consulta: ConsultaRecursos = {}, habilitada = true) {
   return useQuery({
     queryKey: [...CLAVE_PUBLICOS, 'lista', consulta],
     queryFn: () => listarRecursos(consulta),
     placeholderData: keepPreviousData,
+    enabled: habilitada,
   })
 }
 
@@ -41,11 +42,12 @@ export function useRecursoPublico(idRecurso: string) {
   })
 }
 
-export function useRecursosAdmin(consulta: ConsultaRecursosAdmin) {
+export function useRecursosAdmin(consulta: ConsultaRecursosAdmin, habilitada = true) {
   return useQuery({
     queryKey: [...CLAVE_ADMIN, 'lista', consulta],
     queryFn: () => listarRecursosAdmin(consulta),
     placeholderData: keepPreviousData,
+    enabled: habilitada,
   })
 }
 
@@ -79,7 +81,7 @@ export function useCrearRecurso() {
 }
 
 export function useActualizarRecurso(idRecurso: string) {
-  return useMutacionRecurso((cambios: Partial<DatosRecurso>) =>
+  return useMutacionRecurso((cambios: Partial<DatosRecurso> & { versionFicha?: number }) =>
     actualizarRecurso(idRecurso, cambios),
   )
 }

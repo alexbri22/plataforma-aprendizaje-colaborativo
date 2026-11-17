@@ -3,12 +3,15 @@ import { ETIQUETAS_NIVEL_CURSO, type NivelCurso } from '@plataforma/shared'
 import { Button } from '../../components/ui'
 import { useSesion } from '../cuentas'
 import { IconoFlecha } from './iconos'
+import { PreferenciasRutas } from './PreferenciasRutas'
 import { usePreferencias, useRecomendaciones } from './useProgreso'
 import { useRutasPublicas } from './useRutas'
 import styles from './PantallaRecursos.module.css'
 
 /*
- * "Ruta recomendada" de /recursos (nota del incremento 4). Con sesión, la
+ * "Rutas recomendadas" de /recursos (nota del incremento 4; desde las
+ * observaciones del 4 de noviembre va después del catálogo, con su propio
+ * encabezado). Con sesión, la
  * primera que propone el recomendador, con sus razones; sin sesión, o si ya
  * terminó todas, la destacada del catálogo. Debajo, el resto de las rutas.
  * Reemplaza la vista previa fija de ruta.fixtures.ts.
@@ -81,64 +84,81 @@ export function SeccionRutas() {
   const sinPreferencias = usuario !== null && preferencias.data?.length === 0
 
   return (
-    <section id="ruta-destacada" className={styles.ruta} aria-labelledby="titulo-ruta">
-      <div className={styles.rutaIntroduccion}>
-        <p className={styles.eyebrow}>{principal.sobretitulo}</p>
-        <h2 id="titulo-ruta">{principal.titulo}</h2>
-        <p>{principal.finalidad}</p>
+    <section id="rutas" className={styles.rutas} aria-labelledby="titulo-rutas">
+      <div className={styles.rutasCabecera}>
+        <h2 id="titulo-rutas">Rutas recomendadas</h2>
+        <p>
+          Son conjuntos de recursos ordenados de manera progresiva para tener un mejor dominio o
+          entendimiento. Al completar los cursos que incluye una ruta, se obtiene una constancia.
+        </p>
+        <Link to="/rutas" className={styles.enlaceTexto}>
+          Ver todas las rutas <IconoFlecha className={styles.flecha} />
+        </Link>
+      </div>
 
-        {principal.razones.length > 0 ? (
-          <div className={styles.rutaRazones}>
-            <p className={styles.rutaRazonesTitulo}>Por qué te la recomendamos</p>
-            <ul>
-              {principal.razones.map((r) => (
-                <li key={r}>{r}</li>
-              ))}
-            </ul>
+      {/* Con sesión, lo que la persona quiere fortalecer se elige aquí mismo
+          (observaciones del 12 de noviembre). */}
+      {usuario ? <PreferenciasRutas /> : null}
+
+      <section id="ruta-destacada" className={styles.ruta} aria-labelledby="titulo-ruta">
+        <div className={styles.rutaIntroduccion}>
+          <p className={styles.eyebrow}>{principal.sobretitulo}</p>
+          <h3 id="titulo-ruta">{principal.titulo}</h3>
+          <p>{principal.finalidad}</p>
+
+          {principal.razones.length > 0 ? (
+            <div className={styles.rutaRazones}>
+              <p className={styles.rutaRazonesTitulo}>Por qué te la recomendamos</p>
+              <ul>
+                {principal.razones.map((r) => (
+                  <li key={r}>{r}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          <div className={styles.rutaAcciones}>
+            <Button size="sm" to={`/rutas/${principal.idRuta}`}>
+              Ver la ruta
+            </Button>
+            {sinPreferencias ? (
+              <a href="#preferencias" className={styles.enlaceTexto}>
+                Elige qué quieres fortalecer <IconoFlecha className={styles.flecha} />
+              </a>
+            ) : null}
           </div>
-        ) : null}
+        </div>
 
-        <div className={styles.rutaAcciones}>
-          <Button size="sm" to={`/rutas/${principal.idRuta}`}>
-            Ver la ruta
-          </Button>
-          {sinPreferencias ? (
-            <Link to="/mi-formacion" className={styles.enlaceTexto}>
-              Elige qué quieres fortalecer <IconoFlecha className={styles.flecha} />
-            </Link>
+        <div className={styles.rutaLateral}>
+          <ol className={styles.rutaPasos}>
+            {principal.cursos.map((paso, i) => (
+              <li key={paso.idCurso}>
+                <span className={styles.numeroPaso}>{String(i + 1).padStart(2, '0')}</span>
+                <div>
+                  <strong>{paso.titulo}</strong>
+                  <span>{detalleDe(paso)}</span>
+                </div>
+              </li>
+            ))}
+          </ol>
+
+          {otras.length > 0 ? (
+            <nav aria-labelledby="titulo-otras-rutas" className={styles.otrasRutas}>
+              <p id="titulo-otras-rutas" className={styles.rutaRazonesTitulo}>
+                Otras rutas
+              </p>
+              <ul>
+                {otras.map((r) => (
+                  <li key={r.idRuta}>
+                    <Link to={`/rutas/${r.idRuta}`}>{r.titulo}</Link>
+                    <span>{r.finalidad}</span>
+                  </li>
+                ))}
+              </ul>
+            </nav>
           ) : null}
         </div>
-      </div>
-
-      <div className={styles.rutaLateral}>
-        <ol className={styles.rutaPasos}>
-          {principal.cursos.map((paso, i) => (
-            <li key={paso.idCurso}>
-              <span className={styles.numeroPaso}>{String(i + 1).padStart(2, '0')}</span>
-              <div>
-                <strong>{paso.titulo}</strong>
-                <span>{detalleDe(paso)}</span>
-              </div>
-            </li>
-          ))}
-        </ol>
-
-        {otras.length > 0 ? (
-          <nav aria-labelledby="titulo-otras-rutas" className={styles.otrasRutas}>
-            <p id="titulo-otras-rutas" className={styles.rutaRazonesTitulo}>
-              Otras rutas
-            </p>
-            <ul>
-              {otras.map((r) => (
-                <li key={r.idRuta}>
-                  <Link to={`/rutas/${r.idRuta}`}>{r.titulo}</Link>
-                  <span>{r.finalidad}</span>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        ) : null}
-      </div>
+      </section>
     </section>
   )
 }

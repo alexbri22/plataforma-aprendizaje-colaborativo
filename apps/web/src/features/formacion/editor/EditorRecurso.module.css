@@ -280,3 +280,15 @@
   outline-offset: 2px;
   border-radius: var(--radius-sm);
 }
+
+/* El formulario completo va dentro de un fieldset para poder deshabilitarlo
+ * de una vez cuando no se puede editar (una propuesta en revisión). */
+.campos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}

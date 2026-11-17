@@ -1,11 +1,17 @@
 import type {
+  AccionRevision,
   AreaHabilidad,
+  CriterioPublicacion,
+  DecisionRevision,
   ElementoColaboracion,
   EstatusCurso,
   EstatusRecurso,
   NivelCurso,
+  OrigenContenido,
   Paginacion,
   SeccionFormativa,
+  TipoConstancia,
+  TipoContenido,
   TipoLeccion,
   TipoRecurso,
 } from '@plataforma/shared'
@@ -18,6 +24,8 @@ const BASE_URL = import.meta.env.VITE_API_URL ?? ''
 
 export interface ArchivoRecurso {
   nombre: string
+  /** El formato (MIME): PDF, Word, Excel o PowerPoint. */
+  tipo: string
   tamano: number
   url: string
 }
@@ -45,6 +53,9 @@ export interface RecursoPublico extends ResumenRecurso {
 
 export interface RecursoAdmin extends RecursoPublico {
   estatus: EstatusRecurso
+  /** editorial (del administrador) o propuesta (de un usuario, con revisión). */
+  origen: OrigenContenido
+  versionFicha: number
   fechaCreacion: string
   autor: { idUsuario: string; nombre: string } | null
 }
@@ -121,6 +132,7 @@ export interface ResumenCursoAdmin {
   area: AreaHabilidad | null
   nivel: NivelCurso | null
   estatus: EstatusCurso
+  origen: OrigenContenido
   orden: number
   numLecciones: number
   duracionMin: number
@@ -348,7 +360,7 @@ export async function crearRecurso(datos: Partial<DatosRecurso>): Promise<Recurs
 
 export async function actualizarRecurso(
   idRecurso: string,
-  cambios: Partial<DatosRecurso>,
+  cambios: Partial<DatosRecurso> & { versionFicha?: number },
 ): Promise<RecursoAdminDetalle> {
   const { recurso } = await pedir<{ recurso: RecursoAdminDetalle }>(
     `/api/admin/recursos/${encodeURIComponent(idRecurso)}`,
@@ -550,6 +562,9 @@ export interface ResultadoMarcar {
   progreso: MiProgresoCurso
   /** True solo en la marca que terminó el curso. */
   cursoCompletadoAhora: boolean
+  /** Las constancias que emitió esta marca: la del curso y las de las rutas
+   * que terminó con él. */
+  constanciasNuevas: ConstanciaResumen[]
 }
 
 function rutaCursoPublico(idCurso: string): string {
@@ -878,4 +893,345 @@ export async function guardarPreferencias(
     json('PUT', { elementos }),
   )
   return preferencias.elementos
+}
+
+// ---- Constancias de finalización (nota del incremento 5; espejo de
+// constancias.service.ts) ----
+//
+// Las emite el servidor al terminar un curso o una ruta. Las mías exigen
+// sesión; las de otra persona también, y llegan vacías si no las hizo
+// públicas; la verificación por folio es pública.
+
+export interface ConstanciaResumen {
+  folio: string
+  tipo: TipoConstancia
+  titulo: string
+  /** En una ruta, cuántos cursos contaron; en un curso, 0. */
+  numCursos: number
+  fechaFinalizacion: string
+}
+
+export interface ConstanciaPropia extends ConstanciaResumen {
+  idCurso: string | null
+  idRuta: string | null
+}
+
+export interface MisConstancias {
+  constancias: ConstanciaPropia[]
+  /** Si se muestran en mi perfil. Ocultas por defecto. */
+  publicas: boolean
+}
+
+export interface ConstanciaVerificada extends ConstanciaPropia {
+  nombre: string
+  elementos: ElementoColaboracion[]
+  duracionMin: number
+  titulosCursos: string[]
+  fechaEmision: string
+  /** Si el curso o la ruta se sigue ofreciendo. La constancia vale igual. */
+  enCatalogo: boolean
+}
+
+export function obtenerMisConstancias(): Promise<MisConstancias> {
+  return pedir<MisConstancias>(
+    '/api/me/constancias',
+    'No pudimos cargar tus constancias. Intenta de nuevo.',
+  )
+}
+
+export async function cambiarVisibilidadConstancias(publicas: boolean): Promise<boolean> {
+  const respuesta = await pedir<{ publicas: boolean }>(
+    '/api/me/constancias/visibilidad',
+    publicas
+      ? 'No pudimos mostrar tus constancias. Intenta de nuevo.'
+      : 'No pudimos ocultar tus constancias. Intenta de nuevo.',
+    json('PUT', { publicas }),
+  )
+  return respuesta.publicas
+}
+
+export async function obtenerConstanciasDeUsuario(idUsuario: string): Promise<ConstanciaResumen[]> {
+  const { constancias } = await pedir<{ constancias: ConstanciaResumen[] }>(
+    `/api/usuarios/${encodeURIComponent(idUsuario)}/constancias`,
+    'No pudimos cargar las constancias de esta persona.',
+  )
+  return constancias
+}
+
+export async function verificarConstancia(folio: string): Promise<ConstanciaVerificada> {
+  const { constancia } = await pedir<{ constancia: ConstanciaVerificada }>(
+    `/api/constancias/${encodeURIComponent(folio)}`,
+    'No pudimos verificar esta constancia. Intenta de nuevo.',
+  )
+  return constancia
+}
+
+// ---- Autoría abierta: propuestas del autor (espejo de revision.service.ts;
+// nota del incremento 6) ----
+//
+// El autor trabaja en /api/me/propuestas, siempre sobre lo suyo. Usa los
+// mismos editores que el panel, con estas llamadas en vez de las de
+// /api/admin.
+
+export interface EntradaHistorial {
+  accion: AccionRevision
+  motivo: string
+  criterios: CriterioPublicacion[]
+  fecha: string
+  /** Solo en la vista del administrador. */
+  actor?: string | null
+}
+
+export interface EstadoRevision {
+  fechaEnvio: string | null
+  /** Una decisión que el autor todavía no ha visto. */
+  decisionSinVer: boolean
+  historial: EntradaHistorial[]
+}
+
+export type PropuestaRecurso = RecursoAdminDetalle & { revision: EstadoRevision }
+export type PropuestaCurso = CursoAdmin & { revision: EstadoRevision }
+
+export interface UltimaDecision {
+  accion: AccionRevision
+  motivo: string
+  fecha: string
+}
+
+export interface PropuestaResumen {
+  tipo: TipoContenido
+  id: string
+  titulo: string
+  estatus: EstatusRecurso
+  fechaActualizacion: string
+  fechaEnvio: string | null
+  decisionSinVer: boolean
+  ultimaDecision: UltimaDecision | null
+}
+
+export interface MisPropuestas {
+  propuestas: PropuestaResumen[]
+  avisosPendientes: number
+}
+
+const rutaPropuesta = (tipo: TipoContenido, id: string) =>
+  `/api/me/propuestas/${tipo === 'recurso' ? 'recursos' : 'cursos'}/${encodeURIComponent(id)}`
+
+export function listarMisPropuestas(): Promise<MisPropuestas> {
+  return pedir<MisPropuestas>('/api/me/propuestas', 'No pudimos cargar tus propuestas.')
+}
+
+export async function contarAvisosPropuestas(): Promise<number> {
+  const { pendientes } = await pedir<{ pendientes: number }>(
+    '/api/me/propuestas/avisos',
+    'No pudimos revisar tus avisos.',
+  )
+  return pendientes
+}
+
+async function pedirPropuestaRecurso(ruta: string, porDefecto: string, opciones?: RequestInit) {
+  const { recurso } = await pedir<{ recurso: PropuestaRecurso }>(ruta, porDefecto, opciones)
+  return recurso
+}
+
+export function obtenerPropuestaRecurso(id: string): Promise<PropuestaRecurso> {
+  return pedirPropuestaRecurso(rutaPropuesta('recurso', id), 'No pudimos cargar tu propuesta.')
+}
+
+export function crearPropuestaRecurso(datos: Partial<DatosRecurso>): Promise<PropuestaRecurso> {
+  return pedirPropuestaRecurso(
+    '/api/me/propuestas/recursos',
+    'No pudimos crear tu propuesta. Revisa los campos e intenta de nuevo.',
+    json('POST', datos),
+  )
+}
+
+export function actualizarPropuestaRecurso(
+  id: string,
+  cambios: Partial<DatosRecurso> & { versionFicha?: number },
+): Promise<PropuestaRecurso> {
+  return pedirPropuestaRecurso(
+    rutaPropuesta('recurso', id),
+    'No pudimos guardar tu propuesta. Revisa los campos e intenta de nuevo.',
+    json('PATCH', cambios),
+  )
+}
+
+export function subirArchivoPropuesta(id: string, archivo: File): Promise<PropuestaRecurso> {
+  return pedirPropuestaRecurso(
+    `${rutaPropuesta('recurso', id)}/archivo`,
+    'No pudimos subir el archivo. Intenta de nuevo.',
+    {
+      method: 'PUT',
+      headers: {
+        'Content-Type': archivo.type || 'application/pdf',
+        'X-Nombre-Archivo': encodeURIComponent(archivo.name),
+      },
+      body: archivo,
+    },
+  )
+}
+
+export function quitarArchivoPropuesta(id: string): Promise<PropuestaRecurso> {
+  return pedirPropuestaRecurso(
+    `${rutaPropuesta('recurso', id)}/archivo`,
+    'No pudimos quitar el archivo. Intenta de nuevo.',
+    { method: 'DELETE' },
+  )
+}
+
+/** El PDF de mi propuesta, en cualquier estado. */
+export function urlArchivoPropuesta(id: string, archivo: ArchivoRecurso): string {
+  const version = new URL(archivo.url, 'http://x').searchParams.get('v')
+  return `${BASE_URL}${rutaPropuesta('recurso', id)}/archivo${version ? `?v=${version}` : ''}`
+}
+
+async function pedirPropuestaCurso(ruta: string, porDefecto: string, opciones?: RequestInit) {
+  const { curso } = await pedir<{ curso: PropuestaCurso }>(ruta, porDefecto, opciones)
+  return curso
+}
+
+export function obtenerPropuestaCurso(id: string): Promise<PropuestaCurso> {
+  return pedirPropuestaCurso(rutaPropuesta('curso', id), 'No pudimos cargar tu propuesta.')
+}
+
+export function crearPropuestaCurso(datos: Partial<DatosCurso>): Promise<PropuestaCurso> {
+  return pedirPropuestaCurso(
+    '/api/me/propuestas/cursos',
+    'No pudimos crear tu propuesta. Revisa los campos e intenta de nuevo.',
+    json('POST', datos),
+  )
+}
+
+export function actualizarPropuestaCurso(
+  id: string,
+  cambios: Partial<DatosCurso> & { versionFicha?: number },
+): Promise<PropuestaCurso> {
+  return pedirPropuestaCurso(
+    rutaPropuesta('curso', id),
+    'No pudimos guardar tu propuesta. Revisa los campos e intenta de nuevo.',
+    json('PATCH', cambios),
+  )
+}
+
+export function agregarLeccionPropuesta(
+  id: string,
+  datos: Partial<DatosLeccion>,
+): Promise<PropuestaCurso> {
+  return pedirPropuestaCurso(
+    `${rutaPropuesta('curso', id)}/lecciones`,
+    'No pudimos agregar la lección. Intenta de nuevo.',
+    json('POST', datos),
+  )
+}
+
+export function actualizarLeccionPropuesta(
+  id: string,
+  idLeccion: string,
+  cambios: Partial<DatosLeccion>,
+): Promise<PropuestaCurso> {
+  return pedirPropuestaCurso(
+    `${rutaPropuesta('curso', id)}/lecciones/${encodeURIComponent(idLeccion)}`,
+    'No pudimos guardar la lección. Intenta de nuevo.',
+    json('PATCH', cambios),
+  )
+}
+
+export function eliminarLeccionPropuesta(id: string, idLeccion: string): Promise<PropuestaCurso> {
+  return pedirPropuestaCurso(
+    `${rutaPropuesta('curso', id)}/lecciones/${encodeURIComponent(idLeccion)}`,
+    'No pudimos quitar la lección. Intenta de nuevo.',
+    { method: 'DELETE' },
+  )
+}
+
+export function reordenarLeccionesPropuesta(
+  id: string,
+  lecciones: string[],
+): Promise<PropuestaCurso> {
+  return pedirPropuestaCurso(
+    `${rutaPropuesta('curso', id)}/lecciones/orden`,
+    'No pudimos reordenar las lecciones. Intenta de nuevo.',
+    json('PUT', { lecciones }),
+  )
+}
+
+export async function eliminarPropuesta(tipo: TipoContenido, id: string): Promise<void> {
+  await pedir<void>(
+    rutaPropuesta(tipo, id),
+    'No pudimos eliminar tu propuesta. Intenta de nuevo.',
+    {
+      method: 'DELETE',
+    },
+  )
+}
+
+export async function enviarPropuesta(tipo: TipoContenido, id: string): Promise<void> {
+  await pedir<void>(
+    `${rutaPropuesta(tipo, id)}/envio`,
+    'No pudimos enviar tu propuesta. Intenta de nuevo.',
+    { method: 'POST' },
+  )
+}
+
+export async function cancelarEnvioPropuesta(tipo: TipoContenido, id: string): Promise<void> {
+  await pedir<void>(
+    `${rutaPropuesta(tipo, id)}/envio`,
+    'No pudimos cancelar el envío. Intenta de nuevo.',
+    { method: 'DELETE' },
+  )
+}
+
+export async function marcarAvisoVisto(tipo: TipoContenido, id: string): Promise<void> {
+  await pedir<void>(`${rutaPropuesta(tipo, id)}/aviso-visto`, 'No pudimos guardar el aviso.', {
+    method: 'PUT',
+  })
+}
+
+// ---- Revisión: la cola del administrador ----
+
+export interface ElementoCola {
+  tipo: TipoContenido
+  id: string
+  titulo: string
+  autor: string | null
+  fechaEnvio: string
+}
+
+export type ContenidoEnRevision =
+  | { tipo: 'recurso'; recurso: RecursoAdminDetalle; historial: EntradaHistorial[] }
+  | { tipo: 'curso'; curso: CursoAdmin; historial: EntradaHistorial[] }
+
+export interface DatosDecision {
+  decision: DecisionRevision
+  motivo: string
+  criterios: CriterioPublicacion[]
+}
+
+const rutaRevision = (tipo: TipoContenido, id: string) =>
+  `/api/admin/revisiones/${tipo === 'recurso' ? 'recursos' : 'cursos'}/${encodeURIComponent(id)}`
+
+export async function listarColaRevision(): Promise<ElementoCola[]> {
+  const { propuestas } = await pedir<{ propuestas: ElementoCola[] }>(
+    '/api/admin/revisiones',
+    'No pudimos cargar la cola de revisión.',
+  )
+  return propuestas
+}
+
+export function obtenerRevision(tipo: TipoContenido, id: string): Promise<ContenidoEnRevision> {
+  return pedir<ContenidoEnRevision>(rutaRevision(tipo, id), 'No pudimos cargar la propuesta.')
+}
+
+export async function decidirRevision(
+  tipo: TipoContenido,
+  id: string,
+  datos: DatosDecision,
+): Promise<EstatusRecurso> {
+  const { estatus } = await pedir<{ estatus: EstatusRecurso }>(
+    `${rutaRevision(tipo, id)}/decision`,
+    'No pudimos guardar la decisión. Intenta de nuevo.',
+    json('POST', datos),
+  )
+  return estatus
 }

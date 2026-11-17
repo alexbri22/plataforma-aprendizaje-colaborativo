@@ -156,3 +156,22 @@ export async function obtenerActorPorSesion(
 
   return aUsuarioPublico(sesion.usuario)
 }
+
+/**
+ * Nombre completo vigente de una persona, o null si la cuenta no existe. Es
+ * la lectura que Formación usa para mostrar a quién pertenece una constancia
+ * (docs/diseno-desarrollo-general.md §4.5): el nombre se lee al mostrarla y no
+ * se copia, para que un cambio de nombre aprobado (nucleo §6.3) se refleje y
+ * Formación no guarde datos de la cuenta.
+ */
+export async function nombreCompletoDe(idUsuario: string): Promise<string | null> {
+  const usuario = await prisma.usuario.findUnique({
+    where: { idUsuario },
+    select: { nombre: true, apellidoPaterno: true, apellidoMaterno: true },
+  })
+  if (!usuario) return null
+  return [usuario.nombre, usuario.apellidoPaterno, usuario.apellidoMaterno]
+    .map((parte) => parte.trim())
+    .filter(Boolean)
+    .join(' ')
+}

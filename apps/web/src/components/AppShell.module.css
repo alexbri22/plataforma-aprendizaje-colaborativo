@@ -509,3 +509,27 @@ a.nivelItem:hover {
     display: none;
   }
 }
+
+/* Un aviso pendiente junto a un ítem (marcasNav.ts). Study Ink, nunca
+ * Apothecary Amber: es un aviso, no un reconocimiento. El texto que lo explica
+ * va oculto a la vista y lo lee el lector de pantalla. */
+.marca {
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-left: auto;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

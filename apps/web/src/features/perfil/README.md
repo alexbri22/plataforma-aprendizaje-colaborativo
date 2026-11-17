@@ -61,5 +61,9 @@ directamente (`directo`).
   con el interruptor de "Tus datos"; es privado por defecto. No ve frases ni
   avance: eso es de quien recibe y de quien organizó.
 - **Quien administra** ve además mi correo aunque sea privado.
+- **Constancias de Formación:** debajo de Insignias, el grupo
+  `ConstanciasEnPerfil` de `features/formacion`. Formación decide qué se ve:
+  en Mi perfil, todas y el interruptor para mostrarlas; en el perfil ajeno,
+  nada salvo que la persona lo active, ni siquiera a quien administra.
 - No hay directorio: al perfil ajeno se llega desde la lista de participantes
   (P-11 del general).

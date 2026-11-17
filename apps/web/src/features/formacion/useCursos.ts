@@ -25,11 +25,12 @@ const CLAVE_PUBLICOS = ['cursos', 'publicos'] as const
 const CLAVE_ADMIN = ['cursos', 'admin'] as const
 const claveAdmin = (id: string) => ['cursos', 'admin', 'detalle', id] as const
 
-export function useCursosPublicos(consulta: ConsultaCursos = {}) {
+export function useCursosPublicos(consulta: ConsultaCursos = {}, habilitada = true) {
   return useQuery({
     queryKey: [...CLAVE_PUBLICOS, 'lista', consulta],
     queryFn: () => listarCursos(consulta),
     placeholderData: keepPreviousData,
+    enabled: habilitada,
   })
 }
 

@@ -87,6 +87,7 @@ const DE_RECURSO: LeccionAdmin = {
 
 const CURSO: CursoAdmin = {
   idCurso: 'c1',
+  origen: 'editorial',
   titulo: 'Acuerdos claros',
   resumen: 'Resumen',
   objetivo: 'Objetivo',

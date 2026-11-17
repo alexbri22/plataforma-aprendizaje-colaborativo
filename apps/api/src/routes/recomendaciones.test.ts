@@ -143,7 +143,7 @@ async function terminar(quien: { cookie: string }, curso: CursoCreado) {
   }
 }
 
-/** Dos rutas: comunicación (Interacción promotora) y organización
+/** Dos rutas: comunicación (Interacción) y organización
  * (Responsabilidades e Interdependencia), esta última destacada. */
 async function catalogo() {
   const clara = await crearCurso('Comunicación clara', ['interaccion_promotora'])
@@ -208,6 +208,14 @@ describe('preferencias formativas', () => {
     ).toBe(400)
     expect((await como(ana).put('/api/me/preferencias-formativas', {})).status).toBe(400)
   })
+
+  // Sexto elemento, desde las observaciones del 12 de noviembre.
+  it('admite habilidades sociales', async () => {
+    const respuesta = await como(ana)
+      .put('/api/me/preferencias-formativas', { elementos: ['habilidades_sociales'] })
+      .expect(200)
+    expect(respuesta.body.preferencias.elementos).toEqual(['habilidades_sociales'])
+  })
 })
 
 describe('rutas recomendadas', () => {
@@ -231,9 +239,7 @@ describe('rutas recomendadas', () => {
     expect(r.modo).toBe('personalizado')
     expect(r.recomendaciones[0].idRuta).toBe(c.comunicacion)
     expect(r.recomendaciones[0].senales.interes).toBe(1)
-    expect(r.recomendaciones[0].razones[0]).toBe(
-      'Trabaja Interacción promotora, que elegiste fortalecer.',
-    )
+    expect(r.recomendaciones[0].razones[0]).toBe('Trabaja Interacción, que elegiste fortalecer.')
   })
 
   it('una ruta terminada ya no se recomienda y el avance viene por curso', async () => {

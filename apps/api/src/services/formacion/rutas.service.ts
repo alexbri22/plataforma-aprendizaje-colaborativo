@@ -5,6 +5,7 @@ import {
   type ElementoColaboracion,
   type EstatusRecurso,
   type NivelCurso,
+  type OrigenContenido,
   type Paginacion,
 } from '@plataforma/shared'
 import { prisma } from '../../data/prisma.js'
@@ -14,6 +15,8 @@ import {
   ErrorRutaNoEncontrada,
   ErrorValidacion,
 } from '../../errores.js'
+import { usableEnElCatalogo } from './acceso.js'
+import { emitirConstanciasDeRutas, elementosPorFrecuencia } from './constancias.service.js'
 import { INCLUIR_RESUMEN, aResumenPublico, type ResumenCursoPublico } from './cursos.service.js'
 import type { DatosRuta } from './rutas.validacion.js'
 import type { PeticionPagina } from './validacion.js'
@@ -101,10 +104,15 @@ const ORDEN_RUTAS = [
   { idRuta: 'asc' },
 ] satisfies Prisma.RutaFormativaOrderByWithRelationInput[]
 
+// Una ruta es editorial: nunca pasa por los estados de revisión (la
+// validación de entrada no los acepta y un CHECK de la base los impide).
 const TRANSICIONES: Readonly<Record<EstatusRuta, readonly EstatusRuta[]>> = {
   borrador: ['borrador', 'publicado'],
   publicado: ['publicado', 'retirado'],
   retirado: ['retirado', 'publicado'],
+  en_revision: [],
+  cambios_solicitados: [],
+  rechazado: [],
 }
 
 // ---- Conversiones ----
@@ -119,14 +127,9 @@ export function cursosDeRuta(fila: FilaCursosDeRuta): CursoDeRuta[] {
 
 export function derivarRuta(cursos: readonly CursoDeRuta[]): DerivadoRuta {
   const disponibles = cursos.filter((c) => c.disponible)
-  const conteo = new Map<ElementoColaboracion, number>()
-  for (const c of disponibles) {
-    for (const e of c.elementos) conteo.set(e, (conteo.get(e) ?? 0) + 1)
-  }
   return {
-    elementos: [...conteo.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .map(([elemento, n]) => ({ elemento, cursos: n })),
+    // El mismo orden que guarda la constancia de la ruta.
+    elementos: elementosPorFrecuencia(disponibles),
     nivelInicial: disponibles[0]?.nivel ?? null,
     duracionMin: disponibles.reduce((total, c) => total + c.duracionMin, 0),
     numCursos: cursos.length,
@@ -228,12 +231,18 @@ async function bloquearCursos(
   ids: readonly string[],
 ): Promise<Map<string, { idCurso: string; titulo: string; estatus: EstatusRecurso }>> {
   if (ids.length === 0) return new Map()
-  const filas = await tx.$queryRaw<{ id_curso: string; titulo: string; estatus: EstatusRecurso }[]>`
-    SELECT id_curso, titulo, estatus::text AS estatus FROM cursos
+  const filas = await tx.$queryRaw<
+    { id_curso: string; titulo: string; estatus: EstatusRecurso; origen: OrigenContenido }[]
+  >`
+    SELECT id_curso, titulo, estatus::text AS estatus, origen::text AS origen FROM cursos
     WHERE id_curso = ANY(${ids}::text[])
     FOR SHARE`
+  // Una propuesta que todavía no se publica no existe para el panel de rutas:
+  // ni se ve su título ni entra en una ruta (acceso.ts).
   return new Map(
-    filas.map((f) => [f.id_curso, { idCurso: f.id_curso, titulo: f.titulo, estatus: f.estatus }]),
+    filas
+      .filter((f) => usableEnElCatalogo(f))
+      .map((f) => [f.id_curso, { idCurso: f.id_curso, titulo: f.titulo, estatus: f.estatus }]),
   )
 }
 
@@ -361,6 +370,13 @@ export async function actualizarRuta(
         versionFicha: { increment: 1 },
       },
     })
+    // Publicar una ruta cuyos cursos alguien ya terminó se la da por
+    // terminada, como un cambio del administrador sobre un curso (nota del
+    // incremento 5). Al final: el candado de las rutas va después del de la
+    // destacada y de la fila.
+    if (cambios.estatus === 'publicado' && actual.estatus !== 'publicado') {
+      await emitirConstanciasDeRutas(tx, { idsRuta: [idRuta] })
+    }
     return leerRuta(tx, idRuta)
   })
   return aAdmin(fila)
@@ -406,13 +422,17 @@ export async function reemplazarCursosRuta(
       where: { idRuta },
       data: { versionFicha: { increment: 1 }, fechaActualizacion: new Date() },
     })
+    // Quitar el curso que a alguien le faltaba le termina la ruta.
+    if (actual.estatus === 'publicado') await emitirConstanciasDeRutas(tx, { idsRuta: [idRuta] })
     return leerRuta(tx, idRuta)
   })
   return aAdmin(fila)
 }
 
 /** Borra la ruta y su lista; los cursos no se tocan. Como el progreso de una
- * ruta se calcula de sus cursos, borrarla no borra el avance de nadie. */
+ * ruta se calcula de sus cursos, borrarla no borra el avance de nadie. Las
+ * constancias de la ruta tampoco se pierden: guardan su título y no dependen
+ * de que la ruta exista. */
 export async function eliminarRuta(idRuta: string): Promise<void> {
   const { count } = await prisma.rutaFormativa.deleteMany({ where: { idRuta } })
   if (count === 0) throw new ErrorRutaNoEncontrada()

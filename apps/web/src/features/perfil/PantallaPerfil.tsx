@@ -3,6 +3,7 @@ import { ETIQUETAS_NIVEL_ESTUDIOS, type CategoriaInsignia } from '@plataforma/sh
 import { AppShell } from '../../components/AppShell'
 import { Avatar, AvisoError, Button, Card, IconoCargando, Switch } from '../../components/ui'
 import { usePistas } from '../ayuda'
+import { ConstanciasEnPerfil } from '../formacion'
 import { DetalleInsignia, VitrinaInsignias, useRecibidosEnPerfil } from '../insignias'
 import { AvisoSolicitudNombre } from './AvisoSolicitudNombre'
 import { FormularioContrasena } from './FormularioContrasena'
@@ -287,6 +288,9 @@ export function PantallaPerfil() {
           ) : null}
         </Card>
       </section>
+
+      {/* De Formación: sus constancias y si se muestran a otras personas. */}
+      <ConstanciasEnPerfil propio />
     </AppShell>
   )
 }

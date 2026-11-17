@@ -14,9 +14,9 @@ import {
 } from '../../components/ui'
 import { useRutasAdmin } from '../formacion'
 import { AvisoConfirmacion } from './AvisoConfirmacion'
-import { esAvisoRuta, mensajeDeAvisoRuta, type AvisoRuta } from './avisoContenido'
+import { esAvisoRuta, mensajeDeAvisoRuta, type AvisoRuta } from '../formacion'
 import { leerPagina } from './leerPagina'
-import { varianteEstatus } from './varianteEstatus'
+import { varianteEstatus } from '../formacion'
 import styles from './PantallaContenido.module.css'
 
 const FORMATO_FECHA = new Intl.DateTimeFormat('es-MX', {

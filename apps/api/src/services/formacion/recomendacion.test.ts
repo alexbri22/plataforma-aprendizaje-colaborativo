@@ -96,17 +96,17 @@ describe('arranque en frío', () => {
 })
 
 describe('interés declarado', () => {
-  it('quien eligió Interacción promotora recibe primero la ruta de comunicación', () => {
+  it('quien eligió Interacción recibe primero la ruta de comunicación', () => {
     const resultado = recomendarRutas(perfil(['interaccion_promotora']), CATALOGO)
     expect(resultado.modo).toBe('personalizado')
     expect(resultado.recomendaciones[0].idRuta).toBe('comunicacion')
     expect(resultado.recomendaciones[0].senales.interes).toBe(1)
     expect(resultado.recomendaciones[0].razones[0]).toBe(
-      'Trabaja Interacción promotora, que elegiste fortalecer.',
+      'Trabaja Interacción, que elegiste fortalecer.',
     )
   })
 
-  it('quien eligió Responsabilidades claras recibe primero la de organización', () => {
+  it('quien eligió Definición de responsabilidades recibe primero la de organización', () => {
     expect(orden(perfil(['responsabilidades']))[0]).toBe('organizacion')
   })
 
@@ -122,7 +122,7 @@ describe('interés implícito', () => {
     const r = recomendarRutas(p, CATALOGO).recomendaciones[0]
     expect(r.idRuta).toBe('organizacion')
     expect(r.razones).toContain(
-      'Trabaja Responsabilidades claras, como los cursos que estás haciendo.',
+      'Trabaja Definición de responsabilidades, como los cursos que estás haciendo.',
     )
   })
 
@@ -135,7 +135,7 @@ describe('interés implícito', () => {
 })
 
 describe('brecha: llenar los elementos que faltan', () => {
-  it('quien ya cubrió Interacción promotora recibe primero lo que no ha trabajado', () => {
+  it('quien ya cubrió Interacción recibe primero lo que no ha trabajado', () => {
     const p = perfil(
       [],
       [hecho('a', ['interaccion_promotora']), hecho('b', ['interaccion_promotora'])],
@@ -144,7 +144,9 @@ describe('brecha: llenar los elementos que faltan', () => {
     expect(r[0].idRuta).toBe('organizacion')
     expect(r[0].senales.brecha).toBe(1)
     expect(r.find((x) => x.idRuta === 'comunicacion')?.senales.brecha).toBeLessThan(0.5)
-    expect(r[0].razones.some((t) => t.startsWith('Cubre Responsabilidades claras'))).toBe(true)
+    expect(r[0].razones.some((t) => t.startsWith('Cubre Definición de responsabilidades'))).toBe(
+      true,
+    )
   })
 
   it('un elemento se cubre con dos cursos terminados; con uno, a medias', () => {
@@ -284,14 +286,14 @@ describe('ejemplo documentado (nota del incremento 4)', () => {
     })
   })
 
-  it('después de elegir Procesamiento del grupo: Organización 46, Mejora continua 61', () => {
+  it('después de elegir Evaluación de grupo: Organización 46, Mejora continua 61', () => {
     const p = perfil(['procesamiento_grupal'], cursos)
     expect(puntajes(p)).toEqual({ 'organizacion-y-corresponsabilidad': 46, 'mejora-continua': 61 })
     expect(
       recomendarRutas(p, [ORGANIZACION_SEMILLA, MEJORA_SEMILLA]).recomendaciones[0].razones,
     ).toEqual([
-      'Cubre Interacción promotora y Procesamiento del grupo, que aún no has trabajado en ningún curso completado.',
-      'Trabaja Procesamiento del grupo, que elegiste fortalecer.',
+      'Cubre Interacción y Evaluación de grupo, que aún no has trabajado en ningún curso completado.',
+      'Trabaja Evaluación de grupo, que elegiste fortalecer.',
       'Empieza en nivel inicial, adecuado para ti.',
     ])
   })

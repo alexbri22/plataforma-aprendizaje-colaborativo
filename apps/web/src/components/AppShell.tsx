@@ -4,6 +4,7 @@ import { useCerrarSesionMutation, useSesion } from '../features/cuentas'
 import { Bienvenida, BotonAyuda, usePistas, type PistaDePantalla } from '../features/ayuda'
 import { PanelHistorial } from '../features/historial'
 import { GrupoNav } from './GrupoNav'
+import { useMarcasNav } from './marcasNav'
 import type {
   ContextoNav,
   EntradaNavActividad,
@@ -25,10 +26,14 @@ export type SeccionApp =
   | 'perfil'
   | 'recursos'
   | 'mi-formacion'
+  | 'rutas-aprendizaje'
+  | 'plantillas'
+  | 'mis-diplomas'
   | 'cuentas'
   | 'contenido'
   | 'cursos'
   | 'rutas'
+  | 'revisiones'
 
 interface ItemNav {
   id: SeccionApp
@@ -250,27 +255,30 @@ const ITEMS_NAV_ACTIVIDADES: ItemNav[] = [
 // cursos y la ruta recomendada se encuentran dentro de Recursos; Mi
 // formación es lo que la persona empezó o guardó del catálogo
 // (docs/diseno-desarrollo-formacion.md §7.2).
-const ITEMS_NAV_APRENDE: ItemNav[] = [
+// Una entrada sin "to" todavía no tiene pantalla: va en el mapa, sin enlace.
+// Recursos compartidos es del espacio de equipo (Cuentas/núcleo). El orden
+// está por acordarse (observaciones del 12 de noviembre); por ahora no cambia.
+type EntradaAprende = ItemNav | { pendiente: string }
+
+const ENTRADAS_APRENDE: EntradaAprende[] = [
   { id: 'recursos', etiqueta: 'Recursos', to: '/recursos' },
   { id: 'mi-formacion', etiqueta: 'Mi formación', to: '/mi-formacion' },
+  { pendiente: 'Recursos compartidos' },
+  { id: 'rutas-aprendizaje', etiqueta: 'Rutas de aprendizaje', to: '/rutas' },
+  { id: 'plantillas', etiqueta: 'Plantillas', to: '/plantillas' },
+  { id: 'mis-diplomas', etiqueta: 'Mis diplomas', to: '/mis-diplomas' },
 ]
-
-// Del subsistema de formación, todavía sin pantalla: en el mapa, sin enlace.
-const PENDIENTES_APRENDE = [
-  'Recursos compartidos',
-  'Rutas de aprendizaje',
-  'Plantillas',
-  'Mis diplomas',
-]
+const ITEMS_NAV_APRENDE = ENTRADAS_APRENDE.filter((e): e is ItemNav => !('pendiente' in e))
 
 // Solo se muestra a administradores. Es conveniencia de navegación: la
 // autorización real la impone el servidor (exigirAdministrador). Las futuras
 // herramientas de administración se agregan aquí y aparecen dentro del grupo.
 const ITEMS_NAV_ADMIN: ItemNav[] = [
   { id: 'cuentas', etiqueta: 'Cuentas', to: '/admin/cuentas', Icono: IconoCuentas },
-  { id: 'contenido', etiqueta: 'Contenido', to: '/admin/contenido', Icono: IconoRecursos },
+  { id: 'contenido', etiqueta: 'Recursos', to: '/admin/contenido', Icono: IconoRecursos },
   { id: 'cursos', etiqueta: 'Cursos', to: '/admin/cursos', Icono: IconoCursos },
   { id: 'rutas', etiqueta: 'Rutas', to: '/admin/rutas', Icono: IconoRutas },
+  { id: 'revisiones', etiqueta: 'Revisiones', to: '/admin/revisiones', Icono: IconoCursos },
 ]
 
 function IconoHistorial() {
@@ -304,6 +312,7 @@ function IconoHistorial() {
 }
 
 function ItemNavLink({ item, activo }: { item: ItemNav; activo: boolean }) {
+  const marca = useMarcasNav()[item.id]
   return (
     <Link
       to={item.to}
@@ -312,6 +321,12 @@ function ItemNavLink({ item, activo }: { item: ItemNav; activo: boolean }) {
     >
       {item.Icono ? <item.Icono /> : null}
       {item.etiqueta}
+      {marca ? (
+        <>
+          <span className={styles.marca} aria-hidden="true" />
+          <span className={styles.srOnly}>({marca})</span>
+        </>
+      ) : null}
     </Link>
   )
 }
@@ -604,17 +619,22 @@ export function AppShell({
                 contieneActivo={ITEMS_NAV_APRENDE.some((item) => item.id === seccionActiva)}
                 variante="principal"
               >
-                {ITEMS_NAV_APRENDE.map((item) => (
-                  <ItemNavLink key={item.id} item={item} activo={item.id === seccionActiva} />
-                ))}
-                {PENDIENTES_APRENDE.map((etiqueta) => (
-                  <span
-                    key={etiqueta}
-                    className={[styles.navItem, styles.navItemPendiente].join(' ')}
-                  >
-                    {etiqueta}
-                  </span>
-                ))}
+                {ENTRADAS_APRENDE.map((entrada) =>
+                  'pendiente' in entrada ? (
+                    <span
+                      key={entrada.pendiente}
+                      className={[styles.navItem, styles.navItemPendiente].join(' ')}
+                    >
+                      {entrada.pendiente}
+                    </span>
+                  ) : (
+                    <ItemNavLink
+                      key={entrada.id}
+                      item={entrada}
+                      activo={entrada.id === seccionActiva}
+                    />
+                  ),
+                )}
               </GrupoNav>
 
               {usuario?.tipoCuenta === 'administrador' ? (

@@ -186,18 +186,28 @@ describe('PantallaRecursos', () => {
     expect(await screen.findByText('Retrospectivas para mejorar')).toBeInTheDocument()
   })
 
-  it('elegir una sección oculta los cursos, que no pertenecen a ninguna', async () => {
+  it('el filtro de tipo muestra solo lo elegido', async () => {
     const user = userEvent.setup()
     renderPantalla()
     await screen.findByText('Retrospectivas para mejorar')
+    expect(screen.queryByLabelText('Sección')).not.toBeInTheDocument()
 
-    await user.selectOptions(screen.getByLabelText('Sección'), 'como_colaborar')
+    await user.selectOptions(screen.getByLabelText('Tipo'), 'plantilla')
     await waitFor(() =>
       expect(screen.queryByText('Retrospectivas para mejorar')).not.toBeInTheDocument(),
     )
+    expect(screen.queryByRole('region', { name: 'Artículos' })).not.toBeInTheDocument()
+    const breves = await screen.findByRole('region', { name: 'Recursos breves' })
+    expect(within(breves).getByRole('link', { name: /Plantilla de acuerdos claros/ })).toBeVisible()
+    const ultima = vi.mocked(listarRecursos).mock.calls.at(-1)?.[0]
+    expect(ultima?.tipos).toEqual(['plantilla'])
+
+    await user.selectOptions(screen.getByLabelText('Tipo'), 'cursos')
+    expect(await screen.findByText('Retrospectivas para mejorar')).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Recursos breves' })).not.toBeInTheDocument()
   })
 
-  it('separa artículos de recursos breves y destaca el primero de Qué es colaborar', async () => {
+  it('separa artículos de recursos breves dentro de Recursos', async () => {
     renderPantalla()
 
     const articulos = await screen.findByRole('region', { name: 'Artículos' })
@@ -213,8 +223,11 @@ describe('PantallaRecursos', () => {
       within(breves).getByRole('link', { name: /Plantilla de acuerdos claros/ }),
     ).toHaveAttribute('href', '/recursos/r3')
 
-    expect(screen.getByText('Empieza por aquí')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Leer ahora' })).toHaveAttribute('href', '/recursos/r1')
+    // Artículos y recursos breves son parte de la sección Recursos.
+    const catalogo = screen.getByRole('region', { name: 'Recursos' })
+    expect(catalogo).toContainElement(articulos)
+    expect(catalogo).toContainElement(breves)
+    expect(screen.queryByText('Empieza por aquí')).not.toBeInTheDocument()
   })
 
   it('filtra por habilidad y ofrece limpiar cuando no hay resultados', async () => {
@@ -261,7 +274,7 @@ describe('PantallaRecursos', () => {
     renderPantalla()
 
     const articulos = await screen.findByRole('region', { name: 'Artículos' })
-    expect(within(articulos).getAllByRole('heading', { level: 3 })).toHaveLength(6)
+    expect(within(articulos).getAllByRole('heading', { level: 4 })).toHaveLength(6)
 
     await user.click(within(articulos).getByRole('button', { name: 'Siguiente' }))
     expect(await within(articulos).findByText('Artículo 7')).toBeInTheDocument()
@@ -289,6 +302,6 @@ describe('PantallaRecursos', () => {
     await queryClient.invalidateQueries()
 
     expect(await within(articulos).findByText('Artículo 1')).toBeInTheDocument()
-    expect(within(articulos).getAllByRole('heading', { level: 3 })).toHaveLength(6)
+    expect(within(articulos).getAllByRole('heading', { level: 4 })).toHaveLength(6)
   })
 })

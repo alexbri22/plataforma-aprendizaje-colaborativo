@@ -10,6 +10,7 @@ import {
   type EstatusCurso,
   type EstatusRecurso,
   type NivelCurso,
+  type OrigenContenido,
   type Paginacion,
   type TipoLeccion,
   type TipoRecurso,
@@ -21,13 +22,28 @@ import {
   ErrorCursoDesactualizado,
   ErrorCursoNoEncontrado,
   ErrorLeccionNoEncontrada,
+  ErrorPropuestaNoEditable,
   ErrorRecursoNoEncontrado,
   ErrorValidacion,
 } from '../../errores.js'
+import {
+  ADMIN,
+  exigirEditable,
+  puedeVer,
+  usableEnElCatalogo,
+  type Acceso,
+  type EstadoContenido,
+} from './acceso.js'
 import { fijarFinalizaciones } from './calculoProgreso.js'
+import { emitirConstanciasDeRutas } from './constancias.service.js'
 import type { DatosCurso, DatosLeccion, FiltrosCursos } from './cursos.validacion.js'
 import { rutasQueUsanCurso } from './usoDeRecursos.js'
-import { obtenerRecursoPublicado, type RecursoPublico } from './recursos.service.js'
+import {
+  exigirEliminable,
+  obtenerRecursoPublicado,
+  type OpcionesAlta,
+  type RecursoPublico,
+} from './recursos.service.js'
 import type { PeticionPagina } from './validacion.js'
 
 /*
@@ -38,7 +54,8 @@ import type { PeticionPagina } from './validacion.js'
  * lección): solo cursos publicados, sin sesión.
  *
  * Mismo ciclo editorial que los recursos: borrador → publicado → retirado →
- * publicado, sin volver a borrador. Un curso publicado debe seguir cumpliendo
+ * publicado, sin volver a borrador. Como en recursos, un usuario puede
+ * proponer un curso, que pasa por revisión (acceso.ts y revision.service.ts). Un curso publicado debe seguir cumpliendo
  * los mínimos después de cualquier cambio en su ficha o en sus lecciones: si
  * un cambio los rompe, se rechaza completo (la transacción se deshace).
  */
@@ -73,6 +90,7 @@ export interface ResumenCursoAdmin {
   area: AreaHabilidad | null
   nivel: NivelCurso | null
   estatus: EstatusCurso
+  origen: OrigenContenido
   orden: number
   numLecciones: number
   /** Suma de la duración de sus lecciones. */
@@ -180,6 +198,7 @@ function aResumen(fila: FilaResumen): ResumenCursoAdmin {
     area: fila.area as AreaHabilidad | null,
     nivel: fila.nivel,
     estatus: fila.estatus,
+    origen: fila.origen,
     orden: fila.orden,
     numLecciones: fila.lecciones.length,
     duracionMin: fila.lecciones.reduce((total, l) => total + (duracionDe(l) ?? 0), 0),
@@ -311,8 +330,52 @@ async function cerrarCambioDeLecciones(
   if (curso.estatus === 'publicado') {
     validarPublicable(fichaDe(curso), curso.lecciones, leccionTocada ? [leccionTocada] : [])
   }
-  await fijarFinalizaciones(tx, idCurso)
+  const terminaron = await fijarFinalizaciones(tx, idCurso)
+  // Al final: el candado de las rutas es lo último que pide la transacción.
+  if (terminaron.length > 0) {
+    await emitirConstanciasDeRutas(tx, { idsCurso: [idCurso], idsUsuario: terminaron })
+  }
   return curso
+}
+
+/**
+ * Los mínimos de publicación de un curso que ya existe, con todas sus
+ * lecciones de recurso exigidas. Los usa la revisión: al enviar una propuesta
+ * y al aprobarla. Al aprobar, quien llama bloquea antes los recursos (ver
+ * bloquearRecursosDeLecciones) para que ninguno se retire a la mitad.
+ */
+export async function validarCursoPublicable(
+  tx: Prisma.TransactionClient,
+  idCurso: string,
+): Promise<void> {
+  const curso = await leerCurso(tx, idCurso)
+  validarPublicable(fichaDe(curso), curso.lecciones, 'todos')
+}
+
+/** Bloquea en modo compartido los recursos de las lecciones del curso: retirar
+ * uno los bloquea en exclusivo, así que el retiro y quien los lee para
+ * publicar el curso se forman en fila. Mismo orden que al marcar una lección. */
+export async function bloquearRecursosDeLecciones(
+  tx: Prisma.TransactionClient,
+  idCurso: string,
+): Promise<void> {
+  await tx.$queryRaw`
+    SELECT r.id_recurso FROM recursos_formativos r
+    JOIN lecciones_curso l ON l.id_recurso = r.id_recurso
+    WHERE l.id_curso = ${idCurso}
+    ORDER BY r.id_recurso
+    FOR SHARE OF r`
+}
+
+/** Lo que sigue a que un curso cambie de estatus: retirarlo lo deja fuera de
+ * lo que cuenta en sus rutas, y quien ya terminó los demás las termina.
+ * Volver a publicarlo puede hacer lo mismo con una ruta que se había quedado
+ * sin cursos disponibles. */
+export async function alCambiarEstatusCurso(
+  tx: Prisma.TransactionClient,
+  idCurso: string,
+): Promise<void> {
+  await emitirConstanciasDeRutas(tx, { idsCurso: [idCurso] })
 }
 
 /**
@@ -322,24 +385,60 @@ async function cerrarCambioDeLecciones(
  * validan cada una por su lado. Podrían dejar un curso publicado sin su
  * reflexión, pasar de 5 lecciones o chocar en la unicidad de (curso, orden).
  * Las peticiones sobre cursos distintos no se esperan entre sí.
+ *
+ * Como en recursos, con la fila bloqueada se decide si quien llama la ve (si
+ * no, 404) y se entrega su estado para que la operación decida si la edita.
  */
-async function conCursoBloqueado<T>(
+export async function conCursoBloqueado<T>(
   idCurso: string,
-  operacion: (tx: Prisma.TransactionClient) => Promise<T>,
+  acceso: Acceso,
+  operacion: (tx: Prisma.TransactionClient, estado: EstadoContenido) => Promise<T>,
 ): Promise<T> {
   return prisma.$transaction(async (tx) => {
-    const bloqueado = await tx.$queryRaw<{ id_curso: string }[]>`
-      SELECT id_curso FROM cursos WHERE id_curso = ${idCurso} FOR UPDATE`
-    if (bloqueado.length === 0) throw new ErrorCursoNoEncontrado()
-    return operacion(tx)
+    const filas = await tx.$queryRaw<
+      { origen: OrigenContenido; estatus: EstatusCurso; id_usuario_autor: string | null }[]
+    >`
+      SELECT origen::text AS origen, estatus::text AS estatus, id_usuario_autor
+      FROM cursos WHERE id_curso = ${idCurso} FOR UPDATE`
+    const estado = filas[0]
+      ? {
+          origen: filas[0].origen,
+          estatus: filas[0].estatus,
+          idUsuarioAutor: filas[0].id_usuario_autor,
+        }
+      : null
+    if (!estado || !puedeVer(estado, acceso)) throw new ErrorCursoNoEncontrado()
+    return operacion(tx, estado)
   })
 }
 
+/** Igual, para las operaciones que además editan: lecciones y ficha. */
+function conCursoEditable<T>(
+  idCurso: string,
+  acceso: Acceso,
+  operacion: (tx: Prisma.TransactionClient, estado: EstadoContenido) => Promise<T>,
+): Promise<T> {
+  return conCursoBloqueado(idCurso, acceso, async (tx, estado) => {
+    exigirEditable(estado, acceso)
+    return operacion(tx, estado)
+  })
+}
+
+// Las transiciones que el administrador hace directamente sobre su contenido;
+// las de revisión van por revision.service.ts.
 const TRANSICIONES: Readonly<Record<EstatusCurso, readonly EstatusCurso[]>> = {
   borrador: ['borrador', 'publicado'],
   publicado: ['publicado', 'retirado'],
   retirado: ['retirado', 'publicado'],
+  en_revision: ['en_revision'],
+  cambios_solicitados: ['cambios_solicitados'],
+  rechazado: ['rechazado'],
 }
+
+/** Lo que el panel no lista: las propuestas que su autor todavía prepara. */
+export const SIN_PROPUESTAS_PRIVADAS = {
+  NOT: { origen: 'propuesta', estatus: { in: ['borrador', 'cambios_solicitados'] } },
+} satisfies Prisma.CursoWhereInput
 
 // ---- Cursos ----
 
@@ -347,9 +446,11 @@ export async function listarCursosAdmin({
   pagina,
   porPagina,
 }: PeticionPagina): Promise<PaginaDeCursos> {
+  const where = SIN_PROPUESTAS_PRIVADAS
   const [total, filas] = await prisma.$transaction([
-    prisma.curso.count(),
+    prisma.curso.count({ where }),
     prisma.curso.findMany({
+      where,
       include: INCLUIR_RESUMEN,
       orderBy: ORDEN_CURSOS,
       skip: (pagina - 1) * porPagina,
@@ -362,13 +463,23 @@ export async function listarCursosAdmin({
   }
 }
 
-export async function obtenerCursoAdmin(idCurso: string): Promise<CursoAdmin> {
-  return aAdmin(await leerCurso(prisma, idCurso))
+/** Un curso en su editor. Lo que quien llama no puede ver responde 404. */
+export async function obtenerCursoAdmin(
+  idCurso: string,
+  acceso: Acceso = ADMIN,
+): Promise<CursoAdmin> {
+  const fila = await leerCurso(prisma, idCurso)
+  if (!puedeVer(fila, acceso)) throw new ErrorCursoNoEncontrado()
+  return aAdmin(fila)
 }
 
 export async function crearCurso(
   idUsuarioAutor: string,
   datos: Partial<DatosCurso>,
+  {
+    origen = 'editorial',
+    cliente = prisma as unknown as Prisma.TransactionClient,
+  }: OpcionesAlta = {},
 ): Promise<CursoAdmin> {
   const ficha = {
     titulo: datos.titulo ?? '',
@@ -387,10 +498,10 @@ export async function crearCurso(
   }
 
   const orden =
-    datos.orden ?? ((await prisma.curso.aggregate({ _max: { orden: true } }))._max.orden ?? -1) + 1
+    datos.orden ?? ((await cliente.curso.aggregate({ _max: { orden: true } }))._max.orden ?? -1) + 1
 
-  const fila = await prisma.curso.create({
-    data: { ...ficha, orden, textoBusqueda: textoDeBusqueda(ficha), idUsuarioAutor },
+  const fila = await cliente.curso.create({
+    data: { ...ficha, orden, origen, textoBusqueda: textoDeBusqueda(ficha), idUsuarioAutor },
     include: INCLUIR_CURSO,
   })
   return aAdmin(fila)
@@ -400,14 +511,26 @@ export async function actualizarCurso(
   idCurso: string,
   cambios: Partial<DatosCurso>,
   versionLeida?: number,
+  acceso: Acceso = ADMIN,
 ): Promise<CursoAdmin> {
-  const fila = await conCursoBloqueado(idCurso, async (tx) => {
+  const fila = await conCursoEditable(idCurso, acceso, async (tx) => {
     const actual = await leerCurso(tx, idCurso)
 
     // Con la fila ya bloqueada: dos guardados simultáneos con la misma versión
     // no pueden pasar los dos.
     if (versionLeida !== undefined && versionLeida !== actual.versionFicha) {
       throw new ErrorCursoDesactualizado()
+    }
+    // El estatus de una propuesta cambia con un envío o con una decisión que
+    // lleva motivo, no editándolo.
+    if (
+      actual.origen === 'propuesta' &&
+      cambios.estatus !== undefined &&
+      cambios.estatus !== actual.estatus
+    ) {
+      throw new ErrorPropuestaNoEditable(
+        'Las decisiones sobre una propuesta se toman desde la cola de revisión, con motivo.',
+      )
     }
 
     if (cambios.estatus && !TRANSICIONES[actual.estatus].includes(cambios.estatus)) {
@@ -426,7 +549,7 @@ export async function actualizarCurso(
       validarPublicable(final, actual.lecciones, actual.estatus === 'publicado' ? [] : 'todos')
     }
 
-    return tx.curso.update({
+    const actualizado = await tx.curso.update({
       where: { idCurso },
       data: {
         ...cambios,
@@ -435,6 +558,8 @@ export async function actualizarCurso(
       },
       include: INCLUIR_CURSO,
     })
+    if (actualizado.estatus !== actual.estatus) await alCambiarEstatusCurso(tx, idCurso)
+    return actualizado
   })
   return aAdmin(fila)
 }
@@ -444,8 +569,9 @@ export async function actualizarCurso(
  * parte de una ruta, tampoco: en los dos casos se retira. El bloqueo del
  * curso hace esperar a quien se inscribe o lo agrega a una ruta en ese
  * momento, y las llaves RESTRICT cubren lo que quede. */
-export async function eliminarCurso(idCurso: string): Promise<void> {
-  await conCursoBloqueado(idCurso, async (tx) => {
+export async function eliminarCurso(idCurso: string, acceso: Acceso = ADMIN): Promise<void> {
+  await conCursoBloqueado(idCurso, acceso, async (tx, estado) => {
+    exigirEliminable(estado, acceso)
     if ((await tx.inscripcionCurso.count({ where: { idCurso } })) > 0) {
       throw new ErrorCursoConInscripciones()
     }
@@ -468,17 +594,30 @@ type LeccionCombinada = Pick<DatosLeccion, 'tipo' | 'idRecurso' | 'titulo'>
 
 /** Reglas de una lección que no dependen del estatus del curso: la de
  * recurso apunta a un recurso que existe; la propia no apunta a ninguno y
- * lleva título. */
-async function validarLeccion(cliente: Cliente, l: LeccionCombinada): Promise<void> {
+ * lleva título.
+ *
+ * Qué recurso puede usar quien arma el curso: el autor de una propuesta, solo
+ * uno publicado (si quiere usar uno suyo, lo propone aparte); el
+ * administrador, cualquiera de los suyos y las propuestas ya publicadas. Una
+ * propuesta ajena que todavía no se publica no existe para ninguno de los
+ * dos. */
+async function validarLeccion(
+  cliente: Cliente,
+  l: LeccionCombinada,
+  acceso: Acceso,
+): Promise<void> {
   if (l.tipo === 'recurso') {
     if (!l.idRecurso) {
       throw new ErrorValidacion({ idRecurso: 'Elige el recurso de la biblioteca.' })
     }
-    const existe = await cliente.recursoFormativo.findUnique({
+    const recurso = await cliente.recursoFormativo.findUnique({
       where: { idRecurso: l.idRecurso },
-      select: { idRecurso: true },
+      select: { origen: true, estatus: true },
     })
-    if (!existe) throw new ErrorRecursoNoEncontrado()
+    if (!recurso || !usableEnElCatalogo(recurso)) throw new ErrorRecursoNoEncontrado()
+    if (acceso.rol === 'autor' && recurso.estatus !== 'publicado') {
+      throw new ErrorValidacion({ idRecurso: 'Elige un recurso publicado de la biblioteca.' })
+    }
     return
   }
   const detalle: Record<string, string> = {}
@@ -502,8 +641,9 @@ async function renumerar(tx: Prisma.TransactionClient, ids: string[]) {
 export async function agregarLeccion(
   idCurso: string,
   datos: Partial<DatosLeccion>,
+  acceso: Acceso = ADMIN,
 ): Promise<CursoAdmin> {
-  const fila = await conCursoBloqueado(idCurso, async (tx) => {
+  const fila = await conCursoEditable(idCurso, acceso, async (tx) => {
     const curso = await leerCurso(tx, idCurso)
     if (curso.lecciones.length >= MAX_LECCIONES_CURSO) {
       throw new ErrorValidacion({
@@ -516,7 +656,7 @@ export async function agregarLeccion(
       idRecurso: datos.idRecurso ?? null,
       titulo: datos.titulo ?? '',
     }
-    await validarLeccion(tx, leccion)
+    await validarLeccion(tx, leccion, acceso)
 
     const { idLeccion } = await tx.leccionCurso.create({
       data: {
@@ -540,8 +680,9 @@ export async function actualizarLeccion(
   idCurso: string,
   idLeccion: string,
   cambios: Partial<DatosLeccion>,
+  acceso: Acceso = ADMIN,
 ): Promise<CursoAdmin> {
-  const fila = await conCursoBloqueado(idCurso, async (tx) => {
+  const fila = await conCursoEditable(idCurso, acceso, async (tx) => {
     const actual = await tx.leccionCurso.findFirst({ where: { idLeccion, idCurso } })
     if (!actual) throw new ErrorLeccionNoEncontrada()
 
@@ -554,7 +695,7 @@ export async function actualizarLeccion(
     if (cambios.tipo && cambios.tipo !== 'recurso' && cambios.idRecurso === undefined) {
       final.idRecurso = null
     }
-    await validarLeccion(tx, final)
+    await validarLeccion(tx, final, acceso)
 
     await tx.leccionCurso.update({
       where: { idLeccion },
@@ -565,8 +706,12 @@ export async function actualizarLeccion(
   return aAdmin(fila)
 }
 
-export async function eliminarLeccion(idCurso: string, idLeccion: string): Promise<CursoAdmin> {
-  const fila = await conCursoBloqueado(idCurso, async (tx) => {
+export async function eliminarLeccion(
+  idCurso: string,
+  idLeccion: string,
+  acceso: Acceso = ADMIN,
+): Promise<CursoAdmin> {
+  const fila = await conCursoEditable(idCurso, acceso, async (tx) => {
     const curso = await leerCurso(tx, idCurso)
     if (!curso.lecciones.some((l) => l.idLeccion === idLeccion)) {
       throw new ErrorLeccionNoEncontrada()
@@ -583,8 +728,12 @@ export async function eliminarLeccion(idCurso: string, idLeccion: string): Promi
 
 /** Reordena con la lista completa: debe traer exactamente las lecciones del
  * curso, cada una una vez. */
-export async function reordenarLecciones(idCurso: string, ids: string[]): Promise<CursoAdmin> {
-  const fila = await conCursoBloqueado(idCurso, async (tx) => {
+export async function reordenarLecciones(
+  idCurso: string,
+  ids: string[],
+  acceso: Acceso = ADMIN,
+): Promise<CursoAdmin> {
+  const fila = await conCursoEditable(idCurso, acceso, async (tx) => {
     const curso = await leerCurso(tx, idCurso)
     const actuales = new Set(curso.lecciones.map((l) => l.idLeccion))
     if (ids.length !== actuales.size || !ids.every((id) => actuales.has(id))) {

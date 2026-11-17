@@ -1,6 +1,7 @@
-import express, { Router, type Response } from 'express'
+import express, { Router, type Request, type Response } from 'express'
 import {
   MAX_BYTES_ARCHIVO_RECURSO,
+  MIME_PDF,
   POR_PAGINA_ADMIN,
   POR_PAGINA_PUBLICA,
   TIPOS_ARCHIVO_RECURSO,
@@ -20,6 +21,7 @@ import {
   obtenerRecursoPublicado,
   quitarArchivoRecurso,
 } from '../services/formacion/recursos.service.js'
+import { validarVersionFicha } from '../services/formacion/cursos.validacion.js'
 import {
   validarDatosRecurso,
   validarFiltroEstatus,
@@ -64,11 +66,13 @@ recursosRouter.get('/recursos/:id', async (req, res) => {
   res.status(200).json({ recurso })
 })
 
-/** Envía un PDF en línea, para que el navegador lo abra en su visor.
- * nosniff para que nunca lo interprete como otra cosa que el tipo declarado.
+/** Envía el archivo de un recurso. Un PDF va en línea, para que el navegador
+ * lo abra en su visor; un Word, Excel o PowerPoint se descarga, porque el
+ * navegador no los muestra. nosniff para que nunca lo interprete como otra
+ * cosa que el tipo declarado.
  * Express agrega un ETag, así que una revalidación de un archivo que no
  * cambió responde 304 sin volver a mandar los bytes. */
-function enviarArchivo(
+export function enviarArchivo(
   res: Response,
   archivo: { contenido: Uint8Array; tipo: string; nombre: string },
   cacheControl: string,
@@ -77,7 +81,7 @@ function enviarArchivo(
     .status(200)
     .type(archivo.tipo)
     .set({
-      'Content-Disposition': `inline; filename*=UTF-8''${encodeURIComponent(archivo.nombre)}`,
+      'Content-Disposition': `${archivo.tipo === MIME_PDF ? 'inline' : 'attachment'}; filename*=UTF-8''${encodeURIComponent(archivo.nombre)}`,
       'Cache-Control': cacheControl,
       'X-Content-Type-Options': 'nosniff',
     })
@@ -122,10 +126,18 @@ adminRecursosRouter.post('/recursos', exigirAdministrador, async (req, res) => {
   res.status(201).json({ recurso })
 })
 
-// PATCH /api/admin/recursos/:id: editar, reordenar, publicar o retirar.
+// PATCH /api/admin/recursos/:id: editar, reordenar, publicar o retirar. Con
+// versionFicha, si otro guardó mientras tanto responde 409
+// recurso_desactualizado. El estatus de una propuesta no se cambia aquí: va
+// por la cola de revisión, con motivo.
 adminRecursosRouter.patch('/recursos/:id', exigirAdministrador, async (req, res) => {
   const cambios = validarDatosRecurso(req.body, true)
-  const recurso = await actualizarRecurso(req.params.id as string, cambios)
+  const recurso = await actualizarRecurso(
+    req.params.id as string,
+    cambios,
+    undefined,
+    validarVersionFicha(req.body),
+  )
   res.status(200).json({ recurso })
 })
 
@@ -136,26 +148,37 @@ adminRecursosRouter.delete('/recursos/:id', exigirAdministrador, async (req, res
   res.status(204).end()
 })
 
-// PUT /api/admin/recursos/:id/archivo: el cuerpo es el PDF tal cual (mismo
-// esquema que la foto de perfil, sin multipart). El nombre original viaja en
-// X-Nombre-Archivo codificado con encodeURIComponent, porque un encabezado
-// HTTP no admite caracteres fuera de ASCII.
+/** Lee el PDF de una subida: el cuerpo es el archivo tal cual (mismo esquema
+ * que la foto de perfil, sin multipart). El nombre original viaja en
+ * X-Nombre-Archivo codificado con encodeURIComponent, porque un encabezado
+ * HTTP no admite caracteres fuera de ASCII. Lo usan el panel y el autor. */
+export const recibirArchivo = express.raw({
+  type: [...TIPOS_ARCHIVO_RECURSO],
+  limit: MAX_BYTES_ARCHIVO_RECURSO,
+})
+
+export function archivoSubido(req: Request): { tipo: string; nombre: string; contenido: Buffer } {
+  const tipo = req.headers['content-type']?.split(';')[0].trim() ?? ''
+  const contenido = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0)
+  let nombre = 'recurso'
+  const encabezado = req.headers['x-nombre-archivo']
+  if (typeof encabezado === 'string') {
+    try {
+      nombre = decodeURIComponent(encabezado)
+    } catch {
+      // codificación inválida: se queda el nombre por defecto
+    }
+  }
+  return { tipo, nombre, contenido }
+}
+
+// PUT /api/admin/recursos/:id/archivo: sube o reemplaza el PDF.
 adminRecursosRouter.put(
   '/recursos/:id/archivo',
   exigirAdministrador,
-  express.raw({ type: [...TIPOS_ARCHIVO_RECURSO], limit: MAX_BYTES_ARCHIVO_RECURSO }),
+  recibirArchivo,
   async (req, res) => {
-    const tipo = req.headers['content-type']?.split(';')[0].trim() ?? ''
-    const contenido = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0)
-    let nombre = 'recurso.pdf'
-    const encabezado = req.headers['x-nombre-archivo']
-    if (typeof encabezado === 'string') {
-      try {
-        nombre = decodeURIComponent(encabezado)
-      } catch {
-        // codificación inválida: se queda el nombre por defecto
-      }
-    }
+    const { tipo, nombre, contenido } = archivoSubido(req)
     const recurso = await guardarArchivoRecurso(req.params.id as string, tipo, nombre, contenido)
     res.status(200).json({ recurso })
   },

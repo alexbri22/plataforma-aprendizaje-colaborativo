@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -13,10 +13,12 @@ import {
   listarRecursosGuardados,
   listarRutas,
   obtenerMiFormacion,
+  obtenerMisConstancias,
   obtenerPreferencias,
   obtenerRecomendaciones,
   obtenerRecurso,
   obtenerRuta,
+  type ConstanciaPropia,
   type MiCurso,
   type MiFormacion,
   type ResumenRecurso,
@@ -49,6 +51,7 @@ vi.mock('./formacion.api', async () => {
     obtenerRecomendaciones: vi.fn(),
     obtenerPreferencias: vi.fn(),
     guardarPreferencias: vi.fn(),
+    obtenerMisConstancias: vi.fn(),
   }
 })
 
@@ -118,6 +121,7 @@ function renderEn(ruta: string) {
       </MemoryRouter>
     </QueryClientProvider>,
   )
+  return queryClient
 }
 
 beforeAll(() => {
@@ -142,64 +146,52 @@ beforeEach(() => {
   vi.mocked(listarRutas).mockResolvedValue({ rutas: [], paginacion: pagina([]) })
   vi.mocked(obtenerRecomendaciones).mockResolvedValue({ modo: 'editorial', recomendaciones: [] })
   vi.mocked(obtenerPreferencias).mockResolvedValue([])
+  vi.mocked(obtenerMisConstancias).mockResolvedValue({ constancias: [], publicas: false })
 })
 
-describe('Continúa aprendiendo', () => {
-  it('con un curso a medias, el hero ofrece seguir en la lección pendiente', async () => {
+function constanciaPropia(parcial: Partial<ConstanciaPropia> = {}): ConstanciaPropia {
+  return {
+    folio: 'CO3-7KQM-4XPA',
+    tipo: 'curso',
+    titulo: 'Retrospectivas',
+    numCursos: 0,
+    fechaFinalizacion: '2026-11-02T12:00:00.000Z',
+    idCurso: 'c3',
+    idRuta: null,
+    ...parcial,
+  }
+}
+
+describe('Recursos con sesión y sin ella', () => {
+  it('con sesión empieza directo en el catálogo, sin la presentación pública', async () => {
     vi.mocked(obtenerMiFormacion).mockResolvedValue(
-      formacion({
-        enCurso: [
-          // El retirado no tiene siguiente lección: no se ofrece.
-          miCurso({ idCurso: 'viejo', titulo: 'Retirado', estatus: 'retirado', siguiente: null }),
-          miCurso({ idCurso: 'c1', titulo: 'Acuerdos claros' }),
-        ],
-      }),
+      formacion({ enCurso: [miCurso({ idCurso: 'c1', titulo: 'Acuerdos claros' })] }),
     )
     renderEn('/recursos')
 
-    expect(await screen.findByText('Continúa aprendiendo')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Acuerdos claros' })).toBeInTheDocument()
-    expect(screen.getByText('1 de 4 lecciones · 25 %')).toBeInTheDocument()
-    expect(
-      screen.getByRole('progressbar', { name: 'Progreso en Acuerdos claros' }),
-    ).toHaveAttribute('aria-valuenow', '25')
-    expect(screen.getByRole('link', { name: 'Seguir' })).toHaveAttribute(
-      'href',
-      '/cursos/c1/lecciones/l2',
-    )
+    expect(await screen.findByRole('heading', { name: 'Aprende a tu ritmo' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Aprender colaborando' })).not.toBeInTheDocument()
+    // "Continuar" vive en Mi formación (observaciones del 12 de noviembre).
+    expect(screen.queryByText('Continúa aprendiendo')).not.toBeInTheDocument()
     expect(screen.queryByText('Empieza por aquí')).not.toBeInTheDocument()
   })
 
-  it('sin cursos a medias se queda "Empieza por aquí"', async () => {
-    vi.mocked(obtenerMiFormacion).mockResolvedValue(
-      formacion({
-        completados: [
-          miCurso({
-            idCurso: 'c1',
-            titulo: 'Terminado',
-            fechaFinalizacion: '2026-11-02T12:00:00.000Z',
-            siguiente: null,
-          }),
-        ],
-      }),
-    )
-    renderEn('/recursos')
-
-    expect(await screen.findByText('Empieza por aquí')).toBeInTheDocument()
-    expect(screen.queryByText('Continúa aprendiendo')).not.toBeInTheDocument()
-  })
-
-  it('sin sesión no pide el progreso', async () => {
+  it('sin sesión se presenta como "Aprender colaborando" y no pide el progreso', async () => {
     vi.mocked(obtenerSesionActual).mockResolvedValue(null)
     renderEn('/recursos')
 
-    expect(await screen.findByText('Empieza por aquí')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Aprender colaborando' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Recursos' })).toBeInTheDocument()
     expect(obtenerMiFormacion).not.toHaveBeenCalled()
   })
 })
 
 describe('Mi formación: cursos', () => {
   it('separa en curso y completados, y un retirado no ofrece seguir', async () => {
+    vi.mocked(obtenerMisConstancias).mockResolvedValue({
+      constancias: [constanciaPropia()],
+      publicas: false,
+    })
     vi.mocked(obtenerMiFormacion).mockResolvedValue(
       formacion({
         enCurso: [
@@ -220,24 +212,46 @@ describe('Mi formación: cursos', () => {
     )
     renderEn('/mi-formacion')
 
-    const enCurso = await screen.findByRole('region', { name: 'En curso' })
+    // Una sola cuadrícula de tarjetas, cada una con su estado (observaciones
+    // del 12 de noviembre); primero las que van en curso.
+    const cursos = await screen.findByRole('region', { name: 'Cursos' })
+    const tarjetas = await within(cursos).findAllByRole('listitem')
+    expect(tarjetas.map((t) => within(t).getByRole('heading').textContent)).toEqual([
+      'Acuerdos claros',
+      'Curso viejo',
+      'Retrospectivas',
+    ])
+    const [enCurso, retirado, completado] = tarjetas
+
+    expect(within(enCurso).getByText('En curso')).toBeInTheDocument()
     expect(within(enCurso).getByRole('link', { name: 'Acuerdos claros' })).toHaveAttribute(
       'href',
       '/cursos/c1',
     )
-    expect(within(enCurso).getByRole('link', { name: 'Seguir' })).toHaveAttribute(
+    expect(within(enCurso).getByText('Sigue con: Plantilla de acuerdos')).toBeInTheDocument()
+    expect(within(enCurso).getByRole('link', { name: /Continuar/ })).toHaveAttribute(
       'href',
       '/cursos/c1/lecciones/l2',
     )
-    expect(within(enCurso).getByText('Retirado')).toBeInTheDocument()
-    expect(within(enCurso).queryByRole('link', { name: 'Curso viejo' })).not.toBeInTheDocument()
-    expect(within(enCurso).getByText(/se retiró del catálogo/)).toBeInTheDocument()
+    // Un curso en curso no tiene constancia.
+    expect(within(enCurso).queryByRole('link', { name: /constancia/ })).not.toBeInTheDocument()
 
-    const completados = screen.getByRole('region', { name: 'Completados' })
-    expect(within(completados).getByText('Completado')).toBeInTheDocument()
+    expect(within(retirado).getByText('Retirado')).toBeInTheDocument()
+    expect(within(retirado).queryByRole('link', { name: 'Curso viejo' })).not.toBeInTheDocument()
+    expect(within(retirado).getByText(/se retiró del catálogo/)).toBeInTheDocument()
+    expect(within(retirado).queryByRole('link', { name: /Continuar/ })).not.toBeInTheDocument()
+
+    expect(within(completado).getByText('Completado')).toBeInTheDocument()
+    expect(within(completado).getByText(/Completado el 2 de noviembre de 2026/)).toBeInTheDocument()
     expect(
-      within(completados).getByText(/Completado el 2 de noviembre de 2026/),
-    ).toBeInTheDocument()
+      await within(completado).findByRole('link', { name: 'Ver la constancia de Retrospectivas' }),
+    ).toHaveAttribute('href', '/constancias/CO3-7KQM-4XPA')
+
+    // "¿Qué quieres fortalecer?" ya no está aquí: vive en Rutas recomendadas.
+    expect(
+      screen.queryByRole('group', { name: '¿Qué quieres fortalecer?' }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab')).not.toBeInTheDocument()
   })
 
   it('sin cursos invita a explorar', async () => {
@@ -252,7 +266,7 @@ describe('Mi formación: cursos', () => {
 })
 
 describe('Mi formación: guardados', () => {
-  it('la pestaña vive en la URL y lista los guardados con opción de quitarlos', async () => {
+  it('lista los guardados en tarjetas, con opción de quitarlos', async () => {
     vi.mocked(listarRecursosGuardados).mockResolvedValue({
       recursos: [ARTICULO],
       paginacion: pagina([ARTICULO]),
@@ -260,20 +274,24 @@ describe('Mi formación: guardados', () => {
     const user = userEvent.setup()
     renderEn('/mi-formacion')
 
-    await user.click(await screen.findByRole('tab', { name: 'Guardados' }))
-    expect(screen.getByTestId('ubicacion')).toHaveTextContent('/mi-formacion?vista=guardados')
-
-    const panel = await screen.findByRole('tabpanel')
-    expect(await within(panel).findByRole('link', { name: 'Los cinco elementos' })).toHaveAttribute(
-      'href',
-      '/recursos/r1',
-    )
-    expect(listarRecursosGuardados).toHaveBeenCalledWith(1, 10)
+    const guardados = await screen.findByRole('region', { name: 'Recursos guardados' })
+    expect(
+      await within(guardados).findByRole('link', { name: 'Los cinco elementos' }),
+    ).toHaveAttribute('href', '/recursos/r1')
+    expect(within(guardados).getByText('Guardado')).toBeInTheDocument()
+    expect(listarRecursosGuardados).toHaveBeenCalledWith(1, 9)
 
     await user.click(
-      within(panel).getByRole('button', { name: 'Quitar «Los cinco elementos» de guardados' }),
+      within(guardados).getByRole('button', { name: 'Quitar «Los cinco elementos» de guardados' }),
     )
     expect(cambiarGuardado).toHaveBeenCalledWith('r1', false)
+  })
+
+  it('?vista=guardados lleva a su sección, para que los enlaces de antes sigan sirviendo', async () => {
+    renderEn('/mi-formacion?vista=guardados')
+
+    await screen.findByRole('region', { name: 'Recursos guardados' })
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalled()
   })
 
   it('si la página quedó vacía (se quitó su último recurso), vuelve a la última que existe', async () => {
@@ -388,8 +406,8 @@ const RECOMENDADA: RutaRecomendada = {
   puntaje: 82,
   senales: { interes: 1, brecha: 1, continuidad: 0, nivel: 1 },
   razones: [
-    'Trabaja Interacción promotora, que elegiste fortalecer.',
-    'Cubre Interacción promotora, que aún no has trabajado en ningún curso completado.',
+    'Trabaja Interacción, que elegiste fortalecer.',
+    'Cubre Interacción, que aún no has trabajado en ningún curso completado.',
   ],
   avance: { completados: 0, total: 2 },
   ruta: {
@@ -418,7 +436,7 @@ describe('ruta recomendada en /recursos', () => {
     expect(within(seccion).getByText('Ruta recomendada para ti')).toBeInTheDocument()
     expect(within(seccion).getByText('Por qué te la recomendamos')).toBeInTheDocument()
     expect(
-      within(seccion).getByText('Trabaja Interacción promotora, que elegiste fortalecer.'),
+      within(seccion).getByText('Trabaja Interacción, que elegiste fortalecer.'),
     ).toBeInTheDocument()
     expect(within(seccion).getByRole('link', { name: 'Ver la ruta' })).toHaveAttribute(
       'href',
@@ -452,7 +470,7 @@ describe('ruta recomendada en /recursos', () => {
     expect(within(seccion).queryByText('Por qué te la recomendamos')).not.toBeInTheDocument()
     expect(
       within(seccion).getByRole('link', { name: /Elige qué quieres fortalecer/ }),
-    ).toHaveAttribute('href', '/mi-formacion')
+    ).toHaveAttribute('href', '#preferencias')
   })
 
   it('sin sesión muestra la destacada y no pide recomendaciones', async () => {
@@ -464,15 +482,26 @@ describe('ruta recomendada en /recursos', () => {
     expect(obtenerRecomendaciones).not.toHaveBeenCalled()
   })
 
-  it('sin rutas publicadas no hay sección ni botón para ir a ella', async () => {
+  it('va después del catálogo, con su propio encabezado', async () => {
+    vi.mocked(obtenerSesionActual).mockResolvedValue(null)
+    renderEn('/recursos')
+
+    const rutas = await screen.findByRole('region', { name: 'Rutas recomendadas' })
+    const catalogo = screen.getByRole('region', { name: 'Recursos' })
+    expect(catalogo.compareDocumentPosition(rutas) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(
+      within(rutas).getByRole('region', { name: 'Organización y corresponsabilidad' }),
+    ).toBeInTheDocument()
+  })
+
+  it('sin rutas publicadas no hay sección', async () => {
     vi.mocked(listarRutas).mockResolvedValue({ rutas: [], paginacion: pagina([]) })
     vi.mocked(obtenerSesionActual).mockResolvedValue(null)
     renderEn('/recursos')
 
-    expect(await screen.findByText('Empieza por aquí')).toBeInTheDocument()
-    expect(
-      screen.queryByRole('button', { name: 'Ver rutas de aprendizaje' }),
-    ).not.toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: 'Recursos' })).toBeInTheDocument()
+    await waitFor(() => expect(listarRutas).toHaveBeenCalled())
+    expect(screen.queryByRole('region', { name: 'Rutas recomendadas' })).not.toBeInTheDocument()
     expect(screen.queryByText(/Ruta recomendada|Ruta destacada/)).not.toBeInTheDocument()
   })
 })
@@ -510,6 +539,27 @@ describe('ficha de ruta', () => {
     expect(screen.getByText(/no cuenta para terminar la ruta/)).toBeInTheDocument()
   })
 
+  it('con la ruta terminada enlaza su constancia', async () => {
+    vi.mocked(obtenerMisConstancias).mockResolvedValue({
+      publicas: false,
+      constancias: [
+        constanciaPropia({
+          folio: 'CO3-R7TA-0001',
+          tipo: 'ruta',
+          titulo: 'Comunicación y confianza',
+          numCursos: 2,
+          idCurso: null,
+          idRuta: 'rc',
+        }),
+      ],
+    })
+    renderEn('/rutas/rc')
+
+    expect(
+      await screen.findByRole('link', { name: 'Ver tu constancia de la ruta' }),
+    ).toHaveAttribute('href', '/constancias/CO3-R7TA-0001')
+  })
+
   it('si no se puede leer el avance, no lo inventa: ofrece reintentar', async () => {
     vi.mocked(obtenerMiFormacion).mockRejectedValue(new Error('Sin conexión'))
     renderEn('/rutas/rc')
@@ -536,25 +586,81 @@ describe('ficha de ruta', () => {
 })
 
 describe('qué quieres fortalecer', () => {
-  it('empieza con lo guardado, permite como máximo dos y guarda', async () => {
+  beforeEach(() => {
+    vi.mocked(listarRutas).mockResolvedValue({
+      rutas: [RUTA_DESTACADA],
+      paginacion: pagina([RUTA_DESTACADA]),
+    })
+  })
+
+  it('vive en Rutas recomendadas y se guarda al marcar, sin botón', async () => {
     vi.mocked(obtenerPreferencias).mockResolvedValue(['responsabilidades'])
     vi.mocked(guardarPreferencias).mockResolvedValue(['responsabilidades', 'interaccion_promotora'])
     const user = userEvent.setup()
-    renderEn('/mi-formacion')
+    renderEn('/recursos')
 
-    const formulario = await screen.findByRole('group', { name: '¿Qué quieres fortalecer?' })
-    expect(within(formulario).getByLabelText('Responsabilidades claras')).toBeChecked()
-    expect(screen.getByRole('button', { name: 'Guardar' })).toBeDisabled()
+    const rutas = await screen.findByRole('region', { name: 'Rutas recomendadas' })
+    const formulario = await within(rutas).findByRole('group', { name: '¿Qué quieres fortalecer?' })
+    expect(within(formulario).getByLabelText('Definición de responsabilidades')).toBeChecked()
+    expect(screen.queryByRole('button', { name: 'Guardar' })).not.toBeInTheDocument()
 
-    await user.click(within(formulario).getByLabelText('Interacción promotora'))
-    // Con dos elegidos, los demás se desactivan.
-    expect(within(formulario).getByLabelText('Procesamiento del grupo')).toBeDisabled()
-
-    await user.click(screen.getByRole('button', { name: 'Guardar' }))
+    await user.click(within(formulario).getByLabelText('Interacción'))
     expect(guardarPreferencias).toHaveBeenCalledWith(
       ['responsabilidades', 'interaccion_promotora'],
       expect.anything(),
     )
-    expect(await screen.findByText(/Tus recomendaciones ya lo toman en cuenta/)).toBeInTheDocument()
+    expect(await screen.findByText(/La ruta recomendada ya lo toma en cuenta/)).toBeInTheDocument()
+    // Con dos elegidos, los demás se desactivan.
+    expect(within(formulario).getByLabelText('Evaluación de grupo')).toBeDisabled()
+  })
+
+  it('si no se guarda, las casillas vuelven a lo que había', async () => {
+    vi.mocked(obtenerPreferencias).mockResolvedValue([])
+    vi.mocked(guardarPreferencias).mockRejectedValue(new Error('No se pudo guardar.'))
+    const user = userEvent.setup()
+    renderEn('/recursos')
+
+    const formulario = await screen.findByRole('group', { name: '¿Qué quieres fortalecer?' })
+    await user.click(within(formulario).getByLabelText('Interacción'))
+    expect(await screen.findByText('No se pudo guardar.')).toBeInTheDocument()
+    expect(within(formulario).getByLabelText('Interacción')).not.toBeChecked()
+  })
+
+  // Revisión del PR: las casillas no guardan una copia propia. Si lo guardado
+  // cambia por fuera (otra pestaña) y la consulta se actualiza, el siguiente
+  // clic parte de ahí y no pisa ese cambio.
+  it('si lo guardado cambia por fuera, el siguiente clic parte de lo nuevo', async () => {
+    vi.mocked(obtenerPreferencias).mockResolvedValue(['responsabilidades'])
+    vi.mocked(guardarPreferencias).mockImplementation(async (elementos) => elementos)
+    const user = userEvent.setup()
+    const queryClient = renderEn('/recursos')
+
+    const formulario = await screen.findByRole('group', { name: '¿Qué quieres fortalecer?' })
+    expect(within(formulario).getByLabelText('Definición de responsabilidades')).toBeChecked()
+
+    // En otra pestaña cambió a Habilidades sociales; al volver, se vuelve a pedir.
+    vi.mocked(obtenerPreferencias).mockResolvedValue(['habilidades_sociales'])
+    await queryClient.invalidateQueries()
+    await waitFor(() =>
+      expect(within(formulario).getByLabelText('Habilidades sociales')).toBeChecked(),
+    )
+    expect(within(formulario).getByLabelText('Definición de responsabilidades')).not.toBeChecked()
+
+    await user.click(within(formulario).getByLabelText('Interacción'))
+    expect(guardarPreferencias).toHaveBeenLastCalledWith(
+      ['interaccion_promotora', 'habilidades_sociales'],
+      expect.anything(),
+    )
+  })
+
+  it('sin sesión no aparece', async () => {
+    vi.mocked(obtenerSesionActual).mockResolvedValue(null)
+    renderEn('/recursos')
+
+    await screen.findByRole('region', { name: 'Rutas recomendadas' })
+    expect(
+      screen.queryByRole('group', { name: '¿Qué quieres fortalecer?' }),
+    ).not.toBeInTheDocument()
+    expect(obtenerPreferencias).not.toHaveBeenCalled()
   })
 })

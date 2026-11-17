@@ -2,6 +2,7 @@ import { Navigate, useParams } from 'react-router-dom'
 import { ETIQUETAS_NIVEL_ESTUDIOS } from '@plataforma/shared'
 import { AppShell } from '../../components/AppShell'
 import { Avatar, AvisoError, Card, IconoCargando } from '../../components/ui'
+import { ConstanciasEnPerfil } from '../formacion'
 import { VitrinaInsignias } from '../insignias'
 import { usePerfilDeUsuario } from './usePerfil'
 import { useSesion } from '../cuentas'
@@ -76,6 +77,9 @@ export function PantallaPerfilDeUsuario() {
           </p>
         </Card>
       </section>
+
+      {/* De Formación: solo aparece si la persona mostró sus constancias. */}
+      <ConstanciasEnPerfil idUsuario={usuario.idUsuario} />
     </AppShell>
   )
 }

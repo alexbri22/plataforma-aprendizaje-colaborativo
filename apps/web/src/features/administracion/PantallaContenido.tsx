@@ -19,9 +19,9 @@ import {
 } from '../../components/ui'
 import { useRecursosAdmin } from '../formacion'
 import { leerPagina } from './leerPagina'
-import { varianteEstatus } from './varianteEstatus'
+import { varianteEstatus } from '../formacion'
 import { AvisoConfirmacion } from './AvisoConfirmacion'
-import { esAvisoContenido, mensajeDeAviso, type AvisoContenido } from './avisoContenido'
+import { esAvisoContenido, mensajeDeAviso, type AvisoContenido } from '../formacion'
 import styles from './PantallaContenido.module.css'
 
 const FORMATO_FECHA = new Intl.DateTimeFormat('es-MX', {
@@ -63,7 +63,7 @@ export function PantallaContenido() {
   return (
     <AppShell
       seccionActiva="contenido"
-      titulo="Contenido formativo"
+      titulo="Recursos"
       acciones={
         <Button size="sm" to="/admin/contenido/nuevo">
           Nuevo recurso

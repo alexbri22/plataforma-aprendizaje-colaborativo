@@ -1,5 +1,6 @@
 import type { Prisma } from '@prisma/client'
 import type { TipoLeccion } from '@plataforma/shared'
+import { emitirConstanciasDeCurso } from './constancias.service.js'
 
 /*
  * Cálculo del progreso de una persona en un curso
@@ -84,16 +85,20 @@ export function calcularProgreso(
  * marca una lección. Si alguien está marcando a la vez, esta lectura espera a
  * que termine y ve su progreso; sin el bloqueo, cada lado podía creer que al
  * otro le faltaba algo y nadie fijaba la fecha.
+ *
+ * Emite en la misma transacción la constancia de quien termina y devuelve sus
+ * ids, para que quien llama revise sus rutas (emitirConstanciasDeRutas) al
+ * final de la transacción, cuando ya no le queden filas por bloquear.
  */
 export async function fijarFinalizaciones(
   tx: Prisma.TransactionClient,
   idCurso: string,
-): Promise<void> {
-  const abiertas = await tx.$queryRaw<{ id_inscripcion: string }[]>`
-    SELECT id_inscripcion FROM inscripciones_curso
+): Promise<string[]> {
+  const abiertas = await tx.$queryRaw<{ id_inscripcion: string; id_usuario: string }[]>`
+    SELECT id_inscripcion, id_usuario FROM inscripciones_curso
     WHERE id_curso = ${idCurso} AND fecha_finalizacion IS NULL
     FOR UPDATE`
-  if (abiertas.length === 0) return
+  if (abiertas.length === 0) return []
 
   const lecciones = await tx.leccionCurso.findMany({
     where: { idCurso },
@@ -110,13 +115,16 @@ export async function fijarFinalizaciones(
     set.add(p.idLeccion)
     porInscripcion.set(p.idInscripcion, set)
   }
-  const cumplidas = abiertas
-    .map((a) => a.id_inscripcion)
-    .filter((id) => calcularProgreso(lecciones, porInscripcion.get(id) ?? new Set()).completo)
-  if (cumplidas.length === 0) return
+  const cumplidas = abiertas.filter(
+    (a) => calcularProgreso(lecciones, porInscripcion.get(a.id_inscripcion) ?? new Set()).completo,
+  )
+  if (cumplidas.length === 0) return []
 
+  const ids = cumplidas.map((a) => a.id_inscripcion)
   await tx.inscripcionCurso.updateMany({
-    where: { idInscripcion: { in: cumplidas }, fechaFinalizacion: null },
+    where: { idInscripcion: { in: ids }, fechaFinalizacion: null },
     data: { fechaFinalizacion: new Date() },
   })
+  await emitirConstanciasDeCurso(tx, ids)
+  return cumplidas.map((a) => a.id_usuario)
 }

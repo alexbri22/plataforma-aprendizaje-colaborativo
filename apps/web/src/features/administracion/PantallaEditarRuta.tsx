@@ -31,12 +31,16 @@ import {
   type DatosRuta,
   type RutaAdmin,
 } from '../formacion'
-import { accionDe, type AvisoRuta } from './avisoContenido'
-import { llevarA } from './llevarA'
+import { accionDe, type AvisoRuta } from '../formacion'
+import { llevarA } from '../formacion'
 import { ModalElegirCurso } from './ModalElegirCurso'
 import { requisitosRuta } from './requisitosRuta'
-import { varianteEstatus } from './varianteEstatus'
-import styles from './PantallaEditarCurso.module.css'
+import { varianteEstatus } from '../formacion'
+// Mismo diseño que el editor de cursos (ficha, lista ordenada y lateral con
+// lo que falta para publicar). Ese editor vive en Formación porque también lo
+// usa quien propone un curso; el panel ya depende de Formación, así que tomar
+// de ahí la hoja no forma un ciclo.
+import styles from '../formacion/editor/EditorCurso.module.css'
 
 interface Ficha {
   titulo: string

@@ -1,0 +1,123 @@
+/* Mismo ritmo que los grupos del perfil (features/perfil): el grupo de
+ * constancias se lee como uno más, debajo de Insignias. */
+.grupo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-bottom: var(--space-10);
+}
+
+.tituloGrupo {
+  margin: 0;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
+.cargando {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-6) 0;
+  color: var(--color-text-muted);
+}
+
+.texto {
+  margin: 0 0 var(--space-4);
+  color: var(--color-text-muted);
+  text-wrap: pretty;
+}
+
+.vacio {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.vacio a,
+.enlace {
+  border-radius: var(--radius-sm);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.vacio a:focus-visible,
+.enlace:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--color-border);
+}
+
+.fila {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* La palomita no carga el significado sola: "Terminado" va en el texto. */
+.icono {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: var(--radius-full);
+  background: var(--color-success-subtle);
+  color: var(--color-success-ink);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.datos {
+  flex: 1;
+  min-width: 0;
+}
+
+.titulo {
+  margin: 0;
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.enlace {
+  flex: none;
+  font-size: var(--font-size-sm);
+}
+
+.visibilidad {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-5);
+}
+
+.nota {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+@media (max-width: 30rem) {
+  .fila {
+    flex-wrap: wrap;
+  }
+
+  .enlace {
+    margin-left: calc(1.5rem + var(--space-3));
+  }
+}

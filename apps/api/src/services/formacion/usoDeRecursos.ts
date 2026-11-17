@@ -9,11 +9,19 @@ export async function cursosQueUsanRecurso(
   idRecurso: string,
   cliente: Prisma.TransactionClient | typeof prisma = prisma,
 ): Promise<{ idCurso: string; titulo: string; estatus: EstatusCurso }[]> {
-  return cliente.curso.findMany({
+  const filas = await cliente.curso.findMany({
     where: { lecciones: { some: { idRecurso } } },
-    select: { idCurso: true, titulo: true, estatus: true },
+    select: { idCurso: true, titulo: true, estatus: true, origen: true },
     orderBy: { titulo: 'asc' },
   })
+  // El título de una propuesta que su autor todavía prepara no se muestra al
+  // administrador (acceso.ts): solo se sabe que existe, porque impide borrar
+  // el recurso.
+  return filas.map(({ origen, ...c }) =>
+    origen === 'propuesta' && (c.estatus === 'borrador' || c.estatus === 'cambios_solicitados')
+      ? { ...c, titulo: 'Un curso propuesto que su autor está preparando' }
+      : c,
+  )
 }
 
 /** Rutas (sin repetir) que incluyen un curso, para explicar por qué no se

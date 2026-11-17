@@ -683,7 +683,7 @@ describe('búsqueda por etiquetas visibles', () => {
       .expect(200)
 
     const { body } = await request(app)
-      .get(`/api/cursos?q=${encodeURIComponent('Procesamiento del grupo')}`)
+      .get(`/api/cursos?q=${encodeURIComponent('Evaluación de grupo')}`)
       .expect(200)
     expect(body.cursos.map((c: { idCurso: string }) => c.idCurso)).toEqual([idCurso])
   })

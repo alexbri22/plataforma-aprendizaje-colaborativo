@@ -8,6 +8,7 @@ import {
 import { useSesion } from '../cuentas'
 import {
   cambiarGuardado,
+  cambiarVisibilidadConstancias,
   estaGuardado,
   guardarPreferencias,
   guardarReflexion,
@@ -16,9 +17,11 @@ import {
   marcarLeccion,
   obtenerMiFormacion,
   obtenerMiProgreso,
+  obtenerMisConstancias,
   obtenerPreferencias,
   obtenerRecomendaciones,
   type MiProgresoCurso,
+  type MisConstancias,
 } from './formacion.api'
 
 /*
@@ -41,6 +44,7 @@ const claves = (idUsuario: string) => ({
   guardados: [...raizPropia(idUsuario), 'guardados'] as const,
   recomendaciones: [...raizPropia(idUsuario), 'recomendaciones'] as const,
   preferencias: [...raizPropia(idUsuario), 'preferencias'] as const,
+  constancias: [...raizPropia(idUsuario), 'constancias'] as const,
 })
 
 /** El id de la sesión actual, o '' sin sesión (las consultas no se piden). */
@@ -99,8 +103,12 @@ export function useMarcarLeccion(idCurso: string) {
     mutationFn: ({ idLeccion, completada }: { idLeccion: string; completada: boolean }) =>
       marcarLeccion(idCurso, idLeccion, completada),
     onMutate: anotar,
-    onSuccess: (resultado, _variables, dueno) =>
-      guardarProgreso(queryClient, dueno?.idUsuario ?? '', resultado.progreso),
+    onSuccess: (resultado, _variables, dueno) => {
+      guardarProgreso(queryClient, dueno?.idUsuario ?? '', resultado.progreso)
+      if (dueno?.idUsuario && resultado.constanciasNuevas.length > 0) {
+        void queryClient.invalidateQueries({ queryKey: claves(dueno.idUsuario).constancias })
+      }
+    },
   })
 }
 
@@ -211,6 +219,32 @@ export function useGuardarPreferencias() {
       const c = claves(dueno.idUsuario)
       queryClient.setQueryData(c.preferencias, elementos)
       void queryClient.invalidateQueries({ queryKey: c.recomendaciones })
+    },
+  })
+}
+
+/** Mis constancias y si las muestro en mi perfil. Sin sesión no se pide. */
+export function useMisConstancias() {
+  const idUsuario = useIdUsuario()
+  return useQuery({
+    queryKey: claves(idUsuario).constancias,
+    queryFn: obtenerMisConstancias,
+    enabled: idUsuario !== '',
+  })
+}
+
+/** Mostrar u ocultar mis constancias en mi perfil. */
+export function useCambiarVisibilidadConstancias() {
+  const queryClient = useQueryClient()
+  const anotar = useAnotarDueno()
+  return useMutation({
+    mutationFn: cambiarVisibilidadConstancias,
+    onMutate: anotar,
+    onSuccess: (publicas, _variables, dueno) => {
+      if (!dueno?.idUsuario) return
+      queryClient.setQueryData<MisConstancias>(claves(dueno.idUsuario).constancias, (actual) =>
+        actual ? { ...actual, publicas } : actual,
+      )
     },
   })
 }

@@ -1,4 +1,5 @@
 /* Portado de la rama plataforma-formativaV1 (CentroFormacion.module.css). */
+/* Portado de la rama plataforma-formativaV1 (CentroFormacion.module.css). */
 .centro {
   max-width: var(--layout-content-max);
   width: 100%;
@@ -19,8 +20,7 @@
   max-width: var(--layout-copy-max);
 }
 
-.eyebrow,
-.sobretituloTarjeta {
+.eyebrow {
   margin: 0 0 var(--space-2);
   color: var(--color-primary);
   font-size: var(--font-size-xs);
@@ -31,9 +31,8 @@
 
 .presentacion .tituloPrincipal,
 .catalogo h2,
-.ruta h2,
-.articulos h2,
-.recursosBreves h2 {
+.rutas h2,
+.ruta h3 {
   margin: 0;
   color: var(--color-text);
   line-height: var(--line-height-tight);
@@ -41,7 +40,7 @@
 }
 
 .presentacion .tituloPrincipal {
-  max-width: 14ch;
+  max-width: 20ch;
   font-size: var(--font-size-4xl);
   font-weight: var(--font-weight-bold);
   letter-spacing: -0.03em;
@@ -54,67 +53,6 @@
   font-size: var(--font-size-lg);
   line-height: var(--line-height-normal);
   text-wrap: pretty;
-}
-
-.presentacionAcciones {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  margin-top: var(--space-8);
-}
-
-.destacado {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-5);
-  padding: var(--space-6);
-  border-color: var(--color-primary-border);
-  box-shadow: var(--shadow-md);
-}
-
-.destacadoCabecera {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-4);
-}
-
-.iconoCurso {
-  display: inline-grid;
-  width: var(--space-10);
-  height: var(--space-10);
-  flex: 0 0 auto;
-  place-items: center;
-  border-radius: var(--radius-md);
-  background: var(--color-primary-subtle);
-  color: var(--color-primary);
-}
-
-.iconoCurso svg {
-  width: var(--space-6);
-  height: var(--space-6);
-}
-
-.destacado h2 {
-  margin: 0;
-  color: var(--color-text);
-  font-size: var(--font-size-xl);
-  line-height: var(--line-height-tight);
-}
-
-.destacadoDescripcion {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
-  line-height: var(--line-height-normal);
-}
-
-.destacadoPie {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  color: var(--color-text-muted);
-  font-size: var(--font-size-xs);
 }
 
 .ruta {
@@ -130,20 +68,50 @@
 }
 
 .rutaIntroduccion > p:not(.eyebrow),
-.catalogoCabecera > div > p:not(.eyebrow),
-.articulosCabecera > p:not(.eyebrow),
-.recursosBreves > div > p:not(.eyebrow) {
+.rutasCabecera > p,
+.catalogoCabecera > div > p,
+.articulosCabecera > p,
+.recursosBreves > div > p {
   max-width: 56ch;
   margin: var(--space-3) 0 0;
   color: var(--color-text-muted);
   line-height: var(--line-height-normal);
 }
 
-.ruta h2,
 .catalogo h2,
-.articulos h2,
-.recursosBreves h2 {
+.rutas h2,
+.ruta h3 {
   font-size: var(--font-size-2xl);
+}
+
+/* Sin tarjeta de "Continuar", el texto ocupa todo el ancho. */
+/* Sin tarjeta de "Continuar",
+el texto ocupa todo el ancho. */
+.presentacionSola {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.lede + .lede {
+  margin-top: var(--space-3);
+}
+
+/* Recursos y Rutas recomendadas se separan con una línea, como en el mock. */
+/* Recursos y Rutas recomendadas se separan con una línea,
+como en el mock. */
+.rutas {
+  margin-top: var(--space-16);
+  padding-top: var(--space-10);
+  border-top: 1px solid var(--color-border-strong);
+  scroll-margin-top: var(--space-6);
+}
+
+.rutasCabecera {
+  max-width: var(--layout-copy-max);
+  margin-bottom: var(--space-8);
+}
+
+.rutasCabecera .enlaceTexto {
+  margin-top: var(--space-4);
 }
 
 .rutaIntroduccion .enlaceTexto {
@@ -200,15 +168,33 @@
 }
 
 .catalogo {
-  padding-top: var(--space-16);
+  padding-top: var(--space-10);
+  border-top: 1px solid var(--color-border-strong);
   scroll-margin-top: var(--space-6);
 }
 
 .catalogoCabecera {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
   gap: var(--space-8);
+}
+
+/* Dentro de la app el catálogo es lo primero: sin línea ni espacio arriba. */
+/* Dentro de la app el catálogo es lo primero: sin línea ni espacio arriba. */
+.catalogoEnApp {
+  padding-top: 0;
+  border-top: none;
+}
+
+/* La descripción de Recursos es larga: que ocupe el espacio libre junto a
+   los filtros en lugar de quedar en una columna angosta. */
+/* La descripción de Recursos es larga: que ocupe el espacio libre junto a
+   los filtros en lugar de quedar en una columna angosta. */
+.catalogoCabecera > div:first-child {
+  flex: 1 1 28rem;
+  min-width: 0;
 }
 
 .controles {
@@ -435,6 +421,8 @@
 
 /* ---- Añadidos al diseño V1 ---- */
 
+/* ---- Añadidos al diseño V1 ---- */
+
 .grupoCabecera {
   display: flex;
   align-items: flex-end;
@@ -468,11 +456,14 @@
 }
 
 /* Mientras llega la página nueva se sigue viendo la anterior, atenuada. */
+/* Mientras llega la página nueva se sigue viendo la anterior,
+atenuada. */
 .actualizando {
   opacity: 0.6;
   transition: opacity 0.15s ease;
 }
 
+/* Dentro del AppShell el contenedor ya tiene su margen. */
 /* Dentro del AppShell el contenedor ya tiene su margen. */
 .centroEnApp {
   padding: 0 0 var(--space-16);
@@ -518,10 +509,6 @@
 @media (max-width: 56rem) {
   .presentacion {
     grid-template-columns: 1fr;
-  }
-
-  .destacado {
-    max-width: 34rem;
   }
 
   .grid {
@@ -576,11 +563,6 @@
   .grid {
     grid-template-columns: 1fr;
   }
-
-  .destacadoPie {
-    align-items: flex-start;
-    flex-direction: column;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -590,30 +572,14 @@
 }
 
 /* "Continúa aprendiendo" (incremento 3): progreso sobrio, texto y barra. */
-.continuarAvance {
+/* "Continúa aprendiendo" (incremento 3): progreso sobrio {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
 
-.continuarAvance p {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: var(--font-size-xs);
-}
-
-.enlaceTarjeta {
-  border-radius: var(--radius-sm);
-  color: var(--color-primary);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-}
-
-.enlaceTarjeta:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
-}
-
+/* Ruta recomendada (incremento 4): las razones del recomendador y el resto
+   de las rutas. */
 /* Ruta recomendada (incremento 4): las razones del recomendador y el resto
    de las rutas. */
 .rutaRazones {
@@ -691,4 +657,55 @@
 .otrasRutas span {
   color: var(--color-text-muted);
   font-size: var(--font-size-xs);
+}
+
+/* "¿Qué quieres fortalecer?" dentro de Rutas recomendadas (observaciones del
+   12 de noviembre). */
+/* "¿Qué quieres fortalecer?" dentro de Rutas recomendadas (observaciones del
+   12 de noviembre). */
+.preferencias {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-8);
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+  scroll-margin-top: var(--space-6);
+}
+
+.preferenciasCampos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.preferenciasTitulo {
+  margin-bottom: var(--space-1);
+  padding: 0;
+  color: var(--color-text);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.preferenciasNota {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+}
+
+.preferenciasNota:empty {
+  display: none;
+}
+
+.preferenciasOpciones {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: var(--space-2) var(--space-6);
+  margin-top: var(--space-2);
 }

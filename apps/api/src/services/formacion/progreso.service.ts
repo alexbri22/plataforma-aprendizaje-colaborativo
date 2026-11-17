@@ -13,6 +13,11 @@ import {
   leccionDisponible,
   type LeccionParaProgreso,
 } from './calculoProgreso.js'
+import {
+  emitirConstanciasDeCurso,
+  emitirConstanciasDeRutas,
+  type ConstanciaResumen,
+} from './constancias.service.js'
 
 /*
  * Progreso personal en los cursos (docs/diseno-desarrollo-formacion.md §7.2,
@@ -52,6 +57,9 @@ export interface ResultadoMarcar {
   progreso: MiProgresoCurso
   /** True solo en la petición que terminó el curso, para avisarlo una vez. */
   cursoCompletadoAhora: boolean
+  /** Las constancias que emitió esta marca: la del curso y las de las rutas
+   * que terminó con él. Vacía si no terminó nada. */
+  constanciasNuevas: ConstanciaResumen[]
 }
 
 export interface MiCurso {
@@ -252,9 +260,21 @@ export async function marcarLeccion(
           ...(terminaAhora ? { fechaFinalizacion: ahora } : {}),
         },
       })
+      // La constancia del curso, con la inscripción ya bloqueada; las de sus
+      // rutas al final, porque su candado es lo último que se pide.
+      const constanciasNuevas = terminaAhora
+        ? [
+            ...(await emitirConstanciasDeCurso(tx, [idInscripcion])),
+            ...(await emitirConstanciasDeRutas(tx, {
+              idsCurso: [idCurso],
+              idsUsuario: [idUsuario],
+            })),
+          ]
+        : []
       return {
         progreso: terminaAhora ? { ...progreso, fechaFinalizacion: ahora.toISOString() } : progreso,
         cursoCompletadoAhora: terminaAhora,
+        constanciasNuevas,
       }
     },
   )

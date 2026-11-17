@@ -18,9 +18,9 @@ import {
 } from '../../components/ui'
 import { useCursosAdmin } from '../formacion'
 import { AvisoConfirmacion } from './AvisoConfirmacion'
-import { esAvisoCurso, mensajeDeAvisoCurso, type AvisoCurso } from './avisoContenido'
+import { esAvisoCurso, mensajeDeAvisoCurso, type AvisoCurso } from '../formacion'
 import { leerPagina } from './leerPagina'
-import { varianteEstatus } from './varianteEstatus'
+import { varianteEstatus } from '../formacion'
 import styles from './PantallaContenido.module.css'
 
 const FORMATO_FECHA = new Intl.DateTimeFormat('es-MX', {
