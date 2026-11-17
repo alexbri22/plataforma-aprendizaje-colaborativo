@@ -92,7 +92,9 @@ describe('datos privados por sesión', () => {
         },
       ],
     })
-    await act(async () => responder({ progreso: deAna, cursoCompletadoAhora: false }))
+    await act(async () =>
+      responder({ progreso: deAna, cursoCompletadoAhora: false, constanciasNuevas: [] }),
+    )
 
     expect(result.current.progreso.data).toMatchObject({ inscrito: false, reflexiones: [] })
     expect(JSON.stringify(result.current.progreso.data)).not.toContain('Privado de Ana')

@@ -9,6 +9,7 @@ import { adminRouter } from './routes/admin.js'
 import { bitacoraRouter } from './routes/bitacora.js'
 import { clavesRouter } from './routes/claves.js'
 import { comentariosRouter } from './routes/comentarios.js'
+import { constanciasRouter } from './routes/constancias.js'
 import { elementosRouter } from './routes/elementos.js'
 import { equiposRouter } from './routes/equipos.js'
 import { historialRouter } from './routes/historial.js'
@@ -21,6 +22,7 @@ import { publicacionesRouter } from './routes/publicaciones.js'
 import { ponderacionRouter } from './routes/ponderacion.js'
 import { respuestasRouter } from './routes/respuestas.js'
 import { calificacionesRouter } from './routes/calificaciones.js'
+import { adminRevisionesRouter, propuestasRouter } from './routes/propuestas.js'
 import { progresoRouter } from './routes/progreso.js'
 import { adminRutasRouter, rutasRouter } from './routes/rutas.js'
 import { tareasRouter } from './routes/tareas.js'
@@ -67,6 +69,8 @@ export function createApp(): Express {
   // leer abajo.
   app.use('/api/admin/recursos', express.json({ limit: LIMITE_JSON_FORMACION }))
   app.use('/api/admin/cursos', express.json({ limit: LIMITE_JSON_FORMACION }))
+  // Las propuestas usan los mismos editores, con los mismos textos.
+  app.use('/api/me/propuestas', express.json({ limit: LIMITE_JSON_FORMACION }))
   app.use(express.json())
   app.use(cookieParser())
   app.use(resolverSesion)
@@ -81,6 +85,7 @@ export function createApp(): Express {
   app.use('/api/admin', adminRecursosRouter)
   app.use('/api/admin', adminCursosRouter)
   app.use('/api/admin', adminRutasRouter)
+  app.use('/api/admin', adminRevisionesRouter)
   app.use('/api', actividadesRouter)
   app.use('/api', clavesRouter)
   app.use('/api', periodosRouter)
@@ -99,6 +104,8 @@ export function createApp(): Express {
   app.use('/api', cursosRouter)
   app.use('/api', progresoRouter)
   app.use('/api', rutasRouter)
+  app.use('/api', constanciasRouter)
+  app.use('/api', propuestasRouter)
 
   app.use(manejadorErrores)
 

@@ -1,7 +1,7 @@
 import {
   LARGO_MAXIMO_RUTA,
   MAX_CURSOS_RUTA,
-  esEstatusRecurso,
+  esEstatusEditorial,
   type EstatusRecurso,
 } from '@plataforma/shared'
 import { ErrorValidacion } from '../../errores.js'
@@ -66,7 +66,7 @@ export function validarDatosRuta(cuerpo: unknown, parcial: boolean): Partial<Dat
   }
 
   if (datos.estatus !== undefined) {
-    if (typeof datos.estatus === 'string' && esEstatusRecurso(datos.estatus)) {
+    if (typeof datos.estatus === 'string' && esEstatusEditorial(datos.estatus)) {
       resultado.estatus = datos.estatus
     } else detalle.estatus = 'El estatus no es válido.'
   }

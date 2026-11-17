@@ -8,7 +8,7 @@ import { ErrorFormacion, type CursoPublico, type MiProgresoCurso } from './forma
 import { MarcoFormacion } from './MarcoFormacion'
 import { useDentroDeApp } from './marcoContexto'
 import { useCursoPublico } from './useCursos'
-import { useInscribirse, useMiProgreso } from './useProgreso'
+import { useInscribirse, useMiProgreso, useMisConstancias } from './useProgreso'
 import styles from './PantallaCurso.module.css'
 
 /*
@@ -78,6 +78,10 @@ function AvanceCurso({ curso, progreso: p }: { curso: CursoPublico; progreso: Mi
   const terminado = p.fechaFinalizacion !== null
   const primera = curso.lecciones.find((l) => l.disponible)
   const destino = p.siguiente ?? (terminado ? primera : null)
+  const misConstancias = useMisConstancias()
+  const constancia = terminado
+    ? misConstancias.data?.constancias.find((k) => k.idCurso === curso.idCurso)
+    : undefined
 
   return (
     <div className={styles.avance}>
@@ -97,6 +101,11 @@ function AvanceCurso({ curso, progreso: p }: { curso: CursoPublico; progreso: Mi
         etiqueta={`Progreso en ${curso.titulo}`}
       />
       <p className={styles.avanceTexto}>{textoProgreso(p)}</p>
+      {constancia ? (
+        <Link to={`/constancias/${constancia.folio}`} className={styles.enlaceConstancia}>
+          Ver tu constancia
+        </Link>
+      ) : null}
       {destino ? (
         <Button
           variant={terminado ? 'secondary' : 'primary'}

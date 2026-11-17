@@ -73,8 +73,17 @@ otras desde… todavía no: por ahora la promoción es solo por este script.
   biblioteca con `ModalElegirRecurso` o propias con `ModalLeccion`), orden con
   flechas y requisitos para publicar en vivo (`requisitosCurso.ts`, una ayuda:
   quien decide es el servidor).
+- `PantallaRevisiones` (`/admin/revisiones`) y `PantallaRevision`
+  (`/admin/revisiones/:tipo/:id`) — la cola de las propuestas de los usuarios
+  y su revisión: vista previa, historial, criterios de publicación y la
+  decisión con motivo (nota del incremento 6 de Formación).
 
-Todas consumen los hooks de `features/formacion`, dueña del módulo.
+Los editores de recursos y cursos viven en `features/formacion/editor/`
+porque también los usa quien propone contenido; `PantallaEditarRecurso` y
+`PantallaEditarCurso` solo los abren en modo administrador. Una propuesta en
+revisión o rechazada se ve sin editar, y su estatus solo cambia desde la
+revisión. Todas consumen los hooks de `features/formacion`, dueña del
+módulo.
 
 **Fuera de este incremento:** activar/desactivar cuenta
 (`PATCH /api/admin/usuarios/{id}`) y umbrales de insignias.

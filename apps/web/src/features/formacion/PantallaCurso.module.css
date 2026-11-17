@@ -303,3 +303,17 @@
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
 }
+
+/* "Ver tu constancia" en la ficha de un curso o una ruta terminados. */
+.enlaceConstancia {
+  align-self: flex-start;
+  border-radius: var(--radius-sm);
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.enlaceConstancia:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}

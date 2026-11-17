@@ -1,67 +1,86 @@
-import { useState } from 'react'
+import { useEffect } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
-import {
-  ELEMENTOS_COLABORACION,
-  ETIQUETAS_ELEMENTO,
-  MAX_ELEMENTOS_PREFERIDOS,
-  type ElementoColaboracion,
-} from '@plataforma/shared'
 import { AppShell } from '../../components/AppShell'
-import {
-  AvisoError,
-  Badge,
-  Button,
-  Card,
-  Checkbox,
-  IconoCargando,
-  Paginacion,
-  Tabs,
-} from '../../components/ui'
+import { AvisoError, Badge, Button, Card, IconoCargando, Paginacion } from '../../components/ui'
 import { BarraProgreso } from './BarraProgreso'
+import { MisPropuestas } from './MisPropuestas'
+import { useAvisosPropuestas } from './usePropuestas'
 import type { MiCurso } from './formacion.api'
 import { etiquetaTipo, formatoDuracion, formatoFecha, textoProgreso } from './formato'
+import { IconoFlecha } from './iconos'
 import {
   useCambiarGuardado,
-  useGuardarPreferencias,
   useMiFormacion,
-  usePreferencias,
+  useMisConstancias,
   useRecursosGuardados,
 } from './useProgreso'
 import styles from './PantallaMiFormacion.module.css'
 
 /*
  * Espacio individual de formación (docs/diseno-desarrollo-formacion.md §7.2 y
- * ESP-02): mis cursos y mis recursos guardados. Es de la persona y de nadie
- * más; no muestra perfil, insignias ni comparación con otras personas. La
- * pestaña vive en la URL (?vista=guardados) para poder enlazarla.
+ * ESP-02): mis cursos, mis recursos guardados y mis propuestas de contenido
+ * (nota del incremento 6). Es de la persona y de nadie más; no muestra
+ * perfil, insignias ni comparación con otras personas.
+ *
+ * Observaciones del 12 de noviembre: por consistencia con el resto del sitio,
+ * una sola página con tarjetas en cuadrícula, sin pestañas. "¿Qué quieres
+ * fortalecer?" se mudó a Rutas recomendadas (/recursos), que es lo único que
+ * usa. ?vista=guardados o ?vista=propuestas lleva a esa sección, para que los
+ * enlaces de antes sigan sirviendo.
  */
 
-type Vista = 'cursos' | 'guardados'
-
-const VISTAS = [
-  { id: 'cursos', etiqueta: 'Mis cursos' },
-  { id: 'guardados', etiqueta: 'Guardados' },
-]
-
-const POR_PAGINA_GUARDADOS = 10
+const POR_PAGINA_GUARDADOS = 9
 
 export function PantallaMiFormacion() {
-  const [parametros, setParametros] = useSearchParams()
-  const vista: Vista = parametros.get('vista') === 'guardados' ? 'guardados' : 'cursos'
+  const [parametros] = useSearchParams()
+  const vista = parametros.get('vista')
+  // La sección dice si hay decisiones nuevas sobre mis propuestas, con texto.
+  const avisos = useAvisosPropuestas().data ?? 0
+
+  useEffect(() => {
+    if (vista === 'guardados' || vista === 'propuestas') {
+      document.getElementById(`seccion-${vista}`)?.scrollIntoView()
+    }
+  }, [vista])
 
   return (
     <AppShell seccionActiva="mi-formacion" titulo="Mi formación">
       <div className={styles.contenido}>
-        <Preferencias />
-        <Tabs
-          label="Mi formación"
-          items={VISTAS}
-          valor={vista}
-          onCambiar={(id) => setParametros(id === 'guardados' ? { vista: 'guardados' } : {})}
-        />
-        <div role="tabpanel" id={`panel-${vista}`} aria-labelledby={`tab-${vista}`}>
-          {vista === 'cursos' ? <MisCursos /> : <Guardados />}
-        </div>
+        <p className={styles.introduccion}>
+          Continúa consultando los recursos que has seleccionado, así como aquellos que elegiste en
+          algún momento.
+        </p>
+
+        <section id="seccion-cursos" className={styles.seccion} aria-labelledby="titulo-cursos">
+          <h2 id="titulo-cursos" className={styles.tituloSeccion}>
+            Cursos
+          </h2>
+          <MisCursos />
+        </section>
+
+        <section
+          id="seccion-guardados"
+          className={styles.seccion}
+          aria-labelledby="titulo-guardados"
+        >
+          <h2 id="titulo-guardados" className={styles.tituloSeccion}>
+            Recursos guardados
+          </h2>
+          <Guardados />
+        </section>
+
+        <section
+          id="seccion-propuestas"
+          className={styles.seccion}
+          aria-labelledby="titulo-propuestas"
+        >
+          <h2 id="titulo-propuestas" className={styles.tituloSeccion}>
+            {avisos > 0
+              ? `Mis propuestas (${avisos} ${avisos === 1 ? 'nueva' : 'nuevas'})`
+              : 'Mis propuestas'}
+          </h2>
+          <MisPropuestas />
+        </section>
       </div>
     </AppShell>
   )
@@ -88,6 +107,12 @@ function Vacio({ texto }: { texto: string }) {
 
 function MisCursos() {
   const consulta = useMiFormacion()
+  // Si falla o tarda, los cursos se muestran igual, sin el enlace.
+  const constancias = useMisConstancias()
+  const folioDe = new Map<string, string>()
+  for (const k of constancias.data?.constancias ?? []) {
+    if (k.idCurso) folioDe.set(k.idCurso, k.folio)
+  }
 
   if (consulta.isPending) return <Cargando etiqueta="Cargando tus cursos" />
   if (consulta.isError) {
@@ -109,70 +134,63 @@ function MisCursos() {
   }
 
   return (
-    <div className={styles.secciones}>
-      {enCurso.length > 0 ? (
-        <section aria-labelledby="titulo-en-curso">
-          <h2 id="titulo-en-curso" className={styles.tituloSeccion}>
-            En curso
-          </h2>
-          <ul className={styles.lista}>
-            {enCurso.map((c) => (
-              <li key={c.idCurso}>
-                <TarjetaMiCurso curso={c} />
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-      {completados.length > 0 ? (
-        <section aria-labelledby="titulo-completados">
-          <h2 id="titulo-completados" className={styles.tituloSeccion}>
-            Completados
-          </h2>
-          <ul className={styles.lista}>
-            {completados.map((c) => (
-              <li key={c.idCurso}>
-                <TarjetaMiCurso curso={c} />
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-    </div>
+    <ul className={styles.grid}>
+      {enCurso.map((c) => (
+        <li key={c.idCurso}>
+          <TarjetaMiCurso curso={c} />
+        </li>
+      ))}
+      {completados.map((c) => (
+        <li key={c.idCurso}>
+          <TarjetaMiCurso curso={c} folioConstancia={folioDe.get(c.idCurso)} />
+        </li>
+      ))}
+    </ul>
   )
 }
 
-function TarjetaMiCurso({ curso: c }: { curso: MiCurso }) {
+function TarjetaMiCurso({
+  curso: c,
+  folioConstancia,
+}: {
+  curso: MiCurso
+  folioConstancia?: string
+}) {
   const retirado = c.estatus === 'retirado'
   const terminado = c.fechaFinalizacion !== null
 
   return (
     <Card className={styles.tarjeta}>
-      <div className={styles.tarjetaCabecera}>
-        <h3 className={styles.tarjetaTitulo}>
-          {retirado ? c.titulo : <Link to={`/cursos/${c.idCurso}`}>{c.titulo}</Link>}
-        </h3>
-        {retirado ? <Badge variant="neutral">Retirado</Badge> : null}
-        {terminado ? (
+      <div className={styles.tarjetaMeta}>
+        {retirado ? (
+          <Badge variant="neutral">Retirado</Badge>
+        ) : terminado ? (
           <Badge variant="success">
             <span aria-hidden="true">✓ </span>Completado
           </Badge>
-        ) : null}
+        ) : (
+          <Badge variant="primary">En curso</Badge>
+        )}
       </div>
+      <h3 className={styles.tarjetaTitulo}>
+        {retirado ? c.titulo : <Link to={`/cursos/${c.idCurso}`}>{c.titulo}</Link>}
+      </h3>
 
-      <BarraProgreso
-        porcentaje={c.porcentaje}
-        completo={terminado}
-        etiqueta={`Progreso en ${c.titulo}`}
-      />
-      <p className={styles.meta}>
-        {[
-          textoProgreso(c),
-          terminado
-            ? `Completado el ${formatoFecha(c.fechaFinalizacion as string)}`
-            : `Empezado el ${formatoFecha(c.fechaInicio)}`,
-        ].join(' · ')}
-      </p>
+      <div className={styles.avance}>
+        <BarraProgreso
+          porcentaje={c.porcentaje}
+          completo={terminado}
+          etiqueta={`Progreso en ${c.titulo}`}
+        />
+        <p className={styles.meta}>
+          {[
+            textoProgreso(c),
+            terminado
+              ? `Completado el ${formatoFecha(c.fechaFinalizacion as string)}`
+              : `Empezado el ${formatoFecha(c.fechaInicio)}`,
+          ].join(' · ')}
+        </p>
+      </div>
 
       {retirado ? (
         <p className={styles.nota}>
@@ -180,17 +198,31 @@ function TarjetaMiCurso({ curso: c }: { curso: MiCurso }) {
           pueden abrir.
         </p>
       ) : c.siguiente ? (
-        <div className={styles.acciones}>
-          <span className={styles.siguiente}>Sigue con: {c.siguiente.titulo}</span>
-          <Button
-            size="sm"
-            variant={terminado ? 'secondary' : 'primary'}
-            to={`/cursos/${c.idCurso}/lecciones/${c.siguiente.idLeccion}`}
-          >
-            {terminado ? 'Ver lo nuevo' : 'Seguir'}
-          </Button>
-        </div>
+        <p className={styles.siguiente}>Sigue con: {c.siguiente.titulo}</p>
       ) : null}
+
+      <div className={styles.pie}>
+        {folioConstancia ? (
+          <Link
+            to={`/constancias/${folioConstancia}`}
+            className={styles.enlaceConstancia}
+            aria-label={`Ver la constancia de ${c.titulo}`}
+          >
+            Ver constancia
+          </Link>
+        ) : (
+          <span />
+        )}
+        {!retirado && c.siguiente ? (
+          <Link
+            to={`/cursos/${c.idCurso}/lecciones/${c.siguiente.idLeccion}`}
+            className={styles.enlaceAccion}
+          >
+            {terminado ? 'Ver lo nuevo' : 'Continuar'} <IconoFlecha className={styles.flecha} />
+            <span className={styles.srOnly}>: {c.titulo}</span>
+          </Link>
+        ) : null}
+      </div>
     </Card>
   )
 }
@@ -230,33 +262,46 @@ function Guardados() {
   }
   if (paginacion.total === 0) {
     return (
-      <Vacio texto="Aún no guardas recursos. Usa «Guardar para después» en cualquier recurso y aparecerá aquí." />
+      <p className={styles.nota}>
+        Aún no guardas recursos. Usa «Guardar para después» en cualquier recurso y aparecerá aquí.
+      </p>
     )
   }
 
   return (
-    <div className={styles.secciones}>
+    <div className={styles.bloque}>
       {quitar.isError ? <AvisoError mensaje={quitar.error.message} /> : null}
-      <ul className={styles.listaGuardados}>
+      <ul className={styles.grid}>
         {recursos.map((r) => (
-          <li key={r.idRecurso} className={styles.guardado}>
-            <div className={styles.guardadoTexto}>
-              <Link to={`/recursos/${r.idRecurso}`}>{r.titulo}</Link>
-              <span className={styles.meta}>
-                {[etiquetaTipo(r.tipoRecurso), formatoDuracion(r.duracionMin, r.tipoRecurso)]
-                  .filter(Boolean)
-                  .join(' · ')}
-              </span>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={quitar.isPending}
-              aria-label={`Quitar «${r.titulo}» de guardados`}
-              onClick={() => quitar.mutate({ idRecurso: r.idRecurso, guardar: false })}
-            >
-              Quitar
-            </Button>
+          <li key={r.idRecurso}>
+            <Card className={styles.tarjeta}>
+              <div className={styles.tarjetaMeta}>
+                <Badge variant="neutral">Guardado</Badge>
+                <span>
+                  {[etiquetaTipo(r.tipoRecurso), formatoDuracion(r.duracionMin, r.tipoRecurso)]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </span>
+              </div>
+              <h3 className={styles.tarjetaTitulo}>
+                <Link to={`/recursos/${r.idRecurso}`}>{r.titulo}</Link>
+              </h3>
+              <div className={styles.pie}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={quitar.isPending}
+                  aria-label={`Quitar «${r.titulo}» de guardados`}
+                  onClick={() => quitar.mutate({ idRecurso: r.idRecurso, guardar: false })}
+                >
+                  Quitar
+                </Button>
+                <Link to={`/recursos/${r.idRecurso}`} className={styles.enlaceAccion}>
+                  Abrir <IconoFlecha className={styles.flecha} />
+                  <span className={styles.srOnly}>: {r.titulo}</span>
+                </Link>
+              </div>
+            </Card>
           </li>
         ))}
       </ul>
@@ -273,72 +318,5 @@ function Guardados() {
         }
       />
     </div>
-  )
-}
-
-/** "¿Qué quieres fortalecer?": hasta dos elementos de Johnson y Johnson. Es
- * una declaración propia y privada que el recomendador usa como interés; no
- * es una evaluación. Se monta con lo guardado para que el borrador empiece
- * desde ahí. */
-function Preferencias() {
-  const consulta = usePreferencias()
-  if (!consulta.data) return null
-  return <FormularioPreferencias guardadas={consulta.data} />
-}
-
-function FormularioPreferencias({ guardadas }: { guardadas: ElementoColaboracion[] }) {
-  const [elegidos, setElegidos] = useState<ElementoColaboracion[]>(guardadas)
-  const [guardadoAhora, setGuardadoAhora] = useState(false)
-  const guardar = useGuardarPreferencias()
-  const sinCambios =
-    elegidos.length === guardadas.length && elegidos.every((e) => guardadas.includes(e))
-  const lleno = elegidos.length >= MAX_ELEMENTOS_PREFERIDOS
-
-  function alternar(e: ElementoColaboracion) {
-    setGuardadoAhora(false)
-    setElegidos((actual) =>
-      actual.includes(e)
-        ? actual.filter((x) => x !== e)
-        : ELEMENTOS_COLABORACION.filter((x) => x === e || actual.includes(x)),
-    )
-  }
-
-  return (
-    <Card className={styles.preferencias}>
-      <form
-        onSubmit={(evento) => {
-          evento.preventDefault()
-          guardar.mutate(elegidos, { onSuccess: () => setGuardadoAhora(true) })
-        }}
-      >
-        <fieldset className={styles.preferenciasCampos}>
-          <legend className={styles.preferenciasTitulo}>¿Qué quieres fortalecer?</legend>
-          <p className={styles.nota}>
-            Elige hasta {MAX_ELEMENTOS_PREFERIDOS}. Lo usamos solo para recomendarte rutas; nadie
-            más lo ve y no es una evaluación.
-          </p>
-          {ELEMENTOS_COLABORACION.map((e) => (
-            <Checkbox
-              key={e}
-              label={ETIQUETAS_ELEMENTO[e]}
-              checked={elegidos.includes(e)}
-              disabled={lleno && !elegidos.includes(e)}
-              onChange={() => alternar(e)}
-            />
-          ))}
-        </fieldset>
-        {guardar.isError ? <AvisoError mensaje={guardar.error.message} /> : null}
-        <div className={styles.acciones}>
-          <span role="status" className={styles.nota}>
-            {guardadoAhora && sinCambios
-              ? 'Guardado. Tus recomendaciones ya lo toman en cuenta.'
-              : ''}
-          </span>
-          <Button type="submit" size="sm" disabled={sinCambios || guardar.isPending}>
-            Guardar
-          </Button>
-        </div>
-      </form>
-    </Card>
   )
 }

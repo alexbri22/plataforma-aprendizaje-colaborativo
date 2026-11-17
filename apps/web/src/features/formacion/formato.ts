@@ -47,3 +47,9 @@ const FECHA_LARGA = new Intl.DateTimeFormat('es-MX', { dateStyle: 'long' })
 export function formatoFecha(iso: string): string {
   return FECHA_LARGA.format(new Date(iso))
 }
+
+/** "PDF", "PDF o Word", "PDF, Word, Excel o PowerPoint". */
+export function listaLegible(partes: readonly string[]): string {
+  if (partes.length <= 1) return partes[0] ?? ''
+  return `${partes.slice(0, -1).join(', ')} o ${partes[partes.length - 1]}`
+}

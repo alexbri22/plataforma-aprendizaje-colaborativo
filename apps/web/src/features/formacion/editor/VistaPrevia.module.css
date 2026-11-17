@@ -1,0 +1,90 @@
+.vista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  color: var(--color-text);
+  line-height: var(--line-height-normal);
+}
+
+.cabecera {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.04em;
+}
+
+.titulo {
+  margin: 0;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
+.resumen {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  color: var(--color-text-muted);
+  text-wrap: pretty;
+}
+
+.etiquetas,
+.fuente {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.bloque h4,
+.leccionTitulo {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.bloque p {
+  margin: 0;
+}
+
+.lecciones {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.leccion {
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border);
+}
+
+.recurso {
+  margin-bottom: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.recursoTitulo {
+  margin: 0 0 var(--space-2);
+  font-weight: var(--font-weight-semibold);
+}
+
+.archivo {
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+.aviso {
+  margin: 0;
+  color: var(--color-warning-ink);
+  font-size: var(--font-size-sm);
+}

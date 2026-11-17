@@ -49,6 +49,12 @@ export type CodigoError =
   | 'ruta_desactualizada'
   | 'curso_en_ruta'
   | 'solicitud_no_encontrada'
+  | 'constancia_no_encontrada'
+  | 'recurso_desactualizado'
+  | 'propuesta_no_editable'
+  | 'propuesta_no_eliminable'
+  | 'revision_desactualizada'
+  | 'limite_propuestas'
 
 export abstract class ErrorDominio extends Error {
   abstract readonly codigo: CodigoError
@@ -570,5 +576,71 @@ export class ErrorCursoEnRuta extends ErrorDominio {
         rutas.length === 1 ? 'la ruta' : 'las rutas'
       } ${nombres}. Quítalo de ${rutas.length === 1 ? 'esa ruta' : 'esas rutas'} primero, o retíralo.`,
     )
+  }
+}
+
+// Mismo 404 para un folio mal escrito que para uno que no existe: la página
+// de verificación no debe ayudar a adivinar folios (nota del incremento 5).
+export class ErrorConstanciaNoEncontrada extends ErrorDominio {
+  readonly codigo = 'constancia_no_encontrada' as const
+  readonly status = 404
+
+  constructor() {
+    super('No encontramos una constancia con ese folio. Revisa que esté bien escrito.')
+  }
+}
+
+// Mismo control de edición simultánea que en cursos (versionFicha): otra
+// pestaña u otro administrador guardó el recurso mientras se editaba.
+export class ErrorRecursoDesactualizado extends ErrorDominio {
+  readonly codigo = 'recurso_desactualizado' as const
+  readonly status = 409
+
+  constructor() {
+    super('Este recurso se modificó mientras lo editabas.')
+  }
+}
+
+// Una propuesta en revisión está congelada, y una rechazada es definitiva
+// (docs/diseno-desarrollo-formacion.md §6.3 y nota del incremento 6). Al
+// administrador tampoco se le deja editar lo que un autor está preparando.
+export class ErrorPropuestaNoEditable extends ErrorDominio {
+  readonly codigo = 'propuesta_no_editable' as const
+  readonly status = 409
+
+  constructor(mensaje = 'Esta propuesta no se puede editar en su estado actual.') {
+    super(mensaje)
+  }
+}
+
+// El administrador no borra el trabajo de un autor: lo rechaza o lo retira.
+// El autor no borra lo que está en revisión ni lo que ya se publicó.
+export class ErrorPropuestaNoEliminable extends ErrorDominio {
+  readonly codigo = 'propuesta_no_eliminable' as const
+  readonly status = 409
+
+  constructor(mensaje: string) {
+    super(mensaje)
+  }
+}
+
+// La propuesta cambió de estado mientras se decidía: el autor canceló el
+// envío, u otro administrador decidió primero.
+export class ErrorRevisionDesactualizada extends ErrorDominio {
+  readonly codigo = 'revision_desactualizada' as const
+  readonly status = 409
+
+  constructor(mensaje = 'Esta propuesta cambió de estado mientras tanto. Vuelve a cargarla.') {
+    super(mensaje)
+  }
+}
+
+// Límites por persona: propuestas en revisión a la vez y propuestas abiertas.
+export class ErrorLimitePropuestas extends ErrorDominio {
+  readonly codigo = 'limite_propuestas' as const
+  readonly status = 409
+
+  constructor(mensaje: string) {
+    super(mensaje)
   }
 }

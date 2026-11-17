@@ -2,8 +2,10 @@ import { useState } from 'react'
 import { ETIQUETAS_ESTATUS_RECURSO, ETIQUETAS_NIVEL_CURSO } from '@plataforma/shared'
 import { AvisoError, Badge, Button, Modal, Paginacion } from '../../components/ui'
 import { useCursosAdmin } from '../formacion'
-import { varianteEstatus } from './varianteEstatus'
-import styles from './ModalElegirRecurso.module.css'
+import { varianteEstatus } from '../formacion'
+// Mismo diseño que el selector de recursos del editor de cursos, que vive en
+// Formación (features/formacion/editor).
+import styles from '../formacion/editor/ModalElegirRecurso.module.css'
 
 export interface ModalElegirCursoProps {
   /** Los que ya están en la ruta: se muestran, pero no se pueden repetir. */

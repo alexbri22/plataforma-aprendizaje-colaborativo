@@ -27,30 +27,33 @@ export function Encabezado() {
 
           {/* NavLink marca aria-current="page" en el enlace de la pantalla
               actual. La página de muestra de insignias ya no se enlaza: era
-              una vitrina interna y confundía como sección del producto. */}
-          <nav className={styles.nav} aria-label="Principal">
-            {usuario ? (
+              una vitrina interna y confundía como sección del producto.
+              Recursos tampoco: desde las observaciones del 4 de noviembre se
+              llega por "Aprender colaborando" en el inicio y, con sesión, por
+              la barra lateral. Sin sesión no queda ningún enlace, así que la
+              navegación no se dibuja. */}
+          {usuario ? (
+            <nav className={styles.nav} aria-label="Principal">
               <NavLink to="/actividades" className={styles.navLink}>
                 Mis actividades
               </NavLink>
-            ) : null}
-            {esAdministrador ? (
-              <>
-                <NavLink to="/admin/cuentas" className={styles.navLink}>
-                  Cuentas
-                </NavLink>
-                <NavLink to="/admin/contenido" className={styles.navLink}>
-                  Contenido
-                </NavLink>
-                <NavLink to="/admin/cursos" className={styles.navLink}>
-                  Cursos
-                </NavLink>
-              </>
-            ) : null}
-            <NavLink to="/recursos" className={styles.navLink}>
-              Recursos
-            </NavLink>
-          </nav>
+              {esAdministrador ? (
+                <>
+                  <NavLink to="/admin/cuentas" className={styles.navLink}>
+                    Cuentas
+                  </NavLink>
+                  {/* "Recursos" por consistencia con el resto del sitio
+                      (observaciones del 12 de noviembre). */}
+                  <NavLink to="/admin/contenido" className={styles.navLink}>
+                    Recursos
+                  </NavLink>
+                  <NavLink to="/admin/cursos" className={styles.navLink}>
+                    Cursos
+                  </NavLink>
+                </>
+              ) : null}
+            </nav>
+          ) : null}
         </div>
       </header>
     </>

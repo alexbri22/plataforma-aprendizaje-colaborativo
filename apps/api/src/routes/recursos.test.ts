@@ -40,6 +40,10 @@ const ARTICULO_COMPLETO = {
 }
 
 const PDF_MINIMO = Buffer.from('%PDF-1.4\n%%EOF\n', 'ascii')
+// Un .docx es un ZIP: basta con la firma para la validación del API.
+const DOCX_MINIMO = Buffer.concat([Buffer.from([0x50, 0x4b, 0x03, 0x04]), Buffer.from('word/')])
+const MIME_DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+const ENLACE = { tipoRecurso: 'enlace', contenido: 'https://example.org/guia' }
 
 function extraerCookie(respuesta: Response): string {
   const cookies = respuesta.headers['set-cookie'] as unknown as string[] | undefined
@@ -255,7 +259,7 @@ describe('catálogo público', () => {
     // Sin acentos ni mayúsculas, y también por el área.
     expect(await ids('q=comunicacion')).toEqual([otro])
     // Por la etiqueta visible del elemento, no solo por su identificador.
-    expect((await ids(`q=${encodeURIComponent('Responsabilidades claras')}`)).length).toBe(2)
+    expect((await ids(`q=${encodeURIComponent('Definición de responsabilidades')}`)).length).toBe(2)
     expect(await ids(`q=${encodeURIComponent('ÉSCUCHÁ')}`)).toEqual([otro])
     expect(await ids('tipo=pdf')).toEqual([])
     expect((await ids('tipo=pdf,texto')).length).toBe(2)
@@ -481,7 +485,7 @@ describe('archivo de un recurso', () => {
   })
 
   it('rechaza un archivo en un tipo que no lo admite', async () => {
-    const id = await crear(admin.cookie, ARTICULO_COMPLETO)
+    const id = await crear(admin.cookie, { ...ARTICULO_COMPLETO, ...ENLACE })
     const respuesta = await request(app)
       .put(`/api/admin/recursos/${id}/archivo`)
       .set('Cookie', admin.cookie)
@@ -503,10 +507,92 @@ describe('archivo de un recurso', () => {
     const respuesta = await request(app)
       .patch(`/api/admin/recursos/${id}`)
       .set('Cookie', admin.cookie)
-      .send({ tipoRecurso: 'texto' })
+      .send(ENLACE)
     expect(respuesta.status).toBe(200)
     expect(respuesta.body.recurso.archivo).toBeNull()
     expect(await prisma.archivoRecurso.count()).toBe(0)
+  })
+
+  // Observaciones del 12 de noviembre: un artículo puede llevar su PDF y una
+  // plantilla puede ser un documento de Office.
+  it('un artículo admite un PDF, pero no un Word', async () => {
+    const id = await crear(admin.cookie, ARTICULO_COMPLETO)
+    const pdf = await request(app)
+      .put(`/api/admin/recursos/${id}/archivo`)
+      .set('Cookie', admin.cookie)
+      .set('Content-Type', 'application/pdf')
+      .send(PDF_MINIMO)
+    expect(pdf.status).toBe(200)
+    expect(pdf.body.recurso.archivo).toMatchObject({ tipo: 'application/pdf' })
+
+    const word = await request(app)
+      .put(`/api/admin/recursos/${id}/archivo`)
+      .set('Cookie', admin.cookie)
+      .set('Content-Type', MIME_DOCX)
+      .send(DOCX_MINIMO)
+    expect(word.status).toBe(400)
+    expect(word.body.codigo).toBe('archivo_invalido')
+  })
+
+  it('una plantilla admite un Word, que se descarga en lugar de abrirse', async () => {
+    const id = await crear(admin.cookie, { ...ARTICULO_COMPLETO, tipoRecurso: 'plantilla' })
+    const subida = await request(app)
+      .put(`/api/admin/recursos/${id}/archivo`)
+      .set('Cookie', admin.cookie)
+      .set('Content-Type', MIME_DOCX)
+      .set('X-Nombre-Archivo', encodeURIComponent('acuerdos.docx'))
+      .send(DOCX_MINIMO)
+    expect(subida.status).toBe(200)
+    expect(subida.body.recurso.archivo).toMatchObject({ nombre: 'acuerdos.docx', tipo: MIME_DOCX })
+
+    const descarga = await request(app)
+      .get(`/api/admin/recursos/${id}/archivo`)
+      .set('Cookie', admin.cookie)
+      .buffer(true)
+    expect(descarga.status).toBe(200)
+    expect(descarga.headers['content-type']).toContain(MIME_DOCX)
+    expect(descarga.headers['content-disposition']).toMatch(/^attachment;/)
+  })
+
+  it('rechaza un Word cuyos bytes no son de Word', async () => {
+    const id = await crear(admin.cookie, { ...ARTICULO_COMPLETO, tipoRecurso: 'plantilla' })
+    const respuesta = await request(app)
+      .put(`/api/admin/recursos/${id}/archivo`)
+      .set('Cookie', admin.cookie)
+      .set('Content-Type', MIME_DOCX)
+      .send(PDF_MINIMO)
+    expect(respuesta.status).toBe(400)
+    expect(respuesta.body.codigo).toBe('archivo_invalido')
+  })
+
+  it('al pasar una plantilla con Word a artículo, descarta el Word; un PDF se conserva', async () => {
+    const conWord = await crear(admin.cookie, { ...ARTICULO_COMPLETO, tipoRecurso: 'plantilla' })
+    await request(app)
+      .put(`/api/admin/recursos/${conWord}/archivo`)
+      .set('Cookie', admin.cookie)
+      .set('Content-Type', MIME_DOCX)
+      .send(DOCX_MINIMO)
+      .expect(200)
+    const sinWord = await request(app)
+      .patch(`/api/admin/recursos/${conWord}`)
+      .set('Cookie', admin.cookie)
+      .send({ tipoRecurso: 'texto' })
+    expect(sinWord.status).toBe(200)
+    expect(sinWord.body.recurso.archivo).toBeNull()
+
+    const conPdf = await crear(admin.cookie, { ...ARTICULO_COMPLETO, tipoRecurso: 'plantilla' })
+    await request(app)
+      .put(`/api/admin/recursos/${conPdf}/archivo`)
+      .set('Cookie', admin.cookie)
+      .set('Content-Type', 'application/pdf')
+      .send(PDF_MINIMO)
+      .expect(200)
+    const sigue = await request(app)
+      .patch(`/api/admin/recursos/${conPdf}`)
+      .set('Cookie', admin.cookie)
+      .send({ tipoRecurso: 'texto' })
+    expect(sigue.status).toBe(200)
+    expect(sigue.body.recurso.archivo).toMatchObject({ tipo: 'application/pdf' })
   })
 })
 

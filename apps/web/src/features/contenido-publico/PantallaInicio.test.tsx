@@ -40,18 +40,35 @@ describe('PantallaInicio', () => {
     ).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Ingresar' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Crear cuenta' })).toBeInTheDocument()
-    expect(screen.getByRole('navigation', { name: 'Principal' })).toBeInTheDocument()
+    // Sin sesión el encabezado no tiene enlaces, así que no hay navegación.
+    expect(screen.queryByRole('navigation', { name: 'Principal' })).not.toBeInTheDocument()
     // La muestra de insignias es interna: ya no se enlaza desde aquí.
     expect(screen.queryByRole('link', { name: 'Insignias' })).not.toBeInTheDocument()
-    // El contenido formativo es público: Recursos enlaza sin pedir sesión.
-    expect(screen.getByRole('link', { name: 'Recursos' })).toHaveAttribute('href', '/recursos')
+    // Recursos salió del encabezado (observaciones del 4 de noviembre): se
+    // llega por "Aprender colaborando".
+    expect(screen.queryByRole('link', { name: 'Recursos' })).not.toBeInTheDocument()
     expect(
       screen.getByRole('heading', { level: 2, name: 'Características de Co3' }),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('heading', { level: 2, name: 'Aprender colaborando' }),
     ).toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: /Ver más/ })).toHaveLength(2)
+  })
+
+  it('cada "Ver más" lleva a su página', () => {
+    renderPantallaInicio()
+
+    expect(screen.getByRole('link', { name: 'Ver más: Características de Co3' })).toHaveAttribute(
+      'href',
+      '/caracteristicas',
+    )
+    expect(screen.getByRole('link', { name: 'Ver más: Aprender colaborando' })).toHaveAttribute(
+      'href',
+      '/recursos',
+    )
+    expect(
+      screen.getByText(/enfoque de enseñanza fundado en el trabajo de Johnson/),
+    ).toBeInTheDocument()
   })
 
   it('enlaza las acciones de cuenta a sus pantallas', () => {
@@ -78,5 +95,7 @@ describe('PantallaInicio', () => {
       'href',
       '/actividades',
     )
+    expect(screen.getByRole('navigation', { name: 'Principal' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Recursos' })).not.toBeInTheDocument()
   })
 })

@@ -781,3 +781,171 @@ Declarar un interés cambia la recomendación, y la razón principal pasa a ser 
 - Constancias de finalización de cursos y rutas para el perfil, con la frontera con Persona C por acordar.
 - Autoría abierta con revisión del administrador (opción B de §13.1).
 - Versión de ficha en recursos, filtro por duración y vista previa de borradores.
+
+## Nota de implementación: incremento 5 (10 de noviembre de 2026)
+
+Constancias de finalización de cursos y rutas, su página pública de verificación y su lugar en el perfil. Resuelve el primer pendiente del incremento 4 y precisa la no-meta de §11.3: no son certificados oficiales.
+
+### Decisiones
+
+- **Nombre:** "constancia de finalización". Hace constar que la persona recorrió las lecciones. Marcarlas lo declara ella misma, así que no es una calificación ni un documento oficial, y la página lo dice.
+- **Qué la genera:** terminar un curso, y terminar una ruta publicada, es decir, todos sus cursos disponibles (al menos uno). La fecha de la ruta es la de su último curso.
+- **Se emite y se guarda; nunca se borra ni cambia.** Guarda el título, los elementos y la duración de cuando se emitió. Si después se agrega una lección o un curso, la constancia sigue, igual que la finalización. Quien ya había terminado cursos o rutas recibió sus constancias en la migración.
+- **Cambios del administrador:** misma regla que la finalización (incremento 3). Si quitar una lección, retirar un recurso, quitar o retirar un curso de una ruta, o publicar una ruta deja a alguien con todo hecho, su constancia se emite en ese momento.
+- **Nombre vigente:** el nombre no se guarda en la constancia; se pide a Cuentas (`nombreCompletoDe`) al mostrarla. Así un cambio de nombre aprobado se refleja, y Formación no copia datos de la cuenta.
+- **Folio y verificación:** `CO3-XXXX-XXXX`, con el alfabeto de Crockford (sin I, L, O ni U) y 40 bits al azar, así que no se puede adivinar. `/constancias/:folio` es pública, no se indexa y tiene límite de intentos (60 por IP cada 15 minutos). Un folio mal escrito y uno inexistente responden igual.
+- **PDF:** no se genera en el servidor: el API corre sin disco y no tiene librería de PDF. La página tiene estilos de impresión y el botón "Imprimir o guardar como PDF" usa el diálogo del navegador.
+- **Curso o ruta retirados:** la constancia sigue válida y visible, con su título, y la página avisa que ya no se ofrece. Borrar una ruta sigue permitido: la constancia no depende de ella.
+- **Sin revocación:** como las insignias otorgadas, nadie la retira.
+- **Privacidad:** ocultas por defecto, como el correo. La persona las muestra con un interruptor en Mi perfil (`preferencias_formativas.constancias_publicas`). En el perfil de otra persona el grupo no aparece si están ocultas o si no tiene ninguna, para que no quede rastro. El administrador sigue la misma regla: no las necesita para su trabajo.
+- **Frontera con el perfil:** Formación es dueña de los datos, el folio, la API, la página y el componente `ConstanciasEnPerfil`. El perfil es de Cuentas (lo construyó Persona C) y solo inserta el componente, como inserta la vitrina de insignias. Fuera de Formación se tocó lo mínimo: `nombreCompletoDe` en `cuentas.service.ts`, una línea en cada pantalla de perfil y sus pruebas.
+- **Interfaz:** a propósito no se parece a una insignia. Es una lista de texto con una palomita en Confirmed Green, en orden de fecha; sin arte, sin Apothecary Amber, sin niveles, puntos ni contadores.
+- **Insignias:** emitir una constancia no crea otorgamientos ni señales; una prueba lo confirma.
+
+### Concurrencia
+
+- **Constancia de curso:** se emite en la misma transacción que fija la finalización (`marcarLeccion` y `fijarFinalizaciones`), con la inscripción ya bloqueada. No necesita bloqueo nuevo.
+- **Constancia de ruta:** lo que decide si una ruta está terminada lo cambian transacciones distintas: la persona que termina un curso, el administrador que cambia la lista de la ruta, la publica o retira uno de sus cursos, y los recálculos sobre un curso. Si dos corren a la vez, cada una puede leer la otra sin confirmar, y ninguna emite la constancia. Por eso todas toman el mismo candado consultivo (`constancias.rutas`) después de escribir su propio cambio y como último bloqueo de la transacción: la segunda en llegar espera y ve lo que escribió la primera. Con el candado solo se lee y se insertan constancias, así que quien lo tiene no espera a nadie. Es global, como el de la ruta destacada, porque se pide poco: solo cuando algo terminó o la lista de una ruta cambió. Dos pruebas fallan sin él: dos pestañas que terminan a la vez los dos últimos cursos de una ruta, y el administrador que quita de la ruta un curso mientras alguien termina otro.
+- **Sin llave foránea hacia cursos ni rutas:** la llave haría que insertar una constancia bloqueara la fila del curso o la ruta (FOR KEY SHARE) mientras el administrador la tiene bloqueada para editarla, y los dos se esperarían.
+
+### Modelo implementado
+
+`constancias` y la columna `constancias_publicas` de `preferencias_formativas`. El detalle está en el documento general, §4.4 a §4.6 y §5.5.
+
+### API implementada
+
+| Método | Ruta                            | Acceso                                                                    |
+| ------ | ------------------------------- | ------------------------------------------------------------------------- |
+| GET    | /api/me/constancias             | Con sesión: mis constancias, la más reciente primero, y si las muestro    |
+| PUT    | /api/me/constancias/visibilidad | Con sesión: `{ publicas }`, mostrarlas u ocultarlas en mi perfil          |
+| GET    | /api/usuarios/:id/constancias   | Con sesión: las que muestra el perfil de esa persona; vacía si las ocultó |
+| GET    | /api/constancias/:folio         | Público, con límite de intentos: la verificación, con el nombre vigente   |
+
+Además, marcar una lección (`PUT /api/cursos/:id/lecciones/:idLeccion/completada`) responde `constanciasNuevas`: la del curso y las de las rutas que se terminaron con él.
+
+### Pantallas
+
+- `/constancias/:folio`: documento sobrio e imprimible: a quién, qué terminó, cuándo, los elementos que trabaja, el folio con su sello de verificación y la leyenda de lo que no es. Botones para imprimir y copiar el enlace.
+- Mi perfil: grupo "Formación completada", debajo de Insignias, con las constancias (cinco y "Ver todas"), y el interruptor para mostrarlas.
+- Perfil de otra persona: el mismo grupo, de solo lectura, solo si ella lo activó.
+- Visor: el aviso de "Completaste el curso" enlaza la constancia, y la de la ruta si se terminó con ese curso.
+- Ficha del curso, ficha de la ruta y Completados de Mi formación: "Ver constancia".
+
+### Pendiente
+
+- Acordar con Persona C y con el responsable de Cuentas el grupo en el perfil y la función `nombreCompletoDe`, y actualizar §8 del documento de Insignias, que describe los grupos del perfil.
+- Autoría abierta con revisión, versión de ficha en recursos y vista previa de borradores: hechos en el incremento 6.
+- Filtro por duración.
+
+## Nota de implementación: incremento 6 (12 de noviembre de 2026)
+
+Autoría abierta con revisión del administrador: la opción B de §13.1, con el flujo de §6.3, los estados de §9.2, la cola de §12.3 y MOD-01. Sustituye, en lo que toca, la decisión del incremento 1 de que solo el administrador crea contenido.
+
+### Decisiones
+
+- **Quién propone:** cualquier usuario activo, como dice §6.3, con límites por persona: a lo más 10 propuestas en preparación y 3 en revisión a la vez. Resuelve la primera pregunta de §13.3.
+- **Qué se propone:** recursos y cursos. Las rutas siguen siendo editoriales: son selecciones curadas y las usa el recomendador. El curso de un autor solo usa recursos ya publicados y sus lecciones propias; si quiere usar un recurso suyo, primero lo propone aparte.
+- **Estados:** borrador → en revisión → publicado. Desde en revisión también a cambios solicitados (vuelve al autor) o rechazado (definitivo). Un contenido publicado puede retirarse y volver a publicarse. En revisión está congelado: nadie lo edita. El autor puede cancelar el envío mientras nadie haya decidido, y vuelve a borrador.
+- **Quién ve y edita qué** (`services/formacion/acceso.ts`, una sola regla para recursos y cursos):
+  - Una propuesta en borrador o con cambios solicitados es solo de su autor: ni el administrador la ve.
+  - En revisión o rechazada, el administrador la ve pero no la edita.
+  - Publicada, la cuida el administrador y la edita en sitio, como su contenido; el autor ya no la edita.
+  - El administrador no borra propuestas: las rechaza o las retira. El autor borra la suya en borrador, con cambios solicitados o rechazada.
+  - La columna `origen` (editorial o propuesta) dice de quién es cada cosa sin leer la tabla de usuarios.
+- **Decisiones con motivo (MOD-01):** obligatorio al pedir cambios, rechazar y retirar; opcional al aprobar. Aprobar exige marcar los siete criterios de §6.4. Cada envío, cancelación y decisión queda en `revisiones_contenido`, que sobrevive a que el autor borre su propuesta. El autor ve la decisión y su motivo, no qué administrador decidió.
+- **Retirar una propuesta publicada** también va por la revisión, con motivo, para que su autor sepa por qué. El editor del panel ya no cambia el estatus de una propuesta.
+- **Sin versiones.** Editar algo publicado lo hace el administrador en sitio, como hasta ahora. Implementar versiones (VER-01, §9.1) obligaría a llevar el progreso por versión y no solo por lección: queda como trabajo futuro.
+- **Avisos al autor:** sin sondeo rápido, porque una decisión tarda horas y no hay correo (P-24). Un punto en "Mi formación" en la barra lateral, explicado con texto para el lector de pantalla; la pestaña "Mis propuestas (1 nueva)"; y, al abrir la propuesta, el aviso con el motivo, que la marca como vista. El conteo se revisa al volver a la pestaña y cada minuto.
+- **Vista previa:** una sola página con la ficha y todas las lecciones abiertas, para el administrador en la cola y para el autor en su editor. Cubre el pendiente de vista previa de un curso en borrador. No crea inscripciones: el progreso solo acepta cursos publicados.
+- **Versión de ficha en recursos:** los recursos ganan `version_ficha`, como cursos y rutas. El editor la manda y el servidor responde 409 `recurso_desactualizado` si cambió. Cubre otro pendiente.
+- **Nombre público:** el editor del autor avisa que, si se publica, su nombre aparecerá como autor. La ficha del curso ya mostraba al autor.
+
+### Concurrencia
+
+- **Toda transición bloquea la fila del contenido** (`FOR UPDATE`), igual que las ediciones. Un envío, una cancelación, una decisión y una edición de la misma propuesta se forman en fila y cada una ve el estado que dejó la anterior: si el autor cancela mientras el administrador aprueba, la segunda recibe 409 `revision_desactualizada`.
+- **Aprobar un curso** bloquea además en modo compartido los recursos de sus lecciones, en el mismo orden que la marca de una lección. Si alguien retira uno a la vez, la aprobación ve el retiro y no publica un curso con una lección que no se abre.
+- **Los límites por persona** se cuentan con un candado consultivo por autor, tomado después del de la fila. Sin él, dos envíos simultáneos cuentan cada uno sin ver al otro y pasan el límite.
+- Cada uno de los tres tiene una prueba que falla sin él.
+
+### Modelo implementado
+
+Estados nuevos en `estatus_recurso`; columnas `origen`, `decision_sin_ver` y `fecha_envio` en recursos y cursos, y `version_ficha` en recursos; tabla `revisiones_contenido`. Tres CHECK: los estados de revisión solo con origen propuesta, y nunca en una ruta. El detalle está en el documento general, §4.4 a §4.6 y §5.5.
+
+### API implementada
+
+| Método                   | Ruta                                          | Acceso                                                              |
+| ------------------------ | --------------------------------------------- | ------------------------------------------------------------------- |
+| GET                      | /api/me/propuestas                            | Con sesión: mis propuestas con su estado y última decisión          |
+| GET                      | /api/me/propuestas/avisos                     | Con sesión: cuántas decisiones no he visto                          |
+| POST                     | /api/me/propuestas/recursos y /cursos         | Con sesión: nueva propuesta, en borrador                            |
+| GET, PATCH, DELETE       | /api/me/propuestas/recursos/:id y /cursos/:id | Con sesión, solo la mía: verla con su historial, editarla, borrarla |
+| GET, PUT, DELETE         | /api/me/propuestas/recursos/:id/archivo       | Con sesión: el PDF de mi propuesta                                  |
+| POST, PATCH, DELETE, PUT | /api/me/propuestas/cursos/:id/lecciones…      | Con sesión: las lecciones de mi curso, como en el panel             |
+| POST, DELETE             | /api/me/propuestas/:tipo/:id/envio            | Con sesión: enviar a revisión o cancelar el envío                   |
+| PUT                      | /api/me/propuestas/:tipo/:id/aviso-visto      | Con sesión: ya vi la última decisión                                |
+| GET                      | /api/admin/revisiones                         | Administrador: la cola, lo más antiguo primero                      |
+| GET                      | /api/admin/revisiones/:tipo/:id               | Administrador: la propuesta completa y su historial                 |
+| POST                     | /api/admin/revisiones/:tipo/:id/decision      | Administrador: `{ decision, motivo, criterios }`                    |
+
+### Pantallas
+
+- **Mi formación → Mis propuestas** (`?vista=propuestas`): lo que propuse, con su estado, la última decisión y su motivo, y "Proponer un recurso" o "Proponer un curso".
+- **Editor del autor** (`/propuestas/recursos/…` y `/propuestas/cursos/…`): el mismo editor del panel en modo autor. Sin orden ni publicar; con "Enviar a revisión", "Cancelar el envío", el aviso del estado con el motivo y el historial, y solo lectura cuando no se puede editar. Los editores se mudaron a `features/formacion/editor/` y el panel los abre en modo administrador.
+- **Revisiones** (`/admin/revisiones` y `/admin/revisiones/:tipo/:id`): la cola y la revisión de una propuesta, con su vista previa, los criterios, el motivo y el historial con quién decidió cada cosa.
+
+### Pendiente
+
+- Versiones de curso y recurso (VER-01), si se quiere que un autor proponga cambios a algo ya publicado.
+- Filtro del catálogo por duración.
+
+## Nota de implementación: observaciones de pantallas (14 de noviembre de 2026)
+
+Cambios pedidos en `Observaciones-pantallas-4nov.pptx`. Solo web; sin cambios de modelo ni de API.
+
+### Decisiones
+
+- **Inicio** (`/`, Contenido público): "Recursos" sale del encabezado público en todas las páginas; sin sesión el encabezado ya no dibuja navegación. "Aprender colaborando" estrena texto y su "Ver más" lleva a `/recursos`; el de "Características de Co3" lleva a la página nueva `/caracteristicas`.
+- **Características de Co3** (`/caracteristicas`, pública): introducción y los dos usos, Organizo y Participo. Con sesión, cada uno lleva a su sección; sin sesión, "Crear cuenta" e "Ingresar". La animación que sugiere el mock queda pendiente de diseño.
+- **`/recursos` se presenta como "Aprender colaborando"**, con la misma URL: presentación (dos párrafos y, si hay un curso a medias, "Continúa aprendiendo"), después **Recursos** (el catálogo, con Cursos, Artículos y Recursos breves como subgrupos) y al final **Rutas recomendadas**, con su encabezado. Salen "Empieza por aquí" y los botones "Explorar recursos" y "Ver rutas de aprendizaje". Las rutas no llevan filtros: se muestra una recomendada.
+- El texto de las rutas dice "constancia" y no "diploma" mientras no se acuerde el nombre.
+
+### Pendiente
+
+- Escudos de la UNAM y la CUAED al pie del inicio: faltan los archivos oficiales.
+- Submenú de "Aprende colaborando" (Recursos, Rutas de aprendizaje, Mis diplomas, Compartir recursos): acordarlo antes con Cuentas, porque cambia la barra lateral y mueve Mi formación.
+
+## Nota de implementación: observaciones de pantallas (12 de noviembre de 2026)
+
+Cambios pedidos en `Observaciones-pantallas12nov.pptx`. El orden del submenú de "Aprende colaborando" (y que las plantillas vivan dentro de Recursos) queda pendiente de acordarse con Cuentas.
+
+### Decisiones
+
+- **Recursos con sesión** empieza directo en el catálogo ("Aprende a tu ritmo"): la presentación "Aprender colaborando" es solo para quien no ha entrado. "Continúa aprendiendo" sale de Recursos porque ya está en Mi formación.
+- **Filtro "Tipo" en lugar de "Sección"**, con sesión y sin ella: Todos, Cursos, Artículos, Plantillas, PDF, Videos y Enlaces. Las listas que el tipo deja fuera no se piden.
+- **Mi formación** es una sola página, sin pestañas, con tarjetas en cuadrícula como el catálogo: Cursos (En curso, Completado o Retirado, con avance, "Sigue con" y Continuar), Recursos guardados y Mis propuestas. `?vista=guardados` y `?vista=propuestas` siguen funcionando: llevan a su sección.
+- **"¿Qué quieres fortalecer?"** se mudó a Rutas recomendadas, que es lo único que lo usa, y se guarda al marcar (sin botón). Si falla, las casillas vuelven a lo que había; mientras guarda, esperan, para que dos clics no lleguen en desorden.
+- **Panel:** "Contenido" se llama "Recursos". Un artículo admite un PDF opcional y una plantilla, también Word, Excel o PowerPoint (.docx, .xlsx, .pptx). El API comprueba la firma de los bytes (`%PDF-` o ZIP) y no solo el tipo declarado; un PDF se abre en el navegador y los de Office se descargan. Cambiar a un tipo que no acepta el archivo actual lo descarta.
+- **Barra de formato** sobre el contenido de recursos y lecciones: inserta el mismo Markdown que ya se interpretaba, así que lo guardado no cambia. Un editor visual completo queda pendiente.
+- **Elementos de colaboración:** seis. Se renombraron sin cambiar las claves guardadas (`responsabilidades` → Definición de responsabilidades, `interaccion_promotora` → Interacción, `procesamiento_grupal` → Evaluación de grupo) y se agregó `habilidades_sociales`. La migración `20261114200000_nombres_elementos_colaboracion` solo recalcula `texto_busqueda` para que la búsqueda encuentre los nombres nuevos.
+- **Objetivo del curso:** se llama "Objetivo general" y pide redactarlo como resultado medible.
+
+### Pendiente
+
+- Lecciones con objetivo (de los objetivos específicos del curso), desarrollo, recursos de apoyo y actividad de aprendizaje: incremento aparte, con su diseño.
+- §3 de este documento y el artículo semilla "Los cinco elementos del aprendizaje colaborativo" siguen con los cinco elementos y sus nombres anteriores: actualizarlos es una decisión de contenido.
+- Editor visual (WYSIWYG) completo.
+
+## Nota de implementación: Rutas de aprendizaje, Plantillas y Mis diplomas (14 de noviembre de 2026)
+
+Las tres entradas de "Aprende colaborando" que estaban en el mapa sin pantalla. Solo web; sin cambios de modelo ni de API.
+
+### Decisiones
+
+- **Rutas de aprendizaje** (`/rutas`, pública): todas las rutas publicadas en tarjetas (cursos, duración, nivel inicial, elementos). Con sesión, la recomendada va primero ("Recomendada para ti" en modo personalizado), cada tarjeta muestra el avance (cursos terminados entre los disponibles; los retirados no cuentan) y "Ver constancia" si la ruta ya se terminó. El avance sale de Mi formación y de las constancias. "¿Qué quieres fortalecer?" también aparece aquí: es el mismo componente que en Recursos. La ficha de una ruta (`/rutas/:id`) marca este ítem y su regreso lleva a `/rutas`; Recursos enlaza "Ver todas las rutas".
+- **Plantillas** (`/plantillas`, pública): los recursos publicados de tipo plantilla, con filtro de habilidad, búsqueda y paginación; cada tarjeta dice el formato de su archivo. Si se acuerda que las plantillas vivan dentro de Recursos, el catálogo ya tiene "Tipo → Plantillas".
+- **Mis diplomas** (`/mis-diplomas`, con sesión): mis constancias en tarjetas (curso o ruta, folio, fecha) y el interruptor "Mostrar mis constancias en mi perfil", el mismo del perfil. La página se llama como el ítem de la barra; el documento sigue diciendo "constancia" hasta que se acuerde el nombre.
+- **Barra lateral:** los tres ítems pasan a ser enlaces en el mismo orden que tenían; "Recursos compartidos" sigue sin enlace (espacio de equipo, de Cuentas/núcleo).
+
+### Pendiente
+
+- Orden del submenú y nombre "diploma" o "constancia": por acordarse.

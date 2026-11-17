@@ -84,5 +84,12 @@ export const config = {
       ventanaMin: numero('RATE_LIMIT_CLAVE_VENTANA_MIN', 15),
       max: numero('RATE_LIMIT_CLAVE_MAX', 20),
     },
+    // Verificación pública de constancias por folio
+    // (docs/diseno-desarrollo-formacion.md, nota del incremento 5). El folio
+    // tiene 40 bits; el límite hace inútil probarlos uno por uno.
+    constancia: {
+      ventanaMin: numero('RATE_LIMIT_CONSTANCIA_VENTANA_MIN', 15),
+      max: numero('RATE_LIMIT_CONSTANCIA_MAX', 60),
+    },
   },
 }

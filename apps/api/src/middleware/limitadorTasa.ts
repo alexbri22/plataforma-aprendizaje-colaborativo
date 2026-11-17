@@ -98,3 +98,10 @@ export const limitadorClave = crearLimitador(
   config.limiteIntentos.clave.max,
   { keyGenerator: (req) => req.idSesion as string },
 )
+
+// Página pública de verificación de constancias: sin sesión, así que el
+// límite va por IP, como el registro.
+export const limitadorConstancia = crearLimitador(
+  config.limiteIntentos.constancia.ventanaMin,
+  config.limiteIntentos.constancia.max,
+)

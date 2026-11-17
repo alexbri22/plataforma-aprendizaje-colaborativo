@@ -1,0 +1,272 @@
+/* Rutas de aprendizaje, Plantillas y Mis diplomas: mismo ancho, cuadrícula y
+   tarjetas que el catálogo de Recursos y Mi formación. */
+.centro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  max-width: var(--layout-content-max);
+  width: 100%;
+  margin: 0 auto;
+  padding: var(--space-12) var(--space-6) var(--space-16);
+  box-sizing: border-box;
+}
+
+/* Dentro del AppShell el contenedor ya tiene su margen. */
+.centroEnApp {
+  margin: 0;
+  padding: 0 0 var(--space-16);
+}
+
+.introduccion {
+  max-width: 65ch;
+}
+
+.introduccion h1 {
+  margin: 0 0 var(--space-4);
+  color: var(--color-text);
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  letter-spacing: -0.03em;
+}
+
+.introduccion p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-normal);
+  text-wrap: pretty;
+}
+
+.controles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.buscador {
+  max-width: 24rem;
+}
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.filtro,
+.filtroActivo {
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+}
+
+.filtro {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.filtro:hover {
+  border-color: var(--color-primary);
+}
+
+.filtroActivo {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-text-on-accent);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.grid > li {
+  display: flex;
+  min-width: 0;
+}
+
+/* Mientras llega la página nueva se sigue viendo la anterior, atenuada. */
+.actualizando {
+  opacity: 0.6;
+  transition: opacity 0.15s ease;
+}
+
+.tarjeta {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-4);
+  box-shadow: var(--shadow-sm);
+}
+
+.tarjetaMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.insignias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.tarjetaTitulo {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  text-wrap: balance;
+}
+
+.tarjetaTitulo a {
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.tarjetaTitulo a:hover {
+  color: var(--color-primary);
+}
+
+.descripcion {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  text-wrap: pretty;
+}
+
+.meta {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.folio {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  letter-spacing: 0.04em;
+}
+
+.avance {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Las acciones van al pie, alineadas entre tarjetas de distinto alto. */
+.pie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: auto;
+}
+
+.enlaceAccion {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  border-radius: var(--radius-sm);
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+}
+
+.enlaceAccion:hover {
+  color: var(--color-primary-hover);
+}
+
+.tarjetaTitulo a:focus-visible,
+.enlaceAccion:focus-visible,
+.filtro:focus-visible,
+.filtroActivo:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.flecha {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.15s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.enlaceAccion:hover .flecha,
+.enlaceAccion:focus-visible .flecha {
+  transform: translateX(3px);
+}
+
+.estado {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-8) 0;
+  color: var(--color-text-muted);
+}
+
+.estado p {
+  margin: 0;
+}
+
+.visibilidad {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 65ch;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 56rem) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 42rem) {
+  .centro {
+    padding-top: var(--space-6);
+  }
+
+  .introduccion h1 {
+    font-size: var(--font-size-3xl);
+  }
+
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flecha {
+    transition: none;
+  }
+}
