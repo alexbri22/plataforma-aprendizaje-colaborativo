@@ -30,6 +30,14 @@ describe('aplicarFormato', () => {
     expect(aplicarFormato('uno\ndos', 5, 5, accion('subtitulo')).valor).toBe('uno\n## dos')
   })
 
+  // Revisión del PR: con el cursor en 0 y un texto que empieza con un salto,
+  // el prefijo va en la primera línea (la vacía), no en la siguiente.
+  it('al inicio de un texto que empieza con un salto, no toca la línea siguiente', () => {
+    expect(aplicarFormato('\nHola', 0, 0, accion('subtitulo')).valor).toBe('## \nHola')
+    expect(aplicarFormato('\nHola', 0, 0, accion('lista')).valor).toBe('- \nHola')
+    expect(aplicarFormato('\nHola', 0, 0, accion('cita')).valor).toBe('> \nHola')
+  })
+
   it('numera cada línea seleccionada, sin tocar la siguiente', () => {
     expect(aplicarFormato('a\nb\nc', 0, 4, accion('numerada')).valor).toBe('1. a\n2. b\nc')
   })

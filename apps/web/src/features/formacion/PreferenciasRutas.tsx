@@ -16,6 +16,12 @@ import styles from './PantallaRecursos.module.css'
  * Rutas recomendadas, que es lo único que la usa, y se guarda al marcar: ya no
  * hay botón "Guardar". Mientras se guarda, las casillas esperan, para que dos
  * clics seguidos no lleguen en desorden.
+ *
+ * Lo guardado (la consulta) es la única fuente de verdad: las casillas no
+ * guardan una copia propia. Si las preferencias cambian en otra pestaña y la
+ * consulta se actualiza, el siguiente clic parte de lo guardado y no pisa ese
+ * cambio. Mientras se guarda se muestra lo que se mandó; si falla, vuelve solo
+ * a lo guardado.
  */
 export function PreferenciasRutas() {
   const consulta = usePreferencias()
@@ -24,23 +30,17 @@ export function PreferenciasRutas() {
 }
 
 function FormularioPreferencias({ guardadas }: { guardadas: ElementoColaboracion[] }) {
-  const [elegidos, setElegidos] = useState<ElementoColaboracion[]>(guardadas)
   const [guardadoAhora, setGuardadoAhora] = useState(false)
   const guardar = useGuardarPreferencias()
+  const elegidos = guardar.isPending ? (guardar.variables ?? guardadas) : guardadas
   const lleno = elegidos.length >= MAX_ELEMENTOS_PREFERIDOS
 
   function alternar(e: ElementoColaboracion) {
-    const anteriores = elegidos
     const nuevos = elegidos.includes(e)
       ? elegidos.filter((x) => x !== e)
       : ELEMENTOS_COLABORACION.filter((x) => x === e || elegidos.includes(x))
-    setElegidos(nuevos)
     setGuardadoAhora(false)
-    guardar.mutate(nuevos, {
-      onSuccess: () => setGuardadoAhora(true),
-      // Si no se guardó, las casillas vuelven a lo que había.
-      onError: () => setElegidos(anteriores),
-    })
+    guardar.mutate(nuevos, { onSuccess: () => setGuardadoAhora(true) })
   }
 
   return (

@@ -121,6 +121,7 @@ function renderEn(ruta: string) {
       </MemoryRouter>
     </QueryClientProvider>,
   )
+  return queryClient
 }
 
 beforeAll(() => {
@@ -623,6 +624,33 @@ describe('qué quieres fortalecer', () => {
     await user.click(within(formulario).getByLabelText('Interacción'))
     expect(await screen.findByText('No se pudo guardar.')).toBeInTheDocument()
     expect(within(formulario).getByLabelText('Interacción')).not.toBeChecked()
+  })
+
+  // Revisión del PR: las casillas no guardan una copia propia. Si lo guardado
+  // cambia por fuera (otra pestaña) y la consulta se actualiza, el siguiente
+  // clic parte de ahí y no pisa ese cambio.
+  it('si lo guardado cambia por fuera, el siguiente clic parte de lo nuevo', async () => {
+    vi.mocked(obtenerPreferencias).mockResolvedValue(['responsabilidades'])
+    vi.mocked(guardarPreferencias).mockImplementation(async (elementos) => elementos)
+    const user = userEvent.setup()
+    const queryClient = renderEn('/recursos')
+
+    const formulario = await screen.findByRole('group', { name: '¿Qué quieres fortalecer?' })
+    expect(within(formulario).getByLabelText('Definición de responsabilidades')).toBeChecked()
+
+    // En otra pestaña cambió a Habilidades sociales; al volver, se vuelve a pedir.
+    vi.mocked(obtenerPreferencias).mockResolvedValue(['habilidades_sociales'])
+    await queryClient.invalidateQueries()
+    await waitFor(() =>
+      expect(within(formulario).getByLabelText('Habilidades sociales')).toBeChecked(),
+    )
+    expect(within(formulario).getByLabelText('Definición de responsabilidades')).not.toBeChecked()
+
+    await user.click(within(formulario).getByLabelText('Interacción'))
+    expect(guardarPreferencias).toHaveBeenLastCalledWith(
+      ['interaccion_promotora', 'habilidades_sociales'],
+      expect.anything(),
+    )
   })
 
   it('sin sesión no aparece', async () => {

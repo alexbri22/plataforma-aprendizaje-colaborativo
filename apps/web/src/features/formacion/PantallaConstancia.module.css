@@ -177,7 +177,10 @@
 /* Al imprimir solo queda el documento: ni la navegación, ni el aviso de
  * cuenta, ni los botones. */
 @media print {
-  :global(body *) {
+  /* Solo cuando hay una constancia en la página: esta hoja se carga en toda
+     la app (App.tsx importa la pantalla), y sin el :has() imprimir un curso o
+     un perfil sacaba la hoja en blanco. :where() deja la especificidad baja. */
+  :global(body):where(:has(.documento)) * {
     visibility: hidden;
   }
 

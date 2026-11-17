@@ -81,7 +81,9 @@ export function aplicarFormato(
     }
   }
   // Por línea: cada línea tocada por la selección recibe el prefijo.
-  const desde = valor.lastIndexOf('\n', inicio - 1) + 1
+  // En la posición 0 no hay línea anterior: lastIndexOf('\n', -1) revisa la
+  // posición 0 y, si el texto empieza con un salto, daría la línea equivocada.
+  const desde = inicio === 0 ? 0 : valor.lastIndexOf('\n', inicio - 1) + 1
   // Una selección que termina justo después de un salto no toca la línea
   // siguiente.
   const ultimo = fin > inicio && valor[fin - 1] === '\n' ? fin - 1 : fin
