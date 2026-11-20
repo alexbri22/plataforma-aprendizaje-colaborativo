@@ -280,7 +280,13 @@ async function sembrar(
       informacionGeneral: 'Actividad de demostración, creada por el script de sembrado.',
       fechaInicio: escenario.fechaInicio ?? fecha(0),
       fechaTermino: escenario.fechaTermino ?? fecha(60),
-      fechaLimiteInscripcion: fecha(7),
+      // En inscripción, la fecha está por venir; pasada esa etapa, la
+      // inscripción cerró un día antes de que empezara la actividad (si no,
+      // una actividad ya terminada mostraría que la inscripción cierra después).
+      fechaLimiteInscripcion:
+        escenario.estado === 'inscripcion'
+          ? fecha(7)
+          : new Date((escenario.fechaInicio ?? fecha(0)).getTime() - 86_400_000),
       plazoCierreDias: escenario.plazoCierreDias ?? 14,
       numeroEquiposEsperado: escenario.equiposEsperados,
     },
